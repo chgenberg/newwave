@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Craft Klubbmerch (mockup)
 
-## Getting Started
+Välj klubb → bekräfta signaler (högtider, säsong, trender) → välj motiv → ladda ner allt som zip.
 
-First, run the development server:
+## Kom igång
 
 ```bash
+cp .env.local.example .env.local   # lägg in OPENAI_API_KEY
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Öppna http://localhost:3000. Utan API-nyckel körs appen i demoläge med exempelinnehåll.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Delar
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `lib/calendar.ts` – svenska högtider och säsonger som upptäcks automatiskt (60 dagar framåt).
+- `lib/trends.ts` – nyheter om klubben (Google News RSS, 14 dagar) som AI filtrerar till positiva signaler utan spelarnamn.
+- `lib/club.ts` + `lib/rules.ts` – klubbens låsta ramar och regelmotorn som stoppar motiv innan de ritas.
+- `lib/agents.ts` – instruktioner för motivförslag, bildprompt och innehåll per kanal.
+- `lib/compose.ts` – tryckfiler och kampanjbilder (Instagram, story, LinkedIn, hemsidebanner, TV).
+- `lib/artwork.ts` + `lib/imagecheck.ts` – bildkontroll pixel för pixel och av AI-granskare, automatisk omritning (max 3 försök).
+- `lib/vectorize.ts` – vektorisering till SVG i enbart klubbens färger; tryckfiler i 300 dpi (30×40 cm).
+- `lib/photos.ts` – fotorealistiska produktbilder med tryckfilen som referens.
+- `lib/video.ts` – 10-sekundersfilm (1080×1920, MP4) som renderas i webbläsaren.
+- `lib/links.ts` – spårbara länkar och QR-koder per kanal.
+- `lib/personalize.ts` – namn och nummer på ryggen, familjepaket till Fars och Mors dag.
+- `app/match` + `app/api/v1/webhooks/match-result` – drop vid slutsignal med sms för godkännande (Twilio valfritt).
+- `lib/zip.ts` – zip-paketet med foton, film, bilder, texter, affisch, publiceringsplan och guiden "SÅ HÄR GÖR DU".
 
-## Learn More
+## Klubbens grafiska profil (lokal demo)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+node scripts/scrape-ifk.mjs --images=200   # text, mediaregister, logotyper, tema och nyhetsbilder från ifkgoteborg.se
+node scripts/build-brand-kit.mjs           # sköld i fullfärg/svart/vit som SVG + PNG (kräver poppler)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Allt sparas i `.data/brand/ifk-goteborg/` (ignoreras av git) och serveras via `/api/v1/brand/{clubId}/{fil}`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+API-dokumentation finns på `/api-docs`. Genererade filer sparas i `.data/files/`.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Klubbskölden är en platshållare; den officiella skölden hämtas från licensbiblioteket i produktion.

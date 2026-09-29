@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-brand), "Source Sans Pro", sans-serif;
+  --color-club: #234B9A;
+  --color-club-dark: #1A3770;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.checker {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #ececec 25%, transparent 25%),
+    linear-gradient(-45deg, #ececec 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ececec 75%),
+    linear-gradient(-45deg, transparent 75%, #ececec 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.ifk-stripes {
+  background: repeating-linear-gradient(135deg, #234b9a 0 14px, #ffffff 14px 28px);
+  background-size: 40px 40px;
+  animation: ifk-slide 1.2s linear infinite;
+}
+
+.ifk-bar {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 10px, transparent 10px 20px),
+    linear-gradient(90deg, #197bc4, #234b9a);
+  background-size: 28px 28px, 100% 100%;
+  animation: ifk-march 0.9s linear infinite;
+}
+
+@keyframes ifk-march {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 28px 0, 0 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes ifk-slide {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 40px 0;
+  }
+}
+
+.ifk-pop {
+  animation: ifk-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes ifk-pop {
+  from {
+    transform: translateY(16px) scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.ifk-line {
+  animation: ifk-fade 0.5s ease-out;
+}
+
+@keyframes ifk-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ifk-stripes,
+  .ifk-bar,
+  .ifk-pop,
+  .ifk-line {
+    animation: none;
+  }
+}
+
+.font-display {
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
