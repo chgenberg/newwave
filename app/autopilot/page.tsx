@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { mockupSvg } from "@/components/ProductMockup";
 import type { ArtworkResult } from "@/lib/artwork";
 import { PRINT_H, PRINT_W, composePrintFile, loadClubCrest, loadImage, svgToDataUrl } from "@/lib/compose";
-import type { CatalogProduct, Club, Concept, ContentPack, Review, RuleCheck, Signal } from "@/lib/types";
+import type { CatalogProduct, Club, Concept, ContentPack, Review, RuleCheck, Signal, SourceStatus } from "@/lib/types";
 
 type ClubData = { club: Club; catalog: CatalogProduct[]; ai: { enabled: boolean } };
 type Entry = {
@@ -45,22 +45,23 @@ async function mockupPng(product: CatalogProduct, printUrl: string) {
   return canvas.toDataURL("image/png");
 }
 
-const SOURCES = [
-  { name: "Google Nyheter", what: "Svensk press om klubben, senaste 14 dagarna" },
+const SOURCES: { id?: string; name: string; what: string }[] = [
+  { id: "news", name: "Google Nyheter", what: "Svensk press om klubben, senaste 14 dagarna" },
+  { id: "club", name: "Klubbens nyheter", what: "ifkgoteborg.se – jubileum, biljettsläpp, evenemang" },
+  { id: "match", name: "Allsvenskan", what: "Nästa match och färska segrar" },
+  { id: "social", name: "Klubbens YouTube", what: "Det som engagerar supportrarna" },
+  { id: "podcast", name: "Supporterpoddar", what: "Läktarens egna uttryck – underlag för satir" },
+  { id: "search", name: "Google Trends", what: "Vad Sverige söker på just nu" },
+  { id: "weather", name: "SMHI", what: "Hoodie när det är kallt, t-tröja i solen" },
   { name: "Svensk kalender", what: "Högtider, säsong och fotbollsåret" },
-  { name: "Matchresultat", what: "Segrar och derbyn triggar nya motiv" },
-  { name: "ifkgoteborg.se", what: "Sköld, färger och typsnitt" },
   { name: "Valfri nyhetslänk", what: "Klistra in en URL i manuellt läge" },
 ];
 
 const NEXT_SOURCES = [
   { name: "Intersports försäljningsdata", what: "Agenten lär sig vad som faktiskt säljer" },
-  { name: "Klubbens egna nyheter", what: "ifkgoteborg.se – jubileum, värvningar, evenemang" },
-  { name: "Spelschema och live-resultat", what: "Allsvenskan via t.ex. API-Football eller Sportmonks" },
-  { name: "Klubbens sociala kanaler", what: "Inlägg som engagerar supportrarna mest" },
-  { name: "Google Trends", what: "Vad supportrar söker på just nu" },
-  { name: "Supporterpoddar och forum", what: "Läktarens egna skämt och uttryck" },
-  { name: "SMHI väder", what: "Hoodies när det blir kallt, tröjor i solen" },
+  { name: "Instagram, Facebook och TikTok", what: "Kräver att klubben ger åtkomst via Meta och TikTok" },
+  { name: "Supporterforum", what: "T.ex. Svenska Fans – kräver avtal, blockerar i dag automatisk läsning" },
+  { name: "Liveresultat i realtid", what: "API-Football eller Sportmonks för minut-för-minut-triggers" },
 ];
 
 const ICON: Record<Entry["kind"], string> = {
@@ -107,6 +108,7 @@ export default function Autopilot() {
   const [running, setRunning] = useState(false);
   const [auto, setAuto] = useState(false);
   const [published, setPublished] = useState(0);
+  const [status, setStatus] = useState<SourceStatus[] | null>(null);
   const seq = useRef(0);
   const runningRef = useRef(false);
 
@@ -129,9 +131,15 @@ export default function Autopilot() {
       await loadClubCrest(club.id);
       add({ kind: "start", title: `${club.agent.name} startar`, detail: club.agent.mission });
 
-      const s: { season: Signal; occasions: Signal[]; trends: Signal[] } = await fetch(`/api/v1/signals?clubId=${club.id}`).then((r) => r.json());
-      const signals = [...s.trends, ...s.occasions.filter((o) => (o.daysUntil ?? 99) <= 45), s.season];
-      add({ kind: "signal", title: `Hittade ${signals.length} signaler`, detail: signals.map((x) => x.title).join(" · ") });
+      const s: { season: Signal; occasions: Signal[]; trends: Signal[]; matches: Signal[]; weather: Signal | null; sources: SourceStatus[] } =
+        await fetch(`/api/v1/signals?clubId=${club.id}`).then((r) => r.json());
+      setStatus(s.sources);
+      const signals = [...s.matches, ...s.trends, ...(s.weather ? [s.weather] : []), ...s.occasions.filter((o) => (o.daysUntil ?? 99) <= 45), s.season];
+      add({
+        kind: "signal",
+        title: `Hittade ${signals.length} signaler i ${s.sources.filter((x) => x.ok).length + 1} källor`,
+        detail: signals.map((x) => x.title).join(" · "),
+      });
 
       const { concepts } = await post<{ concepts: (Concept & { checks: RuleCheck[] })[] }>("/api/v1/concepts", { clubId: club.id, signals });
       const satire = concepts.filter((c) => c.mode === "satir").length;
@@ -314,15 +322,24 @@ export default function Autopilot() {
             <div className="mt-4 rounded-3xl border border-[#E8E8ED] p-6">
               <p className="text-xs uppercase tracking-wider text-[#86868B]">Källor</p>
               <ul className="mt-3 space-y-2.5">
-                {SOURCES.map((s) => (
-                  <li key={s.name} className="flex items-start justify-between gap-3 text-[13px]">
-                    <div>
-                      <p className="font-medium text-[#1D1D1F]">{s.name}</p>
-                      <p className="text-[12px] text-[#86868B]">{s.what}</p>
-                    </div>
-                    <span className="mt-0.5 shrink-0 rounded-full bg-[#E3F1E7] px-2 py-0.5 text-[10px] font-semibold text-[#1B7F3B]">Aktiv</span>
-                  </li>
-                ))}
+                {SOURCES.map((s) => {
+                  const live = s.id ? status?.find((x) => x.id === s.id) : undefined;
+                  const down = live && !live.ok;
+                  return (
+                    <li key={s.name} className="flex items-start justify-between gap-3 text-[13px]">
+                      <div>
+                        <p className="font-medium text-[#1D1D1F]">{s.name}</p>
+                        <p className="text-[12px] text-[#86868B]">{s.what}</p>
+                      </div>
+                      <span
+                        title={live?.note}
+                        className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${down ? "bg-[#FDECEA] text-[#B3261E]" : "bg-[#E3F1E7] text-[#1B7F3B]"}`}
+                      >
+                        {!live ? "Aktiv" : down ? "Svarar inte" : `${live.count} nya`}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
               <details className="group mt-5 border-t border-[#E8E8ED] pt-4">
                 <summary className="cursor-pointer list-none text-xs font-medium text-[#234B9A]">

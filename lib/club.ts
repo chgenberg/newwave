@@ -42,6 +42,13 @@ export const IFK_GOTEBORG: Club = {
   ],
   intersportShopUrl: "https://www.intersport.se/klubbshop/ifk-goteborg",
   contactPerson: { role: "Klubbens merchandiseansvarige", channel: "e-post" },
+  sources: {
+    website: "https://ifkgoteborg.se",
+    sportsDbTeamId: "134161",
+    youtubeUser: "Kanal1904",
+    podcastSearch: ["Blåvitt", "IFK Göteborg"],
+    weather: { place: "Göteborg", lat: 57.71, lon: 11.97 },
+  },
   agent: {
     name: "Blåvitt-agenten",
     mission:

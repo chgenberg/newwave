@@ -24,8 +24,19 @@ export type Club = {
   rules: string[];
   intersportShopUrl: string;
   contactPerson: { role: string; channel: string };
+  sources: ClubSources;
   agent: ClubAgent;
 };
+
+export type ClubSources = {
+  website: string;
+  sportsDbTeamId: string;
+  youtubeUser: string;
+  podcastSearch: string[];
+  weather: { place: string; lat: number; lon: number };
+};
+
+export type SourceStatus = { id: string; name: string; ok: boolean; count: number; note?: string };
 
 export type ClubAgent = {
   name: string;
@@ -44,7 +55,7 @@ export type ClubAgent = {
 
 export type Signal = {
   id: string;
-  kind: "occasion" | "season" | "trend" | "news" | "custom" | "match";
+  kind: "occasion" | "season" | "trend" | "news" | "custom" | "match" | "club" | "social" | "podcast" | "search" | "weather";
   title: string;
   detail: string;
   date?: string;

@@ -1,34 +1,17 @@
-import { generateJson, hasOpenAIKey } from "./openai";
-import type { Club, Signal } from "./types";
+import { errorMessage, generateJson, hasOpenAIKey } from "./openai";
+import { type FeedItem, type SourceId, clubNews, clubVideos, googleNews, podcasts, searchTrends } from "./sources";
+import type { Club, Signal, SourceStatus } from "./types";
 
-type NewsItem = { title: string; source: string; url: string; published: string };
-
-const cache = new Map<string, { at: number; trends: Signal[] }>();
+const cache = new Map<string, { at: number; value: { trends: Signal[]; status: SourceStatus[] } }>();
 const TTL_MS = 30 * 60 * 1000;
 
-const decode = (s: string) =>
-  s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-
-async function fetchNews(club: Club): Promise<NewsItem[]> {
-  const q = encodeURIComponent(`${club.newsQuery} when:14d`);
-  const res = await fetch(`https://news.google.com/rss/search?q=${q}&hl=sv&gl=SE&ceid=SE:sv`, {
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Nyhetsflödet svarade ${res.status}`);
-  const xml = await res.text();
-  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 30).map(([, item]) => {
-    const tag = (t: string) => decode(item.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`))?.[1] ?? "").trim();
-    const full = tag("title");
-    const source = tag("source") || full.split(" - ").pop() || "";
-    return {
-      title: full.replace(new RegExp(`\\s-\\s${source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`), ""),
-      source,
-      url: tag("link"),
-      published: new Date(tag("pubDate")).toISOString().slice(0, 10),
-    };
-  });
-}
+const FEEDS: { id: SourceId; name: string; load: (club: Club) => Promise<FeedItem[]>; kind: Signal["kind"] }[] = [
+  { id: "news", name: "Google Nyheter", load: googleNews, kind: "trend" },
+  { id: "club", name: "Klubbens nyheter", load: clubNews, kind: "club" },
+  { id: "social", name: "Klubbens YouTube", load: clubVideos, kind: "social" },
+  { id: "podcast", name: "Supporterpoddar", load: podcasts, kind: "podcast" },
+  { id: "search", name: "Google Trends", load: () => searchTrends(), kind: "search" },
+];
 
 const trendSchema = {
   type: "object",
@@ -40,55 +23,72 @@ const trendSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "detail", "newsIndex"],
+        required: ["title", "detail", "index"],
         properties: {
           title: { type: "string" },
           detail: { type: "string" },
-          newsIndex: { type: "integer" },
+          index: { type: "integer" },
         },
       },
     },
   },
 };
 
-export async function clubTrends(club: Club): Promise<Signal[]> {
+export async function clubTrends(club: Club): Promise<{ trends: Signal[]; status: SourceStatus[] }> {
   const hit = cache.get(club.id);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.trends;
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
 
-  const news = await fetchNews(club);
-  if (news.length === 0) return [];
+  const results = await Promise.allSettled(FEEDS.map((f) => f.load(club)));
+  const status: SourceStatus[] = FEEDS.map((f, i) => {
+    const r = results[i];
+    return r.status === "fulfilled"
+      ? { id: f.id, name: f.name, ok: true, count: r.value.length }
+      : { id: f.id, name: f.name, ok: false, count: 0, note: errorMessage(r.reason) };
+  });
+  const items = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  if (items.length === 0) return { trends: [], status };
 
-  let picked: { title: string; detail: string; newsIndex: number }[];
+  const label = (id: SourceId) => FEEDS.find((f) => f.id === id)!.name.toUpperCase();
+  let picked: { title: string; detail: string; index: number }[];
   if (hasOpenAIKey()) {
     const out = await generateJson<{ trends: typeof picked }>({
-      system: `Du bevakar nyheter om ${club.name} för att hitta signaler som supportrar skulle vilja bära på en tröja eller mugg.
-Välj högst 3 POSITIVA och aktuella signaler: segersviter, viktiga segrar, jubileum, rekordpublik, tabelläge, kommande stormatcher, derbyn, supporterkultur.
-Hoppa över: skador, sjukdom, dödsfall, brott, skandaler, ekonomiska problem, spelare som lämnar, förluster och allt negativt.
+      system: `Du bevakar ${club.name} (${club.nicknames.join(", ")}) för att hitta signaler som supportrar skulle vilja bära på en tröja eller dricka ur i en mugg.
+Listan blandar fem källor. Välj högst 6 POSITIVA och aktuella signaler, gärna från olika källor:
+- GOOGLE NYHETER: segersviter, viktiga segrar, tabelläge, rekordpublik, stormatcher.
+- KLUBBENS NYHETER: jubileum, evenemang, biljettsläpp, klubbhistoria, familjedagar, supporterinitiativ.
+- KLUBBENS YOUTUBE: det som engagerar supportrarna – teman och stämningar, aldrig en enskild spelare. Hoppa över om äldre än 30 dagar.
+- SUPPORTERPODDAR: läktarens egna uttryck, skämt och stämning – bra för satir. Återge temat, inte avsnittstiteln ordagrant.
+- GOOGLE TRENDS: bara om sökningen tydligt går att koppla till fotboll, Göteborg eller något supportrar skulle göra kul merch av. Oftast hoppar du över allt här.
+Hoppa alltid över: skador, sjukdom, dödsfall, brott, skandaler, ekonomiska problem, spelare som lämnar, förluster och allt negativt.
 Nämn aldrig spelares namn – beskriv i stället vad som hänt för laget.
-title: kort signal, max 6 ord. detail: en mening om varför den är värd ett motiv just nu. newsIndex: index i listan.`,
-      user: news.map((n, i) => `${i}. [${n.published}] ${n.title} (${n.source})`).join("\n"),
+title: kort signal, max 6 ord. detail: en mening om varför den är värd ett motiv just nu. index: numret i listan.`,
+      user: items.map((n, i) => `${i}. [${label(n.sourceId)}] [${n.published}] ${n.title} (${n.source})`).join("\n"),
       schemaName: "trends",
       schema: trendSchema,
     });
     picked = out.trends;
   } else {
-    picked = news.slice(0, 2).map((n, i) => ({ title: n.title.slice(0, 60), detail: `Nyhet från ${n.source}.`, newsIndex: i }));
+    picked = items
+      .filter((n) => n.sourceId === "news" || n.sourceId === "club")
+      .slice(0, 3)
+      .map((n) => ({ title: n.title.slice(0, 60), detail: `Från ${n.source}.`, index: items.indexOf(n) }));
   }
 
   const trends: Signal[] = picked
-    .slice(0, 3)
-    .filter((t) => news[t.newsIndex])
+    .filter((t) => items[t.index])
+    .slice(0, 6)
     .map((t, i) => {
-      const n = news[t.newsIndex];
+      const n = items[t.index];
       return {
-        id: `trend-${i}-${n.published}`,
-        kind: "trend",
+        id: `${n.sourceId}-${i}-${n.published}`,
+        kind: FEEDS.find((f) => f.id === n.sourceId)!.kind,
         title: t.title,
         detail: t.detail,
         date: n.published,
         source: { name: n.source, url: n.url, published: n.published },
       };
     });
-  cache.set(club.id, { at: Date.now(), trends });
-  return trends;
+  const value = { trends, status };
+  cache.set(club.id, { at: Date.now(), value });
+  return value;
 }

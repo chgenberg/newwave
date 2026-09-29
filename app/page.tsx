@@ -6,7 +6,7 @@ import { IFKLoader, useLoader } from "@/components/IFKLoader";
 import { ProductMockup, mockupSvg } from "@/components/ProductMockup";
 import type { ArtworkResult } from "@/lib/artwork";
 import { PRINT_H, PRINT_W, composeBackPrint, composeCampaignImage, composePrintFile, loadClubCrest, qrDataUrl } from "@/lib/compose";
-import type { CatalogProduct, Club, Concept, ContentPack, RuleCheck, Signal } from "@/lib/types";
+import type { CatalogProduct, Club, Concept, ContentPack, RuleCheck, Signal, SourceStatus } from "@/lib/types";
 import { renderReel } from "@/lib/video";
 import { type PackItem, buildCampaignZip, downloadBlob } from "@/lib/zip";
 
@@ -20,7 +20,30 @@ type Suggestion = Concept & {
   status: "waiting" | "drawing" | "done" | "error" | "blocked";
   error?: string;
 };
-type SignalsResponse = { season: Signal; occasions: Signal[]; trends: Signal[]; trendError: string | null };
+type SignalsResponse = {
+  season: Signal;
+  occasions: Signal[];
+  trends: Signal[];
+  matches: Signal[];
+  weather: Signal | null;
+  sources: SourceStatus[];
+  trendError: string | null;
+};
+
+const SIGNAL_LABEL: Partial<Record<Signal["kind"], string>> = {
+  trend: "Nyheter",
+  news: "Nyhet",
+  club: "Klubben",
+  social: "YouTube",
+  podcast: "Podd",
+  search: "Sökning",
+  weather: "Väder",
+  match: "Match",
+  season: "Säsong",
+  custom: "Eget",
+};
+const signalLabel = (s: Signal) =>
+  s.kind === "match" && s.daysUntil !== undefined ? `Match om ${s.daysUntil} d` : (SIGNAL_LABEL[s.kind] ?? `Om ${s.daysUntil} dagar`);
 type ContentResult = {
   conceptId: string;
   shopUrl: string;
@@ -193,12 +216,13 @@ export default function Home() {
       const d: ClubData = await fetch(`/api/v1/clubs/${clubId}`).then((r) => r.json());
       setData(d);
       setStep("signals");
-      loader.stage(`Letar trender och högtider för ${d.club.name}`, 95, 9000);
+      loader.stage(`Lyssnar av nyheter, matcher, poddar och väder för ${d.club.name}`, 95, 14000);
       const s: SignalsResponse = await fetch(`/api/v1/signals?clubId=${clubId}`).then((r) => r.json());
-      const list = [...s.trends, ...s.occasions, s.season];
+      const list = [...s.matches, ...s.trends, ...(s.weather ? [s.weather] : []), ...s.occasions, s.season];
       setSignals(list);
       setActive(new Set(list.filter((x) => x.kind !== "occasion" || (x.daysUntil ?? 0) <= 45).map((x) => x.id)));
-      setTrendNote(s.trendError ? "Kunde inte hämta trender just nu – högtider och säsong används." : null);
+      const down = s.sources.filter((x) => !x.ok).map((x) => x.name);
+      setTrendNote(s.trendError ? "Kunde inte hämta trender just nu – högtider och säsong används." : down.length ? `Svarade inte just nu: ${down.join(", ")}.` : null);
     });
 
   const toggleSignal = (id: string) =>
@@ -553,8 +577,7 @@ export default function Home() {
                 <div className="mt-4 divide-y divide-[#F0F0F2] rounded-3xl border border-[#E8E8ED]">
                   {signals.map((s) => {
                     const on = active.has(s.id);
-                    const label =
-                      s.kind === "trend" ? "Trend" : s.kind === "season" ? "Säsong" : s.kind === "custom" ? "Eget" : s.kind === "match" ? "Match" : s.kind === "news" ? "Nyhet" : `Om ${s.daysUntil} dagar`;
+                    const label = signalLabel(s);
                     return (
                       <div
                         key={s.id}
@@ -569,7 +592,7 @@ export default function Home() {
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-3">
                             <span className={`text-[15px] font-medium ${on ? "" : "text-[#86868B]"}`}>{s.title}</span>
-                            <span className={`shrink-0 text-xs ${s.kind === "trend" || s.kind === "news" ? "font-medium text-[#234B9A]" : "text-[#86868B]"}`}>{label}</span>
+                            <span className={`shrink-0 text-xs ${s.kind === "occasion" || s.kind === "season" ? "text-[#86868B]" : "font-medium text-[#234B9A]"}`}>{label}</span>
                           </span>
                           <span className="mt-0.5 block text-[13px] leading-snug text-[#86868B]">
                             {s.detail}

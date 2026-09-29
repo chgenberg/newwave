@@ -61,6 +61,12 @@ Tänk bästsäljare, inte reklam: varje förslag ska ha EN stark idé som suppor
 
 Ta fram exakt ${SUGGESTIONS} förslag. Sprid dem över signalerna – varje signal ska få minst ett förslag om det finns plats, trender och högtider nära i tid prioriteras.
 Variera stilen: humor/göteborgsk ordvits, retro, typografiskt minimalistiskt, illustrativt.
+Så använder du signalerna efter typ:
+- [match]: nästa match eller färsk seger – skarpast i tid, prioritera högt. Mot en rival passar satirläget.
+- [podcast]: läktarens egna uttryck och skämt – bästa underlaget för satir och ordvitsar.
+- [club]: klubbens egna evenemang och historia – stolthet och nostalgi.
+- [weather]: styr främst produktvalet (products), inte motivet. Kallt eller regn ger hoodie, varmt ger t-tröja.
+- [search]: använd bara om kopplingen till klubben är självklar.
 
 Fält:
 - signal: exakt titeln på signalen förslaget bygger på.
