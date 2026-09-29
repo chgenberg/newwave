@@ -45,6 +45,24 @@ async function mockupPng(product: CatalogProduct, printUrl: string) {
   return canvas.toDataURL("image/png");
 }
 
+const SOURCES = [
+  { name: "Google Nyheter", what: "Svensk press om klubben, senaste 14 dagarna" },
+  { name: "Svensk kalender", what: "Högtider, säsong och fotbollsåret" },
+  { name: "Matchresultat", what: "Segrar och derbyn triggar nya motiv" },
+  { name: "ifkgoteborg.se", what: "Sköld, färger och typsnitt" },
+  { name: "Valfri nyhetslänk", what: "Klistra in en URL i manuellt läge" },
+];
+
+const NEXT_SOURCES = [
+  { name: "Intersports försäljningsdata", what: "Agenten lär sig vad som faktiskt säljer" },
+  { name: "Klubbens egna nyheter", what: "ifkgoteborg.se – jubileum, värvningar, evenemang" },
+  { name: "Spelschema och live-resultat", what: "Allsvenskan via t.ex. API-Football eller Sportmonks" },
+  { name: "Klubbens sociala kanaler", what: "Inlägg som engagerar supportrarna mest" },
+  { name: "Google Trends", what: "Vad supportrar söker på just nu" },
+  { name: "Supporterpoddar och forum", what: "Läktarens egna skämt och uttryck" },
+  { name: "SMHI väder", what: "Hoodies när det blir kallt, tröjor i solen" },
+];
+
 const ICON: Record<Entry["kind"], string> = {
   start: "●",
   signal: "◎",
@@ -270,39 +288,62 @@ export default function Autopilot() {
                   <h2 className="text-lg font-semibold">{club.agent.name}</h2>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-[#3A3A3C]">{club.agent.mission}</p>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-[#86868B]">Riktlinjer</p>
-              <ul className="mt-2 space-y-1.5 text-[13px] text-[#3A3A3C]">
-                {club.agent.guidelines.map((g) => (
-                  <li key={g} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#234B9A]" />{g}</li>
+              <ul className="mt-5 space-y-2 text-[13px] text-[#3A3A3C]">
+                <li className="flex gap-2"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#234B9A]" />Bara {club.shortName}:s färger och symboler</li>
+                {club.agent.satire.allowed && (
+                  <li className="flex gap-2"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#FBC323]" />Satir tillåten vid derbyn – aldrig rivalens sköld</li>
+                )}
+                <li className="flex gap-2">
+                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#1B7F3B]" />
+                  Publicerar bara det som får minst {club.agent.review.minSales}/10
+                </li>
+              </ul>
+              <details className="group mt-4">
+                <summary className="cursor-pointer list-none text-xs font-medium text-[#234B9A]">
+                  <span className="group-open:hidden">Visa alla riktlinjer</span>
+                  <span className="hidden group-open:inline">Dölj riktlinjer</span>
+                </summary>
+                <ul className="mt-3 space-y-1.5 text-[12px] leading-snug text-[#6E6E73]">
+                  {[...club.agent.guidelines, ...(club.agent.satire.allowed ? club.agent.satire.rules : [])].map((g) => (
+                    <li key={g}>{g}</li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+
+            <div className="mt-4 rounded-3xl border border-[#E8E8ED] p-6">
+              <p className="text-xs uppercase tracking-wider text-[#86868B]">Källor</p>
+              <ul className="mt-3 space-y-2.5">
+                {SOURCES.map((s) => (
+                  <li key={s.name} className="flex items-start justify-between gap-3 text-[13px]">
+                    <div>
+                      <p className="font-medium text-[#1D1D1F]">{s.name}</p>
+                      <p className="text-[12px] text-[#86868B]">{s.what}</p>
+                    </div>
+                    <span className="mt-0.5 shrink-0 rounded-full bg-[#E3F1E7] px-2 py-0.5 text-[10px] font-semibold text-[#1B7F3B]">Aktiv</span>
+                  </li>
                 ))}
               </ul>
-              {club.agent.satire.allowed && (
-                <>
-                  <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-[#86868B]">Undantag: satir och memes</p>
-                  <p className="mt-1 text-[13px] text-[#3A3A3C]">{club.agent.satire.when}</p>
-                  <ul className="mt-2 space-y-1.5 text-[13px] text-[#3A3A3C]">
-                    {club.agent.satire.rules.map((g) => (
-                      <li key={g} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#FBC323]" />{g}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-[#86868B]">Granskarens gräns</p>
-              <p className="mt-1 text-[13px] text-[#3A3A3C]">
-                Motiv med minst {club.agent.review.minMotifSales}/10 går vidare till fotografering på modell. Bara foton med minst{" "}
-                {club.agent.review.minSales}/10 i säljbarhet, {club.agent.review.minRealism}/10 i realism och {club.agent.review.minBrandFit}/10 i
-                varumärkespassning publiceras. Allt under revideras en gång – annars publiceras det inte.
-              </p>
+              <details className="group mt-5 border-t border-[#E8E8ED] pt-4">
+                <summary className="cursor-pointer list-none text-xs font-medium text-[#234B9A]">
+                  <span className="group-open:hidden">Kan läggas till ({NEXT_SOURCES.length})</span>
+                  <span className="hidden group-open:inline">Dölj</span>
+                </summary>
+                <ul className="mt-3 space-y-2.5">
+                  {NEXT_SOURCES.map((s) => (
+                    <li key={s.name} className="text-[13px]">
+                      <p className="font-medium text-[#1D1D1F]">{s.name}</p>
+                      <p className="text-[12px] text-[#86868B]">{s.what}</p>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           </aside>
 
           <section>
             <h1 className="text-4xl font-semibold tracking-tight">Autopilot.</h1>
-            <p className="mt-3 max-w-xl text-[17px] text-[#86868B]">
-              Klubben gör ingenting. Agenten hittar tillfällena, skapar motiven, fotograferar dem på modeller, låter granskaren
-              betygsätta och publicerar det bästa direkt i klubbshoppen hos Intersport.
-            </p>
+            <p className="mt-3 max-w-xl text-[17px] text-[#86868B]">Klubben gör ingenting. Agenten sköter resten.</p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button
                 type="button"
