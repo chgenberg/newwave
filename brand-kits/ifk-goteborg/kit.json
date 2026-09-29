@@ -1,0 +1,42 @@
+{
+  "club": "IFK Göteborg",
+  "tagline": "Hela stadens lag",
+  "crest": {
+    "aspect": 0.6575,
+    "variants": {
+      "farg": {
+        "svg": "skold-farg.svg",
+        "png": "skold-farg.png",
+        "use": "Standard på vita och ljusa plagg samt i digitala kanaler"
+      },
+      "svart": {
+        "svg": "skold-svart.svg",
+        "png": "skold-svart.png",
+        "use": "Tryck i en färg på ljusa plagg"
+      },
+      "vit": {
+        "svg": "skold-vit.svg",
+        "png": "skold-vit.png",
+        "use": "Tryck i en färg på mörka plagg"
+      }
+    },
+    "colors": {
+      "guld": "#FBC323",
+      "sköldblå": "#197BC4",
+      "vit": "#FFFFFF"
+    }
+  },
+  "colors": {
+    "primary": "#234B9A",
+    "primaryDark": "#1A3770",
+    "crestBlue": "#197BC4",
+    "gold": "#FBC323",
+    "white": "#FFFFFF",
+    "black": "#0A0A0A"
+  },
+  "fonts": {
+    "brand": "Akkurat / Akkurat Black (licensierat, ej nedladdat)",
+    "web": "Source Sans Pro"
+  },
+  "source": "https://ifkgoteborg.se – insamlat för lokal demo"
+}

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createConcepts, demoConcepts } from "@/lib/agents";
 import { produceArtwork } from "@/lib/artwork";
 import { CLUBS } from "@/lib/club";
+import { publicOrigin } from "@/lib/origin";
 import { saveDrop } from "@/lib/drops";
 import { sendSms } from "@/lib/notify";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     );
 
     const id = crypto.randomUUID();
-    const origin = new URL(req.url).origin;
+    const origin = publicOrigin(req);
     const approveUrl = `${origin}/?drop=${id}`;
     const ready = suggestions.filter((s) => s.artwork?.passed).length;
     const text = `${club.nicknames[0]} ${result === "seger" ? "vann" : "tog en poäng"} ${score} mot ${opponent}! ${ready} motiv är klara för klubbshoppen. Välj och godkänn: ${approveUrl}`;

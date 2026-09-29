@@ -2,6 +2,7 @@ import { z } from "zod";
 import { productById } from "@/lib/catalog";
 import { CLUBS } from "@/lib/club";
 import { MOCK_API_KEY } from "@/lib/intersport";
+import { internalOrigin, publicOrigin } from "@/lib/origin";
 import { ConceptSchema, fileUrl } from "@/lib/schemas";
 
 export const maxDuration = 60;
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
     return Response.json({ published: 0, reason: "Inga foton nådde granskarens gräns – inget publicerades." });
   }
 
-  const origin = new URL(req.url).origin;
+  const origin = publicOrigin(req);
   const products = concept.products
     .map(productById)
     .filter((p) => p !== undefined && p.kind !== "mug" && mockups[p.id])
@@ -47,9 +48,9 @@ export async function POST(req: Request) {
       sizes: p!.sizes,
       images: [
         ...(p!.id === PHOTO_GARMENT
-          ? approved.map((ph) => ({ url: `${origin}${ph.url}`, alt: `${concept.slogan} – ${ph.label}`, kind: "foto" as const }))
+          ? approved.map((ph) => ({ url: ph.url, alt: `${concept.slogan} – ${ph.label}`, kind: "foto" as const }))
           : []),
-        { url: `${origin}${mockups[p!.id]}`, alt: `${p!.name} ${p!.garmentColor}`, kind: "mockup" as const },
+        { url: mockups[p!.id], alt: `${p!.name} ${p!.garmentColor}`, kind: "mockup" as const },
       ],
       printFileUrl: `${origin}${p!.dark ? printFiles.dark : printFiles.light}`,
       fulfilment: "print-on-demand" as const,
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
       tags: [club.shortName, ...club.nicknames, concept.signal, concept.mode === "satir" ? "Satir" : "Klubbmerch"],
     }));
 
-  const res = await fetch(`${origin}/api/mock-intersport/v1/club-shops/${club.id}/products`, {
+  const res = await fetch(`${internalOrigin(req)}/api/mock-intersport/v1/club-shops/${club.id}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${MOCK_API_KEY}` },
     body: JSON.stringify({ products }),

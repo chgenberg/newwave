@@ -28,6 +28,13 @@ npm run dev
 - `app/match` + `app/api/v1/webhooks/match-result` – drop vid slutsignal med sms för godkännande (Twilio valfritt).
 - `lib/zip.ts` – zip-paketet med foton, film, bilder, texter, affisch, publiceringsplan och guiden "SÅ HÄR GÖR DU".
 
+## Railway
+
+Miljövariabler: `OPENAI_API_KEY`, `OPENAI_TEXT_MODEL`, `OPENAI_IMAGE_MODEL`, `OPENAI_IMAGE_QUALITY`,
+`DEMO_PASSWORD` (lösenordsskydd, valfritt användarnamn) och `INTERSPORT_API_KEY` (nyckel för det simulerade Intersport-API:t).
+Genererade filer sparas i `.data/` – montera en volym på `/app/.data` för att behålla dem mellan driftsättningar.
+Sköldfilerna ligger i `brand-kits/` som reserv.
+
 ## Klubbens grafiska profil (lokal demo)
 
 ```bash

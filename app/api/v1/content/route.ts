@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createContentPack, demoContentPack } from "@/lib/agents";
 import { productById } from "@/lib/catalog";
 import { CLUBS } from "@/lib/club";
+import { publicOrigin } from "@/lib/origin";
 import { trackedLinks } from "@/lib/links";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
 import { personalizationRules } from "@/lib/personalize";
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Ett motiv bryter mot klubbens regelbok" }, { status: 422 });
   }
 
-  const origin = new URL(req.url).origin;
+  const origin = publicOrigin(req);
   const today = new Date().toISOString().slice(0, 10);
   const mode = hasOpenAIKey() ? "ai" : "demo";
 
