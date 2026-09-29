@@ -635,7 +635,7 @@ export default function Home() {
                         return next;
                       })
                     }
-                    className={`group relative overflow-hidden rounded-3xl text-left transition ${on ? "ring-2 ring-[#234B9A]" : "ring-1 ring-[#E8E8ED] hover:ring-[#C7C7CC]"} disabled:cursor-default`}
+                    className={`group relative flex flex-col justify-start overflow-hidden rounded-3xl text-left transition ${on ? "ring-2 ring-[#234B9A]" : "ring-1 ring-[#E8E8ED] hover:ring-[#C7C7CC]"} disabled:cursor-default`}
                   >
                     <div className="relative aspect-square bg-[#F5F5F7]">
                       {s.preview && (
