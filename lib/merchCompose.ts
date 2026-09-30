@@ -1,4 +1,5 @@
 import { loadImage } from "./compose";
+import { apply, invert, squareToQuad, type Point } from "./homography";
 import type { LibraryEntry, MerchProduct } from "./merch";
 
 function trimmed(img: HTMLImageElement) {
@@ -29,27 +30,73 @@ function trimmed(img: HTMLImageElement) {
   return out;
 }
 
-function fitArt(art: HTMLCanvasElement, box: LibraryEntry["box"], curved: boolean, coverage: number) {
-  const scale = Math.min((box.w * coverage) / art.width, (box.h * coverage) / art.height);
-  const w = Math.max(1, Math.round(art.width * scale));
-  const h = Math.max(1, Math.round(art.height * scale));
+function scaled(art: HTMLCanvasElement, w: number, h: number) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
   const ctx = c.getContext("2d")!;
-  if (!curved) {
-    ctx.drawImage(art, 0, 0, w, h);
-  } else {
-    const k = 0.9;
-    const norm = Math.asin(k);
-    for (let dx = 0; dx < w; dx++) {
-      const u = (dx / (w - 1 || 1)) * 2 - 1;
-      const sx = ((Math.asin(u * k) / norm + 1) / 2) * (art.width - 1);
-      ctx.drawImage(art, Math.floor(sx), 0, 1, art.height, dx, 0, 1, h);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(art, 0, 0, w, h);
+  return ctx.getImageData(0, 0, w, h);
+}
+
+/** Bilinear sample with alpha-weighted colour so edges don't pick up dark fringes. */
+function sample(img: ImageData, x: number, y: number, out: number[]) {
+  const { width: w, height: h, data } = img;
+  out[0] = out[1] = out[2] = out[3] = 0;
+  if (x < -1 || y < -1 || x > w || y > h) return;
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const fx = x - x0, fy = y - y0;
+  let r = 0, g = 0, b = 0, a = 0;
+  for (let j = 0; j < 2; j++) {
+    const yy = y0 + j;
+    if (yy < 0 || yy >= h) continue;
+    const wy = j ? fy : 1 - fy;
+    for (let i = 0; i < 2; i++) {
+      const xx = x0 + i;
+      if (xx < 0 || xx >= w) continue;
+      const wgt = (i ? fx : 1 - fx) * wy;
+      const k = (yy * w + xx) * 4;
+      const al = data[k + 3] * wgt;
+      r += data[k] * al;
+      g += data[k + 1] * al;
+      b += data[k + 2] * al;
+      a += al;
     }
   }
-  return c;
+  if (a <= 0) return;
+  out[0] = r / a;
+  out[1] = g / a;
+  out[2] = b / a;
+  out[3] = a / 255;
 }
+
+function blurred(lum: Float32Array, w: number, h: number, r: number) {
+  const tmp = new Float32Array(w * h);
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    let acc = 0;
+    for (let x = -r; x <= r; x++) acc += lum[y * w + Math.min(w - 1, Math.max(0, x))];
+    for (let x = 0; x < w; x++) {
+      tmp[y * w + x] = acc / (2 * r + 1);
+      acc += lum[y * w + Math.min(w - 1, x + r + 1)] - lum[y * w + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = acc / (2 * r + 1);
+      acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+const smoothstep = (a: number, b: number, v: number) => {
+  const t = Math.min(1, Math.max(0, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 export async function composeMerch(opts: {
   product: MerchProduct;
@@ -59,6 +106,8 @@ export async function composeMerch(opts: {
   size?: number;
 }): Promise<string> {
   const { product, entry } = opts;
+  const { box } = entry;
+  const surface = product.surface;
   const [blank, artImg] = await Promise.all([loadImage(opts.blankUrl), loadImage(opts.artUrl)]);
   const W = entry.width;
   const H = entry.height;
@@ -68,38 +117,133 @@ export async function composeMerch(opts: {
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(blank, 0, 0, W, H);
 
-  const art = fitArt(trimmed(artImg), entry.box, product.curved, product.art === "crest" ? 0.85 : 0.92);
-  const ox = Math.round(entry.box.x + (entry.box.w - art.width) / 2);
-  const oy = Math.round(entry.box.y + (entry.box.h - art.height) / 2);
-  const base = ctx.getImageData(ox, oy, art.width, art.height);
-  const ink = art.getContext("2d")!.getImageData(0, 0, art.width, art.height).data;
+  const art = trimmed(artImg);
+  const coverage = product.art === "crest" ? 0.85 : surface.kind === "cylinder" ? 0.98 : 0.92;
+  const quad = surface.kind === "flat" && entry.quad?.length === 4 ? (entry.quad.map(([x, y]) => ({ x, y })) as [Point, Point, Point, Point]) : null;
+  const len = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+  const faceW = quad ? (len(quad[0], quad[1]) + len(quad[3], quad[2])) / 2 : box.w;
+  const faceH = quad ? (len(quad[0], quad[3]) + len(quad[1], quad[2])) / 2 : box.h;
+  const R = surface.kind === "cylinder" ? surface.radius * box.w : 0;
+  const maxWidth = R ? 2 * R * Math.asin(Math.min(0.9, (box.w * coverage) / (2 * R))) : faceW * coverage;
+  const k = Math.min(maxWidth / art.width, (faceH * coverage) / art.height);
+  const aw = Math.max(1, Math.round(art.width * k));
+  const ah = Math.max(1, Math.round(art.height * k));
+  const src = scaled(art, aw, ah);
+
+  const cx = box.x + box.w / 2;
+  const top = box.y + (box.h - ah) / 2;
+  const halfW = R ? R * Math.sin(aw / (2 * R)) : aw / 2;
+  const lift = surface.kind === "cylinder" ? surface.sag * R : 0;
+  const fold = surface.kind === "fabric" ? 10 : 0;
+  const toFace = quad ? invert(squareToQuad(quad)) : null;
+  const [rx0, rx1, ry0, ry1] = quad
+    ? [
+        Math.max(0, Math.floor(Math.min(...quad.map((q) => q.x)))),
+        Math.min(W, Math.ceil(Math.max(...quad.map((q) => q.x)))),
+        Math.max(0, Math.floor(Math.min(...quad.map((q) => q.y)))),
+        Math.min(H, Math.ceil(Math.max(...quad.map((q) => q.y)))),
+      ]
+    : [
+        Math.max(0, Math.floor(cx - halfW - fold - 2)),
+        Math.min(W, Math.ceil(cx + halfW + fold + 2)),
+        Math.max(0, Math.floor(top - lift - fold - 2)),
+        Math.min(H, Math.ceil(top + ah + fold + 2)),
+      ];
+  const rw = rx1 - rx0;
+  const rh = ry1 - ry0;
+  const base = ctx.getImageData(rx0, ry0, rw, rh);
   const px = base.data;
 
-  const lum = (i: number) => 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-  const samples: number[] = [];
-  for (let i = 0; i < px.length; i += 4 * 7) samples.push(lum(i));
-  samples.sort((a, b) => a - b);
-  const ref = samples[Math.floor(samples.length * 0.7)] || 230;
+  const lum = new Float32Array(rw * rh);
+  for (let i = 0; i < lum.length; i++) lum[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+  const soft = surface.kind === "fabric" ? blurred(lum, rw, rh, Math.max(3, Math.round(box.w / 45))) : null;
 
   const engraved = product.finish !== "print";
   const tone = engraved ? (product.engraveInk ?? "rgba(120,120,125,0.35)").match(/[\d.]+/g)!.map(Number) : null;
+  const knockWhite = !engraved && product.variant === "light";
+  const embroidered = product.art === "crest";
+  const s = [0, 0, 0, 0];
+  const shadow = [0, 0, 0, 0];
 
-  for (let i = 0; i < px.length; i += 4) {
-    const a = ink[i + 3] / 255;
-    if (a <= 0.02) continue;
-    const x = (i / 4) % art.width;
-    const edge = product.curved ? 1 - 0.28 * Math.pow(Math.abs((x / art.width) * 2 - 1), 3) : 1;
-    if (tone) {
-      const inkLum = (0.299 * ink[i] + 0.587 * ink[i + 1] + 0.114 * ink[i + 2]) / 255;
-      const strength = a * tone[3] * (1 - inkLum * 0.35) * edge;
-      for (let c = 0; c < 3; c++) px[i + c] = Math.round(tone[c] * strength + px[i + c] * (1 - strength));
+  const at = [0, 0, 1];
+  const mapTo = (x: number, y: number, ref: number) => {
+    const X = rx0 + x + 0.5;
+    const Y = ry0 + y + 0.5;
+    let ax: number, ay: number, density = 1;
+    if (surface.kind === "cylinder") {
+      const u = (X - cx) / R;
+      if (Math.abs(u) >= 1) return false;
+      const theta = Math.asin(u);
+      const cos = Math.cos(theta);
+      ax = theta * R + aw / 2;
+      ay = Y - top + lift * (1 - cos);
+      density = smoothstep(0.08, 0.4, cos) * (0.82 + 0.18 * cos);
+    } else if (soft) {
+      const i = y * rw + x;
+      const gx = (soft[y * rw + Math.min(rw - 1, x + 1)] - soft[y * rw + Math.max(0, x - 1)]) / 2;
+      const gy = (soft[Math.min(rh - 1, y + 1) * rw + x] - soft[Math.max(0, y - 1) * rw + x]) / 2;
+      const f = (surface as { folds: number }).folds * 2.2;
+      ax = X - (cx - aw / 2) + Math.max(-fold, Math.min(fold, gx * f));
+      ay = Y - top + Math.max(-fold, Math.min(fold, gy * f + ((soft[i] - ref) / 255) * box.w * 0.012));
+    } else if (toFace) {
+      const f = apply(toFace, X, Y);
+      if (f.x < 0 || f.x > 1 || f.y < 0 || f.y > 1) return false;
+      ax = (f.x - 0.5) * faceW + aw / 2;
+      ay = (f.y - 0.5) * faceH + ah / 2;
     } else {
-      const shade = Math.min(1.1, Math.max(0.45, lum(i) / ref)) * edge;
-      const alpha = a * 0.96;
-      for (let c = 0; c < 3; c++) px[i + c] = Math.round(Math.min(255, ink[i + c] * shade) * alpha + px[i + c] * (1 - alpha));
+      ax = X - (cx - aw / 2);
+      ay = Y - top;
+    }
+    at[0] = ax;
+    at[1] = ay;
+    at[2] = density;
+    return true;
+  };
+
+  let ref = 230;
+  const footprint: number[] = [];
+  for (let y = 0; y < rh; y += 3) {
+    for (let x = 0; x < rw; x += 3) {
+      if (!mapTo(x, y, 0)) continue;
+      sample(src, at[0] - 0.5, at[1] - 0.5, s);
+      if (s[3] > 0.1) footprint.push(lum[y * rw + x]);
     }
   }
-  ctx.putImageData(base, ox, oy);
+  if (footprint.length) ref = footprint.sort((a, b) => a - b)[Math.floor(footprint.length * 0.7)];
+
+  for (let y = 0; y < rh; y++) {
+    for (let x = 0; x < rw; x++) {
+      if (!mapTo(x, y, ref)) continue;
+      sample(src, at[0] - 0.5, at[1] - 0.5, s);
+      let a = s[3] * at[2];
+      if (embroidered && a < 0.98) {
+        sample(src, at[0] - 1.5, at[1] - 3, shadow);
+        const p = (y * rw + x) * 4;
+        const dim = 1 - 0.35 * shadow[3] * (1 - a);
+        for (let c = 0; c < 3; c++) px[p + c] *= dim;
+      }
+      if (a <= 0.02) continue;
+      if (knockWhite) a *= 1 - smoothstep(0.82, 0.96, Math.min(s[0], s[1], s[2]) / 255);
+      if (a <= 0.02) continue;
+      const p = (y * rw + x) * 4;
+      if (tone) {
+        const inkLum = (0.299 * s[0] + 0.587 * s[1] + 0.114 * s[2]) / 255;
+        const strength = a * tone[3] * (1 - inkLum * 0.35);
+        for (let c = 0; c < 3; c++) px[p + c] = Math.round(tone[c] * strength + px[p + c] * (1 - strength));
+      } else {
+        const l = lum[y * rw + x];
+        const shade = embroidered
+          ? Math.min(1.15, Math.max(0.55, 0.9 + ((l - ref) / ref) * 1.6))
+          : Math.min(1.08, Math.max(0.3, l / ref));
+        const alpha = a * 0.95;
+        for (let c = 0; c < 3; c++) {
+          const ink = knockWhite ? (s[c] / 255) * px[p + c] * Math.min(1, 255 / ref) : Math.min(255, s[c] * shade);
+          px[p + c] = Math.round(ink * alpha + px[p + c] * (1 - alpha));
+        }
+      }
+    }
+  }
+  ctx.putImageData(base, rx0, ry0);
 
   const all = ctx.getImageData(0, 0, W, H);
   const d = all.data;
