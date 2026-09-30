@@ -11,14 +11,23 @@ const SANS = `-apple-system, "Helvetica Neue", Arial, sans-serif`;
 
 export type PrintVariant = "light" | "dark";
 
-export function loadImage(src: string) {
+export function loadImage(src: string, timeoutMs = 20000) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Kunde inte ladda bild"));
+    const timer = setTimeout(() => reject(new Error("Bilden laddades inte i tid")), timeoutMs);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Kunde inte ladda bild"));
+    };
     img.src = src;
   });
 }
+
+export const fontsReady = () => Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]);
 
 export const svgToDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
@@ -112,7 +121,7 @@ export async function composePrintFile(opts: {
   primary: string;
   scale?: number;
 }) {
-  await document.fonts.ready;
+  await fontsReady();
   const s = opts.scale ?? 1;
   const W = Math.round(PRINT_W * s), H = Math.round(PRINT_H * s), k = K * s;
   const { canvas, ctx } = newCanvas(W, H);
@@ -152,7 +161,7 @@ export async function composeBackPrint(opts: {
   clubName: string;
   scale?: number;
 }) {
-  await document.fonts.ready;
+  await fontsReady();
   const s = opts.scale ?? 1;
   const W = Math.round(PRINT_W * s), H = Math.round(PRINT_H * s), k = K * s;
   const { canvas, ctx } = newCanvas(W, H);
@@ -183,7 +192,7 @@ export async function composeCampaignImage(opts: {
   primary: string;
   qr?: { dataUrl: string; caption: string };
 }) {
-  await document.fonts.ready;
+  await fontsReady();
   const { width: W, height: H, font } = opts;
   const { canvas, ctx } = newCanvas(W, H);
   ctx.fillStyle = opts.primary;

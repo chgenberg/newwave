@@ -1,7 +1,7 @@
 "use client";
 
 import { MOCKUP_ASPECT } from "@/components/ProductMockup";
-import { brandFont, drawCrest, fitLines, loadImage, svgToDataUrl } from "./compose";
+import { brandFont, drawCrest, fitLines, fontsReady, loadImage, svgToDataUrl } from "./compose";
 
 const W = 1080;
 const H = 1920;
@@ -27,7 +27,7 @@ export async function renderReel(opts: {
   font: string;
   primary: string;
 }): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
-  await document.fonts.ready;
+  await fontsReady();
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;

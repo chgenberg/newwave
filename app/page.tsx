@@ -70,7 +70,6 @@ type PendingDrop = {
 const STEPS: Step[] = ["club", "signals", "prints", "collage", "content"];
 const MAX_SIGNALS = 3;
 const PRINTS = 3;
-const IMAGE_CONCURRENCY = 4;
 const PREVIEW_SCALE = 0.25;
 
 async function post<T>(url: string, body: unknown): Promise<T> {
@@ -276,30 +275,10 @@ export default function Home() {
     }
   };
 
-  const drawArtworks = async (list: Suggestion[], id: number, c: Club) => {
-    const queue = list.filter((s) => s.status === "waiting");
-    const update = (sid: string, patch: Partial<Suggestion>) =>
-      runId.current === id && setSuggestions((prev) => prev.map((s) => (s.id === sid ? { ...s, ...patch } : s)));
-
-    const worker = async () => {
-      for (let s = queue.shift(); s; s = queue.shift()) {
-        update(s.id, { status: "drawing" });
-        try {
-          const artwork = await post<ArtworkResult>("/api/v1/artwork", { clubId: c.id, concept: conceptOnly(s) });
-          const preview = await previewFor(c, s, artwork.url);
-          update(s.id, { status: artwork.passed ? "done" : "blocked", artwork, preview });
-        } catch (e) {
-          update(s.id, { status: "error", error: e instanceof Error ? e.message : String(e) });
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: IMAGE_CONCURRENCY }, worker));
-  };
-
   const goSuggestions = (only?: Signal[]) =>
     guard("Läser signalerna", async () => {
-      const id = ++runId.current;
-      loader.stage("Tar fram tre tryck inom klubbens ramar", 96, 26000);
+      ++runId.current;
+      loader.stage("Tar fram tre idéer inom klubbens ramar", 96, 18000);
       const chosen = only ?? signals.filter((s) => active.has(s.id));
       if (only) setActive(new Set(only.map((s) => s.id)));
       const res = await post<{ concepts: (Concept & { checks: RuleCheck[] })[] }>("/api/v1/concepts", {
@@ -309,28 +288,39 @@ export default function Home() {
       });
       const list: Suggestion[] = res.concepts.map((c) => ({
         ...c,
-        status: c.checks.every((r) => r.ok) ? "waiting" : "blocked",
+        status: c.checks.every((r) => r.ok) ? "done" : "blocked",
       }));
       setSuggestions(list);
       setChosenId(null);
       setFromMatch(null);
       setStep("prints");
-      setBusy(false);
-      loader.done();
-      void drawArtworks(list, id, club!);
     });
 
   const goCollage = () =>
     guard("Förbereder trycket", async () => {
       const c = club!;
-      const s = suggestions.find((x) => x.id === chosenId && x.status === "done" && x.artwork);
-      if (!s) return;
+      const picked = suggestions.find((x) => x.id === chosenId && x.status === "done");
+      if (!picked) return;
       const id = ++runId.current;
       const primary = c.palette[0].hex;
       const font = displayFont();
       await loadClubCrest(c.id);
 
-      loader.stage("Gör tryckfiler i 300 dpi", 40, 5000);
+      let s = picked;
+      if (!s.artwork) {
+        loader.stage("Ritar trycket och kontrollerar klubbens ramar", 60, 30000);
+        const artwork = await post<ArtworkResult>("/api/v1/artwork", { clubId: c.id, concept: conceptOnly(s) });
+        const preview = await previewFor(c, s, artwork.url);
+        s = { ...s, artwork, preview, status: artwork.passed ? "done" : "blocked" };
+        const updated = s;
+        setSuggestions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        if (!artwork.passed) {
+          const why = artwork.imageChecks.filter((x) => !x.ok).map((x) => x.rule).join(", ");
+          throw new Error(`Trycket stoppades av klubbens ramar (${why}). Välj ett annat eller be om nya tryck.`);
+        }
+      }
+
+      loader.stage("Gör tryckfiler i 300 dpi", 72, 5000);
       const base = { artworkUrl: s.artwork!.url, slogan: s.slogan, footer: `${c.name} · ${c.arena}`, font, primary };
       const light = await composePrintFile({ ...base, variant: "light" });
       const dark = await composePrintFile({ ...base, variant: "dark" });
@@ -480,7 +470,6 @@ export default function Home() {
     });
 
   const stepIndex = STEPS.indexOf(step);
-  const drawing = suggestions.some((s) => s.status === "waiting" || s.status === "drawing");
   const chosen = suggestions.find((s) => s.id === chosenId && s.status === "done");
 
   return (
@@ -685,9 +674,9 @@ export default function Home() {
 
         {step === "prints" && club && (
           <div className="mt-[6vh] w-full max-w-5xl">
-            <h1 className="text-center text-4xl font-semibold tracking-tight">{fromMatch ? "Efter slutsignalen." : "Tre tryck."}</h1>
+            <h1 className="text-center text-4xl font-semibold tracking-tight">{fromMatch ? "Efter slutsignalen." : "Tre idéer."}</h1>
             <p className="mt-3 text-center text-[17px] text-[#86868B]">
-              {fromMatch ?? (drawing ? "Trycken ritas och kontrolleras just nu." : "Välj det du gillar mest.")}
+              {fromMatch ?? "Välj en idé – vi ritar trycket och lägger det på produkterna."}
             </p>
             <div className="mt-12 flex flex-wrap justify-center gap-6">
               {suggestions.map((s) => {
@@ -705,13 +694,25 @@ export default function Home() {
                     <div
                       className={`relative aspect-square w-full overflow-hidden rounded-[28px] bg-[#F5F5F7] transition ${on ? "ring-2 ring-[#234B9A] ring-offset-4" : "group-enabled:group-hover:bg-[#EFEFF2]"}`}
                     >
-                      {s.preview && (
+                      {s.preview ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={s.preview}
                           alt={s.slogan}
                           className={`absolute inset-0 h-full w-full object-contain p-9 transition duration-500 group-enabled:group-hover:scale-[1.03] ${s.status === "blocked" ? "opacity-30" : ""}`}
                         />
+                      ) : (
+                        <div
+                          className={`absolute inset-0 flex flex-col items-center justify-center px-8 text-center transition duration-500 group-enabled:group-hover:scale-[1.03] ${s.status === "blocked" ? "opacity-30" : ""}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`/api/v1/brand/${club.id}/${club.brand.crest.farg}`} alt="" className="h-12 w-auto" />
+                          <p className="mt-5 font-display text-[28px] uppercase leading-[1.02] text-[#234B9A]">{s.slogan}</p>
+                          <p className="mt-4 line-clamp-3 text-[13px] leading-snug text-[#6E6E73]">{s.story}</p>
+                          {s.mode === "satir" && (
+                            <span className="mt-3 rounded-full bg-[#FBC323] px-2 py-0.5 text-[10px] font-semibold uppercase">Satir</span>
+                          )}
+                        </div>
                       )}
                       {(s.status === "waiting" || s.status === "drawing") && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-[#86868B]">
@@ -735,7 +736,7 @@ export default function Home() {
                       )}
                     </div>
                     <p className="mt-4 px-1 text-xs text-[#86868B]">{s.signal}</p>
-                    <p className="mt-0.5 px-1 font-display text-xl uppercase leading-tight text-[#234B9A]">{s.slogan}</p>
+                    <p className="mt-0.5 px-1 text-[13px] text-[#3A3A3C]">{s.title}</p>
                   </button>
                 );
               })}
@@ -745,10 +746,10 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => goSuggestions()}
-                  disabled={busy || drawing}
+                  disabled={busy}
                   className="h-12 rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED] disabled:opacity-50"
                 >
-                  Nya tryck
+                  Nya idéer
                 </button>
               )}
               <PrimaryButton onClick={goCollage} disabled={!chosen} loading={busy}>
