@@ -9,13 +9,14 @@ export const maxDuration = 300;
 const Body = z.object({
   productId: z.string().refine((id) => LOGO_PRODUCT_IDS.includes(id)),
   logo: z.object({ light: fileUrl, dark: fileUrl }),
+  finish: z.enum(["print", "engrave"]).default("print"),
 });
 
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   try {
-    return Response.json({ photos: await logoPhotos(parsed.data.productId, parsed.data.logo) });
+    return Response.json({ photos: await logoPhotos(parsed.data.productId, parsed.data.logo, parsed.data.finish) });
   } catch (err) {
     return Response.json({ error: errorMessage(err) }, { status: 502 });
   }

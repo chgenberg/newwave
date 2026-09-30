@@ -4,7 +4,7 @@ import JSZip from "jszip";
 import { type CSSProperties, useRef, useState } from "react";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
 import type { LogoResult } from "@/lib/logo";
-import { LOGO_PRODUCTS, type LogoProduct } from "@/lib/logoMerch";
+import { ENGRAVABLE, LOGO_PRODUCTS, type LogoFinish, type LogoProduct, withFinish } from "@/lib/logoMerch";
 import type { LogoPhoto } from "@/lib/logoPhotos";
 import type { ProductLibrary } from "@/lib/merch";
 import { composeMerch } from "@/lib/merchCompose";
@@ -93,6 +93,50 @@ function Check() {
   );
 }
 
+function ReviewBadge({ photo }: { photo: LogoPhoto }) {
+  const [open, setOpen] = useState(false);
+  const r = photo.review;
+  if (!r) return null;
+  const ok = r.verdict === "godkänd";
+  const rows: [string, number][] = [
+    ["Realism", r.realism],
+    ["Logga", r.logo],
+    ["Placering", r.placement],
+    ["Säljkraft", r.sales],
+  ];
+  return (
+    <div className="absolute bottom-4 left-4 right-4">
+      {open && (
+        <div className="mb-2 rounded-2xl bg-white/92 p-4 text-[12px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur">
+          <p className="font-medium">{r.summary}</p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {rows.map(([k, v]) => (
+              <div key={k}>
+                <p className="text-[10px] text-[#86868B]">{k}</p>
+                <p className="text-[15px] font-semibold tabular-nums">{v}</p>
+              </div>
+            ))}
+          </div>
+          {r.issues.length > 0 && <p className="mt-3 text-[#86868B]">{r.issues.slice(0, 2).join(" · ")}</p>}
+          <p className="mt-2 text-[10px] text-[#86868B]">
+            {photo.attempts === 1 ? "Godkänt på första försöket" : `Bästa av ${photo.attempts} tagningar`}
+          </p>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-full bg-white/85 py-1 pl-1 pr-3 text-[11px] font-medium backdrop-blur"
+      >
+        <span className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums text-white ${ok ? "bg-[#1D8A4E]" : "bg-[#B26A00]"}`}>
+          {r.score.toFixed(1)}
+        </span>
+        {ok ? "Godkänd av granskaren" : "Bästa försöket"}
+      </button>
+    </div>
+  );
+}
+
 function PhotoSlot({ photo, label }: { photo?: LogoPhoto; label: string }) {
   return (
     <figure className="relative aspect-[2/3] overflow-hidden rounded-[28px] bg-[#F5F5F7]">
@@ -100,13 +144,39 @@ function PhotoSlot({ photo, label }: { photo?: LogoPhoto; label: string }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photo.url} alt={label} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-[#86868B]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-8 text-center text-xs text-[#86868B]">
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#86868B] border-t-transparent" />
           Fotograferar {label.toLowerCase()}…
+          <span className="text-[11px]">Granskaren betygsätter varje foto och tar om underkända.</span>
         </div>
       )}
       <figcaption className="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-[11px] font-medium backdrop-blur">Foto · {label}</figcaption>
+      {photo && <ReviewBadge photo={photo} />}
     </figure>
+  );
+}
+
+function FinishToggle({ value, onChange, disabled }: { value: LogoFinish; onChange: (f: LogoFinish) => void; disabled?: boolean }) {
+  const options: [LogoFinish, string][] = [
+    ["print", "Färgtryck"],
+    ["engrave", "Lasergravyr"],
+  ];
+  return (
+    <div className="inline-flex rounded-full bg-[#F5F5F7] p-1" role="radiogroup" aria-label="Utförande för muggar och flaskor">
+      {options.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          role="radio"
+          aria-checked={value === id}
+          disabled={disabled}
+          onClick={() => onChange(id)}
+          className={`h-9 rounded-full px-4 text-[13px] font-medium transition disabled:opacity-50 ${value === id ? "bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)]" : "text-[#6E6E73] hover:text-[#1D1D1F]"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -144,6 +214,7 @@ export function LogoMerchStudio() {
   const [photos, setPhotos] = useState<LogoPhoto[] | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [finish, setFinish] = useState<LogoFinish>("print");
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const runId = useRef(0);
@@ -180,16 +251,10 @@ export function LogoMerchStudio() {
     await fetchLogo({ dataUrl, name: file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").replace(/\blogo(type)?\b/i, "").trim() || "Ditt företag" });
   };
 
-  const generate = async () => {
-    if (!logo || !product) return;
-    const id = ++runId.current;
-    setBusy(true);
-    setError(null);
+  const shoot = (p: LogoProduct, l: LogoResult, f: LogoFinish, id: number) => {
     setPhotos(null);
     setPhotoError(null);
-    loader.start(`Lägger loggan på ${LOGO_PRODUCTS.length} produkter`, 90, 6000);
-
-    post<{ photos: LogoPhoto[] }>("/api/v1/logo-photos", { productId: product.id, logo: { light: logo.light, dark: logo.dark } })
+    post<{ photos: LogoPhoto[] }>("/api/v1/logo-photos", { productId: p.id, logo: { light: l.light, dark: l.dark }, finish: f })
       .then((r) => {
         if (runId.current !== id) return;
         setPhotos(r.photos);
@@ -200,24 +265,39 @@ export function LogoMerchStudio() {
         setPhotos([]);
         setPhotoError(e.message);
       });
+  };
 
-    try {
-      const library = await productLibrary();
-      const ordered = [product, ...LOGO_PRODUCTS.filter((p) => p.id !== product.id)].filter((p) => library[p.id]);
-      const made = await Promise.all(
-        ordered.map(async (p: LogoProduct) => ({
-          id: p.id,
-          name: p.name,
-          priceSek: p.priceSek,
+  const compose = async (p: LogoProduct, l: LogoResult, f: LogoFinish) => {
+    const library = await productLibrary();
+    const ordered = [p, ...LOGO_PRODUCTS.filter((x) => x.id !== p.id)].filter((x) => library[x.id]);
+    return Promise.all(
+      ordered.map(async (x) => {
+        const item = withFinish(x, f);
+        return {
+          id: item.id,
+          name: item.finish === "engrave" ? `${item.name}, graverad` : item.name,
+          priceSek: item.priceSek,
           url: await composeMerch({
-            product: p,
-            entry: library[p.id],
-            blankUrl: `/products/${p.id}.jpg`,
-            artUrl: p.variant === "dark" ? logo.dark : logo.light,
-            artScale: p.art === "crest" ? 1 : (ART_SCALE[p.id] ?? 0.62),
+            product: item,
+            entry: library[item.id],
+            blankUrl: `/products/${item.id}.jpg`,
+            artUrl: item.variant === "dark" ? l.dark : l.light,
+            artScale: item.art === "crest" ? 1 : Math.min(1, (ART_SCALE[item.id] ?? 0.62) * (l.width / l.height > 3.5 ? 1.25 : 1)),
           }),
-        })),
-      );
+        };
+      }),
+    );
+  };
+
+  const generate = async () => {
+    if (!logo || !product) return;
+    const id = ++runId.current;
+    setBusy(true);
+    setError(null);
+    loader.start(`Lägger loggan på ${LOGO_PRODUCTS.length} produkter`, 90, 6000);
+    shoot(product, logo, finish, id);
+    try {
+      const made = await compose(product, logo, finish);
       if (runId.current !== id) return;
       setTiles(made);
       setStep("result");
@@ -227,6 +307,21 @@ export function LogoMerchStudio() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const changeFinish = async (f: LogoFinish) => {
+    if (f === finish) return;
+    setFinish(f);
+    if (!logo || !product || step !== "result") return;
+    const id = ++runId.current;
+    if (ENGRAVABLE.includes(product.id)) shoot(product, logo, f, id);
+    else runId.current = id;
+    try {
+      const made = await compose(product, logo, f);
+      if (runId.current === id) setTiles(made);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -375,6 +470,15 @@ export function LogoMerchStudio() {
               </div>
             )}
 
+            {ENGRAVABLE.includes(product.id) && (
+              <div className="mt-8 flex flex-col items-center gap-2">
+                <FinishToggle value={finish} onChange={changeFinish} />
+                <p className="text-xs text-[#86868B]">
+                  {finish === "engrave" ? "Loggan graveras i materialet, ton i ton." : "Loggan trycks i sina egna färger."}
+                </p>
+              </div>
+            )}
+
             <div className="mt-10">
               <PrimaryButton onClick={generate} disabled={!logo || logoBusy} loading={busy}>
                 Skapa merch
@@ -416,8 +520,14 @@ export function LogoMerchStudio() {
             </div>
             {photoError && <p className="mt-3 text-center text-xs text-[#B3261E]">{photoError}</p>}
 
-            <h2 className="mt-14 text-2xl font-semibold tracking-tight">Hela kollektionen</h2>
-            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
+            <div className="mt-14 flex flex-wrap items-end justify-between gap-4">
+              <h2 className="text-2xl font-semibold tracking-tight">Hela kollektionen</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-[13px] text-[#86868B]">Kopp, yeti-mugg och termos</span>
+                <FinishToggle value={finish} onChange={changeFinish} />
+              </div>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
               {rest.map((t) => (
                 <TileCard key={t.id} tile={t} />
               ))}

@@ -7,7 +7,7 @@ const MAX_BYTES = 3_000_000;
 
 export class NewsError extends Error {}
 
-function isPrivate(ip: string) {
+export function isPrivate(ip: string) {
   if (isIP(ip) === 6) {
     const v = ip.toLowerCase();
     return v === "::1" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80") || v.startsWith("::ffff:127.");

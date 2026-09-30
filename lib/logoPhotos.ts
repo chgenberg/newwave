@@ -1,6 +1,6 @@
 import sharp from "sharp";
-import { LOGO_PRODUCTS } from "./logoMerch";
-import { editWithReference, hasOpenAIKey } from "./openai";
+import { ENGRAVABLE, LOGO_PRODUCTS, engraveInkFor, type LogoFinish } from "./logoMerch";
+import { editWithReference, hasOpenAIKey, openai, TEXT_MODEL } from "./openai";
 import { printOntoFabric } from "./photoComposite";
 import { type Scene, shootBlank } from "./photos";
 import { loadFile, saveFile } from "./store";
@@ -96,7 +96,19 @@ const SPECS: Record<string, Spec> = {
   },
 };
 
-export type LogoPhoto = { id: string; label: string; url: string; method: "exakt tryck" | "referens" };
+export type LogoReview = {
+  realism: number;
+  logo: number;
+  placement: number;
+  sales: number;
+  score: number;
+  verdict: "godkänd" | "underkänd";
+  strengths: string[];
+  issues: string[];
+  summary: string;
+};
+
+export type LogoPhoto = { id: string; label: string; url: string; method: "exakt tryck" | "referens"; review: LogoReview | null; attempts: number };
 
 export function logoScenes(productId: string): (Scene & { width: number })[] {
   const p = LOGO_PRODUCTS.find((x) => x.id === productId);
@@ -110,29 +122,121 @@ export function logoScenes(productId: string): (Scene & { width: number })[] {
   ];
 }
 
-const ATTEMPTS = 2;
+const MAX_SHOTS = 3;
+const PASS = 8;
 
-export async function logoPhotos(productId: string, logo: { light: string; dark: string }): Promise<LogoPhoto[]> {
+const reviewSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["realism", "logo", "placement", "sales", "strengths", "issues", "summary"],
+  properties: {
+    realism: { type: "integer", minimum: 1, maximum: 10 },
+    logo: { type: "integer", minimum: 1, maximum: 10 },
+    placement: { type: "integer", minimum: 1, maximum: 10 },
+    sales: { type: "integer", minimum: 1, maximum: 10 },
+    strengths: { type: "array", items: { type: "string" } },
+    issues: { type: "array", items: { type: "string" } },
+    summary: { type: "string" },
+  },
+};
+
+const asInput = async (img: Buffer, background: string) => {
+  const jpg = await sharp(img).flatten({ background }).resize(1024, 1024, { fit: "inside" }).jpeg({ quality: 82 }).toBuffer();
+  return { type: "input_image" as const, image_url: `data:image/jpeg;base64,${jpg.toString("base64")}`, detail: "auto" as const };
+};
+
+async function reviewPhoto(photo: Buffer, logo: Buffer, ctx: { product: string; scene: string; finish: LogoFinish; darkLogo: boolean }): Promise<LogoReview> {
+  const technique = ctx.finish === "engrave" ? "lasergraverad (en tonad silhuett av loggan i materialets gravyrfärg – inte i loggans färger)" : "tryckt i loggans egna färger";
+  const res = await openai().responses.create({
+    model: TEXT_MODEL,
+    input: [
+      {
+        role: "system",
+        content: `Du är en kräsen art director som godkänner produktfoton till en merchbutik. Var ärlig: 8 betyder "jag skulle själv publicera det här i dag", 10 är sällsynt.
+
+Betygsätt 1–10:
+- realism: ser fotot ut som ett riktigt kampanjfoto? Naturliga människor, händer, ansikten, material och ljus. Allt som ser AI-genererat ut drar ner kraftigt.
+- logo: är loggan på produkten samma logga som referensbilden – samma form, bokstäver och proportioner, inga påhittade eller förvrängda tecken? Loggan ska vara ${technique}.
+- placement: sitter loggan naturligt på produkten – rätt storlek, följer ytans form, veck och ljus, varken klistrad ovanpå eller för liten?
+- sales: skulle bilden sälja produkten i ett flöde?
+strengths/issues: korta konkreta punkter på svenska som en fotograf kan åtgärda. summary: en mening.`,
+      },
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: `Foto (${ctx.scene}) av produkten ${ctx.product}. Första bilden är fotot, andra bilden är företagets logga som referens.` },
+          await asInput(photo, "#FFFFFF"),
+          await asInput(logo, ctx.darkLogo ? "#1A1A1A" : "#FFFFFF"),
+        ],
+      },
+    ],
+    text: { format: { type: "json_schema", name: "photo_review", schema: reviewSchema, strict: true } },
+  });
+  const r = JSON.parse(res.output_text) as Omit<LogoReview, "score" | "verdict">;
+  const score = Math.round(((r.realism + r.logo + r.placement + r.sales) / 4) * 10) / 10;
+  const pass = Math.min(r.realism, r.logo, r.placement) >= PASS && r.sales >= PASS - 1;
+  return { ...r, score, verdict: pass ? "godkänd" : "underkänd" };
+}
+
+/** Flat tone silhouette of the logo in the engraving colour; white parts of the logo stay unengraved. */
+async function engraveArt(logo: Buffer, productId: string) {
+  const [r, g, b, a] = engraveInkFor(productId);
+  const { data, info } = await sharp(logo).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const out = Buffer.alloc(data.length);
+  for (let k = 0; k < data.length; k += 4) {
+    const white = Math.min(1, Math.max(0, (Math.min(data[k], data[k + 1], data[k + 2]) / 255 - 0.8) / 0.15));
+    out[k] = r;
+    out[k + 1] = g;
+    out[k + 2] = b;
+    out[k + 3] = Math.round(data[k + 3] * a * (1 - white));
+  }
+  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+}
+
+const total = (r: LogoReview | null) => (r ? r.realism + r.logo + r.placement + r.sales : -1);
+
+export async function logoPhotos(productId: string, logo: { light: string; dark: string }, finish: LogoFinish = "print"): Promise<LogoPhoto[]> {
   if (!hasOpenAIKey()) return [];
   const id = (url: string) => url.split("/").pop()!;
   const [light, dark] = await Promise.all([loadFile(id(logo.light)), loadFile(id(logo.dark))]);
   if (!light || !dark) throw new Error("Loggan hittades inte");
+  const engrave = finish === "engrave" && ENGRAVABLE.includes(productId);
+  const product = LOGO_PRODUCTS.find((p) => p.id === productId)!;
+
+  const meta = await sharp(light.data).metadata();
+  const wide = (meta.width ?? 1) / (meta.height ?? 1) > 3.5;
 
   const results = await Promise.allSettled(
     logoScenes(productId).map(async (s) => {
-      const print = s.print === "dark" ? dark.data : light.data;
-      let jpg: Buffer | null = null;
-      for (let i = 0; i < ATTEMPTS && !jpg; i++) {
-        const shot = await shootBlank(s).catch(() => null);
-        if (shot) jpg = await printOntoFabric(shot.blank, print, shot.marker, { ink: s.print, anchor: s.anchor, width: s.width });
+      const width = wide ? Math.min(0.92, s.width * 1.35) : s.width;
+      const original = s.print === "dark" ? dark.data : light.data;
+      const print = engrave ? await engraveArt(light.data, productId) : original;
+      const ink = engrave ? ("dark" as const) : s.print;
+      let best: { jpg: Buffer; review: LogoReview | null; method: LogoPhoto["method"] } | null = null;
+      let feedback: string | undefined;
+      let attempts = 0;
+      while (attempts < MAX_SHOTS) {
+        attempts++;
+        let jpg: Buffer | null = null;
+        for (let i = 0; i < 2 && !jpg; i++) {
+          const shot = await shootBlank(s, feedback).catch(() => null);
+          if (shot) jpg = await printOntoFabric(shot.blank, print, shot.marker, { ink, anchor: s.anchor, width });
+        }
+        const method = jpg ? ("exakt tryck" as const) : ("referens" as const);
+        if (!jpg) {
+          const bg = ink === "dark" ? "#1A1A1A" : "#FFFFFF";
+          const ref = await sharp(print).flatten({ background: bg }).resize(1024, 1024, { fit: "contain", background: bg }).png().toBuffer();
+          const how = engrave ? "laser engraved as a subtle tone-on-tone mark into the surface" : "printed crisply and following the surface";
+          const base = s.prompt.replace(/one flat, solid, pure bright green[\s\S]*$/, "");
+          jpg = await editWithReference(`${base} the exact logo from the reference image, ${how}.${feedback ? `\nFix: ${feedback}` : ""}`, ref);
+        }
+        const review = await reviewPhoto(jpg, original, { product: `${product.name} (${product.blurb})`, scene: s.label.toLowerCase(), finish: engrave ? "engrave" : "print", darkLogo: s.print === "dark" }).catch(() => null);
+        if (!best || total(review) > total(best.review)) best = { jpg, review, method };
+        if (!review || review.verdict === "godkänd") break;
+        feedback = review.issues.join("; ");
       }
-      const method = jpg ? ("exakt tryck" as const) : ("referens" as const);
-      if (!jpg) {
-        const ref = await sharp(print).flatten({ background: s.print === "dark" ? "#1A1A1A" : "#FFFFFF" }).resize(1024, 1024, { fit: "contain", background: s.print === "dark" ? "#1A1A1A" : "#FFFFFF" }).png().toBuffer();
-        jpg = await editWithReference(`${s.prompt.replace(/one flat, solid, pure bright green[\s\S]*$/, "")} the exact logo from the reference image, printed crisply and following the surface.`, ref);
-      }
-      const file = await saveFile(jpg, "jpg");
-      return { id: s.id, label: s.label, url: file.url, method };
+      const file = await saveFile(best!.jpg, "jpg");
+      return { id: s.id, label: s.label, url: file.url, method: best!.method, review: best!.review, attempts };
     }),
   );
   return results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));

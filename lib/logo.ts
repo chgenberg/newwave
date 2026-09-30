@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { NewsError, assertPublicUrl, fetchHtml } from "./news";
+import { renderLogos } from "./render";
 import { saveFile } from "./store";
 
 export class LogoError extends Error {}
@@ -106,7 +107,7 @@ async function fetchImage(raw: string): Promise<Buffer> {
   throw new LogoError("För många omdirigeringar");
 }
 
-const withXmlns = (svg: string) => (/xmlns=/.test(svg.slice(0, 400)) ? svg : svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"'));
+const withXmlns = (svg: string) => (/\sxmlns=/.test(svg.match(/<svg\b[^>]*>/i)?.[0] ?? "") ? svg : svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"'));
 
 type Raster = { data: Buffer; width: number; height: number; vector?: boolean };
 
@@ -252,6 +253,19 @@ function siteName(html: string, url: URL) {
 
 export async function logoFromUrl(raw: string): Promise<LogoResult> {
   const withScheme = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`;
+  await assertPublicUrl(withScheme).catch((e) => {
+    throw new LogoError(e instanceof NewsError ? e.message : "Kunde inte öppna webbplatsen.");
+  });
+  const rendered = await renderLogos(withScheme).catch(() => null);
+  if (rendered) {
+    const name = siteName(rendered.html, rendered.finalUrl);
+    const site = rendered.finalUrl.hostname.replace(/^www\./, "");
+    for (const pick of rendered.picks) {
+      try {
+        return await finish(await prepare(pick.buffer), { name, site, source: pick.source });
+      } catch {}
+    }
+  }
   let page: { html: string; finalUrl: URL };
   try {
     page = await fetchHtml(await assertPublicUrl(withScheme));
