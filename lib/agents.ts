@@ -38,7 +38,7 @@ const conceptSchema = (club: Club, signals: Signal[]) => ({
   },
 });
 
-export async function createConcepts(club: Club, signals: Signal[]): Promise<Concept[]> {
+export async function createConcepts(club: Club, signals: Signal[], count = SUGGESTIONS): Promise<Concept[]> {
   const system = `Du är kreativ AD i Crafts innehållsmaskin för klubbmerch som trycks på beställning och säljs i klubbens butik hos Intersport.
 Du tar fram motiv som känns unika för just ${club.name} och som går att trycka med digitaltryck (DTG).
 
@@ -59,7 +59,7 @@ ${club.agent.satire.rules.map((r) => `- ${r}`).join("\n")}
 
 Tänk bästsäljare, inte reklam: varje förslag ska ha EN stark idé som supportrarna direkt känner igen, ett stort och tydligt huvudmotiv, en slogan man vill säga högt och en känsla av stolthet eller humor. Undvik det generiska (diagram, abstrakta former, vaga stämningar).
 
-Ta fram exakt ${SUGGESTIONS} förslag. Sprid dem över signalerna – varje signal ska få minst ett förslag om det finns plats, trender och högtider nära i tid prioriteras.
+${count === signals.length ? `Ta fram exakt ${count} förslag – ett per signal, i samma ordning som signalerna. Gör dem tydligt olika varandra i stil och idé.` : `Ta fram exakt ${count} förslag. Sprid dem över signalerna – varje signal ska få minst ett förslag om det finns plats, trender och högtider nära i tid prioriteras.`}
 Variera stilen: humor/göteborgsk ordvits, retro, typografiskt minimalistiskt, illustrativt.
 Så använder du signalerna efter typ:
 - [match]: nästa match eller färsk seger – skarpast i tid, prioritera högt. Mot en rival passar satirläget.
@@ -90,7 +90,7 @@ ${CATALOG.map((p) => `- ${p.id}: ${p.name} (${p.garmentColor})`).join("\n")}`;
     schemaName: "concepts",
     schema: conceptSchema(club, signals),
   });
-  return out.concepts.slice(0, SUGGESTIONS).map((c) => ({ ...c, id: randomUUID() }));
+  return out.concepts.slice(0, count).map((c) => ({ ...c, id: randomUUID() }));
 }
 
 export function artworkPrompt(club: Club, concept: Concept) {
@@ -159,7 +159,7 @@ Länk: ${shopUrl}`;
   return generateJson<ContentPack>({ system, user, schemaName: "content_pack", schema: contentSchema });
 }
 
-export function demoConcepts(club: Club, signals: Signal[]): Concept[] {
+export function demoConcepts(club: Club, signals: Signal[], count = SUGGESTIONS): Concept[] {
   const [blue, white, navy] = club.palette.map((c) => c.hex);
   const pick = (i: number) => signals[i % signals.length]?.title ?? "Säsong";
   const base: Omit<Concept, "id">[] = [
@@ -168,7 +168,7 @@ export function demoConcepts(club: Club, signals: Signal[]): Concept[] {
     { signal: pick(2), mode: "standard", title: "Göteborgsvits", slogan: "Tre poäng och en räka", story: "Göteborgshumor med glimten i ögat.", style: "playful cartoon sticker style", artDirection: "A cheerful cartoon shrimp wearing a scarf, kicking a ball", palette: [blue, white], products: ["tee-white", "mug-white"] },
     { signal: pick(3), mode: "standard", title: "Minimal rand", slogan: "Blått blod", story: "Diskret och typografiskt.", style: "minimal geometric stripes", artDirection: "Five vertical stripes forming a subtle heart shape", palette: [blue, white], products: ["tee-navy", "hoodie-navy"] },
   ];
-  return base.map((c) => ({ ...c, id: randomUUID() }));
+  return base.slice(0, count).map((c) => ({ ...c, id: randomUUID() }));
 }
 
 export function demoArtworkSvg(club: Club, concept: Concept) {

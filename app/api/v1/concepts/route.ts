@@ -7,7 +7,7 @@ import { SignalSchema } from "@/lib/schemas";
 
 export const maxDuration = 120;
 
-const Body = z.object({ clubId: z.string(), signals: z.array(SignalSchema).min(1).max(12) });
+const Body = z.object({ clubId: z.string(), signals: z.array(SignalSchema).min(1).max(12), count: z.number().int().min(1).max(6).optional() });
 
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
@@ -17,8 +17,8 @@ export async function POST(req: Request) {
 
   const mode = hasOpenAIKey() ? "ai" : "demo";
   try {
-    const { signals } = parsed.data;
-    const concepts = mode === "ai" ? await createConcepts(club, signals) : demoConcepts(club, signals);
+    const { signals, count } = parsed.data;
+    const concepts = mode === "ai" ? await createConcepts(club, signals, count) : demoConcepts(club, signals, count);
     return Response.json({ mode, concepts: concepts.map((c) => ({ ...c, checks: checkConcept(club, c) })) });
   } catch (err) {
     return Response.json({ error: errorMessage(err) }, { status: 502 });

@@ -39,8 +39,17 @@ Any people are fictional and generic, not famous, not football players. No logos
       fabric: "plain white cotton t-shirt fabric",
       prompt: `${look}\nProduct photo: a plain white crew-neck t-shirt laid flat and neatly styled on a blue plastic stadium seat in an empty stand, a blue-and-white striped scarf beside it, soft ${season} daylight. On the chest of the t-shirt there is ${MARKER}`,
     },
+    {
+      id: "filt",
+      label: "Filt i soffan",
+      print: "light",
+      fabric: "soft cream white fleece blanket fabric",
+      prompt: `${look}\nInterior photo, no people: a cosy Scandinavian living room on a ${season} evening. A soft cream white fleece throw blanket is draped over the back and seat of a light grey sofa, with chunky knitted cushions, a wooden side table with a ceramic mug and a few books, warm lamp light and a glowing wood stove in the background. On the front of the draped blanket, facing the camera, there is one flat, solid, pure bright green (#00FF00) rectangle in portrait orientation (3:4), large, centred on the visible part of the blanket and following its drape. The rectangle has no texture, text or pattern, and there is no other bright green anywhere in the image.`,
+    },
   ];
 }
+
+export const SCENE_IDS = ["livsstil", "produkt", "filt"] as const;
 
 async function shootWithExactPrint(scene: Scene, print: Buffer, feedback?: string) {
   const prompt = feedback ? `${scene.prompt}\nAvoid these issues from a previous attempt: ${feedback}` : scene.prompt;
@@ -55,13 +64,18 @@ async function shootWithExactPrint(scene: Scene, print: Buffer, feedback?: strin
   return printOntoFabric(blank, print, marker);
 }
 
-export async function productPhotos(club: Club, concept: Concept, prints: { light: string; dark: string }): Promise<ReviewedPhoto[]> {
+export async function productPhotos(
+  club: Club,
+  concept: Concept,
+  prints: { light: string; dark: string },
+  sceneIds: readonly string[] = ["livsstil", "produkt"],
+): Promise<ReviewedPhoto[]> {
   if (!hasOpenAIKey()) return [];
   const id = (url: string) => url.split("/").pop()!;
   const [light, dark] = await Promise.all([loadFile(id(prints.light)), loadFile(id(prints.dark))]);
   if (!light || !dark) throw new Error("Tryckfilerna hittades inte");
 
-  const list = scenes(club, concept);
+  const list = scenes(club, concept).filter((s) => sceneIds.includes(s.id));
   const results = await Promise.allSettled(
     list.map(async (s) => {
       const print = s.print === "light" ? light.data : dark.data;

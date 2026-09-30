@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
+import { type CollagePhoto, type CollageTile, MerchCollage } from "@/components/MerchCollage";
 import { ProductMockup, mockupSvg } from "@/components/ProductMockup";
 import type { ArtworkResult } from "@/lib/artwork";
 import { PRINT_H, PRINT_W, composeBackPrint, composeCampaignImage, composePrintFile, loadClubCrest, qrDataUrl } from "@/lib/compose";
 import type { CatalogProduct, Club, Concept, ContentPack, RuleCheck, Signal, SourceStatus } from "@/lib/types";
+import { MERCH, type ProductLibrary } from "@/lib/merch";
+import { composeMerch } from "@/lib/merchCompose";
 import { renderReel } from "@/lib/video";
 import { type PackItem, buildCampaignZip, downloadBlob } from "@/lib/zip";
 
-type Step = "club" | "signals" | "suggestions" | "content";
+type Step = "club" | "signals" | "prints" | "collage" | "content";
 type ClubListItem = { id: string; name: string; city: string; nicknames: string[] };
 type ClubData = { club: Club; catalog: CatalogProduct[]; ai: { enabled: boolean } };
 type Suggestion = Concept & {
@@ -51,6 +54,12 @@ type ContentResult = {
   content: ContentPack;
   intersport: unknown;
 };
+type Prints = { light: string; dark: string; lightUrl: string; darkUrl: string };
+type Collage = { suggestion: Suggestion; prints: Prints; preview: string; tiles: CollageTile[]; photos: CollagePhoto[] | null };
+
+let libraryCache: Promise<ProductLibrary> | null = null;
+const productLibrary = () => (libraryCache ??= fetch("/products/library.json").then((r) => r.json()));
+
 type PendingDrop = {
   id: string;
   clubId: string;
@@ -58,7 +67,9 @@ type PendingDrop = {
   suggestions: (Concept & { checks: RuleCheck[]; artwork: ArtworkResult | null; error?: string })[];
 };
 
-const STEPS: Step[] = ["club", "signals", "suggestions", "content"];
+const STEPS: Step[] = ["club", "signals", "prints", "collage", "content"];
+const MAX_SIGNALS = 3;
+const PRINTS = 3;
 const IMAGE_CONCURRENCY = 4;
 const PREVIEW_SCALE = 0.25;
 
@@ -138,7 +149,8 @@ export default function Home() {
   const [newsError, setNewsError] = useState<string | null>(null);
   const [news, setNews] = useState<{ signal: Signal; article: { title: string; site: string; image: string | null; published: string } } | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [chosenId, setChosenId] = useState<string | null>(null);
+  const [collage, setCollage] = useState<Collage | null>(null);
   const [pack, setPack] = useState<PackItem[]>([]);
   const [fromMatch, setFromMatch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -184,7 +196,7 @@ export default function Home() {
         }),
       );
       setSuggestions(list);
-      setStep("suggestions");
+      setStep("prints");
     })();
   }, [previewFor]);
 
@@ -220,7 +232,8 @@ export default function Home() {
       const s: SignalsResponse = await fetch(`/api/v1/signals?clubId=${clubId}`).then((r) => r.json());
       const list = [...s.matches, ...s.trends, ...(s.weather ? [s.weather] : []), ...s.occasions, s.season];
       setSignals(list);
-      setActive(new Set(list.filter((x) => x.kind !== "occasion" || (x.daysUntil ?? 0) <= 45).map((x) => x.id)));
+      const soon = s.occasions.filter((o) => (o.daysUntil ?? 99) <= 45);
+      setActive(new Set([...s.matches, ...s.trends, ...soon, s.season].slice(0, MAX_SIGNALS).map((x) => x.id)));
       const down = s.sources.filter((x) => !x.ok).map((x) => x.name);
       setTrendNote(s.trendError ? "Kunde inte hämta trender just nu – högtider och säsong används." : down.length ? `Svarade inte just nu: ${down.join(", ")}.` : null);
     });
@@ -229,16 +242,17 @@ export default function Home() {
     setActive((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (next.size < MAX_SIGNALS) next.add(id);
       return next;
     });
+  const activate = (id: string) => setActive((prev) => new Set([...prev, id].slice(-MAX_SIGNALS)));
 
   const addCustom = () => {
     const title = custom.trim();
     if (title.length < 2) return;
     const s: Signal = { id: `custom-${Date.now()}`, kind: "custom", title, detail: title };
     setSignals((prev) => [s, ...prev]);
-    setActive((prev) => new Set(prev).add(s.id));
+    activate(s.id);
     setCustom("");
   };
 
@@ -252,7 +266,7 @@ export default function Home() {
       loader.done();
       setNews(res);
       setSignals((prev) => [res.signal, ...prev.filter((x) => x.kind !== "news")]);
-      setActive((prev) => new Set(prev).add(res.signal.id));
+      activate(res.signal.id);
       setNewsUrl("");
     } catch (e) {
       loader.fail();
@@ -285,24 +299,76 @@ export default function Home() {
   const goSuggestions = (only?: Signal[]) =>
     guard("Läser signalerna", async () => {
       const id = ++runId.current;
-      loader.stage("Tar fram förslag inom klubbens ramar", 96, 32000);
+      loader.stage("Tar fram tre tryck inom klubbens ramar", 96, 26000);
       const chosen = only ?? signals.filter((s) => active.has(s.id));
       if (only) setActive(new Set(only.map((s) => s.id)));
       const res = await post<{ concepts: (Concept & { checks: RuleCheck[] })[] }>("/api/v1/concepts", {
         clubId,
         signals: chosen,
+        count: PRINTS,
       });
       const list: Suggestion[] = res.concepts.map((c) => ({
         ...c,
         status: c.checks.every((r) => r.ok) ? "waiting" : "blocked",
       }));
       setSuggestions(list);
-      setPicked(new Set());
+      setChosenId(null);
       setFromMatch(null);
-      setStep("suggestions");
+      setStep("prints");
       setBusy(false);
       loader.done();
       void drawArtworks(list, id, club!);
+    });
+
+  const goCollage = () =>
+    guard("Förbereder trycket", async () => {
+      const c = club!;
+      const s = suggestions.find((x) => x.id === chosenId && x.status === "done" && x.artwork);
+      if (!s) return;
+      const id = ++runId.current;
+      const primary = c.palette[0].hex;
+      const font = displayFont();
+      await loadClubCrest(c.id);
+
+      loader.stage("Gör tryckfiler i 300 dpi", 40, 5000);
+      const base = { artworkUrl: s.artwork!.url, slogan: s.slogan, footer: `${c.name} · ${c.arena}`, font, primary };
+      const light = await composePrintFile({ ...base, variant: "light" });
+      const dark = await composePrintFile({ ...base, variant: "dark" });
+      const [lightUrl, darkUrl] = await Promise.all([upload(light), upload(dark)]);
+      const prints: Prints = { light, dark, lightUrl, darkUrl };
+
+      loader.stage(`Lägger trycket på ${MERCH.length} produkter`, 96, 5000);
+      const [library, smallLight, smallDark] = await Promise.all([
+        productLibrary(),
+        composePrintFile({ ...base, variant: "light", scale: 0.4 }),
+        composePrintFile({ ...base, variant: "dark", scale: 0.4 }),
+      ]);
+      const crest = `/api/v1/brand/${c.id}/${c.brand.crest.farg}`;
+      const tiles = await Promise.all(
+        MERCH.filter((m) => library[m.id]).map(async (m) => ({
+          id: m.id,
+          name: m.name,
+          priceSek: m.priceSek,
+          url: await composeMerch({
+            product: m,
+            entry: library[m.id],
+            blankUrl: `/products/${m.id}.jpg`,
+            artUrl: m.art === "crest" ? crest : m.variant === "dark" ? smallDark : smallLight,
+          }),
+        })),
+      );
+      setCollage({ suggestion: s, prints, preview: smallLight, tiles, photos: null });
+      setStep("collage");
+
+      post<{ photos: CollagePhoto[] }>("/api/v1/photos", {
+        clubId: c.id,
+        concept: conceptOnly(s),
+        printFiles: { light: lightUrl, dark: darkUrl },
+        scenes: ["livsstil", "filt"],
+      })
+        .then((r) => r.photos)
+        .catch((): CollagePhoto[] => [])
+        .then((photos) => runId.current === id && setCollage((prev) => (prev && prev.suggestion.id === s.id ? { ...prev, photos } : prev)));
     });
 
   const goContent = () =>
@@ -310,22 +376,14 @@ export default function Home() {
       const c = club!;
       const primary = c.palette[0].hex;
       const font = displayFont();
-      const chosen = suggestions.filter((s) => picked.has(s.id) && s.status === "done" && s.artwork);
+      if (!collage) return;
+      const chosen = [collage.suggestion];
+      const prints = [collage.prints];
       await loadClubCrest(c.id);
       setStep("content");
       setPack([]);
 
-      loader.stage("Gör tryckfiler i 300 dpi", 14, 4000 * chosen.length);
-      const prints: { light: string; dark: string; lightUrl: string; darkUrl: string }[] = [];
-      for (const s of chosen) {
-        const base = { artworkUrl: s.artwork!.url, slogan: s.slogan, footer: `${c.name} · ${c.arena}`, font, primary };
-        const light = await composePrintFile({ ...base, variant: "light" });
-        const dark = await composePrintFile({ ...base, variant: "dark" });
-        const [lightUrl, darkUrl] = await Promise.all([upload(light), upload(dark)]);
-        prints.push({ light, dark, lightUrl, darkUrl });
-      }
-
-      loader.stage("Skriver texter och fotograferar produkterna", 62, 55000);
+      loader.stage("Skriver texter till alla kanaler", 62, 30000);
       const [res, photoSets] = await Promise.all([
         post<{ results: ContentResult[] }>("/api/v1/content", {
           clubId: c.id,
@@ -336,17 +394,7 @@ export default function Home() {
           })),
           printPixels: { width: PRINT_W, height: PRINT_H },
         }),
-        Promise.all(
-          chosen.map((s, i) =>
-            post<{ photos: PackItem["photos"] }>("/api/v1/photos", {
-              clubId: c.id,
-              concept: conceptOnly(s),
-              printFiles: { light: prints[i].lightUrl, dark: prints[i].darkUrl },
-            })
-              .then((r) => r.photos)
-              .catch(() => []),
-          ),
-        ),
+        Promise.resolve([(collage.photos ?? []) as PackItem["photos"]]),
       ]);
 
       loader.stage("Bygger bilder, QR-koder och baksidor", 76, 5000 * chosen.length);
@@ -433,6 +481,7 @@ export default function Home() {
 
   const stepIndex = STEPS.indexOf(step);
   const drawing = suggestions.some((s) => s.status === "waiting" || s.status === "drawing");
+  const chosen = suggestions.find((s) => s.id === chosenId && s.status === "done");
 
   return (
     <main className="flex min-h-screen flex-col bg-white">
@@ -517,8 +566,8 @@ export default function Home() {
 
         {step === "signals" && club && (
           <div className="mt-[8vh] w-full max-w-xl">
-            <h1 className="text-center text-4xl font-semibold tracking-tight">Det här händer nu.</h1>
-            <p className="mt-3 text-center text-[17px] text-[#86868B]">Allt är ifyllt. Bocka ur det du inte vill ha med.</p>
+            <h1 className="text-center text-4xl font-semibold tracking-tight">Välj tre.</h1>
+            <p className="mt-3 text-center text-[17px] text-[#86868B]">De tre starkaste är redan valda. Byt om du vill.</p>
 
             {busy && signals.length === 0 ? (
               <div className="mt-12 h-40" />
@@ -577,6 +626,7 @@ export default function Home() {
                 <div className="mt-4 divide-y divide-[#F0F0F2] rounded-3xl border border-[#E8E8ED]">
                   {signals.map((s) => {
                     const on = active.has(s.id);
+                    const full = !on && active.size >= MAX_SIGNALS;
                     const label = signalLabel(s);
                     return (
                       <div
@@ -586,7 +636,7 @@ export default function Home() {
                         tabIndex={0}
                         onClick={() => toggleSignal(s.id)}
                         onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), toggleSignal(s.id))}
-                        className="flex w-full cursor-pointer items-start gap-4 px-5 py-4 text-left outline-none focus-visible:bg-[#F5F5F7]"
+                        className={`flex w-full items-start gap-4 px-5 py-4 text-left outline-none transition focus-visible:bg-[#F5F5F7] ${full ? "cursor-default opacity-45" : "cursor-pointer"}`}
                       >
                         <Checkbox on={on} />
                         <span className="min-w-0 flex-1">
@@ -625,7 +675,7 @@ export default function Home() {
                 </div>
                 <div className="mt-10 text-center">
                   <PrimaryButton onClick={() => goSuggestions()} disabled={active.size === 0} loading={busy}>
-                    Ge mig förslag
+                    Skapa tre tryck · {active.size}/{MAX_SIGNALS}
                   </PrimaryButton>
                 </div>
               </>
@@ -633,38 +683,35 @@ export default function Home() {
           </div>
         )}
 
-        {step === "suggestions" && club && (
+        {step === "prints" && club && (
           <div className="mt-[6vh] w-full max-w-5xl">
-            <h1 className="text-center text-4xl font-semibold tracking-tight">{fromMatch ? "Efter slutsignalen." : "Välj dina favoriter."}</h1>
+            <h1 className="text-center text-4xl font-semibold tracking-tight">{fromMatch ? "Efter slutsignalen." : "Tre tryck."}</h1>
             <p className="mt-3 text-center text-[17px] text-[#86868B]">
-              {fromMatch ?? (drawing ? "Motiven ritas och kontrolleras just nu – du kan börja välja." : "Klicka på de motiv du gillar.")}
+              {fromMatch ?? (drawing ? "Trycken ritas och kontrolleras just nu." : "Välj det du gillar mest.")}
             </p>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-12 flex flex-wrap justify-center gap-6">
               {suggestions.map((s) => {
-                const on = picked.has(s.id);
+                const on = chosenId === s.id;
                 const selectable = s.status === "done";
                 const failed = [...s.checks, ...(s.artwork?.imageChecks ?? [])].filter((c) => !c.ok);
-                const palette = s.artwork?.imageChecks.find((c) => c.rule === "Bilden håller klubbens färger");
                 return (
                   <button
                     key={s.id}
                     type="button"
                     disabled={!selectable}
-                    onClick={() =>
-                      setPicked((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(s.id)) next.delete(s.id);
-                        else next.add(s.id);
-                        return next;
-                      })
-                    }
-                    className={`group relative flex flex-col justify-start overflow-hidden rounded-3xl text-left transition ${on ? "ring-2 ring-[#234B9A]" : "ring-1 ring-[#E8E8ED] hover:ring-[#C7C7CC]"} disabled:cursor-default`}
+                    onClick={() => setChosenId(s.id)}
+                    className="group flex w-[300px] flex-col justify-start text-left disabled:cursor-default"
                   >
-                    <div className="relative aspect-square bg-[#F5F5F7]">
+                    <div
+                      className={`relative aspect-square w-full overflow-hidden rounded-[28px] bg-[#F5F5F7] transition ${on ? "ring-2 ring-[#234B9A] ring-offset-4" : "group-enabled:group-hover:bg-[#EFEFF2]"}`}
+                    >
                       {s.preview && (
-                        <div className={`absolute inset-4 ${s.status === "blocked" ? "opacity-30" : ""}`}>
-                          <ProductMockup product={product("tee-white")} printUrl={s.preview} />
-                        </div>
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={s.preview}
+                          alt={s.slogan}
+                          className={`absolute inset-0 h-full w-full object-contain p-9 transition duration-500 group-enabled:group-hover:scale-[1.03] ${s.status === "blocked" ? "opacity-30" : ""}`}
+                        />
                       )}
                       {(s.status === "waiting" || s.status === "drawing") && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-[#86868B]">
@@ -686,23 +733,14 @@ export default function Home() {
                           <Checkbox on={on} />
                         </span>
                       )}
-                      {selectable && s.artwork && (
-                        <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-[#1B7F3B] backdrop-blur">
-                          ✓ Kontrollerad · {palette?.note ?? "klubbens färger"} · vektor
-                          {s.artwork.attempts > 1 ? ` · försök ${s.artwork.attempts}` : ""}
-                        </span>
-                      )}
                     </div>
-                    <div className="px-5 pb-5 pt-4">
-                      <p className="text-xs text-[#86868B]">{s.signal}</p>
-                      <p className="mt-1 font-display text-2xl uppercase leading-tight text-[#234B9A]">{s.slogan}</p>
-                      <p className="mt-1.5 text-[13px] leading-snug text-[#6E6E73]">{s.story}</p>
-                    </div>
+                    <p className="mt-4 px-1 text-xs text-[#86868B]">{s.signal}</p>
+                    <p className="mt-0.5 px-1 font-display text-xl uppercase leading-tight text-[#234B9A]">{s.slogan}</p>
                   </button>
                 );
               })}
             </div>
-            <div className="sticky bottom-6 mx-auto mt-10 flex w-fit justify-center gap-3 rounded-full bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="sticky bottom-6 mx-auto mt-12 flex w-fit justify-center gap-3 rounded-full bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
               {!fromMatch && (
                 <button
                   type="button"
@@ -710,13 +748,49 @@ export default function Home() {
                   disabled={busy || drawing}
                   className="h-12 rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED] disabled:opacity-50"
                 >
-                  Nya förslag
+                  Nya tryck
                 </button>
               )}
-              <PrimaryButton onClick={goContent} disabled={picked.size === 0} loading={busy}>
-                {fromMatch ? "Godkänn" : "Nästa"}
-                {picked.size > 0 ? ` · ${picked.size} valda` : ""}
+              <PrimaryButton onClick={goCollage} disabled={!chosen} loading={busy}>
+                Generera
               </PrimaryButton>
+            </div>
+          </div>
+        )}
+
+        {step === "collage" && club && collage && (
+          <div className="mt-[5vh] w-full max-w-6xl">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <p className="text-xs text-[#86868B]">{collage.suggestion.signal}</p>
+                <h1 className="font-display text-5xl uppercase leading-none text-[#234B9A]">{collage.suggestion.slogan}</h1>
+                <p className="mt-2 text-[15px] text-[#86868B]">
+                  {collage.tiles.length} produkter med exakt tryck · {collage.photos === null ? "AI-foton tas just nu" : `${collage.photos.length} AI-foton`}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep("prints")}
+                  className="h-12 rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED]"
+                >
+                  Byt tryck
+                </button>
+                <PrimaryButton onClick={goContent} disabled={collage.photos === null} loading={busy}>
+                  Skapa kanalinnehåll
+                </PrimaryButton>
+              </div>
+            </div>
+            <div className="mt-8">
+              <MerchCollage
+                slogan={collage.suggestion.slogan}
+                signal={collage.suggestion.signal}
+                story={collage.suggestion.story}
+                printUrl={collage.preview}
+                primary={club.palette[0].hex}
+                tiles={collage.tiles}
+                photos={collage.photos}
+              />
             </div>
           </div>
         )}
