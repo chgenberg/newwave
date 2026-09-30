@@ -2,7 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { MERCH, type ProductLibrary } from "../lib/merch";
+import { EXTRA_MERCH, MERCH, type ProductLibrary } from "../lib/merch";
 import { editWithMask, generatePhoto } from "../lib/openai";
 import { detectMarker } from "../lib/photoComposite";
 
@@ -17,7 +17,7 @@ const MARKER =
   "Exactly one flat, solid, pure bright green (#00FF00) rectangle marks the print area, following the surface of the product. The rectangle has no texture, text or pattern, and there is no other green anywhere in the image.";
 
 async function build(id: string) {
-  const p = MERCH.find((m) => m.id === id)!;
+  const p = [...MERCH, ...EXTRA_MERCH].find((m) => m.id === id)!;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const raw = await generatePhoto(`${STUDIO}\nProduct: ${p.prompt}.\n${MARKER}`, "1024x1024");
     const marker = await detectMarker(raw);

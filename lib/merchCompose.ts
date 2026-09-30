@@ -104,6 +104,7 @@ export async function composeMerch(opts: {
   blankUrl: string;
   artUrl: string;
   size?: number;
+  artScale?: number;
 }): Promise<string> {
   const { product, entry } = opts;
   const { box } = entry;
@@ -118,7 +119,7 @@ export async function composeMerch(opts: {
   ctx.drawImage(blank, 0, 0, W, H);
 
   const art = trimmed(artImg);
-  const coverage = product.art === "crest" ? 0.85 : surface.kind === "cylinder" ? 0.98 : 0.92;
+  const coverage = (product.art === "crest" ? 0.85 : surface.kind === "cylinder" ? 0.98 : 0.92) * (opts.artScale ?? 1);
   const quad = surface.kind === "flat" && entry.quad?.length === 4 ? (entry.quad.map(([x, y]) => ({ x, y })) as [Point, Point, Point, Point]) : null;
   const len = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
   const faceW = quad ? (len(quad[0], quad[1]) + len(quad[3], quad[2])) / 2 : box.w;

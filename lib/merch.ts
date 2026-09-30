@@ -153,3 +153,18 @@ export type LibraryEntry = {
   quad?: [number, number][];
 };
 export type ProductLibrary = Record<string, LibraryEntry>;
+
+/** Products that only the neutral logo page uses; not part of the club collages. */
+export const EXTRA_MERCH: MerchProduct[] = [
+  {
+    id: "paraply",
+    name: "Paraply",
+    priceSek: 349,
+    finish: "print",
+    art: "print",
+    variant: "dark",
+    surface: { kind: "fabric", folds: 0.5 },
+    prompt: "a large black golf umbrella, fully opened, seen straight from the front and slightly below so the canopy fills the frame, the straight black handle visible underneath. The print area is a landscape rectangle (3:2) in the middle of the canopy panel that faces the camera",
+  },
+];
+

@@ -16,7 +16,7 @@ function isPrivate(ip: string) {
   return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
 }
 
-async function assertPublicUrl(raw: string) {
+export async function assertPublicUrl(raw: string) {
   let url: URL;
   try {
     url = new URL(raw.trim());
@@ -37,7 +37,7 @@ const decode = (s: string) =>
     .replace(/&nbsp;/g, " ").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
 const strip = (html: string) => decode(html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 
-async function fetchHtml(start: URL) {
+export async function fetchHtml(start: URL) {
   let url = start;
   for (let hop = 0; hop < 4; hop++) {
     const res = await fetch(url, {
