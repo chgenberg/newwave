@@ -823,7 +823,7 @@ export default function Home() {
         )}
       </div>
 
-      <IFKLoader state={loader.state} crestUrl={`/api/v1/brand/${clubId ?? "ifk-goteborg"}/skold-farg.svg`} />
+      <IFKLoader state={loader.state} crestUrl={`/api/v1/brand/${clubId ?? "ifk-goteborg"}/skold-farg.png`} />
 
       {showRules && club && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6" onClick={() => setShowRules(false)}>

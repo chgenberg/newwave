@@ -157,7 +157,7 @@ export default function MatchCentral() {
           </div>
         </div>
       </div>
-      <IFKLoader state={loader.state} crestUrl="/api/v1/brand/ifk-goteborg/skold-farg.svg" />
+      <IFKLoader state={loader.state} crestUrl="/api/v1/brand/ifk-goteborg/skold-farg.png" />
     </main>
   );
 }

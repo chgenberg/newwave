@@ -20,7 +20,7 @@ export const IFK_GOTEBORG: Club = {
   ],
   crestColors: ["#197BC4", "#FBC323", "#FFFFFF"],
   brand: {
-    crest: { farg: "skold-farg.svg", svart: "skold-svart.svg", vit: "skold-vit.svg" },
+    crest: { farg: "skold-farg.png", svart: "skold-svart.png", vit: "skold-vit.png" },
     fonts: { brand: "Akkurat Black", web: "Source Sans Pro" },
     source: "ifkgoteborg.se",
   },

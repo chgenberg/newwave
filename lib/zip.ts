@@ -171,7 +171,7 @@ export async function buildCampaignZip(club: Club, items: PackItem[], onProgress
   const profile = root.folder("Grafisk profil")!;
   for (const [variant, file] of Object.entries(club.brand.crest)) {
     for (const ext of ["svg", "png"]) {
-      const res = await fetch(`/api/v1/brand/${club.id}/${file.replace(/\.svg$/, `.${ext}`)}`);
+      const res = await fetch(`/api/v1/brand/${club.id}/${file.replace(/\.(svg|png)$/, `.${ext}`)}`);
       if (res.ok) profile.file(`skold-${variant}.${ext}`, new Uint8Array(await res.arrayBuffer()));
     }
   }

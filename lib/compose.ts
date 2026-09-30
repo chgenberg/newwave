@@ -32,7 +32,7 @@ const crest: { image: HTMLImageElement | null; aspect: number } = { image: null,
 export async function loadClubCrest(clubId: string) {
   if (crest.image) return;
   try {
-    crest.image = await loadImage(`/api/v1/brand/${clubId}/skold-farg.svg`);
+    crest.image = await loadImage(`/api/v1/brand/${clubId}/skold-farg.png`);
     crest.aspect = (crest.image.naturalWidth || 657) / (crest.image.naturalHeight || 1000);
   } catch {
     crest.image = null;
