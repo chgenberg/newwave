@@ -38,8 +38,42 @@ const conceptSchema = (club: Club, signals: Signal[]) => ({
   },
 });
 
+const brandConceptSystem = (club: Club, signals: Signal[], count: number) => `Du är kreativ AD i ${club.name}s innehållsmaskin för merch som trycks på beställning och säljs i ${club.name}s egen webbshop och på stationerna.
+Du tar fram motiv som känns unika för just ${club.name} och som går att trycka med digitaltryck (DTG).
+
+Varumärkets regelbok (måste följas utan undantag):
+${club.rules.map((r) => `- ${r}`).join("\n")}
+- Tonalitet: ${club.tone}
+- Namn som får användas: ${club.nicknames.join(", ")}. Känd devis internt: "${club.tagline}".
+
+Du är ${club.agent.name}. Uppdrag: ${club.agent.mission}
+Riktlinjer:
+${club.agent.guidelines.map((g) => `- ${g}`).join("\n")}
+
+Tänk bästsäljare, inte reklam: varje förslag ska ha EN stark idé som stamkunder direkt känner igen – kaffet på morgonen, korven på vägen, bilresan, stationens ljus i mörkret, frosten på rutan – ett stort och tydligt huvudmotiv, en slogan man vill säga högt och en känsla av värme eller humor. Undvik det generiska (diagram, abstrakta former, vaga stämningar) och allt som låter som en annons.
+
+${count === signals.length ? `Ta fram exakt ${count} förslag – ett per signal, i samma ordning som signalerna. Gör dem tydligt olika varandra i stil och idé.` : `Ta fram exakt ${count} förslag. Sprid dem över signalerna – varje signal ska få minst ett förslag om det finns plats, trender och högtider nära i tid prioriteras.`}
+Variera stilen: vardagshumor och ordvits, retro roadtrip, typografiskt minimalistiskt, illustrativt.
+Så använder du signalerna efter typ:
+- [occasion]: helger och resor – skarpast i tid, prioritera högt.
+- [offer]: det stationerna säljer just nu – gör lekfulla motiv av själva produkten (kaffe, korv, dryck), aldrig om priset.
+- [club]: pressrummets kampanjer, sponsring och satsningar – stolthet och värme.
+- [weather]: styr främst produktvalet (products), inte motivet. Kallt ger hoodie, termos och isskrapa, varmt ger t-tröja, keps och dricksglas.
+- [search]: använd bara om kopplingen till bilresor, kaffe eller vardagen på vägen är självklar.
+
+Fält:
+- signal: exakt titeln på signalen förslaget bygger på.
+- mode: alltid "standard".
+- title: kort internt namn på motivet.
+- slogan: texten som trycks, max ${club.maxSloganLength} tecken, på svenska.
+- story: 1–2 meningar om varför motivet träffar stamkunderna just nu.
+- style: stilbeskrivning på engelska, 3–6 ord.
+- artDirection: bildbeskrivning på engelska till en bildmodell. Beskriv ENDAST illustrationen (objekt, komposition, formspråk). Nämn inga färger utanför paletten, ingen text, ingen logga, inga personer, inga bensinpumpar med varumärken.
+- palette: 2–3 färgkoder ur paletten.
+- products: 2–3 produkt-id som passar motivet och årstiden.`;
+
 export async function createConcepts(club: Club, signals: Signal[], count = SUGGESTIONS): Promise<Concept[]> {
-  const system = `Du är kreativ AD i Crafts innehållsmaskin för klubbmerch som trycks på beställning och säljs i klubbens butik hos Intersport.
+  const system = club.kind === "brand" ? brandConceptSystem(club, signals, count) : `Du är kreativ AD i Crafts innehållsmaskin för klubbmerch som trycks på beställning och säljs i klubbens butik hos Intersport.
 Du tar fram motiv som känns unika för just ${club.name} och som går att trycka med digitaltryck (DTG).
 
 Klubbens regelbok (måste följas utan undantag):
@@ -100,6 +134,14 @@ export function artworkPrompt(club: Club, concept: Concept) {
     concept.mode === "satir"
       ? "\nThis is a light-hearted supporter satire/meme motif. Rival colours may appear only as a small comic element. Never draw any real club crest, logo or trademark.\n"
       : "";
+  if (club.kind === "brand")
+    return `Print-ready graphic for a ${club.name} fan merchandise garment, direct-to-garment print.
+Subject: ${concept.artDirection}
+Style: ${concept.style}. Flat, bold vector-like shapes, clean edges, screen-print feel, no gradients, no photographic detail.
+Make it a best-selling tee graphic: one big, iconic central motif with a strong silhouette that fills most of the canvas, high contrast, instantly readable from a distance.
+Colour palette strictly limited to: ${colors}. Do not use any other colours. Never use green, blue or yellow.
+Transparent background. Centered composition with generous empty margin around the motif.
+Absolutely no text, letters, numbers, logos, brand marks, circle emblems resembling a logo, or real people.`;
   return `Print-ready graphic for a football supporter garment, direct-to-garment print.
 Subject: ${concept.artDirection}
 Style: ${concept.style}. Flat, bold vector-like shapes, clean edges, screen-print feel, no gradients, no photographic detail.
@@ -129,6 +171,20 @@ const contentSchema = obj({
   plan: { type: "array", items: obj({ date: str, channel: str, action: str }) },
 });
 
+const brandContentSystem = (club: Club, today: string) => `Du skriver marknadsföring för ${club.name} som ${club.name}s marknadsavdelning själv ska publicera. Tonalitet: ${club.tone}
+Skriv på svenska. Produkterna trycks på beställning och finns i ${club.name}-shoppen online och kan hämtas på stationen.
+Hitta inte på priser, rabatter eller datum utöver det som anges. Använd länken exakt som den står. Nämn inga verkliga personer, konkurrenter eller drivmedelspriser.
+- instagram.caption: max 300 tecken, 1–2 emojis. Skriv "Länk i bio" – ingen URL i texten. hashtags: 5–8 st utan #.
+- tiktok.caption: skriv "Länk i bio" – ingen URL.
+- Om signalen kommer från en nyhet: bygg på det som hänt, men citera inte artikeln och nämn inte tidningen.
+- facebook.post: 2–4 meningar, varm och vardaglig, riktad till stamkunder och bilfolk.
+- linkedin.post: 3–5 meningar i professionell ton för partners: egen merch som trycks på beställning, utan lager och utan svinn, som stärker varumärket på vägen.
+- tiktok: hook (första 2 sekunderna), script med 3–5 scener för en 10-sekundersfilm, caption.
+- newsletter: ämnesrad och brödtext (max 120 ord) till kunder i Circle K-appen och Extra-programmet.
+- banner: headline max 5 ord, subline max 10 ord, altText för hemsidebannern.
+- tv: headline max 5 ord och subline max 10 ord för skärmarna i stationsbutikerna.
+- plan: 4–6 steg för när marknadsavdelningen ska publicera vad, med datum (ÅÅÅÅ-MM-DD). Sprid ut stegen: från ${today} fram till och med händelsens datum om det ligger i framtiden, annars över de kommande 10 dagarna. Ett steg per rad, en kanal per steg. Skriv bara konkreta instruktioner – inga kommentarer om underlaget eller osäkerheter.`;
+
 export async function createContentPack(
   club: Club,
   concept: Concept,
@@ -137,7 +193,7 @@ export async function createContentPack(
   shopUrl: string,
   today: string,
 ): Promise<ContentPack> {
-  const system = `Du skriver marknadsföring för ${club.name} ("${club.tagline}") som klubbens kansli själv ska publicera. Tonalitet: ${club.tone}
+  const system = club.kind === "brand" ? brandContentSystem(club, today) : `Du skriver marknadsföring för ${club.name} ("${club.tagline}") som klubbens kansli själv ska publicera. Tonalitet: ${club.tone}
 Skriv på svenska. Produkterna trycks på beställning och finns i klubbens butik hos Intersport; varje köp stöttar klubben.
 Hitta inte på priser, rabatter eller datum utöver det som anges. Använd länken exakt som den står. Nämn inga spelares namn.
 - instagram.caption: max 300 tecken, 1–2 emojis. Skriv "Länk i bio" – ingen URL i texten. hashtags: 5–8 st utan #.

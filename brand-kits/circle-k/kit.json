@@ -1,0 +1,16 @@
+{
+  "club": "Circle K",
+  "tagline": "Gör det lite enklare",
+  "crest": {
+    "aspect": 1.166,
+    "variants": {
+      "farg": { "svg": "skold-farg.svg", "png": "skold-farg.png", "use": "Standard på vita och ljusa produkter samt i digitala kanaler" },
+      "svart": { "svg": "skold-svart.svg", "png": "skold-svart.png", "use": "Tryck i en färg på ljusa produkter" },
+      "vit": { "svg": "skold-vit.svg", "png": "skold-vit.png", "use": "Tryck i en färg på mörka produkter" }
+    },
+    "colors": { "röd": "#EE2E24" }
+  },
+  "colors": { "primary": "#DA291C", "logoRed": "#EE2E24", "orange": "#ED8B00", "darkGrey": "#414141", "sand": "#F7F5F2", "white": "#FFFFFF" },
+  "fonts": { "brand": "ACT Easy (licensierat, ej nedladdat)", "web": "Source Sans Pro" },
+  "source": "https://www.circlek.se – logga och färger insamlade för lokal demo"
+}

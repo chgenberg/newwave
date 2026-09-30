@@ -26,6 +26,8 @@ export async function renderReel(opts: {
   qrDataUrl: string;
   font: string;
   primary: string;
+  shopName?: string;
+  shopSupport?: string;
 }): Promise<{ blob: Blob; ext: "mp4" | "webm" }> {
   await fontsReady();
   const canvas = document.createElement("canvas");
@@ -60,7 +62,7 @@ export async function renderReel(opts: {
 
     if (t < 2.4) {
       const a = ease(seg(t, 0, 0.6));
-      drawCrest(ctx, W / 2, 520 - 40 * (1 - a), 150, opts.primary, "#FFFFFF", opts.font);
+      drawCrest(ctx, W / 2, 520 - 40 * (1 - a), 150, opts.primary, "#FFFFFF", opts.font, true);
       drawHeadline(760, ease(seg(t, 0.25, 0.9)), 1.25 - 0.25 * ease(seg(t, 0.25, 0.9)));
     } else if (t < 5.4 && photo) {
       const p = seg(t, 2.4, 5.4);
@@ -97,7 +99,7 @@ export async function renderReel(opts: {
       drawHeadline(220, 1, 0.8);
     } else {
       const a = ease(seg(t, 8.2, 8.7));
-      drawCrest(ctx, W / 2, 200, 130, opts.primary, "#FFFFFF", opts.font);
+      drawCrest(ctx, W / 2, 200, 130, opts.primary, "#FFFFFF", opts.font, true);
       drawHeadline(420, 1, 0.85);
       ctx.globalAlpha = a;
       const size = 420;
@@ -110,7 +112,7 @@ export async function renderReel(opts: {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = `600 52px ${SANS}`;
-      ctx.fillText("Klubbshoppen hos Intersport", W / 2, 1480);
+      ctx.fillText(opts.shopName ?? "Klubbshoppen hos Intersport", W / 2, 1480);
       let px = 40;
       do ctx.font = `${px}px ${SANS}`;
       while (ctx.measureText(opts.subline).width > W * 0.88 && --px > 20);
@@ -118,7 +120,7 @@ export async function renderReel(opts: {
       ctx.fillText(opts.subline, W / 2, 1560);
       if (!/beställning|stöttar/i.test(opts.subline)) {
         ctx.font = `36px ${SANS}`;
-        ctx.fillText("Tryckt på beställning · Varje köp stöttar klubben", W / 2, 1630);
+        ctx.fillText(opts.shopSupport ?? "Tryckt på beställning · Varje köp stöttar klubben", W / 2, 1630);
       }
       ctx.globalAlpha = 1;
     }

@@ -24,16 +24,20 @@ export function checkConcept(club: Club, concept: Concept): RuleCheck[] {
   const colorHits = satire
     ? []
     : club.forbiddenColors.filter((fc) => fc.words.some((w) => mentionsWord(`${concept.artDirection} ${concept.story}`, w)));
-  const rivalMarks = /\b(aik|hammarby|gais|örgryte|malmö ff|mff|djurgården)\b.{0,20}\b(logo|logga|crest|sköld|emblem|badge|märke)/i.test(
+  const brand = club.kind === "brand";
+  const rivalText = `${concept.artDirection} ${concept.story} ${concept.slogan}`;
+  const rivalMarks = brand
+    ? (club.competitors ?? []).some((c) => mentionsWord(rivalText, c))
+    : /\b(aik|hammarby|gais|örgryte|malmö ff|mff|djurgården)\b.{0,20}\b(logo|logga|crest|sköld|emblem|badge|märke)/i.test(
     `${concept.artDirection} ${concept.story}`,
   );
 
-  const logoHit = /\b(logo|logotype|crest|emblem|badge|sköld|klubbmärke)\b/i.test(concept.artDirection)
+  const logoHit = /\b(logo|logotype|crest|emblem|badge|sköld|klubbmärke|logga)\b/i.test(concept.artDirection)
     && !/\b(no|without|inga?|utan)\s+(\w+\s+)?(logo|logotype|crest|emblem|badge|sköld|klubbmärke)/i.test(concept.artDirection);
 
   return [
     {
-      rule: "Endast klubbens färger",
+      rule: brand ? `Endast ${club.name}s färger` : "Endast klubbens färger",
       ok: offPalette.length === 0,
       note: offPalette.length ? `Otillåtna färgkoder: ${offPalette.join(", ")}` : undefined,
     },
@@ -43,9 +47,9 @@ export function checkConcept(club: Club, concept: Concept): RuleCheck[] {
       note: colorHits.length ? colorHits.map((c) => `${c.name}: ${c.reason}`).join("; ") : undefined,
     },
     {
-      rule: "Inga andra klubbars sköldar eller varumärken",
+      rule: brand ? "Inga konkurrenters namn eller loggor" : "Inga andra klubbars sköldar eller varumärken",
       ok: !rivalMarks,
-      note: rivalMarks ? "Beskrivningen nämner en annan klubbs logga eller sköld" : undefined,
+      note: rivalMarks ? (brand ? "Texten nämner en konkurrent" : "Beskrivningen nämner en annan klubbs logga eller sköld") : undefined,
     },
     {
       rule: `Slogan max ${club.maxSloganLength} tecken`,
@@ -58,7 +62,7 @@ export function checkConcept(club: Club, concept: Concept): RuleCheck[] {
       note: banned.length ? `Hittade: ${banned.join(", ")}` : undefined,
     },
     {
-      rule: "AI ritar ingen klubbsköld",
+      rule: brand ? "AI ritar ingen logga" : "AI ritar ingen klubbsköld",
       ok: !logoHit,
       note: logoHit ? "Bildbeskrivningen nämner logga eller sköld" : undefined,
     },

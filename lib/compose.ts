@@ -36,10 +36,18 @@ export const qrDataUrl = (text: string, dark = "#234B9A") =>
 
 export const brandFont = (px: number, family: string) => `900 ${px}px ${family}`;
 
-const crest: { image: HTMLImageElement | null; aspect: number } = { image: null, aspect: 0.657 };
+const crest: { image: HTMLImageElement | null; inverse: HTMLImageElement | null; aspect: number; clubId: string } = {
+  image: null,
+  inverse: null,
+  aspect: 0.657,
+  clubId: "",
+};
 
-export async function loadClubCrest(clubId: string) {
-  if (crest.image) return;
+/** `inverseOnColor`: use the white logo on brand-coloured backgrounds (for logos drawn in the brand colour). */
+export async function loadClubCrest(clubId: string, inverseOnColor = false) {
+  if (crest.image && crest.clubId === clubId) return;
+  crest.clubId = clubId;
+  crest.inverse = inverseOnColor ? await loadImage(`/api/v1/brand/${clubId}/skold-vit.png`).catch(() => null) : null;
   try {
     crest.image = await loadImage(`/api/v1/brand/${clubId}/skold-farg.png`);
     crest.aspect = (crest.image.naturalWidth || 657) / (crest.image.naturalHeight || 1000);
@@ -48,11 +56,13 @@ export async function loadClubCrest(clubId: string) {
   }
 }
 
-export function drawCrest(ctx: CanvasRenderingContext2D, cx: number, top: number, w: number, fill: string, ink: string, font: string) {
+export function drawCrest(ctx: CanvasRenderingContext2D, cx: number, top: number, w: number, fill: string, ink: string, font: string, onColor = false) {
   const h = w * 1.18;
-  if (crest.image) {
-    const cw = h * crest.aspect;
-    ctx.drawImage(crest.image, cx - cw / 2, top, cw, h);
+  const image = onColor && crest.inverse ? crest.inverse : crest.image;
+  if (image) {
+    const cw = crest.aspect > 1 ? h : h * crest.aspect;
+    const ch = crest.aspect > 1 ? h / crest.aspect : h;
+    ctx.drawImage(image, cx - cw / 2, top + (h - ch) / 2, cw, ch);
     return;
   }
   const x = cx - w / 2;
@@ -233,7 +243,7 @@ export async function composeCampaignImage(opts: {
     const block = crestW * 1.18 + H * 0.05 + lines.length * px + H * 0.03 + subPx * 1.4 + H * 0.05 + tail;
     let y = Math.max(H * 0.04, (H - block) / 2);
 
-    drawCrest(ctx, left + crestW / 2, y, crestW, opts.primary, "#FFFFFF", font);
+    drawCrest(ctx, left + crestW / 2, y, crestW, opts.primary, "#FFFFFF", font, true);
     y += crestW * 1.18 + H * 0.05;
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "left";
@@ -268,7 +278,7 @@ export async function composeCampaignImage(opts: {
     }
   } else {
     const crestW = W * 0.09;
-    drawCrest(ctx, W / 2, H * 0.045, crestW, opts.primary, "#FFFFFF", font);
+    drawCrest(ctx, W / 2, H * 0.045, crestW, opts.primary, "#FFFFFF", font, true);
     const { lines, px } = fitLines(ctx, headline, W * 0.88, Math.round(W * 0.13), Math.round(W * 0.075), font);
     ctx.fillStyle = "#FFFFFF";
     ctx.textAlign = "center";

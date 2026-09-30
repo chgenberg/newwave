@@ -35,6 +35,7 @@ export async function POST(req: Request) {
   if (items.some((i) => !passesAll(checkConcept(club, i.concept)))) {
     return Response.json({ error: "Ett motiv bryter mot klubbens regelbok" }, { status: 422 });
   }
+  const brand = club.kind === "brand";
 
   const origin = publicOrigin(req);
   const today = new Date().toISOString().slice(0, 10);
@@ -63,9 +64,9 @@ export async function POST(req: Request) {
         };
 
         const intersportProducts = products.map((p) => ({
-          sku: `CRAFT-POD-${p.id.toUpperCase()}-${slug(concept.title).toUpperCase()}`,
+          sku: `${brand ? "CK" : "CRAFT"}-POD-${p.id.toUpperCase()}-${slug(concept.title).toUpperCase()}`,
           title: `${club.name} – ${concept.slogan} – ${p.name.split(",")[0]} ${p.garmentColor.toLowerCase()}`,
-          description: `${concept.story} Trycks på beställning för ${club.name}. Varje köp stöttar klubben.`,
+          description: `${concept.story} Trycks på beställning för ${club.name}. ${brand ? "Hämtas på din station eller skickas hem." : "Varje köp stöttar klubben."}`,
           priceSek: p.priceSek,
           priceNote: "Exempelpris i mockup",
           sizes: p.sizes,
@@ -77,10 +78,10 @@ export async function POST(req: Request) {
             vectorUrl: `${origin}${printFiles.vector}`,
             pixels: printPixels,
             dpi: Math.round(printPixels.width / (30 / 2.54)),
-            crest: { source: "licensbibliotek", assetId: `${club.id}/crest/official`, colors: club.crestColors },
+            [brand ? "logo" : "crest"]: { source: "licensbibliotek", assetId: `${club.id}/${brand ? "logo" : "crest"}/official`, colors: club.crestColors },
           },
-          personalization: p.kind === "mug" ? { enabled: false } : personalizationRules(club, concept.signal),
-          clubCommission: "enligt klubbavtal",
+          personalization: p.kind === "mug" || brand ? { enabled: false } : personalizationRules(club, concept.signal),
+          ...(brand ? { channel: "webbshop + stationer" } : { clubCommission: "enligt klubbavtal" }),
         }));
 
         return {
@@ -90,10 +91,10 @@ export async function POST(req: Request) {
           links,
           content,
           intersport: {
-            endpoint: "POST /v1/club-shops/{clubShopId}/products",
-            clubShopId: club.id,
+            endpoint: brand ? "POST /v1/merch/shops/{shopId}/products" : "POST /v1/club-shops/{clubShopId}/products",
+            ...(brand ? { shopId: club.id } : { clubShopId: club.id }),
             dropId,
-            supplier: "Craft of Scandinavia AB",
+            supplier: brand ? "Circle K Sverige AB · tryck på beställning" : "Craft of Scandinavia AB",
             tracking: { utmCampaign: dropId, channels: Object.keys(links) },
             products: intersportProducts,
           },

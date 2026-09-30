@@ -20,9 +20,13 @@ export async function GET(req: Request) {
   const weather = weatherRes.status === "fulfilled" ? weatherRes.value : null;
   const sources: SourceStatus[] = [
     ...(trendRes.status === "fulfilled" ? trendRes.value.status : []),
-    matchRes.status === "fulfilled"
-      ? { id: "match", name: "Allsvenskan", ok: true, count: matches.length }
-      : { id: "match", name: "Allsvenskan", ok: false, count: 0, note: errorMessage(matchRes.reason) },
+    ...(!club.sources.sportsDbTeamId
+      ? []
+      : [
+          matchRes.status === "fulfilled"
+            ? { id: "match", name: "Allsvenskan", ok: true, count: matches.length }
+            : { id: "match", name: "Allsvenskan", ok: false, count: 0, note: errorMessage(matchRes.reason) },
+        ]),
     weather
       ? { id: "weather", name: "SMHI", ok: true, count: 1 }
       : { id: "weather", name: "SMHI", ok: false, count: 0, note: weatherRes.status === "rejected" ? errorMessage(weatherRes.reason) : undefined },
@@ -30,8 +34,8 @@ export async function GET(req: Request) {
 
   return Response.json({
     today: now.toISOString().slice(0, 10),
-    season: seasonFor(now),
-    occasions: upcomingOccasions(now),
+    season: seasonFor(now, club.kind === "brand"),
+    occasions: upcomingOccasions(now, 60, club.kind === "brand"),
     trends,
     matches,
     weather,

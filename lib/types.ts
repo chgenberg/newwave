@@ -2,6 +2,10 @@ export type ColorToken = { name: string; hex: string };
 
 export type Club = {
   id: string;
+  /** "brand" = företagsvarumärke (t.ex. Circle K) i stället för en idrottsklubb. */
+  kind?: "brand";
+  copy?: Partial<BrandCopy>;
+  competitors?: string[];
   name: string;
   shortName: string;
   nicknames: string[];
@@ -30,10 +34,32 @@ export type Club = {
 
 export type ClubSources = {
   website: string;
-  sportsDbTeamId: string;
-  youtubeUser: string;
-  podcastSearch: string[];
+  sportsDbTeamId?: string;
+  youtubeUser?: string;
+  youtubeChannelId?: string;
+  podcastSearch?: string[];
+  pressRss?: { name: string; url: string };
+  offersUrl?: string;
   weather: { place: string; lat: number; lon: number };
+};
+
+export type BrandCopy = {
+  maker: string;
+  product: string;
+  pickTitle: string;
+  pickSubtitle: string;
+  pickPlaceholder: string;
+  pickEmpty: string;
+  newsPlaceholder: string;
+  customPlaceholder: string;
+  org: string;
+  listening: string;
+  shopName: string;
+  shopSupport: string;
+  logoWord: string;
+  loaderLines: string[];
+  loaderDone: string;
+  navLinks: boolean;
 };
 
 export type SourceStatus = { id: string; name: string; ok: boolean; count: number; note?: string };
@@ -55,7 +81,7 @@ export type ClubAgent = {
 
 export type Signal = {
   id: string;
-  kind: "occasion" | "season" | "trend" | "news" | "custom" | "match" | "club" | "social" | "podcast" | "search" | "weather";
+  kind: "occasion" | "season" | "trend" | "news" | "custom" | "match" | "club" | "social" | "podcast" | "search" | "weather" | "offer";
   title: string;
   detail: string;
   date?: string;

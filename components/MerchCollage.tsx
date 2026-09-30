@@ -57,6 +57,7 @@ export function MerchCollage(props: {
   primary: string;
   tiles: CollageTile[];
   photos: CollagePhoto[] | null;
+  blanketLabel?: string;
 }) {
   const tile = (id: string) => props.tiles.find((t) => t.id === id);
   const photo = (id: string) => props.photos?.find((p) => p.id === id);
@@ -82,7 +83,7 @@ export function MerchCollage(props: {
     p("tee", "md:col-span-4 row-span-4"),
     p("termos", "md:col-span-3 row-span-4", "md:pt-8"),
     p("hoodie", "md:col-span-4 row-span-3"),
-    { cls: "col-span-2 md:col-span-4 row-span-6", render: () => <PhotoBox photo={photo("filt")} label="Filten i soffan" pending={pending} /> },
+    { cls: "col-span-2 md:col-span-4 row-span-6", render: () => <PhotoBox photo={photo("filt")} label={props.blanketLabel ?? "Filten i soffan"} pending={pending} /> },
     p("yeti", "md:col-span-4 row-span-3"),
     {
       cls: "md:col-span-4 row-span-3",

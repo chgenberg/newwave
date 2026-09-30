@@ -13,7 +13,41 @@ export type Scene = { id: string; label: string; print: "light" | "dark"; prompt
 const MARKER =
   "one flat, solid, pure bright green (#00FF00) rectangle in portrait orientation (3:4), centred on the chest, large – covering the whole chest area from just below the collar to above the stomach and following the fabric naturally. The rectangle has no texture, text or pattern. Nothing else is printed on the garment and there is no other bright green anywhere in the image.";
 
+function brandScenes(club: Club, concept: Concept): Scene[] {
+  const season = seasonFor(new Date(), true).title.toLowerCase();
+  const signal = concept.signal.toLowerCase();
+  const people = /fars dag/.test(signal)
+    ? `a father and his young child laughing together; the father wears a plain white crew-neck t-shirt with ${MARKER} The child wears a plain white t-shirt with nothing on it`
+    : `a young adult on a road trip, relaxed and happy, holding a plain white takeaway coffee cup, wearing a plain white crew-neck cotton t-shirt with ${MARKER}`;
+  const place = /jul|lucia|black friday/.test(signal)
+    ? "leaning against a car in a snowy parking area at a modern Scandinavian roadside service station at dusk, warm canopy lights glowing behind"
+    : `leaning against a car at a modern Scandinavian roadside service station on a ${season} evening, warm canopy lights glowing softly out of focus behind`;
+
+  const look = `Hyperrealistic editorial lifestyle campaign photo, shot on a full-frame camera with a 50mm lens, natural light, shallow depth of field. Real skin texture, natural hands and faces, realistic cotton fabric and stitching – indistinguishable from a real photo shoot.
+Any people are fictional and generic, not famous. No logos, no brands, no readable signage, no fuel prices, no green, blue or yellow clothing.`;
+
+  return [
+    { id: "livsstil", label: "Livsstil", print: "light", fabric: "plain white cotton t-shirt fabric", prompt: `${look}\n${people}, ${place}.` },
+    {
+      id: "produkt",
+      label: "Produkt",
+      print: "light",
+      fabric: "plain white cotton t-shirt fabric",
+      prompt: `${look}\nProduct photo: a plain white crew-neck t-shirt laid flat and neatly styled on the bonnet of a glossy red car, a plain white takeaway coffee cup and a set of car keys beside it, soft ${season} daylight. On the chest of the t-shirt there is ${MARKER}`,
+    },
+    {
+      id: "filt",
+      label: "Filt i bilen",
+      print: "light",
+      anchor: "center",
+      fabric: "soft cream white fleece blanket fabric",
+      prompt: `${look}\nPhoto, no people: the open boot of an estate car parked by a Scandinavian lake on a ${season} evening. A soft cream white fleece throw blanket is draped over the edge of the boot, with a picnic basket, a thermos and two mugs beside it, warm golden light. On the front of the draped blanket, facing the camera, there is one flat, solid, pure bright green (#00FF00) rectangle in portrait orientation (3:4), large, centred on the visible part of the blanket and following its drape. The rectangle has no texture, text or pattern, and there is no other bright green anywhere in the image.`,
+    },
+  ];
+}
+
 export function scenes(club: Club, concept: Concept): Scene[] {
+  if (club.kind === "brand") return brandScenes(club, concept);
   const season = seasonFor(new Date()).title.toLowerCase();
   const signal = concept.signal.toLowerCase();
   const people = /fars dag/.test(signal)

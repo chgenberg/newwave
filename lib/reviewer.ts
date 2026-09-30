@@ -37,23 +37,24 @@ export async function reviewAsset(
   const t = club.agent.review;
   const satire = concept.mode === "satir";
 
+  const b = club.kind === "brand";
   const res = await openai().responses.create({
     model: TEXT_MODEL,
     input: [
       {
         role: "system",
-        content: `Du är granskaragenten för ${club.name} – en erfaren merchansvarig och art director som bestämmer om material får publiceras i klubbshoppen hos Intersport. Var ärlig och kräsen: betyget 8 betyder "jag skulle själv lägga ut det här i dag", 10 är sällsynt.
+        content: `Du är granskaragenten för ${club.name} – en erfaren merchansvarig och art director som bestämmer om material får publiceras i ${b ? `${club.name}-shoppen` : "klubbshoppen hos Intersport"}. Var ärlig och kräsen: betyget 8 betyder "jag skulle själv lägga ut det här i dag", 10 är sällsynt.
 
-Klubbens riktlinjer:
+${b ? "Varumärkets" : "Klubbens"} riktlinjer:
 ${club.agent.guidelines.map((g) => `- ${g}`).join("\n")}
 ${club.rules.map((r) => `- ${r}`).join("\n")}
-${satire ? `Detta är SATIR/MEME-läge. Regler:\n${club.agent.satire.rules.map((r) => `- ${r}`).join("\n")}` : "Standardläge: bara klubbens färger och symboler."}
+${satire ? `Detta är SATIR/MEME-läge. Regler:\n${club.agent.satire.rules.map((r) => `- ${r}`).join("\n")}` : b ? `Standardläge: bara ${club.name}s färger och logga.` : "Standardläge: bara klubbens färger och symboler."}
 
 Betygsätt 1–10:
 - realism: ${kind === "produktfoto" ? "ser fotot ut som ett riktigt kampanjfoto? Naturliga människor, händer, ansikten, tyg, ljus och tryck som ligger rätt på plagget. Allt som ser AI-genererat ut drar ner kraftigt." : "ser motivet professionellt och tryckfärdigt ut, som från en riktig designbyrå?"}
-- relevance: träffar det signalen ("${concept.signal}") och känns aktuellt för supportrarna just nu?
-- brandFit: följer det klubbens riktlinjer, färger och tonläge? Andra klubbars sköldar eller varumärken ger 1.
-- sales: hur troligt är det att en supporter köper det här? Tänk på känsla, humor, stolthet, bärbarhet och om det sticker ut i ett flöde.
+- relevance: träffar det signalen ("${concept.signal}") och känns aktuellt för ${b ? "stamkunderna" : "supportrarna"} just nu?
+- brandFit: följer det ${b ? "varumärkets" : "klubbens"} riktlinjer, färger och tonläge? ${b ? "Konkurrenters namn, loggor eller färger" : "Andra klubbars sköldar eller varumärken"} ger 1.
+- sales: hur troligt är det att en ${b ? "stamkund" : "supporter"} köper det här? Tänk på känsla, humor, stolthet, bärbarhet och om det sticker ut i ett flöde.
 strengths/issues: korta punkter på svenska. summary: en mening.`,
       },
       {
@@ -63,8 +64,12 @@ strengths/issues: korta punkter på svenska. summary: en mening.`,
             type: "input_text",
             text: `${kind === "produktfoto" ? "Produktfoton" : "Motiv"} för "${concept.slogan}" (${concept.title}). ${concept.story}${
               kind === "motiv"
-                ? "\nBilden är en enkel platt skiss av en t-shirt som bara visar trycket. Bedöm själva trycket – motiv, slogan och sköld – inte skissen. Skölden i trycket är klubbens officiella och ska inte räknas som ett fel."
-                : "\nTrycket på plagget är lagt från klubbens exakta originalfil, inklusive den officiella skölden. Bedöm fotots realism, hur naturligt trycket sitter på plagget och hur säljande helheten är."
+                ? b
+                  ? `\nBilden är en enkel platt skiss av en t-shirt som bara visar trycket. Bedöm själva trycket – motiv, slogan och logga – inte skissen. Loggan i trycket är ${club.name}s officiella och ska inte räknas som ett fel.`
+                  : "\nBilden är en enkel platt skiss av en t-shirt som bara visar trycket. Bedöm själva trycket – motiv, slogan och sköld – inte skissen. Skölden i trycket är klubbens officiella och ska inte räknas som ett fel."
+                : b
+                  ? `\nTrycket på plagget är lagt från ${club.name}s exakta originalfil, inklusive den officiella loggan. Bedöm fotots realism, hur naturligt trycket sitter på plagget och hur säljande helheten är.`
+                  : "\nTrycket på plagget är lagt från klubbens exakta originalfil, inklusive den officiella skölden. Bedöm fotots realism, hur naturligt trycket sitter på plagget och hur säljande helheten är."
             }`,
           },
           ...inputs,

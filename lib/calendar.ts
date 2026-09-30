@@ -54,8 +54,45 @@ function occasionsForYear(y: number): Occasion[] {
   ];
 }
 
-export function seasonFor(date: Date): Signal {
+function brandOccasionsForYear(y: number): Occasion[] {
+  const midsummerEve = (() => {
+    for (let day = 19; day <= 25; day++) if (d(y, 6, day).getUTCDay() === 5) return d(y, 6, day);
+    return d(y, 6, 19);
+  })();
+  const e = easter(y);
+  const thanksgiving = nthWeekday(y, 11, 4, 4);
+  return [
+    { id: "sportlov", title: "Sportlovsresan", detail: "Skidorna på taket, termosen i mitthålet – fjällresan börjar med ett stopp.", date: nthWeekday(y, 2, 6, 3) },
+    { id: "alla-hjartans", title: "Alla hjärtans dag", detail: "Kärlek på vägen – kaffe för två och en korv att dela.", date: d(y, 2, 14) },
+    { id: "pask", title: "Påskresan", detail: "Påskledigt, fulla bilar och ett efterlängtat stopp på vägen.", date: new Date(e.getTime() - 2 * DAY) },
+    { id: "sommardack", title: "Dags för sommardäck", detail: "Vinterdäcken av – våren är på riktigt.", date: d(y, 4, 15) },
+    { id: "nationaldagen", title: "Nationaldagen", detail: "Sverige på väg – långa vägar, röda stugor och ljusa kvällar.", date: d(y, 6, 6) },
+    { id: "midsommar", title: "Midsommarresan", detail: "Årets mest trafikerade helg – kaffe, glass och korv på vägen till landet.", date: new Date(midsummerEve.getTime() - DAY) },
+    { id: "bilsemester", title: "Bilsemestern börjar", detail: "Industrisemester och roadtrip – kartan, kylväskan och K-Freeze.", date: d(y, 7, 1) },
+    { id: "skolstart", title: "Skolstart", detail: "Morgonkaffe igen – vardagen och pendlingen tillbaka.", date: d(y, 8, 20) },
+    { id: "hostlov", title: "Höstlovsresan", detail: "Mörka kvällar, stationen som lyser upp vägen hem.", date: nthWeekday(y, 10, 6, 4) },
+    { id: "vinterdack", title: "Första frosten", detail: "Isskrapan fram, vinterdäcken på – och en varm kopp i handen.", date: d(y, 10, 15) },
+    { id: "halloween", title: "Halloween", detail: "Läskigt god korv och spöklika stationer i mörkret.", date: d(y, 10, 31) },
+    { id: "black-friday", title: "Black Friday", detail: "Årets största shoppinghelg – julklappar för bilfolket.", date: new Date(thanksgiving.getTime() + DAY) },
+    { id: "lucia", title: "Lucia", detail: "Ljus i mörkret – och lussekatt till kaffet.", date: d(y, 12, 13) },
+    { id: "jul", title: "Julresan", detail: "Hem till jul – bilen full av klappar och ett stopp för glögg och kaffe.", date: d(y, 12, 22) },
+    { id: "nyar", title: "Nyår", detail: "Nytt år, nya resor.", date: d(y, 12, 31) },
+  ];
+}
+
+export function seasonFor(date: Date, brand = false): Signal {
   const m = date.getUTCMonth() + 1;
+  if (brand) {
+    const [title, detail] =
+      m <= 2 || m === 12
+        ? ["Vinter", "Frost, mörker och fjällresor – isskrapor, termosar och varma mössor."]
+        : m <= 5
+          ? ["Vår", "Ljusare morgnar, sommardäck och påskresor."]
+          : m <= 8
+            ? ["Sommar", "Roadtrip och bilsemester – kepsar, t-shirts och dricksglas."]
+            : ["Höst", "Mörka kvällar och första frosten – hoodies, kaffe och isskrapor."];
+    return { id: `season-${title.toLowerCase()}`, kind: "season", title, detail };
+  }
   const [title, detail] =
     m <= 2 || m === 12
       ? ["Vinter", "Mörker, kyla och försäsong – mössor, hoodies och termosmuggar."]
@@ -67,10 +104,11 @@ export function seasonFor(date: Date): Signal {
   return { id: `season-${title.toLowerCase()}`, kind: "season", title, detail };
 }
 
-export function upcomingOccasions(from: Date, windowDays = 60): Signal[] {
+export function upcomingOccasions(from: Date, windowDays = 60, brand = false): Signal[] {
   const y = from.getUTCFullYear();
   const start = d(y, from.getUTCMonth() + 1, from.getUTCDate()).getTime();
-  return [...occasionsForYear(y), ...occasionsForYear(y + 1)]
+  const forYear = brand ? brandOccasionsForYear : occasionsForYear;
+  return [...forYear(y), ...forYear(y + 1)]
     .map((o) => ({ ...o, days: Math.round((o.date.getTime() - start) / DAY) }))
     .filter((o) => o.days >= 0 && o.days <= windowDays)
     .sort((a, b) => a.days - b.days)

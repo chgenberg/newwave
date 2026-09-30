@@ -31,6 +31,7 @@ const FORBIDDEN_HUES: Record<string, (h: number) => boolean> = {
   Grön: (h) => h >= 75 && h <= 165,
   Röd: (h) => h < 14 || h > 340,
   Gul: (h) => h >= 40 && h < 70,
+  Blå: (h) => h >= 190 && h <= 260,
 };
 
 export type PaletteReport = {
@@ -133,7 +134,7 @@ export async function visionReview(png: Buffer, club: Club): Promise<RuleCheck[]
     input: [
       {
         role: "system",
-        content: `Du granskar tryckmotiv till supporterkläder för ${club.name} innan de trycks. Var strikt men rättvis.
+        content: `Du granskar tryckmotiv till ${club.kind === "brand" ? "merchprodukter" : "supporterkläder"} för ${club.name} innan de trycks. Var strikt men rättvis.
 - containsTextOrLetters: finns bokstäver, siffror eller läsbar text i bilden?
 - containsLogoOrCrest: finns en sköldform/vapensköld som kan förväxlas med en klubbs officiella sköld, eller ett varumärkes logotyp? Runda märken, emblem-känsla och symboler UTAN text och UTAN sköldform är OK och ska inte flaggas.
 - resemblesOtherBrandOrCharacter: liknar något ett känt varumärke, en annan klubbs symbol eller en upphovsrättsskyddad figur (t.ex. Disney, Pokémon)?

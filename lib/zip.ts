@@ -34,10 +34,10 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim().replace(/[.\s]+$/, "");
 const hashtags = (tags: string[]) => tags.map((h) => `#${h.replace(/^#/, "")}`).join(" ");
 
-function channelTexts(it: PackItem) {
+function channelTexts(it: PackItem, brand: boolean) {
   const c = it.content;
   const l = it.links;
-  return {
+  const base = {
     instagram: `${c.instagram.caption}\n\n${hashtags(c.instagram.hashtags)}\n\nLänk i bio:\n${l.instagram}\n\nLänkklistermärke i storyn:\n${l["instagram-story"]}\n\nTips: lägg upp som karusell – foto-livsstil.jpg, inlagg-4x5.png, foto-produkt.jpg.\n`,
     facebook: `${c.facebook.post}\n`,
     linkedin: `${c.linkedin.post}\n`,
@@ -46,8 +46,67 @@ function channelTexts(it: PackItem) {
     banner: `Bild: banner-1920x600.png (dator) och banner-mobil-1080x1080.png (mobil)\nLänka bannern till:\n${l.hemsida}\n\nAlt-text (för tillgänglighet):\n${c.banner.altText}\n`,
     tv: `Bild: tv-1920x1080.png – med QR-kod till klubbshoppen.\nVisa på skärmar i klubbhuset, kansliet eller på arenan (USB-minne eller skärmsystem).\n`,
     poster: `Skriv ut affisch-A4.png i A4 eller A3 och sätt upp i klubbhuset, omklädningsrummet eller kiosken.\nQR-koden går till klubbshoppen och räknas som kanalen "affisch".\n`,
-    links: `LÄNKAR OCH SPÅRNING\n\nVarje kanal har en egen länk. Då syns i försäljningsrapporten exakt vilken kanal som sålde.\nAnvänd rätt länk i rätt kanal – texterna i mapparna har redan rätt länk.\n\n${CHANNELS.map((ch) => `${ch.label}:\n${l[ch.id]}`).join("\n\n")}\n`,
+    links: `LÄNKAR OCH SPÅRNING\n\nVarje kanal har en egen länk. Då syns i försäljningsrapporten exakt vilken kanal som sålde.\nAnvänd rätt länk i rätt kanal – texterna i mapparna har redan rätt länk.\n\n${CHANNELS.map((ch) => `${ch.label.replace("i klubbhuset", brand ? "på stationen" : "i klubbhuset")}:\n${l[ch.id]}`).join("\n\n")}\n`,
   };
+  if (!brand) return base;
+  return {
+    ...base,
+    tv: `Bild: tv-1920x1080.png – med QR-kod till shoppen.\nVisa på skärmarna i stationsbutikerna (skärmsystem eller USB-minne).\n`,
+    poster: `Skriv ut affisch-A4.png i A4 eller A3 och sätt upp vid kassan, kaffemaskinen eller entrén.\nQR-koden går till shoppen och räknas som kanalen "affisch".\n`,
+  };
+}
+
+function brandGuideHtml(club: Club, items: PackItem[], folders: string[]) {
+  const plans = items
+    .map((it, i) => {
+      const rows = it.content.plan
+        .map((p) => `<tr><td>${esc(p.date)}</td><td>${esc(p.channel)}</td><td>${esc(p.action)}</td></tr>`)
+        .join("");
+      return `<h3>${esc(it.concept.slogan)}</h3>
+<p class="muted">Mapp: <b>${esc(folders[i])}</b> · Bygger på: ${esc(it.concept.signal)}</p>
+<table><thead><tr><th>Datum</th><th>Kanal</th><th>Gör så här</th></tr></thead><tbody>${rows}</tbody></table>`;
+    })
+    .join("");
+  const brandColor = club.palette[0].hex;
+  return `<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>Så här gör du – ${esc(club.name)}</title>
+<style>
+body{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;max-width:760px;margin:40px auto;padding:0 24px;color:#1d1d1f;line-height:1.55}
+h1{font-size:30px;margin-bottom:4px}h2{margin-top:36px;font-size:20px;border-bottom:1px solid #d2d2d7;padding-bottom:6px}
+h3{margin:22px 0 2px;color:${brandColor}}.muted{color:#6e6e73;margin-top:0}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{text-align:left;padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top}td:first-child,td:nth-child(2){white-space:nowrap}
+ol li{margin-bottom:8px}.box{background:#f5f5f7;border-radius:12px;padding:14px 18px}.warn{background:#fff4e5;border-radius:12px;padding:14px 18px}
+code{background:#f5f5f7;padding:1px 5px;border-radius:4px}
+</style></head><body>
+<h1>Så här gör du</h1>
+<p class="muted">${esc(club.name)} · Nytt innehåll för ${esc(club.name)}-shoppen · skapat ${new Date().toISOString().slice(0, 10)}</p>
+
+<div class="box">Allt i den här mappen är klart att publicera. Produkterna trycks på beställning – inget lager och inget svinn.
+Varje kanal har en egen spårbar länk, så att ni ser vad som säljer.</div>
+
+<h2>1. Publiceringsplan</h2>${plans}
+
+<h2>2. Kanal för kanal</h2>
+<ol>
+<li><b>Instagram</b> – lägg upp en karusell: <code>foto-livsstil.jpg</code>, <code>inlagg-4x5.png</code>, <code>foto-produkt.jpg</code>. Klistra in <code>text.txt</code>. Lägg <code>story-9x16.png</code> som story med länkklistermärke.</li>
+<li><b>Reels och TikTok</b> – filmen <code>film-9x16</code> är klar. Ladda upp den, lägg på ett populärt ljud i appen och klistra in bildtexten.</li>
+<li><b>Facebook</b> – publicera <code>inlagg-4x5.png</code> eller fotona med texten.</li>
+<li><b>LinkedIn</b> – publicera <code>inlagg-1200x627.png</code> med texten. Tagga gärna partners.</li>
+<li><b>Hemsidan och appen</b> – lägg bannern på circlek.se eller i appen och länka den med länken i <code>instruktion.txt</code>.</li>
+<li><b>Skärmar på stationerna</b> – visa <code>tv-1920x1080.png</code>. QR-koden tar kunden direkt till shoppen.</li>
+<li><b>Affisch</b> – skriv ut <code>affisch-A4.png</code> och sätt upp vid kassan och kaffemaskinen.</li>
+<li><b>Nyhetsbrev</b> – kopiera ämnesrad och text till utskicket i appen eller Extra-programmet.</li>
+</ol>
+
+<h2>3. Regler – ändra inte</h2>
+<div class="warn"><ul>
+${club.rules.map((r) => `<li>${esc(r)}</li>`).join("")}
+<li>Alla motiv har kontrollerats automatiskt: färger pixel för pixel, att inga konkurrenter, andra varumärken eller verkliga personer förekommer, och att motivet går att trycka.</li>
+<li>Loggan läggs alltid på automatiskt från de officiella filerna (mappen <code>Grafisk profil</code>). Använd bara de filerna – rita aldrig om eller färglägg loggan.</li>
+</ul></div>
+
+<h2>4. För tryckeriet</h2>
+<p><code>Tryckfiler</code> innehåller tryckfiler i 300 dpi för ljusa och mörka produkter och motivet som vektorfil (SVG). <code>circle-k-produkter.json</code> är det som skickas till shoppen via API. Alla länkar och spårningskoder finns i <code>Länkar och spårning.txt</code>.</p>
+</body></html>`;
 }
 
 function guideHtml(club: Club, items: PackItem[], folders: string[]) {
@@ -113,6 +172,7 @@ async function fetchBytes(url: string) {
 }
 
 export async function buildCampaignZip(club: Club, items: PackItem[], onProgress?: (percent: number) => void) {
+  const brand = club.kind === "brand";
   const zip = new JSZip();
   const date = new Date().toISOString().slice(0, 10);
   const root = zip.folder(`${safe(club.name)} – innehåll ${date}`)!;
@@ -121,7 +181,7 @@ export async function buildCampaignZip(club: Club, items: PackItem[], onProgress
 
   for (const [i, it] of items.entries()) {
     const f = root.folder(folders[i])!;
-    const t = channelTexts(it);
+    const t = channelTexts(it, brand);
     const photos = await Promise.all(it.photos.map(async (p) => ({ ...p, bytes: await fetchBytes(p.url) })));
 
     const ig = f.folder("Instagram")!;
@@ -172,16 +232,16 @@ export async function buildCampaignZip(club: Club, items: PackItem[], onProgress
   for (const [variant, file] of Object.entries(club.brand.crest)) {
     for (const ext of ["svg", "png"]) {
       const res = await fetch(`/api/v1/brand/${club.id}/${file.replace(/\.(svg|png)$/, `.${ext}`)}`);
-      if (res.ok) profile.file(`skold-${variant}.${ext}`, new Uint8Array(await res.arrayBuffer()));
+      if (res.ok) profile.file(`${brand ? "logga" : "skold"}-${variant}.${ext}`, new Uint8Array(await res.arrayBuffer()));
     }
   }
   profile.file(
     "färger-och-typsnitt.txt",
-    `${club.name} – grafisk profil\n\nFärger:\n${club.palette.map((c) => `${c.name}: ${c.hex}`).join("\n")}\nGuld (endast i skölden): #FBC323\n\nTypsnitt: ${club.brand.fonts.brand} (varumärke), ${club.brand.fonts.web} (webb)\n\nSköld: fullfärg som standard, svart eller vit vid tryck i en färg.\n`,
+    `${club.name} – grafisk profil\n\nFärger:\n${club.palette.map((c) => `${c.name}: ${c.hex}`).join("\n")}${brand ? "" : "\nGuld (endast i skölden): #FBC323"}\n\nTypsnitt: ${club.brand.fonts.brand} (varumärke), ${club.brand.fonts.web} (webb)\n\n${brand ? "Logga" : "Sköld"}: fullfärg som standard, svart eller vit vid tryck i en färg.\n`,
   );
 
-  root.file("SÅ HÄR GÖR DU.html", guideHtml(club, items, folders));
-  root.file("intersport-produkter.json", JSON.stringify(items.map((it) => it.intersport), null, 2));
+  root.file("SÅ HÄR GÖR DU.html", brand ? brandGuideHtml(club, items, folders) : guideHtml(club, items, folders));
+  root.file(brand ? "circle-k-produkter.json" : "intersport-produkter.json", JSON.stringify(items.map((it) => it.intersport), null, 2));
   return zip.generateAsync({ type: "blob" }, (meta) => onProgress?.(meta.percent));
 }
 

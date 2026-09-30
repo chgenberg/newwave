@@ -15,7 +15,7 @@ export const ConceptSchema = z.object({
 
 export const SignalSchema = z.object({
   id: z.string(),
-  kind: z.enum(["occasion", "season", "trend", "news", "custom", "match", "club", "social", "podcast", "search", "weather"]),
+  kind: z.enum(["occasion", "season", "trend", "news", "custom", "match", "club", "social", "podcast", "search", "weather", "offer"]),
   title: z.string().min(2).max(120),
   detail: z.string().max(600),
   date: z.string().optional(),

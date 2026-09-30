@@ -78,13 +78,25 @@ export function useLoader() {
   return { state, start, stage, set, done, fail };
 }
 
-export function IFKLoader({ state, crestUrl }: { state: LoaderState; crestUrl: string }) {
+export function IFKLoader({
+  state,
+  crestUrl,
+  lines = LINES,
+  doneLine = "Heja Blåvitt!",
+  wide = false,
+}: {
+  state: LoaderState;
+  crestUrl: string;
+  lines?: string[];
+  doneLine?: string;
+  wide?: boolean;
+}) {
   const [line, setLine] = useState(0);
   useEffect(() => {
     if (!state.open) return;
-    const id = setInterval(() => setLine((l) => (l + 1) % LINES.length), 2600);
+    const id = setInterval(() => setLine((l) => (l + 1) % lines.length), 2600);
     return () => clearInterval(id);
-  }, [state.open]);
+  }, [state.open, lines.length]);
 
   if (!state.open) return null;
   const pct = Math.round(state.value);
@@ -101,7 +113,7 @@ export function IFKLoader({ state, crestUrl }: { state: LoaderState; crestUrl: s
       <div className="ifk-pop relative w-[380px] overflow-hidden rounded-[32px] bg-white px-8 pb-8 pt-9 text-center shadow-[0_30px_80px_rgba(26,55,112,0.25)]">
         <div className="ifk-stripes pointer-events-none absolute inset-x-0 top-0 h-2" />
 
-        <div className="relative mx-auto h-40 w-[105px]">
+        <div className={`relative mx-auto ${wide ? "my-6 h-28 w-[150px]" : "h-40 w-[105px]"}`}>
           {/* eslint-disable @next/next/no-img-element */}
           <img src={crestUrl} alt="" className="absolute inset-0 h-full w-full object-contain opacity-[0.12] grayscale" />
           <img
@@ -113,24 +125,24 @@ export function IFKLoader({ state, crestUrl }: { state: LoaderState; crestUrl: s
           {/* eslint-enable @next/next/no-img-element */}
           {pct < 100 && (
             <span
-              className="absolute left-[-14px] right-[-14px] h-[3px] rounded-full bg-[#FBC323] shadow-[0_0_12px_#FBC323]"
+              className="absolute left-[-14px] right-[-14px] h-[3px] rounded-full bg-[var(--accent,#FBC323)] shadow-[0_0_12px_var(--accent,#FBC323)]"
               style={{ top: `${100 - state.value}%` }}
             />
           )}
         </div>
 
-        <p className="mt-6 font-display text-6xl leading-none tabular-nums text-[#234B9A]">
+        <p className="mt-6 font-display text-6xl leading-none tabular-nums text-[var(--brand,#234B9A)]">
           {pct}
           <span className="text-3xl align-top">%</span>
         </p>
 
-        <div className="mt-5 h-3 overflow-hidden rounded-full bg-[#E9EEF7]">
+        <div className="mt-5 h-3 overflow-hidden rounded-full bg-[var(--bar-bg,#E9EEF7)]">
           <div className="ifk-bar h-full rounded-full" style={{ width: `${state.value}%` }} />
         </div>
 
         <p className="mt-5 min-h-[1.5rem] text-[15px] font-medium text-[#1D1D1F]">{state.label}</p>
         <p key={line} className="ifk-line mt-1 text-[13px] text-[#86868B]">
-          {pct === 100 ? "Heja Blåvitt!" : LINES[line]}
+          {pct === 100 ? doneLine : lines[line % lines.length]}
         </p>
       </div>
     </div>

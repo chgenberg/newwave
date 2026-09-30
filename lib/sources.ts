@@ -1,7 +1,7 @@
 import type { Club, Signal } from "./types";
 
 export type FeedItem = { sourceId: SourceId; source: string; title: string; url: string; published: string };
-export type SourceId = "news" | "club" | "social" | "podcast" | "search";
+export type SourceId = "news" | "club" | "social" | "podcast" | "search" | "offer";
 
 const UA = { "User-Agent": "Mozilla/5.0 (compatible; CraftKlubbmerch/1.0)" };
 const DAY = 24 * 60 * 60 * 1000;
@@ -55,6 +55,16 @@ export async function googleNews(club: Club): Promise<FeedItem[]> {
 }
 
 export async function clubNews(club: Club): Promise<FeedItem[]> {
+  const press = club.sources.pressRss;
+  if (press) {
+    return cached(`club:${club.id}`, 30 * 60_000, async () => {
+      const xml = await (await get(press.url)).text();
+      return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+        .slice(0, 15)
+        .map(([, i]) => ({ sourceId: "club" as const, source: press.name, title: tag(i, "title"), url: tag(i, "link"), published: isoDay(tag(i, "pubDate")) }))
+        .filter((p) => recent(p.published, 120));
+    });
+  }
   return cached(`club:${club.id}`, 30 * 60_000, async () => {
     const res = await get(`${club.sources.website}/wp-json/wp/v2/posts?per_page=15&_fields=date,title,link`);
     const posts = (await res.json()) as { date: string; title: { rendered: string }; link: string }[];
@@ -66,7 +76,10 @@ export async function clubNews(club: Club): Promise<FeedItem[]> {
 
 export async function clubVideos(club: Club): Promise<FeedItem[]> {
   return cached(`social:${club.id}`, 60 * 60_000, async () => {
-    const xml = await (await get(`https://www.youtube.com/feeds/videos.xml?user=${encodeURIComponent(club.sources.youtubeUser)}`)).text();
+    const { youtubeChannelId, youtubeUser } = club.sources;
+    if (!youtubeChannelId && !youtubeUser) return [];
+    const query = youtubeChannelId ? `channel_id=${youtubeChannelId}` : `user=${encodeURIComponent(youtubeUser!)}`;
+    const xml = await (await get(`https://www.youtube.com/feeds/videos.xml?${query}`)).text();
     return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, 6).map(([, e]) => ({
       sourceId: "social" as const,
       source: "YouTube",
@@ -78,9 +91,10 @@ export async function clubVideos(club: Club): Promise<FeedItem[]> {
 }
 
 export async function podcasts(club: Club): Promise<FeedItem[]> {
+  if (!club.sources.podcastSearch?.length) return [];
   return cached(`podcast:${club.id}`, 6 * 60 * 60_000, async () => {
     const feeds = new Map<string, string>();
-    for (const term of club.sources.podcastSearch) {
+    for (const term of club.sources.podcastSearch ?? []) {
       const res = await get(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=podcast&country=se&limit=15`);
       const json = (await res.json()) as { results: { collectionName: string; feedUrl?: string }[] };
       for (const r of json.results) if (r.feedUrl) feeds.set(r.feedUrl, r.collectionName);
@@ -119,6 +133,20 @@ export async function searchTrends(): Promise<FeedItem[]> {
   });
 }
 
+export async function offers(club: Club): Promise<FeedItem[]> {
+  const url = club.sources.offersUrl;
+  if (!url) return [];
+  return cached(`offer:${club.id}`, 6 * 60 * 60_000, async () => {
+    const html = await (await get(url)).text();
+    const today = new Date().toISOString().slice(0, 10);
+    const titles = [
+      ...[...html.matchAll(/<h2[^>]*>([^<]{4,90})<\/h2>/g)].map((m) => m[1]),
+      ...[...html.matchAll(/aria-label="([^"]{4,60})"[^>]*class="uk-button-secondary/g)].map((m) => m[1]),
+    ].map(decode);
+    return [...new Set(titles)].slice(0, 8).map((title) => ({ sourceId: "offer" as const, source: "Erbjudanden · circlek.se", title, url, published: today }));
+  });
+}
+
 type SportsDbEvent = {
   idEvent: string;
   strTimestamp: string;
@@ -131,6 +159,7 @@ type SportsDbEvent = {
 
 export async function matchSignals(club: Club, now = new Date()): Promise<Signal[]> {
   const id = club.sources.sportsDbTeamId;
+  if (!id) return [];
   const base = "https://www.thesportsdb.com/api/v1/json/123";
   const [next, last] = await cached(`match:${club.id}`, 15 * 60_000, () =>
     Promise.all([
@@ -209,7 +238,7 @@ export async function weatherSignal(club: Club): Promise<Signal> {
         ? [`Regniga dagar i ${place}`, `Omkring ${rain} mm regn väntas – hoodies och inomhusmotiv säljer, t.ex. muggar.`]
         : avgMax >= 20
           ? [`T-tröjeväder i ${place}`, `Upp mot ${avgMax} °C – t-tröjor och ljusa motiv.`]
-          : [`Höstväder i ${place}`, `Kring ${avgMax} °C – t-tröja under dagen, hoodie till kvällsmatchen.`];
+          : [`Höstväder i ${place}`, `Kring ${avgMax} °C – t-tröja under dagen, hoodie till ${club.kind === "brand" ? "kvällens bilresa" : "kvällsmatchen"}.`];
   const today = new Date().toISOString().slice(0, 10);
   return {
     id: `weather-${today}`,

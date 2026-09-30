@@ -21,6 +21,8 @@ const FIXES: Record<string, string> = {
   "Tryckbart med DTG": "Use thicker lines and larger, simpler shapes that survive textile printing.",
 };
 
+const HUE_EN: Record<string, string> = { Grön: "green", Röd: "red", Gul: "yellow", Blå: "blue" };
+
 export type ArtworkResult = {
   mode: "ai" | "demo";
   url: string;
@@ -66,8 +68,12 @@ export async function produceArtwork(club: Club, concept: Concept, feedback?: st
     checks = [...palette, ...vision];
     const failed = checks.filter((c) => !c.ok);
     if (failed.length === 0) break;
-    const fixes = failed.map((f) => FIXES[f.rule] ?? `${f.rule}${f.note ? ` (${f.note})` : ""}`);
-    prompt = `${basePrompt}\n\nThe previous attempt was rejected by the club's brand rules. Fix the following: ${fixes.join(" ")}`;
+    const fixes = failed.map((f) =>
+      f.rule === "Inga spärrade färger i bilden" && club.kind === "brand"
+        ? `Remove every trace of ${club.forbiddenColors.map((c) => HUE_EN[c.name] ?? c.name).join(", ")}.`
+        : (FIXES[f.rule] ?? `${f.rule}${f.note ? ` (${f.note})` : ""}`),
+    );
+    prompt = `${basePrompt}\n\nThe previous attempt was rejected by the ${club.kind === "brand" ? "brand" : "club's brand"} rules. Fix the following: ${fixes.join(" ")}`;
   }
 
   const [{ svg, colorsUsed }, raster] = await Promise.all([

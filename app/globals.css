@@ -19,7 +19,7 @@
 }
 
 .ifk-stripes {
-  background: repeating-linear-gradient(135deg, #234b9a 0 14px, #ffffff 14px 28px);
+  background: repeating-linear-gradient(135deg, var(--stripe-a, #234b9a) 0 14px, var(--stripe-b, #ffffff) 14px 28px);
   background-size: 40px 40px;
   animation: ifk-slide 1.2s linear infinite;
 }
@@ -27,9 +27,21 @@
 .ifk-bar {
   background:
     repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 10px, transparent 10px 20px),
-    linear-gradient(90deg, #197bc4, #234b9a);
+    linear-gradient(90deg, var(--bar-a, #197bc4), var(--bar-b, #234b9a));
   background-size: 28px 28px, 100% 100%;
   animation: ifk-march 0.9s linear infinite;
+}
+
+.theme-circle-k {
+  --brand: #da291c;
+  --brand-dark: #b01f14;
+  --brand-tint: #fdf3f1;
+  --accent: #ed8b00;
+  --stripe-a: #da291c;
+  --stripe-b: #ed8b00;
+  --bar-a: #ed8b00;
+  --bar-b: #da291c;
+  --bar-bg: #f6e7e4;
 }
 
 @keyframes ifk-march {
