@@ -8,12 +8,12 @@ import type { Club, Concept, Review } from "./types";
 
 export type ReviewedPhoto = { id: string; label: string; url: string; review: Review | null; attempts: number; method: "exakt tryck" | "referens" };
 
-type Scene = { id: string; label: string; print: "light" | "dark"; prompt: string; fabric: string };
+export type Scene = { id: string; label: string; print: "light" | "dark"; prompt: string; fabric: string; anchor?: "top" | "center" };
 
 const MARKER =
   "one flat, solid, pure bright green (#00FF00) rectangle in portrait orientation (3:4), centred on the chest, large – covering the whole chest area from just below the collar to above the stomach and following the fabric naturally. The rectangle has no texture, text or pattern. Nothing else is printed on the garment and there is no other bright green anywhere in the image.";
 
-function scenes(club: Club, concept: Concept): Scene[] {
+export function scenes(club: Club, concept: Concept): Scene[] {
   const season = seasonFor(new Date()).title.toLowerCase();
   const signal = concept.signal.toLowerCase();
   const people = /fars dag/.test(signal)
@@ -43,6 +43,7 @@ Any people are fictional and generic, not famous, not football players. No logos
       id: "filt",
       label: "Filt i soffan",
       print: "light",
+      anchor: "center",
       fabric: "soft cream white fleece blanket fabric",
       prompt: `${look}\nInterior photo, no people: a cosy Scandinavian living room on a ${season} evening. A soft cream white fleece throw blanket is draped over the back and seat of a light grey sofa, with chunky knitted cushions, a wooden side table with a ceramic mug and a few books, warm lamp light and a glowing wood stove in the background. On the front of the draped blanket, facing the camera, there is one flat, solid, pure bright green (#00FF00) rectangle in portrait orientation (3:4), large, centred on the visible part of the blanket and following its drape. The rectangle has no texture, text or pattern, and there is no other bright green anywhere in the image.`,
     },
@@ -51,7 +52,7 @@ Any people are fictional and generic, not famous, not football players. No logos
 
 export const SCENE_IDS = ["livsstil", "produkt", "filt"] as const;
 
-async function shootWithExactPrint(scene: Scene, print: Buffer, feedback?: string) {
+export async function shootBlank(scene: Scene, feedback?: string) {
   const prompt = feedback ? `${scene.prompt}\nAvoid these issues from a previous attempt: ${feedback}` : scene.prompt;
   const raw = await generatePhoto(prompt);
   const marker = await detectMarker(raw);
@@ -61,7 +62,12 @@ async function shootWithExactPrint(scene: Scene, print: Buffer, feedback?: strin
     marker.maskPng,
     `Replace the masked green rectangle with ${scene.fabric}, continuing the natural folds, shading and texture of the garment seamlessly. Keep everything else identical. No print, no graphics, no text.`,
   );
-  return printOntoFabric(blank, print, marker);
+  return { raw, blank, marker };
+}
+
+async function shootWithExactPrint(scene: Scene, print: Buffer, feedback?: string) {
+  const shot = await shootBlank(scene, feedback);
+  return shot ? printOntoFabric(shot.blank, print, shot.marker, { ink: scene.print, anchor: scene.anchor }) : null;
 }
 
 export async function productPhotos(
