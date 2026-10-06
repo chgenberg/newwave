@@ -7,6 +7,11 @@
   --color-club-dark: #1A3770;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 .checker {
   background-color: #fff;
   background-image:

@@ -51,12 +51,12 @@ export default function MatchCentral() {
   };
 
   const stepper = (value: number, set: (n: number) => void) => (
-    <div className="flex items-center gap-3">
-      <button type="button" onClick={() => set(Math.max(0, value - 1))} className="h-10 w-10 rounded-full bg-[#F5F5F7] text-lg hover:bg-[#E8E8ED]">
+    <div className="flex items-center gap-1.5 sm:gap-3">
+      <button type="button" onClick={() => set(Math.max(0, value - 1))} className="h-11 w-11 shrink-0 rounded-full lg:h-10 lg:w-10 bg-[#F5F5F7] text-lg hover:bg-[#E8E8ED]">
         −
       </button>
-      <span className="w-10 text-center font-display text-5xl">{value}</span>
-      <button type="button" onClick={() => set(value + 1)} className="h-10 w-10 rounded-full bg-[#F5F5F7] text-lg hover:bg-[#E8E8ED]">
+      <span className="w-8 text-center font-display text-5xl sm:w-10">{value}</span>
+      <button type="button" onClick={() => set(value + 1)} className="h-11 w-11 shrink-0 rounded-full lg:h-10 lg:w-10 bg-[#F5F5F7] text-lg hover:bg-[#E8E8ED]">
         +
       </button>
     </div>
@@ -64,34 +64,34 @@ export default function MatchCentral() {
 
   return (
     <main className="min-h-screen bg-white">
-      <header className="flex h-16 items-center justify-between px-8">
-        <Link href="/" className="text-[15px] font-semibold tracking-tight">
+      <header className="flex h-16 items-center justify-between px-4 md:px-8">
+        <Link href="/" className="-my-3 inline-block py-3 text-[15px] font-semibold tracking-tight">
           Craft <span className="font-normal text-[#86868B]">Klubbmerch</span>
         </Link>
         <span className="text-xs font-medium text-[#86868B]">Matchcentral</span>
       </header>
 
-      <div className="mx-auto grid max-w-5xl gap-12 px-6 pb-24 pt-[6vh] lg:grid-cols-[1fr_360px]">
-        <div>
+      <div className="mx-auto grid max-w-5xl gap-10 px-4 pb-24 pt-[6vh] sm:gap-12 sm:px-6 lg:grid-cols-[1fr_360px]">
+        <div className="min-w-0">
           <h1 className="text-4xl font-semibold tracking-tight">Slutsignal.</h1>
           <p className="mt-3 max-w-md text-[17px] text-[#86868B]">
             I skarp drift kommer resultatet automatiskt från matchdata. Här kan du simulera det. Vid seger – eller poäng i
             ett derby – skapas motiv direkt och kansliet får ett sms.
           </p>
 
-          <div className="mt-10 rounded-3xl border border-[#E8E8ED] p-7">
-            <div className="flex items-center justify-between gap-6">
-              <div className="text-center">
+          <div className="mt-10 rounded-3xl border border-[#E8E8ED] p-5 sm:p-7">
+            <div className="flex items-center justify-between gap-2 sm:gap-6">
+              <div className="min-w-0 text-center">
                 <p className="text-xs font-medium uppercase tracking-wider text-[#86868B]">{home ? "Hemma" : "Borta"}</p>
                 <p className="mt-1 font-display text-2xl uppercase text-[#234B9A]">IFK Göteborg</p>
                 <div className="mt-3 flex justify-center">{stepper(goalsFor, setGoalsFor)}</div>
               </div>
               <span className="font-display text-3xl text-[#C7C7CC]">–</span>
-              <div className="text-center">
+              <div className="min-w-0 text-center">
                 <select
                   value={opponent}
                   onChange={(e) => setOpponent(e.target.value)}
-                  className="rounded-full bg-[#F5F5F7] px-4 py-2 text-sm font-medium outline-none"
+                  className="h-11 max-w-full rounded-full max-lg:w-full bg-[#F5F5F7] px-4 py-2 text-base font-medium outline-none lg:h-auto lg:text-sm"
                 >
                   {OPPONENTS.map((o) => (
                     <option key={o}>{o}</option>
@@ -101,7 +101,7 @@ export default function MatchCentral() {
               </div>
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#F0F0F2] pt-5">
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex min-h-11 items-center gap-2 text-sm lg:min-h-0">
                 <input type="checkbox" checked={home} onChange={(e) => setHome(e.target.checked)} className="h-4 w-4 accent-[#234B9A]" />
                 Hemmamatch på Gamla Ullevi
               </label>
@@ -109,7 +109,7 @@ export default function MatchCentral() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Mobilnummer (+46…) – valfritt"
-                className="h-10 w-60 rounded-full bg-[#F5F5F7] px-4 text-sm outline-none ring-[#234B9A] focus:ring-2"
+                className="h-11 w-full rounded-full bg-[#F5F5F7] px-4 text-base outline-none sm:w-72 lg:h-10 lg:w-60 lg:text-sm ring-[#234B9A] focus:ring-2"
               />
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function MatchCentral() {
           </div>
         </div>
 
-        <div className="mx-auto w-[340px]">
+        <div className="mx-auto w-full max-w-[340px]">
           <div className="rounded-[48px] border-[10px] border-[#1D1D1F] bg-[#F2F2F7] p-4 shadow-2xl">
             <div className="mx-auto mb-4 h-6 w-28 rounded-full bg-[#1D1D1F]" />
             <p className="text-center text-xs text-[#86868B]">Meddelanden · Craft Klubbmerch</p>

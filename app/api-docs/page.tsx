@@ -84,22 +84,22 @@ const PRODUCTION = [
 
 export default function ApiDocs() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/" className="text-sm font-medium text-[#234B9A] hover:underline">
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <Link href="/" className="-my-3 inline-block py-3 text-sm font-medium text-[#234B9A] hover:underline">
         ← Tillbaka
       </Link>
       <h1 className="mt-4 text-4xl font-semibold tracking-tight">API</h1>
       <p className="mt-2 text-[#86868B]">Samma API som gränssnittet använder. Intersport, en klubbportal eller en schemalagd bevakning kan anropa det direkt.</p>
       <div className="mt-8 space-y-3">
         {ENDPOINTS.map((e) => (
-          <div key={e.path + e.method} className="rounded-3xl bg-[#F5F5F7] p-6">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[#234B9A]">{e.method}</span>
-              <code className="text-sm font-semibold">{e.path}</code>
+          <div key={e.path + e.method} className="min-w-0 rounded-3xl bg-[#F5F5F7] p-5 sm:p-6">
+            <div className="flex items-start gap-3 sm:items-center">
+              <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[#234B9A]">{e.method}</span>
+              <code className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere]">{e.path}</code>
             </div>
-            <p className="mt-2 text-sm text-[#3A3A3C]">{e.what}</p>
+            <p className="mt-2 text-[15px] text-[#3A3A3C] sm:text-sm">{e.what}</p>
             {e.body && (
-              <pre className="mt-3 overflow-auto rounded-2xl bg-[#1D1D1F] p-4 text-xs text-[#E8E8ED]">{JSON.stringify(e.body, null, 2)}</pre>
+              <pre className="mt-3 max-w-full overflow-auto rounded-2xl bg-[#1D1D1F] p-4 text-xs text-[#E8E8ED]">{JSON.stringify(e.body, null, 2)}</pre>
             )}
           </div>
         ))}
@@ -109,7 +109,7 @@ export default function ApiDocs() {
         {PRODUCTION.map(([title, text]) => (
           <div key={title} className="rounded-3xl bg-[#F5F5F7] p-5">
             <p className="text-sm font-semibold">{title}</p>
-            <p className="mt-1 text-sm text-[#3A3A3C]">{text}</p>
+            <p className="mt-1 text-[15px] text-[#3A3A3C] sm:text-sm">{text}</p>
           </div>
         ))}
       </div>

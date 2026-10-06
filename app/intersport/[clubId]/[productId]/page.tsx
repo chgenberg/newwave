@@ -15,9 +15,11 @@ export default async function ProductPage({ params }: { params: Promise<{ clubId
 
   return (
     <main className="min-h-screen bg-white">
-      <ShopHeader clubName={club.name} />
-      <section className="mx-auto mt-6 grid max-w-6xl gap-10 px-6 pb-24 md:grid-cols-[1.3fr_1fr]">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="max-sm:[&>div:last-child]:px-4 max-sm:[&_header>div]:px-4 max-sm:[&_header_img]:h-[15px] max-sm:[&_nav]:gap-3.5 max-sm:[&_nav]:text-[13px]">
+        <ShopHeader clubName={club.name} />
+      </div>
+      <section className="mx-auto mt-6 grid max-w-6xl gap-8 px-4 pb-24 sm:gap-10 sm:px-6 md:grid-cols-[1.3fr_1fr]">
+        <div className="grid min-w-0 grid-cols-2 gap-3">
           {product.images.map((img, i) => (
             <div key={img.url} className={`overflow-hidden rounded-xl bg-[#F5F5F7] ${i === 0 ? "col-span-2" : ""}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -27,9 +29,9 @@ export default async function ProductPage({ params }: { params: Promise<{ clubId
         </div>
         <div className="md:sticky md:top-6 md:self-start">
           <p className="text-xs font-semibold uppercase text-[#6E6E73]">Craft · {club.name}</p>
-          <h1 className="mt-1 text-2xl font-bold leading-tight">{product.title}</h1>
+          <h1 className="mt-1 text-2xl font-bold leading-tight [overflow-wrap:anywhere]">{product.title}</h1>
           <p className="mt-3 text-2xl font-black">{product.priceSek} kr</p>
-          <p className="mt-4 text-sm leading-relaxed text-[#3A3A3C]">{product.description}</p>
+          <p className="mt-4 text-[15px] leading-relaxed text-[#3A3A3C] sm:text-sm">{product.description}</p>
           <p className="mt-6 text-sm font-semibold">Storlek</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {product.sizes.map((s) => (
@@ -49,7 +51,7 @@ export default async function ProductPage({ params }: { params: Promise<{ clubId
           <p className="mt-6 text-xs text-[#86868B]">
             Publicerad automatiskt {new Date(product.publishedAt).toLocaleString("sv-SE")} · SKU {product.sku}
           </p>
-          <Link href={`/intersport/${club.id}`} className="mt-4 inline-block text-sm text-[#0A2A6B] underline">
+          <Link href={`/intersport/${club.id}`} className="mt-1 inline-block py-3 text-sm text-[#0A2A6B] underline sm:mt-4 sm:py-0">
             ← Tillbaka till klubbshoppen
           </Link>
         </div>

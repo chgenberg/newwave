@@ -110,7 +110,7 @@ export function IFKLoader({
       aria-valuenow={pct}
       aria-label={state.label}
     >
-      <div className="ifk-pop relative w-[380px] overflow-hidden rounded-[32px] bg-white px-8 pb-8 pt-9 text-center shadow-[0_30px_80px_rgba(26,55,112,0.25)]">
+      <div className="ifk-pop relative w-[calc(100%-2rem)] max-w-[380px] overflow-hidden rounded-[32px] bg-white px-6 pb-8 pt-9 sm:w-[380px] sm:max-w-none sm:px-8 text-center shadow-[0_30px_80px_rgba(26,55,112,0.25)]">
         <div className="ifk-stripes pointer-events-none absolute inset-x-0 top-0 h-2" />
 
         <div className={`relative mx-auto ${wide ? "my-6 h-28 w-[150px]" : "h-40 w-[105px]"}`}>

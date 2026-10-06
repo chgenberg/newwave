@@ -116,7 +116,7 @@ function PrimaryButton(props: { children: React.ReactNode; onClick: () => void; 
       type="button"
       onClick={props.onClick}
       disabled={props.disabled || props.loading}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-8 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#D2D2D7]"
+      className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#1D1D1F] px-8 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#D2D2D7]"
     >
       {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
       {props.children}
@@ -484,8 +484,8 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
 
   return (
     <main className={`flex min-h-screen flex-col bg-white ${isBrand ? "theme-circle-k" : ""}`}>
-      <header className="flex h-16 items-center justify-between px-8">
-        <button type="button" onClick={() => setStep("club")} className="w-64 text-left text-[15px] font-semibold tracking-tight">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 px-4 pt-1 md:h-16 md:flex-nowrap md:px-8 md:pt-0">
+        <button type="button" onClick={() => setStep("club")} className="min-h-11 whitespace-nowrap text-left text-[15px] font-semibold tracking-tight md:min-h-0 md:w-64 md:whitespace-normal">
           {copy.maker} <span className="font-normal text-[#86868B]">{copy.product}</span>
         </button>
         <div className="flex gap-1.5">
@@ -493,13 +493,13 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
             <span key={s} className={`h-1.5 rounded-full transition-all ${i <= stepIndex ? "w-6 bg-[#1D1D1F]" : "w-1.5 bg-[#D2D2D7]"}`} />
           ))}
         </div>
-        <div className="flex w-64 items-center justify-end gap-3">
+        <div className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-1 max-md:empty:hidden md:mx-0 md:w-64 md:justify-end md:gap-3">
           {copy.navLinks && (
             <>
-              <Link href="/autopilot" className="whitespace-nowrap text-xs font-medium text-[#86868B] hover:text-[#1D1D1F]">
+              <Link href="/autopilot" className="inline-flex min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-medium text-[#86868B] hover:text-[#1D1D1F] md:min-h-0 md:px-0 md:text-xs">
                 Autopilot
               </Link>
-              <Link href="/match" className="whitespace-nowrap text-xs font-medium text-[#86868B] hover:text-[#1D1D1F]">
+              <Link href="/match" className="inline-flex min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-medium text-[#86868B] hover:text-[#1D1D1F] md:min-h-0 md:px-0 md:text-xs">
                 Matchcentral
               </Link>
             </>
@@ -508,7 +508,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
             <button
               type="button"
               onClick={() => setShowRules(true)}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#F5F5F7] px-3 py-1.5 text-xs font-medium text-[#1D1D1F] hover:bg-[#E8E8ED]"
+              className="ml-auto mr-2 inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#F5F5F7] px-4 py-1.5 text-[13px] font-medium text-[#1D1D1F] hover:bg-[#E8E8ED] md:mx-0 md:min-h-0 md:px-3 md:text-xs"
             >
               <Lock /> Ramar
             </button>
@@ -516,12 +516,12 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
         </div>
       </header>
 
-      {error && <div className="mx-auto mt-2 max-w-xl rounded-2xl bg-[#FDECEA] px-5 py-3 text-sm text-[#B3261E]">{error}</div>}
+      {error && <div className="mx-4 mt-2 max-w-xl rounded-2xl bg-[#FDECEA] px-5 py-3 text-sm text-[#B3261E] sm:mx-auto">{error}</div>}
 
-      <div className="flex flex-1 flex-col items-center px-6 pb-24">
+      <div className="flex flex-1 flex-col items-center px-4 pb-24 sm:px-6">
         {step === "club" && (
           <div className="mt-[18vh] w-full max-w-md text-center">
-            <h1 className="text-5xl font-semibold tracking-tight">{copy.pickTitle}</h1>
+            <h1 className="text-4xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-5xl">{copy.pickTitle}</h1>
             <p className="mt-3 text-[17px] text-[#86868B]">{copy.pickSubtitle}</p>
             <div className="mt-10 text-left">
               <input
@@ -583,13 +583,13 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                       onChange={(e) => setNewsUrl(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && newsUrl.trim() && readNews()}
                       placeholder={copy.newsPlaceholder}
-                      className="h-12 flex-1 rounded-full bg-[#F5F5F7] px-5 text-[15px] outline-none ring-[var(--brand,#234B9A)] placeholder:text-[#86868B] focus:ring-2"
+                      className="h-12 min-w-0 flex-1 rounded-full bg-[#F5F5F7] px-5 text-base outline-none lg:text-[15px] ring-[var(--brand,#234B9A)] placeholder:text-[#86868B] focus:ring-2"
                     />
                     <button
                       type="button"
                       onClick={readNews}
                       disabled={!newsUrl.trim() || newsBusy}
-                      className="inline-flex h-12 items-center gap-2 rounded-full bg-[#F5F5F7] px-5 text-sm font-medium hover:bg-[#E8E8ED] disabled:opacity-50"
+                      className="inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-[#F5F5F7] px-4 text-sm font-medium hover:bg-[#E8E8ED] disabled:opacity-50 sm:px-5"
                     >
                       {newsBusy && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#1D1D1F] border-t-transparent" />}
                       {newsBusy ? "Läser…" : "Läs nyheten"}
@@ -597,7 +597,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                   </div>
                   {newsError && <p className="mt-2 px-5 text-sm text-[#B3261E]">{newsError}</p>}
                   {news && (
-                    <div className="mt-3 flex items-center gap-4 rounded-3xl bg-[var(--brand-tint,#F4F8FD)] p-3 pr-4">
+                    <div className="mt-3 flex flex-wrap items-center gap-4 rounded-3xl bg-[var(--brand-tint,#F4F8FD)] p-3 pr-4 sm:flex-nowrap">
                       {news.article.image && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -619,7 +619,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                         type="button"
                         onClick={() => goSuggestions([news.signal])}
                         disabled={busy}
-                        className="shrink-0 rounded-full bg-[var(--brand,#234B9A)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--brand-dark,#1A3770)] disabled:opacity-50"
+                        className="min-h-11 w-full shrink-0 rounded-full bg-[var(--brand,#234B9A)] px-4 py-2 text-[13px] font-medium text-white sm:min-h-0 sm:w-auto sm:text-xs hover:bg-[var(--brand-dark,#1A3770)] disabled:opacity-50"
                       >
                         Skapa från nyheten
                       </button>
@@ -670,9 +670,9 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                     onChange={(e) => setCustom(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addCustom()}
                     placeholder={copy.customPlaceholder}
-                    className="h-11 flex-1 rounded-full bg-[#F5F5F7] px-5 text-sm outline-none ring-[var(--brand,#234B9A)] focus:ring-2"
+                    className="h-11 min-w-0 flex-1 rounded-full bg-[#F5F5F7] px-5 text-base outline-none lg:text-sm ring-[var(--brand,#234B9A)] focus:ring-2"
                   />
-                  <button type="button" onClick={addCustom} className="h-11 rounded-full bg-[#F5F5F7] px-5 text-sm font-medium hover:bg-[#E8E8ED]">
+                  <button type="button" onClick={addCustom} className="h-11 shrink-0 whitespace-nowrap rounded-full bg-[#F5F5F7] px-5 text-sm font-medium hover:bg-[#E8E8ED]">
                     Lägg till
                   </button>
                 </div>
@@ -692,7 +692,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
             <p className="mt-3 text-center text-[17px] text-[#86868B]">
               {fromMatch ?? "Välj en idé – vi ritar trycket och lägger det på produkterna."}
             </p>
-            <div className="mt-12 flex flex-wrap justify-center gap-6">
+            <div className="mt-8 flex flex-wrap justify-center gap-6 sm:mt-12">
               {suggestions.map((s) => {
                 const on = chosenId === s.id;
                 const selectable = s.status === "done";
@@ -703,7 +703,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                     type="button"
                     disabled={!selectable}
                     onClick={() => setChosenId(s.id)}
-                    className="group flex w-[300px] flex-col justify-start text-left disabled:cursor-default"
+                    className="group flex w-full flex-col justify-start sm:w-[300px] text-left disabled:cursor-default"
                   >
                     <div
                       className={`relative aspect-square w-full overflow-hidden rounded-[28px] bg-[#F5F5F7] transition ${on ? "ring-2 ring-[var(--brand,#234B9A)] ring-offset-4" : "group-enabled:group-hover:bg-[#EFEFF2]"}`}
@@ -755,7 +755,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                 );
               })}
             </div>
-            <div className="sticky bottom-6 mx-auto mt-12 flex w-fit justify-center gap-3 rounded-full bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 mx-auto mt-12 flex w-fit max-w-full justify-center gap-3 sm:bottom-6 rounded-full bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
               {!fromMatch && (
                 <button
                   type="button"
@@ -778,16 +778,16 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
                 <p className="text-xs text-[#86868B]">{collage.suggestion.signal}</p>
-                <h1 className="font-display text-5xl uppercase leading-none text-[var(--brand,#234B9A)]">{collage.suggestion.slogan}</h1>
+                <h1 className="font-display text-4xl uppercase leading-none text-[var(--brand,#234B9A)] [overflow-wrap:anywhere] sm:text-5xl">{collage.suggestion.slogan}</h1>
                 <p className="mt-2 text-[15px] text-[#86868B]">
                   {collage.tiles.length} produkter med exakt tryck · {collage.photos === null ? "AI-foton tas just nu" : `${collage.photos.length} AI-foton`}
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex w-full flex-wrap gap-3 sm:w-auto max-sm:[&>button]:flex-1">
                 <button
                   type="button"
                   onClick={() => setStep("prints")}
-                  className="h-12 rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED]"
+                  className="h-12 whitespace-nowrap rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED]"
                 >
                   Byt tryck
                 </button>
@@ -812,7 +812,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
         )}
 
         {step === "content" && club && (
-          <div className="mt-[6vh] w-full max-w-5xl">
+          <div className="mt-[6vh] w-full min-w-0 max-w-5xl">
             {pack.length === 0 ? (
               <div className="mt-[14vh] h-40" />
             ) : (
@@ -848,8 +848,8 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
       />
 
       {showRules && club && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6" onClick={() => setShowRules(false)}>
-          <div className="w-full max-w-md rounded-3xl bg-white p-7" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-6" onClick={() => setShowRules(false)}>
+          <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl sm:p-7" onClick={(e) => e.stopPropagation()}>
             <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[#86868B]">
               <Lock /> Låsta ramar
             </p>
@@ -863,7 +863,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
                 </p>
               </div>
             </div>
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               {club.palette.map((c) => (
                 <span key={c.hex} className="flex flex-col items-center gap-1 text-[11px] text-[#86868B]">
                   <span className="h-9 w-9 rounded-full border border-black/10" style={{ background: c.hex }} />
@@ -891,7 +891,7 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
               automatiskt och vektoriseras sedan i enbart {copy.org} färger.
             </p>
             <div className="mt-6 text-right">
-              <button type="button" onClick={() => setShowRules(false)} className="text-sm font-medium text-[var(--brand,#234B9A)]">
+              <button type="button" onClick={() => setShowRules(false)} className="-mr-3 min-h-11 px-3 text-sm font-medium sm:mr-0 sm:min-h-0 sm:px-0 text-[var(--brand,#234B9A)]">
                 Stäng
               </button>
             </div>
@@ -931,17 +931,17 @@ function BackPrintTry({ club, item }: { club: Club; item: PackItem }) {
         {item.familyPack && ` Familjepaket: ${item.familyPack}.`}
       </p>
       <div className="mt-3 flex gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={10} className="h-10 w-32 rounded-full bg-white px-4 text-sm uppercase outline-none ring-[var(--brand,#234B9A)] focus:ring-2" />
-        <input value={number} onChange={(e) => setNumber(e.target.value)} maxLength={2} className="h-10 w-16 rounded-full bg-white px-4 text-sm outline-none ring-[var(--brand,#234B9A)] focus:ring-2" />
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={10} className="h-11 w-32 rounded-full bg-white px-4 text-base uppercase outline-none lg:h-10 lg:text-sm ring-[var(--brand,#234B9A)] focus:ring-2" />
+        <input value={number} onChange={(e) => setNumber(e.target.value)} maxLength={2} className="h-11 w-16 rounded-full bg-white px-4 text-base outline-none lg:h-10 lg:text-sm ring-[var(--brand,#234B9A)] focus:ring-2" />
       </div>
       {note && <p className="mt-2 text-xs text-[#B3261E]">{note}</p>}
-      <div className="mt-3 flex gap-3">
-        <div className="aspect-[10/11] w-40 rounded-2xl bg-white p-2">
+      <div className="mt-3 flex flex-wrap gap-3">
+        <div className="aspect-[10/11] w-[calc(50%-0.375rem)] rounded-2xl sm:w-40 bg-white p-2">
           {preview && <ProductMockup product={{ id: "back", name: "", kind: "tee", garmentColor: "", garmentHex: "#F7F7F5", dark: false, priceSek: 0, sizes: [], printArea: { widthCm: 30, heightCm: 40, method: "DTG" } }} printUrl={preview} />}
         </div>
         {item.backPrints.length > 1 &&
           item.backPrints.map((b) => (
-            <div key={b.file} className="aspect-[10/11] w-40 rounded-2xl bg-white p-2">
+            <div key={b.file} className="aspect-[10/11] w-[calc(50%-0.375rem)] rounded-2xl sm:w-40 bg-white p-2">
               <ProductMockup product={{ id: b.file, name: "", kind: "tee", garmentColor: "", garmentHex: "#F7F7F5", dark: false, priceSek: 0, sizes: [], printArea: { widthCm: 30, heightCm: 40, method: "DTG" } }} printUrl={b.dataUrl} />
             </div>
           ))}
@@ -963,10 +963,10 @@ function PackPreview({ item, club, personalize }: { item: PackItem; club: Club; 
   return (
     <section>
       <p className="text-xs text-[#86868B]">{item.concept.signal}</p>
-      <h2 className="font-display text-3xl uppercase text-[var(--brand,#234B9A)]">{item.concept.slogan}</h2>
+      <h2 className="font-display text-3xl uppercase text-[var(--brand,#234B9A)] [overflow-wrap:anywhere]">{item.concept.slogan}</h2>
 
       {/* eslint-disable @next/next/no-img-element */}
-      <div className="mt-5 grid grid-cols-4 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {item.photos.map((p) => (
           <figure key={p.id} className="col-span-1">
             <img src={p.url} alt={p.label} className={`${tile} aspect-[2/3]`} />
@@ -995,7 +995,7 @@ function PackPreview({ item, club, personalize }: { item: PackItem; club: Club; 
           <img src={item.images.linkedin} alt="LinkedIn" className={tile} />
           <figcaption className="mt-1.5 text-xs text-[#86868B]">LinkedIn</figcaption>
         </figure>
-        <figure className="col-span-4">
+        <figure className="col-span-2 md:col-span-4">
           <img src={item.images.banner} alt="Hemsidebanner" className={tile} />
           <figcaption className="mt-1.5 text-xs text-[#86868B]">Hemsidebanner 1920×600</figcaption>
         </figure>
@@ -1007,12 +1007,12 @@ function PackPreview({ item, club, personalize }: { item: PackItem; club: Club; 
         <div className={`grid gap-3 ${personalize ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
           {texts.map(([title, text]) => (
             <details key={title} className="rounded-2xl bg-[#F5F5F7] px-5 py-4">
-              <summary className="cursor-pointer text-sm font-medium">{title}</summary>
+              <summary className="-my-3 cursor-pointer py-3 text-sm font-medium">{title}</summary>
               <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-[#3A3A3C] [overflow-wrap:anywhere]">{text}</p>
             </details>
           ))}
           <details className="rounded-2xl bg-[#F5F5F7] px-5 py-4">
-            <summary className="cursor-pointer text-sm font-medium">Publiceringsplan</summary>
+            <summary className="-my-3 cursor-pointer py-3 text-sm font-medium">Publiceringsplan</summary>
             <ul className="mt-3 space-y-1.5 text-[13px] text-[#3A3A3C]">
               {c.plan.map((p, i) => (
                 <li key={i}>

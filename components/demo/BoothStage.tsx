@@ -9,14 +9,17 @@ export type Phase = "logo" | "site" | "booth";
 type Loading = { phase: Phase; name: string; industry?: string };
 
 const SITE_LINES = ["Hittar produkter och tjänster…", "Tittar på bilder och produkter…", "Läser in varumärkets ton…", "Väljer profilprodukter som passar…"];
-const BOOTH_LINES = [
-  "Bygger montern…",
-  "Trycker mässväggen…",
-  "Ställer fram era produkter…",
-  "Trycker roll-up och beachflagga…",
-  "Klär personalen i profilkläder…",
-  "Riggar ljuset…",
-  "Sista detaljerna…",
+/** One booth request renders, reviews and possibly retakes; the server doesn't stream, so the stages follow typical timings. */
+const BOOTH_STAGES: [number, string][] = [
+  [0, "Bygger montern…"],
+  [4, "Trycker mässväggen…"],
+  [8, "Ställer fram era produkter…"],
+  [12, "Klär personalen i profilkläder…"],
+  [16, "Kvalitetsgranskar bilden…"],
+  [23, "Gör om en detalj…"],
+  [38, "Kvalitetsgranskar igen…"],
+  [45, "Gör om en detalj…"],
+  [60, "Sista detaljerna…"],
 ];
 
 /** Progress bands: logo 0-15 %, site reading 15-45 %, booth image 45-95 %. */
@@ -28,16 +31,16 @@ function BuildingOverlay({ phase, name, industry }: Loading) {
     return () => clearInterval(t);
   }, [phase]);
   const ease = (tau: number) => 1 - Math.exp(-elapsed / tau);
-  const progress = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(34);
-  const boothLines = industry ? [`Anpassar montern för ${industry.toLowerCase()}…`, ...BOOTH_LINES] : BOOTH_LINES;
+  const progress = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(25);
+  const boothLine = industry && elapsed < 4 ? `Anpassar montern för ${industry.toLowerCase()}…` : [...BOOTH_STAGES].reverse().find(([t]) => elapsed >= t)![1];
   const line =
-    phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? SITE_LINES[Math.min(SITE_LINES.length - 1, Math.floor(elapsed / 9))] : boothLines[Math.min(boothLines.length - 1, Math.floor(elapsed / 8))];
+    phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? SITE_LINES[Math.min(SITE_LINES.length - 1, Math.floor(elapsed / 9))] : boothLine;
   const sub =
     phase === "logo"
       ? "Vi letar upp logga och färger på webbplatsen."
       : phase === "site"
         ? `Vi läser ${name}s webbplats för att förstå vad ni erbjuder.`
-        : `Vi bygger en unik monter för ${name}. Det tar ungefär en minut.`;
+        : `Vi bygger en unik monter för ${name}. Vi granskar varje bild innan du får se den.`;
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 backdrop-blur-[6px]" role="status" aria-live="polite">
       <div className="w-[min(380px,86%)] rounded-3xl bg-white/95 p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.12)]">

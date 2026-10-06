@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 
@@ -8,6 +8,13 @@ const brand = Source_Sans_3({ subsets: ["latin"], weight: ["400", "600", "900"],
 export const metadata: Metadata = {
   title: "Craft Content Engine – klubbmerch på beställning",
   description: "Mockup: AI-genererade tryckmotiv, Intersport-API och innehåll för sociala medier per klubb.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

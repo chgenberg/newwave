@@ -62,7 +62,7 @@ function PrimaryButton(props: { children: React.ReactNode; onClick: () => void; 
       type="button"
       onClick={props.onClick}
       disabled={props.disabled || props.loading}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-8 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#D2D2D7]"
+      className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#1D1D1F] px-8 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#D2D2D7]"
     >
       {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
       {props.children}
@@ -76,7 +76,7 @@ function SecondaryButton(props: { children: React.ReactNode; onClick: () => void
       type="button"
       onClick={props.onClick}
       disabled={props.disabled}
-      className="h-12 rounded-full bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED] disabled:opacity-50"
+      className="h-12 whitespace-nowrap rounded-full bg-[#F5F5F7] px-5 text-[15px] font-medium hover:bg-[#E8E8ED] disabled:opacity-50 sm:px-6"
     >
       {props.children}
     </button>
@@ -171,7 +171,7 @@ function FinishToggle({ value, onChange, disabled }: { value: LogoFinish; onChan
           aria-checked={value === id}
           disabled={disabled}
           onClick={() => onChange(id)}
-          className={`h-9 rounded-full px-4 text-[13px] font-medium transition disabled:opacity-50 ${value === id ? "bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)]" : "text-[#6E6E73] hover:text-[#1D1D1F]"}`}
+          className={`h-11 rounded-full px-4 text-[13px] font-medium transition lg:h-9 disabled:opacity-50 ${value === id ? "bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)]" : "text-[#6E6E73] hover:text-[#1D1D1F]"}`}
         >
           {label}
         </button>
@@ -352,8 +352,8 @@ export function LogoMerchStudio() {
 
   return (
     <main className="flex min-h-screen flex-col bg-white" style={theme}>
-      <header className="flex h-16 items-center justify-between px-8">
-        <button type="button" onClick={() => setStep("product")} className="w-64 text-left text-[15px] font-semibold tracking-tight">
+      <header className="flex min-h-14 items-center justify-between gap-3 px-4 md:h-16 md:px-8">
+        <button type="button" onClick={() => setStep("product")} className="min-h-11 whitespace-nowrap text-left text-[15px] font-semibold tracking-tight md:min-h-0 md:w-64 md:whitespace-normal">
           Merch <span className="font-normal text-[#86868B]">med din logga</span>
         </button>
         <div className="flex gap-1.5">
@@ -361,17 +361,17 @@ export function LogoMerchStudio() {
             <span key={s} className={`h-1.5 rounded-full transition-all ${i <= stepIndex ? "w-6 bg-[#1D1D1F]" : "w-1.5 bg-[#D2D2D7]"}`} />
           ))}
         </div>
-        <div className="w-64" />
+        <div className="hidden w-64 md:block" />
       </header>
 
-      {error && <div className="mx-auto mt-2 max-w-xl rounded-2xl bg-[#FDECEA] px-5 py-3 text-sm text-[#B3261E]">{error}</div>}
+      {error && <div className="mx-4 mt-2 max-w-xl rounded-2xl bg-[#FDECEA] px-5 py-3 text-sm text-[#B3261E] sm:mx-auto">{error}</div>}
 
-      <div className="flex flex-1 flex-col items-center px-6 pb-24">
+      <div className="flex flex-1 flex-col items-center px-4 pb-24 sm:px-6">
         {step === "product" && (
           <div className="mt-[6vh] w-full max-w-6xl">
-            <h1 className="text-center text-5xl font-semibold tracking-tight">Välj produkt.</h1>
+            <h1 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">Välj produkt.</h1>
             <p className="mt-3 text-center text-[17px] text-[#86868B]">Vi fotograferar den med din logga – och trycker loggan på hela kollektionen.</p>
-            <div className="mt-12 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-5 sm:mt-12 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
               {LOGO_PRODUCTS.map((p) => {
                 const on = productId === p.id;
                 return (
@@ -399,7 +399,7 @@ export function LogoMerchStudio() {
                 );
               })}
             </div>
-            <div className="sticky bottom-6 mx-auto mt-12 flex w-fit rounded-full bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 mx-auto mt-12 flex w-fit rounded-full sm:bottom-6 bg-white/85 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur">
               <PrimaryButton onClick={() => setStep("logo")} disabled={!productId}>
                 Nästa
               </PrimaryButton>
@@ -409,12 +409,12 @@ export function LogoMerchStudio() {
 
         {step === "logo" && product && (
           <div className="mt-[10vh] w-full max-w-xl text-center">
-            <button type="button" onClick={() => setStep("product")} className="mx-auto flex items-center gap-3 rounded-full bg-[#F5F5F7] py-1.5 pl-1.5 pr-4 text-sm hover:bg-[#E8E8ED]">
+            <button type="button" onClick={() => setStep("product")} className="mx-auto flex min-h-11 items-center gap-3 rounded-full bg-[#F5F5F7] py-1.5 pl-1.5 pr-4 text-sm hover:bg-[#E8E8ED]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/products/${product.id}.jpg`} alt="" className="h-8 w-8 rounded-full bg-white object-contain mix-blend-multiply" />
               {product.name} <span className="text-[#86868B]">· Byt</span>
             </button>
-            <h1 className="mt-8 text-5xl font-semibold tracking-tight">Din logga.</h1>
+            <h1 className="mt-8 text-4xl font-semibold tracking-tight sm:text-5xl">Din logga.</h1>
             <p className="mt-3 text-[17px] text-[#86868B]">Klistra in adressen till er webbplats. Vi hämtar loggan därifrån.</p>
             <div className="mt-10 flex gap-2">
               <input
@@ -423,13 +423,13 @@ export function LogoMerchStudio() {
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && url.trim() && !logoBusy && fetchLogo({ url })}
                 placeholder="t.ex. www.företaget.se"
-                className="h-14 flex-1 rounded-2xl bg-[#F5F5F7] px-5 text-[17px] outline-none ring-[#1D1D1F] placeholder:text-[#86868B] focus:ring-2"
+                className="h-14 min-w-0 flex-1 rounded-2xl bg-[#F5F5F7] px-4 text-[17px] sm:px-5 outline-none ring-[#1D1D1F] placeholder:text-[#86868B] focus:ring-2"
               />
               <button
                 type="button"
                 onClick={() => fetchLogo({ url })}
                 disabled={!url.trim() || logoBusy}
-                className="inline-flex h-14 items-center gap-2 rounded-2xl bg-[#F5F5F7] px-6 text-[15px] font-medium hover:bg-[#E8E8ED] disabled:opacity-50"
+                className="inline-flex h-14 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl bg-[#F5F5F7] px-4 text-[15px] font-medium sm:px-6 hover:bg-[#E8E8ED] disabled:opacity-50"
               >
                 {logoBusy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1D1D1F] border-t-transparent" />}
                 {logoBusy ? "Hämtar…" : "Hämta logga"}
@@ -437,7 +437,7 @@ export function LogoMerchStudio() {
             </div>
             <p className="mt-3 text-sm text-[#86868B]">
               Eller{" "}
-              <button type="button" onClick={() => fileInput.current?.click()} className="font-medium text-[#1D1D1F] underline underline-offset-2">
+              <button type="button" onClick={() => fileInput.current?.click()} className="-my-3 py-3 font-medium text-[#1D1D1F] underline underline-offset-2">
                 ladda upp loggan
               </button>{" "}
               som PNG, JPG eller SVG.
@@ -448,18 +448,18 @@ export function LogoMerchStudio() {
             {logo && (
               <div className="mt-8 rounded-[28px] border border-[#E8E8ED] p-5 text-left">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="flex h-36 items-center justify-center rounded-2xl bg-white ring-1 ring-[#E8E8ED]">
+                  <div className="flex h-28 items-center justify-center rounded-2xl bg-white ring-1 ring-[#E8E8ED] sm:h-36">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={logo.light} alt={logo.name} className="max-h-24 max-w-[80%] object-contain" />
                   </div>
-                  <div className="flex h-36 items-center justify-center rounded-2xl bg-[#1D1D1F]">
+                  <div className="flex h-28 items-center justify-center rounded-2xl bg-[#1D1D1F] sm:h-36">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={logo.dark} alt={`${logo.name} på mörkt`} className="max-h-24 max-w-[80%] object-contain" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[15px] font-medium">{logo.name}</p>
+                    <p className="truncate text-[15px] font-medium">{logo.name}</p>
                     <p className="truncate text-xs text-[#86868B]">Hittad: {logo.source}</p>
                   </div>
                   <span className="flex shrink-0 items-center gap-2 text-xs text-[#86868B]">
@@ -490,13 +490,13 @@ export function LogoMerchStudio() {
         {step === "result" && product && logo && (
           <div className="mt-[5vh] w-full max-w-6xl">
             <div className="flex flex-wrap items-end justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="flex h-16 w-24 items-center justify-center rounded-2xl bg-[#F5F5F7]">
+              <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+                <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-2xl bg-[#F5F5F7]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logo.light} alt="" className="max-h-10 max-w-[76px] object-contain" />
                 </div>
-                <div>
-                  <h1 className="text-4xl font-semibold tracking-tight">
+                <div className="min-w-0">
+                  <h1 className="text-3xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-4xl">
                     {logo.name} <span className="text-[#86868B]">×</span> {product.name.toLowerCase()}
                   </h1>
                   <p className="mt-1 text-[15px] text-[#86868B]">
@@ -504,7 +504,7 @@ export function LogoMerchStudio() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex w-full flex-wrap gap-3 sm:w-auto max-sm:[&>button]:flex-1 max-sm:[&>button:last-child]:basis-full">
                 <SecondaryButton onClick={() => setStep("product")}>Byt produkt</SecondaryButton>
                 <SecondaryButton onClick={() => setStep("logo")}>Byt logga</SecondaryButton>
                 <PrimaryButton onClick={downloadZip} disabled={photos === null} loading={busy}>
@@ -522,12 +522,12 @@ export function LogoMerchStudio() {
 
             <div className="mt-14 flex flex-wrap items-end justify-between gap-4">
               <h2 className="text-2xl font-semibold tracking-tight">Hela kollektionen</h2>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-[13px] text-[#86868B]">Kopp, yeti-mugg och termos</span>
                 <FinishToggle value={finish} onChange={changeFinish} />
               </div>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4">
               {rest.map((t) => (
                 <TileCard key={t.id} tile={t} />
               ))}

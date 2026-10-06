@@ -4,6 +4,7 @@ import path from "node:path";
 import { toFile } from "openai";
 import sharp from "sharp";
 import { SITE, cleanText, createLimiter, envInt } from "./demoLimit";
+import { type BoothReview, reviewBooth } from "./demoBoothQa";
 import { type SiteAnalysis, readAnalysis } from "./demoSiteCache";
 import { IMAGE_MODEL, IMAGE_QUALITY, hasOpenAIKey, openai } from "./openai";
 import { loadFile, saveFile } from "./store";
@@ -12,7 +13,7 @@ export const BOOTH_ITEMS = ["massvagg", "rollup", "beachflagga", "massdisk", "sk
 export type BoothItem = (typeof BOOTH_ITEMS)[number];
 
 export type BoothRequest = { name: string; site: string; color: string; light: string; products: BoothItem[]; analysisId?: string };
-export type BoothResult = { url: string; color: string; cached: boolean };
+export type BoothResult = { url: string; color: string; cached: boolean; attempts?: number };
 
 export class BoothError extends Error {
   constructor(message: string, readonly status: number, readonly retryAfterSec?: number) {
@@ -34,6 +35,9 @@ const MAX_LOGO_BYTES = 8_000_000;
 
 const VERSION = "v1";
 const TAILORED = "v2";
+/** Bumped whenever prompt or QA changes enough that older cached booths should be rendered again. */
+const PIPELINE = "q1";
+const MAX_IMAGES = 3;
 const FILE_JPG = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
 const CACHE = path.join(process.cwd(), ".data", "demo", "booths");
 const PLACEHOLDER = path.join(process.cwd(), "public", "demo", "booth-placeholder.jpg");
@@ -42,7 +46,7 @@ const LAYOUT = `Fixed composition, left to right, exactly as in the first refere
 - FAR LEFT (about 4-12% from the left edge): a tall curved beach flag (feather flag) on a pole.
 - LEFT (about 14-24%): a roll-up banner standing on the floor.
 - LEFT OF CENTRE (about 26-33%): a black brochure stand with several stacked leaflets.
-- CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel. Two friendly staff, a man and a woman in matching branded polo shirts, stand behind the counter. On the counter: two branded coffee mugs, two branded water bottles, a bowl of wrapped candy and a few pens.
+- CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel. Two friendly staff, a man and a woman in matching branded polo shirts, stand behind the counter, relaxed and facing the camera, each with both hands resting on the counter top. On the counter: two branded coffee mugs, two branded water bottles, a bowl of wrapped candy and a few pens.
 - RIGHT (about 68-92%): open wooden shelving with branded t-shirts and polo shirts on hangers, branded baseball caps on a shelf, branded tote bags hanging on hooks and a row of branded mugs.`;
 
 /** Same positions as LAYOUT, but the content comes from the site analysis. */
@@ -50,8 +54,25 @@ const POSITIONS = `Fixed composition, left to right, exactly as in the first ref
 - FAR LEFT (about 4-12% from the left edge): a tall curved beach flag (feather flag) on a pole.
 - LEFT (about 14-24%): a roll-up banner standing on the floor.
 - LEFT OF CENTRE (about 26-33%): a black brochure stand with several stacked leaflets.
-- CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel and two staff behind it. On the counter, next to the company's own items, two branded coffee mugs, a branded water bottle and a few pens.
+- CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel and two staff behind it, standing relaxed and facing the camera, each with both hands resting on the counter top or one hand holding a single item naturally. On the counter, next to the company's own items, two branded coffee mugs, a branded water bottle and a few pens.
 - RIGHT (about 68-92%): open shelving that mixes the company's own products with branded t-shirts on hangers, branded caps and branded tote bags.`;
+
+const REALISM = `Realism requirements (most important):
+- It must look like an unedited photo by a professional event photographer: physically plausible light, shadows and reflections, correct perspective, nothing floating in the air.
+- Exactly two people stand behind the counter. Each has an anatomically correct body: one head, two arms, two hands, five fingers per hand, all clearly connected to their own body. No extra, missing, merged or disembodied arms, hands or fingers, and no hands reaching in from outside. Nobody else touches the counter.
+- Natural, relaxed faces with real skin texture; people are fictional and generic.
+- Every logo is spelled exactly as in the logo reference, letter for letter. No garbled, invented or nonsense text anywhere; small print on products may be illegible but must not look like fake letters.
+- The exhibition hall behind the booth stays softly out of focus with a few visitors at a distance.`;
+
+/** What the reviewer should expect to see, in the fixed left-to-right order. */
+const EXPECTED: [BoothItem | null, string][] = [
+  ["beachflagga", "a beach flag on a pole"],
+  ["rollup", "a roll-up banner"],
+  ["skyltstall", "a brochure stand"],
+  ["massvagg", "a back wall with the logo and a wall screen"],
+  [null, "a centred reception counter with two staff behind it"],
+  [null, "open shelving with products and merch on the right"],
+];
 
 const MISSING: Record<BoothItem, string> = {
   massvagg: "The back wall is a plain neutral light grey wall without logo or print.",
@@ -83,7 +104,7 @@ The second reference image is the company's logo. Replace every "DIN LOGO" place
 Brand colour: ${color}. Use it as the dominant colour of the back wall, roll-up, beach flag, counter front and staff shirts, combined with white and a little warm wood. Premium, clean Scandinavian design.
 ${LAYOUT}
 ${missing.join("\n")}
-The exhibition hall behind the booth stays softly out of focus with a few visitors. Real skin texture, natural hands and faces; people are fictional and generic.`;
+${REALISM}`;
 }
 
 function tailoredPrompt(req: BoothRequest, a: SiteAnalysis, color: string, refs: string[]) {
@@ -105,7 +126,7 @@ ${[
     line("Roll-up", s.rollup && `${s.rollup}, logo at the top`),
     "- Beach flag: brand colour with the logo.",
     line("Counter", s.counter),
-    line("Staff (two people, a man and a woman)", s.staff),
+    line("Staff clothing and styling (two people, a man and a woman; keep the relaxed pose described above and ignore any demonstration or action in this line)", s.staff),
     line("Shelving on the right", s.shelves),
     line("Floor and materials", s.materials),
     line("Lighting", s.lighting),
@@ -113,7 +134,7 @@ ${[
     .filter(Boolean)
     .join("\n")}
 ${missing.join("\n")}
-The exhibition hall behind the booth stays softly out of focus with a few visitors. Real skin texture, natural hands and faces; people are fictional and generic.`;
+${REALISM}`;
 }
 
 /** The logo's own colour wins; monochrome logos borrow the brand colour the analysis saw on the site. */
@@ -149,9 +170,6 @@ export async function logoPrint(png: Buffer) {
   return createHash("sha1").update(px.map((v) => v >> 5)).digest("hex").slice(0, 16);
 }
 
-/** Entries written before the key included the logo; read-only so they cannot be poisoned. */
-const legacyKey = (req: BoothRequest) => (SITE.test(req.site) ? hash(["v1", req.site, productKey(req)]) : null);
-
 async function readCache(key: string): Promise<BoothResult | null> {
   try {
     const hit = JSON.parse(await readFile(path.join(CACHE, `${key}.json`), "utf8")) as { url: string; color: string };
@@ -179,21 +197,48 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
     .png()
     .toBuffer();
   const booth = await readFile(PLACEHOLDER);
-  const res = await openai().images.edit({
-    model: IMAGE_MODEL,
-    image: [await toFile(booth, "booth.jpg", { type: "image/jpeg" }), await toFile(logoRef, "logo.png", { type: "image/png" }), ...refFiles],
-    prompt: analysis ? tailoredPrompt(req, analysis, color, refs.map((r) => r.description)) : prompt(req, color),
-    size: "1536x1024",
-    quality: IMAGE_QUALITY,
-    output_format: "jpeg",
-  });
-  const b64 = res.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
-  const jpg = await sharp(Buffer.from(b64, "base64")).resize({ width: 1536, withoutEnlargement: true }).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
-  const file = await saveFile(jpg, "jpg");
+  const base = analysis ? tailoredPrompt(req, analysis, color, refs.map((r) => r.description)) : prompt(req, color);
+  const generate = async (fixes: string[]) => {
+    const res = await openai().images.edit({
+      model: IMAGE_MODEL,
+      image: [await toFile(booth, "booth.jpg", { type: "image/jpeg" }), await toFile(logoRef, "logo.png", { type: "image/png" }), ...refFiles],
+      prompt: fixes.length ? `${base}\nA previous attempt had these problems – make sure they do not happen this time:\n${fixes.map((f) => `- ${f}`).join("\n")}` : base,
+      size: "1536x1024",
+      quality: IMAGE_QUALITY,
+      output_format: "jpeg",
+    });
+    const b64 = res.data?.[0]?.b64_json;
+    if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
+    return sharp(Buffer.from(b64, "base64")).resize({ width: 1536, withoutEnlargement: true }).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
+  };
+
+  /** Keeps the first clean render, else the one with the fewest issues; a failing reviewer never blocks the booth. */
+  let best: { jpg: Buffer; review: BoothReview | null } | null = null;
+  let attempts = 0;
+  let fixes: string[] = [];
+  while (attempts < MAX_IMAGES) {
+    attempts++;
+    const t0 = Date.now();
+    let jpg: Buffer;
+    try {
+      jpg = await generate(fixes);
+    } catch (e) {
+      if (!best) throw e;
+      break;
+    }
+    const review = await reviewBooth(jpg, logo, { name: promptName(analysis?.brandName || req.name, req.site), tagline: analysis?.tagline, layout: EXPECTED.filter(([i]) => !i || req.products.includes(i)).map(([, d]) => d) });
+    console.info(`demo/booth ${req.site} attempt ${attempts}: ${review ? (review.ok ? "ok" : review.issues.join(" | ")) : "review failed"} (${Date.now() - t0} ms)`);
+    if (!best || (review && (!best.review || review.issues.length < best.review.issues.length))) best = { jpg, review };
+    if (!review || review.ok) break;
+    fixes = review.issues;
+  }
+  const file = await saveFile(best!.jpg, "jpg");
   await mkdir(CACHE, { recursive: true });
-  await writeFile(path.join(CACHE, `${key}.json`), JSON.stringify({ url: file.url, color, site: req.site, products: req.products, analysisId: analysis?.id, createdAt: new Date().toISOString() }));
-  return { url: file.url, color, cached: false };
+  await writeFile(
+    path.join(CACHE, `${key}.json`),
+    JSON.stringify({ url: file.url, color, site: req.site, products: req.products, analysisId: analysis?.id, attempts, review: best!.review, createdAt: new Date().toISOString() }),
+  );
+  return { url: file.url, color, cached: false, attempts };
 }
 
 const inFlight = new Map<string, Promise<BoothResult>>();
@@ -208,10 +253,9 @@ export async function brandedBooth(req: BoothRequest, ip: string): Promise<Booth
   const found = req.analysisId ? await readAnalysis(req.analysisId) : null;
   const analysis = found && found.host === req.site ? found : null;
   const key = analysis
-    ? hash([TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash)])
-    : hash([VERSION, req.site, print, boothColor(req.color), productKey(req)]);
-  const legacy = analysis ? null : legacyKey(req);
-  const hit = (await readCache(key)) ?? (legacy ? await readCache(legacy) : null);
+    ? hash([PIPELINE, TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash)])
+    : hash([PIPELINE, VERSION, req.site, print, boothColor(req.color), productKey(req)]);
+  const hit = await readCache(key);
   if (hit) return hit;
 
   let job = inFlight.get(key);

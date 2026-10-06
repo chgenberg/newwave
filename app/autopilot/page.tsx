@@ -273,11 +273,11 @@ export default function Autopilot() {
 
   return (
     <main className="min-h-screen bg-white">
-      <header className="flex h-16 items-center justify-between px-8">
-        <Link href="/" className="text-[15px] font-semibold tracking-tight">
+      <header className="flex flex-wrap items-center justify-between px-4 pt-2 md:h-16 md:flex-nowrap md:px-8 md:pt-0">
+        <Link href="/" className="inline-block py-3 text-[15px] font-semibold tracking-tight md:-my-3">
           Craft <span className="font-normal text-[#86868B]">Klubbmerch</span>
         </Link>
-        <div className="flex items-center gap-5 text-xs font-medium text-[#86868B]">
+        <div className="-mx-2 flex w-[calc(100%+1rem)] flex-wrap items-center text-[13px] font-medium text-[#86868B] md:mx-0 md:w-auto md:gap-5 md:text-xs [&>a]:inline-flex [&>a]:min-h-11 [&>a]:items-center [&>a]:whitespace-nowrap [&>a]:px-2 md:[&>a]:min-h-0 md:[&>a]:px-0">
           <Link href="/" className="hover:text-[#1D1D1F]">Manuellt läge</Link>
           <Link href="/match" className="hover:text-[#1D1D1F]">Matchcentral</Link>
           <Link href={`/intersport/${CLUB_ID}`} className="hover:text-[#1D1D1F]">Klubbshop hos Intersport</Link>
@@ -285,9 +285,9 @@ export default function Autopilot() {
       </header>
 
       {club && (
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 pb-24 pt-[4vh] lg:grid-cols-[340px_1fr]">
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-3xl border border-[#E8E8ED] p-6">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-24 pt-[4vh] sm:px-6 lg:grid-cols-[340px_1fr]">
+          <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-3xl border border-[#E8E8ED] p-5 sm:p-6">
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/api/v1/brand/${club.id}/${club.brand.crest.farg}`} alt="" className="h-14 w-auto" />
@@ -307,7 +307,7 @@ export default function Autopilot() {
                 </li>
               </ul>
               <details className="group mt-4">
-                <summary className="cursor-pointer list-none text-xs font-medium text-[#234B9A]">
+                <summary className="-my-3.5 cursor-pointer list-none py-3.5 text-xs font-medium text-[#234B9A]">
                   <span className="group-open:hidden">Visa alla riktlinjer</span>
                   <span className="hidden group-open:inline">Dölj riktlinjer</span>
                 </summary>
@@ -319,7 +319,7 @@ export default function Autopilot() {
               </details>
             </div>
 
-            <div className="mt-4 rounded-3xl border border-[#E8E8ED] p-6">
+            <div className="mt-4 rounded-3xl border border-[#E8E8ED] p-5 sm:p-6">
               <p className="text-xs uppercase tracking-wider text-[#86868B]">Källor</p>
               <ul className="mt-3 space-y-2.5">
                 {SOURCES.map((s) => {
@@ -342,7 +342,7 @@ export default function Autopilot() {
                 })}
               </ul>
               <details className="group mt-5 border-t border-[#E8E8ED] pt-4">
-                <summary className="cursor-pointer list-none text-xs font-medium text-[#234B9A]">
+                <summary className="-my-3.5 cursor-pointer list-none py-3.5 text-xs font-medium text-[#234B9A]">
                   <span className="group-open:hidden">Kan läggas till ({NEXT_SOURCES.length})</span>
                   <span className="hidden group-open:inline">Dölj</span>
                 </summary>
@@ -358,7 +358,7 @@ export default function Autopilot() {
             </div>
           </aside>
 
-          <section>
+          <section className="order-first min-w-0 lg:order-none">
             <h1 className="text-4xl font-semibold tracking-tight">Autopilot.</h1>
             <p className="mt-3 max-w-xl text-[17px] text-[#86868B]">Klubben gör ingenting. Agenten sköter resten.</p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -371,7 +371,7 @@ export default function Autopilot() {
                 {running && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
                 {running ? "Agenten arbetar…" : "Starta autopilot"}
               </button>
-              <label className="flex items-center gap-2 text-sm text-[#3A3A3C]">
+              <label className="flex min-h-11 items-center gap-2 text-sm text-[#3A3A3C] lg:min-h-0">
                 <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="h-4 w-4 accent-[#234B9A]" />
                 Kör automatiskt var 15:e minut
               </label>
@@ -384,7 +384,7 @@ export default function Autopilot() {
 
             <ol className="mt-10 space-y-3">
               {log.map((e) => (
-                <li key={e.id} className="ifk-line flex gap-4">
+                <li key={e.id} className="ifk-line flex gap-3 sm:gap-4">
                   <span
                     className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm ${
                       e.kind === "error" || e.kind === "skip" ? "bg-[#FDECEA] text-[#B3261E]" : e.kind === "done" || e.kind === "publish" ? "bg-[#E3F1E7] text-[#1B7F3B]" : "bg-[#EEF2FA] text-[#234B9A]"
@@ -392,9 +392,9 @@ export default function Autopilot() {
                   >
                     {ICON[e.kind]}
                   </span>
-                  <div className="min-w-0 flex-1 rounded-2xl bg-[#F5F5F7] px-5 py-3.5">
+                  <div className="min-w-0 flex-1 rounded-2xl bg-[#F5F5F7] px-4 py-3.5 sm:px-5">
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="text-sm font-medium">
+                      <p className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
                         {e.title}
                         {e.badge && <span className="ml-2 rounded-full bg-[#FBC323] px-2 py-0.5 text-[10px] font-semibold uppercase">{e.badge}</span>}
                       </p>
@@ -402,10 +402,10 @@ export default function Autopilot() {
                     </div>
                     {e.detail && <p className="mt-1 text-[13px] leading-snug text-[#6E6E73]">{e.detail}</p>}
                     {(e.images || e.review) && (
-                      <div className="mt-3 flex gap-4">
+                      <div className="mt-3 flex flex-col gap-4 sm:flex-row">
                         {e.images?.map((src) => (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img key={src} src={src} alt="" className="h-40 w-auto rounded-xl bg-white object-contain" />
+                          <img key={src} src={src} alt="" className="h-40 w-auto max-w-full self-start rounded-xl bg-white object-contain" />
                         ))}
                         {e.review && (
                           <div className="min-w-0 flex-1">
