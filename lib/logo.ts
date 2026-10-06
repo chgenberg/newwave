@@ -129,12 +129,29 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/** Removes a uniform, partly transparent layer along the edges, e.g. a tinted header behind a screenshotted logo. */
+function knockOutTranslucentEdge(r: Raster) {
+  const { data, width: w, height: h } = r;
+  const edge: number[] = [];
+  for (let x = 0; x < w; x += 2) edge.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y += 2) edge.push(y * w, y * w + w - 1);
+  const filled = edge.map((p) => p * 4).filter((k) => data[k + 3] > 16);
+  if (filled.length < edge.length * 0.6) return;
+  const bg = [0, 1, 2, 3].map((c) => filled.reduce((s, k) => s + data[k + c], 0) / filled.length);
+  const dist = (k: number) => Math.hypot(data[k] - bg[0], data[k + 1] - bg[1], data[k + 2] - bg[2], data[k + 3] - bg[3]);
+  if (filled.filter((k) => dist(k) < 40).length < filled.length * 0.85) return;
+  for (let k = 0; k < data.length; k += 4) data[k + 3] = Math.round(data[k + 3] * smoothstep(22, 70, dist(k)));
+}
+
 /** Makes a uniform background transparent. Returns false when the image looks like a photo. */
 function knockOutBackground(r: Raster) {
   const { data, width: w, height: h } = r;
   let opaque = 0;
   for (let i = 3; i < data.length; i += 4) if (data[i] > 250) opaque++;
-  if (opaque / (w * h) < 0.97) return true;
+  if (opaque / (w * h) < 0.97) {
+    knockOutTranslucentEdge(r);
+    return true;
+  }
   const corner = (x: number, y: number) => {
     const k = (y * w + x) * 4;
     return [data[k], data[k + 1], data[k + 2]];
