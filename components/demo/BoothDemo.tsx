@@ -17,11 +17,13 @@ import {
   sek,
   sumSek,
 } from "@/lib/demoCatalog";
+import type { SiteAnalysis } from "@/lib/demoSiteCache";
 import type { LogoResult } from "@/lib/logo";
-import { BoothStage, type Hotspot } from "./BoothStage";
+import { BoothStage, type Hotspot, type Phase } from "./BoothStage";
 import { type Line, ProductDrawer, ProductVisual } from "./ProductDrawer";
 import { type OfferLine, PrintOffer } from "./PrintOffer";
 import { BrandMark, Header, Icons, PlusBadge, Primary, Secondary, StepDots, Stepper } from "./parts";
+import { TailorCard } from "./TailorCard";
 import { useMockups } from "./useMockups";
 
 type Stage = "landing" | "brand" | "fill" | "view" | "summary" | "thanks";
@@ -65,10 +67,16 @@ const shortName = (raw: string, site: string) => {
 
 const tileName = (site: string) => BRANDS.find((b) => domainName(b.url) === domainName(site))?.name;
 
+const newLine = (p: Product): Line => ({ qty: p.defaultQty, model: p.models[0].id, color: "", style: p.styles[0] });
 const initialLines = (): Record<string, Line> =>
-  Object.fromEntries(
-    [...BOOTH_PRODUCTS, ...PROMO_PRODUCTS.filter((p) => DEFAULT_PROMOS.includes(p.id))].map((p) => [p.id, { qty: p.defaultQty, model: p.models[0].id, color: "", style: p.styles[0] }]),
-  );
+  Object.fromEntries([...BOOTH_PRODUCTS, ...PROMO_PRODUCTS.filter((p) => DEFAULT_PROMOS.includes(p.id))].map((p) => [p.id, newLine(p)]));
+
+/** Keeps the booth choices and swaps the promo products for the ones recommended for this company. */
+const withMerch = (ls: Record<string, Line>, ids: string[]) => {
+  const next = Object.fromEntries(Object.entries(ls).filter(([id]) => BOOTH_PRODUCTS.some((p) => p.id === id)));
+  for (const p of PROMO_PRODUCTS) if (ids.includes(p.id)) next[p.id] = newLine(p);
+  return next;
+};
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`flex flex-col px-6 py-8 sm:px-10 lg:py-12 ${className}`}>{children}</div>;
@@ -134,7 +142,8 @@ export function BoothDemo() {
   const [url, setUrl] = useState("");
   const [logo, setLogo] = useState<LogoResult | null>(null);
   const [brandName, setBrandName] = useState("");
-  const [phase, setPhase] = useState<"logo" | "booth" | null>(null);
+  const [phase, setPhase] = useState<Phase | null>(null);
+  const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [boothNote, setBoothNote] = useState<string | null>(null);
   const [booth, setBooth] = useState<Booth | null>(null);
@@ -163,11 +172,18 @@ export function BoothDemo() {
   };
 
   /** A failed booth (no API key, rate limit, model error) never blocks the flow: the neutral booth stays usable. */
-  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number) => {
+  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number, a: SiteAnalysis | null) => {
     setPhase("booth");
     setBoothNote(null);
     try {
-      const b = await post<BoothResult>("/api/v1/demo/booth", { name: nm || l.site || "Ditt företag", site: l.site, color: l.color, light: l.light, products: items });
+      const b = await post<BoothResult>("/api/v1/demo/booth", {
+        name: nm || l.site || "Ditt företag",
+        site: l.site,
+        color: l.color,
+        light: l.light,
+        products: items,
+        ...(a && a.host === l.site ? { analysisId: a.id } : {}),
+      });
       if (run.current === id) setBooth({ ...b, items });
     } catch (e) {
       if (run.current === id) setBoothNote(e instanceof Error ? e.message : String(e));
@@ -185,6 +201,7 @@ export function BoothDemo() {
     setBoothNote(null);
     setLogo(null);
     setBooth(null);
+    setAnalysis(null);
     setBrandName(knownName ?? "");
     setPhase("logo");
     let l: LogoResult;
@@ -196,14 +213,27 @@ export function BoothDemo() {
       return setError(e instanceof Error ? e.message : String(e));
     }
     if (run.current !== id) return;
-    const nm = knownName ?? tileName(value) ?? tileName(l.site) ?? shortName(l.name, l.site);
+    const known = knownName ?? tileName(value) ?? tileName(l.site);
+    setBrandName(known ?? shortName(l.name, l.site));
+
+    /** The deep read is a bonus: if it fails the booth is still built from logo and colours alone. */
+    let a: SiteAnalysis | null = null;
+    if (l.site) {
+      setPhase("site");
+      a = await post<SiteAnalysis>("/api/v1/demo/analyze", { site: l.site, light: l.light }).catch(() => null);
+      if (run.current !== id) return;
+    }
+    if (a?.logo.result) l = a.logo.result;
+    const nm = known ?? (a?.brandName || shortName(l.name, l.site));
+    setAnalysis(a);
     setLogo(l);
     setBrandName(nm);
-    await buildBooth(l, nm, boothItems, id);
+    if (a) setLines((ls) => withMerch(ls, a.merch.map((m) => m.id)));
+    await buildBooth(l, nm, boothItems, id, a);
   };
 
   const rebuild = () => {
-    if (logo) buildBooth(logo, brandName, boothItems, ++run.current);
+    if (logo) buildBooth(logo, brandName, boothItems, ++run.current, analysis);
   };
 
   useEffect(() => {
@@ -236,7 +266,7 @@ export function BoothDemo() {
     setLines((ls) => {
       const next = { ...ls };
       if (next[p.id]) delete next[p.id];
-      else next[p.id] = { qty: p.defaultQty, model: p.models[0].id, color: "", style: p.styles[0] };
+      else next[p.id] = newLine(p);
       return next;
     });
 
@@ -309,7 +339,7 @@ export function BoothDemo() {
   /** History entries can point at steps whose data is gone (e.g. after a reload); fall back to step 1. */
   const shown: Stage = (!logo && (stage === "fill" || stage === "view" || stage === "summary")) || (stage === "thanks" && !quote) ? "brand" : stage;
   const drawerProduct = ALL_PRODUCTS.find((p) => p.id === drawer);
-  const loading = phase ? { phase, name } : null;
+  const loading = phase ? { phase, name, industry: analysis?.industry ?? "" } : null;
   const eventLabel = EVENTS.find((e) => e.id === event)!.label;
 
   return (
@@ -410,7 +440,7 @@ export function BoothDemo() {
                   )}
                 </div>
                 <Primary type="submit" className="mt-3 w-full" loading={phase !== null}>
-                  {phase ? (phase === "logo" ? "Hämtar logga…" : "Bygger montern…") : "Skapa min monter"} {!phase && Icons.arrow}
+                  {phase ? (phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? "Hittar produkter och tjänster…" : "Bygger montern…") : "Skapa min monter"} {!phase && Icons.arrow}
                 </Primary>
               </form>
               {error && <p className="mt-3 rounded-xl bg-[#FDECEC] px-4 py-3 text-[13px] text-[#B42318]">{error}</p>}
@@ -422,7 +452,9 @@ export function BoothDemo() {
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1D8A4E] text-white">{Icons.check}</span>
                       <div>
                         <p className="text-[14px] font-semibold">Montern för {name} är klar</p>
-                        <p className="text-[12px] text-[#6E6E73]">{booth.cached ? "Hämtad från tidigare bygge" : "Logga och färger är applicerade"}</p>
+                        <p className="text-[12px] text-[#6E6E73]">
+                          {booth.cached ? "Hämtad från tidigare bygge" : analysis ? `Anpassad för ${analysis.industry.toLowerCase() || "er bransch"}` : "Logga och färger är applicerade"}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -443,6 +475,7 @@ export function BoothDemo() {
                   <Primary className="mt-3 w-full" onClick={() => go("fill")}>
                     Fyll montern med produkter {Icons.arrow}
                   </Primary>
+                  {analysis && <TailorCard analysis={analysis} />}
                 </div>
               ) : (
                 <>
@@ -751,7 +784,7 @@ export function BoothDemo() {
 
       {printing && quote && (
         <PrintOffer
-          brand={{ name: brandName || "Ditt företag", logo: logo?.light ?? null, site: logo?.site ?? "" }}
+          brand={{ name: brandName || "Ditt företag", logo: logo?.light ?? null, site: logo?.site ?? "", tagline: analysis?.tagline ?? "", industry: analysis?.industry ?? "" }}
           event={eventLabel}
           date={quote.date}
           reference={quote.reference}

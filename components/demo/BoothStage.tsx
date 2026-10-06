@@ -5,26 +5,39 @@ import { Icons } from "./parts";
 
 export type Hotspot = { id: string; x: number; y: number; label: string; added: boolean };
 
-const LINES = [
-  "Analyserar färger och form…",
+export type Phase = "logo" | "site" | "booth";
+type Loading = { phase: Phase; name: string; industry?: string };
+
+const SITE_LINES = ["Hittar produkter och tjänster…", "Tittar på bilder och produkter…", "Läser in varumärkets ton…", "Väljer profilprodukter som passar…"];
+const BOOTH_LINES = [
   "Bygger montern…",
   "Trycker mässväggen…",
+  "Ställer fram era produkter…",
   "Trycker roll-up och beachflagga…",
   "Klär personalen i profilkläder…",
-  "Ställer i ordning hyllorna…",
   "Riggar ljuset…",
   "Sista detaljerna…",
 ];
 
-function BuildingOverlay({ phase, name }: { phase: "logo" | "booth"; name: string }) {
+/** Progress bands: logo 0-15 %, site reading 15-45 %, booth image 45-95 %. */
+function BuildingOverlay({ phase, name, industry }: Loading) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const started = Date.now();
     const t = setInterval(() => setElapsed((Date.now() - started) / 1000), 400);
     return () => clearInterval(t);
   }, [phase]);
-  const progress = phase === "logo" ? Math.min(0.12, 0.02 + elapsed / 120) : 0.12 + 0.83 * (1 - Math.exp(-elapsed / 38));
-  const line = phase === "logo" ? "Hämtar logga…" : LINES[Math.min(LINES.length - 1, Math.floor(elapsed / 9))];
+  const ease = (tau: number) => 1 - Math.exp(-elapsed / tau);
+  const progress = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(34);
+  const boothLines = industry ? [`Anpassar montern för ${industry.toLowerCase()}…`, ...BOOTH_LINES] : BOOTH_LINES;
+  const line =
+    phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? SITE_LINES[Math.min(SITE_LINES.length - 1, Math.floor(elapsed / 9))] : boothLines[Math.min(boothLines.length - 1, Math.floor(elapsed / 8))];
+  const sub =
+    phase === "logo"
+      ? "Vi letar upp logga och färger på webbplatsen."
+      : phase === "site"
+        ? `Vi läser ${name}s webbplats för att förstå vad ni erbjuder.`
+        : `Vi bygger en unik monter för ${name}. Det tar ungefär en minut.`;
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 backdrop-blur-[6px]" role="status" aria-live="polite">
       <div className="w-[min(380px,86%)] rounded-3xl bg-white/95 p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
@@ -32,9 +45,7 @@ function BuildingOverlay({ phase, name }: { phase: "logo" | "booth"; name: strin
         <p key={line} className="ifk-line mt-4 text-[16px] font-semibold">
           {line}
         </p>
-        <p className="mt-1 text-[13px] text-[#6E6E73]">
-          {phase === "logo" ? "Vi letar upp logga och färger på webbplatsen." : `Vi bygger en unik monter för ${name}. Det tar ungefär en minut.`}
-        </p>
+        <p className="mt-1 text-[13px] text-[#6E6E73]">{sub}</p>
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[#E8E8ED]">
           <div className="h-full rounded-full bg-[#2563EB] transition-[width] duration-500" style={{ width: `${Math.round(progress * 100)}%` }} />
         </div>
@@ -49,7 +60,7 @@ export function BoothStage(props: {
   alt: string;
   spots?: Hotspot[];
   onSpot?: (id: string) => void;
-  loading?: { phase: "logo" | "booth"; name: string } | null;
+  loading?: Loading | null;
   className?: string;
   children?: ReactNode;
   fit?: "cover" | "contain";
@@ -78,7 +89,7 @@ export function BoothStage(props: {
           </button>
         ))}
       {props.children}
-      {props.loading && <BuildingOverlay phase={props.loading.phase} name={props.loading.name} />}
+      {props.loading && <BuildingOverlay {...props.loading} />}
     </div>
   );
 }

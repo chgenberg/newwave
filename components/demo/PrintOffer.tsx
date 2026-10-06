@@ -7,7 +7,7 @@ import { CropThumb, Icons, Primary, Secondary } from "./parts";
 export type OfferLine = { id: string; model: string; name: string; spec: string; variant: string; qty: number; unitSek: number; totalSek: number; unit: string; thumb: ReactNode };
 
 type Props = {
-  brand: { name: string; logo: string | null; site: string };
+  brand: { name: string; logo: string | null; site: string; tagline?: string; industry?: string };
   event: string;
   date: Date;
   reference: string;
@@ -69,8 +69,11 @@ export function PrintOffer(p: Props) {
             <div>
               <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#6E6E73]">Offertförslag</p>
               <h1 className="mt-2 text-[25px] font-semibold leading-[1.05] tracking-tight">Mässmonter med produkter</h1>
+              {p.brand.tagline && <p className="mt-2 text-[12px] font-medium italic leading-snug text-[#1D1D1F]">”{p.brand.tagline}”</p>}
               <p className="mt-3 text-[10px] leading-relaxed text-[#424245]">
-                Ett komplett förslag på mässmonter med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger.
+                {p.brand.industry
+                  ? `Ett komplett förslag på mässmonter anpassad för ${p.brand.industry.toLowerCase()}, med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger.`
+                  : "Ett komplett förslag på mässmonter med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger."}
               </p>
               <div className="mt-4 space-y-2 rounded-xl bg-[#F5F5F7] p-3.5">
                 {rows.map(([icon, k, v]) => (

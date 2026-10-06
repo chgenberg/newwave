@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BOOTH_ITEMS, BoothError, LOGO_URL, brandedBooth } from "@/lib/demoBooth";
+import { ANALYSIS_ID } from "@/lib/demoSiteCache";
 import { SITE, clientIp, readJson } from "@/lib/demoLimit";
 import { errorMessage } from "@/lib/openai";
 
@@ -11,6 +12,7 @@ const Body = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1D1D1F"),
   light: z.string().max(80).regex(LOGO_URL),
   products: z.array(z.enum(BOOTH_ITEMS)).max(BOOTH_ITEMS.length).default([...BOOTH_ITEMS]),
+  analysisId: z.string().regex(ANALYSIS_ID).optional(),
 });
 
 export async function POST(req: Request) {
