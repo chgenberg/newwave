@@ -3,55 +3,58 @@
 import { PROMO_PRODUCTS } from "@/lib/demoCatalog";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 
-/** Shows what the site read found, so the tailoring feels earned rather than random. */
+/** Collapsed by default: the booth speaks for itself, the details are there for the curious. */
 export function TailorCard({ analysis }: { analysis: SiteAnalysis }) {
   const images = [...analysis.images].sort((a, b) => Number(b.selected) - Number(a.selected)).slice(0, 6);
   const merch = analysis.merch.map((m) => ({ ...m, product: PROMO_PRODUCTS.find((p) => p.id === m.id) })).filter((m) => m.product);
   return (
-    <div className="mt-5 border-t border-black/[0.08] pt-5">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#6E6E73]">Så anpassade vi montern</p>
-      {analysis.industry && (
-        <p className="mt-3 text-[14px] font-semibold">
-          {analysis.industry}
-          {analysis.offering && <span className="font-normal text-[#424245]"> · {analysis.offering}</span>}
-        </p>
-      )}
-      {analysis.tagline && <p className="mt-1 text-[12px] italic text-[#6E6E73]">På mässväggen: ”{analysis.tagline}”</p>}
-
-      {images.length > 0 && (
-        <>
-          <p className="mt-4 text-[12px] font-medium text-[#424245]">Från er webbplats</p>
-          <div className="mt-2 grid grid-cols-6 gap-1.5">
-            {images.map((im) => (
-              <span key={im.url} className={`relative aspect-square overflow-hidden rounded-lg bg-white ${im.selected ? "ring-2 ring-[#2563EB]" : "ring-1 ring-black/[0.06]"}`} title={im.caption}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={im.url} alt={im.caption} loading="lazy" className="h-full w-full object-cover" />
-              </span>
-            ))}
+    <details className="group rounded-2xl border border-black/[0.08] bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
+        Se hur vi anpassade montern
+        <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#6E6E73] transition group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 8l5 5 5-5" />
+        </svg>
+      </summary>
+      <div className="grid gap-6 px-5 pb-5 text-[13px] leading-relaxed text-[#424245] sm:grid-cols-3">
+        <div>
+          <p className="font-semibold text-[#1D1D1F]">Bransch</p>
+          <p className="mt-1">
+            {analysis.industry || "Okänd"}
+            {analysis.offering && ` – ${analysis.offering}`}
+          </p>
+          {analysis.tagline && <p className="mt-2">På mässväggen: ”{analysis.tagline}”</p>}
+          {analysis.logo.status !== "ok" && (
+            <p className="mt-2">{analysis.logo.status === "replaced" ? "Vi hittade en bättre version av er logga i sidhuvudet och använder den." : "Vi satte namnet som ordmärke tills ni laddar upp er logga."}</p>
+          )}
+        </div>
+        {images.length > 0 && (
+          <div>
+            <p className="font-semibold text-[#1D1D1F]">Från er webbplats</p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {images.map((im) => (
+                <span key={im.url} className={`aspect-square overflow-hidden rounded-lg bg-[#F5F5F7] ${im.selected ? "ring-2 ring-[#1D1D1F]" : ""}`} title={im.caption}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={im.url} alt={im.caption} loading="lazy" className="h-full w-full object-cover" />
+                </span>
+              ))}
+            </div>
+            {images.some((i) => i.selected) && <p className="mt-1.5 text-[12px] text-[#86868B]">Markerade bilder användes som förlaga.</p>}
           </div>
-          {images.some((i) => i.selected) && <p className="mt-1.5 text-[11px] text-[#86868B]">Markerade bilder användes som förlaga i montern.</p>}
-        </>
-      )}
-
-      {merch.length > 0 && (
-        <>
-          <p className="mt-4 text-[12px] font-medium text-[#424245]">Profilprodukter vi valt åt er</p>
-          <ul className="mt-2 space-y-1.5">
-            {merch.map((m) => (
-              <li key={m.id} className="text-[12px] leading-snug">
-                <span className="font-semibold">{m.product!.name}</span>
-                {m.reason && <span className="text-[#6E6E73]"> – {m.reason}</span>}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {analysis.logo.status !== "ok" && (
-        <p className="mt-4 rounded-xl bg-white px-3 py-2.5 text-[12px] leading-snug text-[#6E6E73]">
-          {analysis.logo.status === "replaced" ? "Vi hittade en bättre version av er logga i sidhuvudet och använder den." : "Vi satte namnet som ordmärke tills ni laddar upp er logga."}
-        </p>
-      )}
-    </div>
+        )}
+        {merch.length > 0 && (
+          <div>
+            <p className="font-semibold text-[#1D1D1F]">Profilprodukter vi föreslår</p>
+            <ul className="mt-1 space-y-1.5">
+              {merch.map((m) => (
+                <li key={m.id}>
+                  <span className="font-medium text-[#1D1D1F]">{m.product!.name}</span>
+                  {m.reason && ` – ${m.reason}`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }

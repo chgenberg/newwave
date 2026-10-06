@@ -32,6 +32,13 @@ const Body = z.object({
     )
     .min(1)
     .max(ALL_PRODUCTS.length),
+  contact: z
+    .object({
+      name: z.string().max(80).default(""),
+      email: z.union([z.literal(""), z.email().max(120)]).default(""),
+      company: z.string().max(80).default(""),
+    })
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -68,6 +75,11 @@ export async function POST(req: Request) {
     brand: { name: cleanText(parsed.data.brand.name, 80) || "Okänt varumärke", site: parsed.data.brand.site },
     event: parsed.data.event,
     boothUrl: parsed.data.boothUrl,
+    contact: parsed.data.contact && {
+      name: cleanText(parsed.data.contact.name, 80),
+      email: parsed.data.contact.email.toLowerCase(),
+      company: cleanText(parsed.data.contact.company, 80),
+    },
     totalSek: sumSek(lines.map((l) => l.totalSek)),
     lines,
   };

@@ -76,7 +76,7 @@ export function BoothStage(props: {
             type="button"
             onClick={() => props.onSpot?.(s.id)}
             style={{ left: `${s.x}%`, top: `${s.y}%` }}
-            className="group absolute z-[5] -translate-x-1/2 -translate-y-1/2"
+            className="group absolute z-[5] hidden -translate-x-1/2 -translate-y-1/2 sm:block"
             aria-label={`${s.label}${s.added ? " – i montern" : " – lägg till"}`}
           >
             <span className="absolute inset-0 animate-ping rounded-full bg-[#2563EB]/40 [animation-duration:2.4s]" />

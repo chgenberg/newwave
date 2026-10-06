@@ -1,7 +1,7 @@
 "use client";
 
 import { type CSSProperties, type ReactNode, useState } from "react";
-import { BOOTH_ASPECT, type Crop, EVENTS, type EventId, MAX_QTY } from "@/lib/demoCatalog";
+import { BOOTH_ASPECT, type Crop, MAX_QTY } from "@/lib/demoCatalog";
 
 const clamp = (v: number) => Math.min(100, Math.max(0, v));
 
@@ -142,82 +142,73 @@ export const Icons = {
   ),
 };
 
-export function Header(props: { logo: string | null; name: string; event: EventId; cartCount: number; onHome: () => void; onEvent: (e: EventId) => void; onQuote: () => void }) {
+export type Step = 1 | 2 | 3;
+export const STEP_LABELS: Record<Step, string> = { 1: "Varumärke", 2: "Produkter", 3: "Offert" };
+
+export function Header(props: { logo: string | null; name: string; step: Step | null; reachable: Step; onStep: (s: Step) => void; onHome: () => void }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl print:hidden">
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-5 sm:px-8">
-        <button type="button" onClick={props.onHome} className="flex h-10 min-w-[120px] items-center" aria-label="Till startsidan">
+    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/85 backdrop-blur-xl print:hidden">
+      <div className="mx-auto flex h-14 max-w-[1120px] items-center justify-between gap-4 px-5 sm:px-8">
+        <button type="button" onClick={props.onHome} className="flex h-10 min-w-0 items-center" aria-label="Till början">
           {props.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={props.logo} alt={props.name} className="max-h-7 max-w-[150px] object-contain" />
+            <img src={props.logo} alt={props.name} className="max-h-7 max-w-[140px] object-contain" />
           ) : (
-            <span className="text-[19px] font-semibold tracking-[0.18em]">DIN LOGO</span>
+            <span className="text-[15px] font-semibold tracking-[0.16em]">DIN LOGO</span>
           )}
         </button>
-        <nav className="mx-auto hidden items-center gap-9 md:flex" aria-label="Typ av event">
-          {EVENTS.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              onClick={() => props.onEvent(e.id)}
-              className={`relative py-5 text-[14px] font-medium transition ${props.event === e.id ? "text-[#1D1D1F]" : "text-[#6E6E73] hover:text-[#1D1D1F]"}`}
-            >
-              {e.label}
-              {props.event === e.id && <span className="absolute inset-x-0 bottom-[14px] h-[2px] rounded-full bg-[#1D1D1F]" />}
-            </button>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-1 md:ml-0">
-          {[
-            ["Sök", Icons.search],
-            ["Favoriter", Icons.heart],
-          ].map(([label, svg]) => (
-            <span key={label as string} title={label as string} className="hidden h-10 w-10 items-center justify-center rounded-full text-[#1D1D1F] sm:flex">
-              {svg}
-            </span>
-          ))}
-          <button type="button" onClick={props.onQuote} className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/[0.04]" aria-label={`Varukorg, ${props.cartCount} produkter`}>
-            {Icons.cart}
-            {props.cartCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2563EB] px-1 text-[10px] font-semibold text-white">{props.cartCount}</span>
-            )}
-          </button>
-          <button type="button" onClick={props.onQuote} className="ml-2 h-9 rounded-full bg-[#1D1D1F] px-4 text-[13px] font-medium text-white transition hover:bg-black">
-            Få offert
-          </button>
-        </div>
+        {props.step && <Steps step={props.step} reachable={props.reachable} onStep={props.onStep} />}
       </div>
     </header>
   );
 }
 
-export function StepDots({ step, onStep }: { step: 1 | 2 | 3; onStep?: (s: 1 | 2 | 3) => void }) {
+function Steps({ step, reachable, onStep }: { step: Step; reachable: Step; onStep: (s: Step) => void }) {
   return (
-    <div className="flex items-center gap-1.5" aria-label={`Steg ${step} av 3`}>
-      {([1, 2, 3] as const).map((s, i) => (
-        <span key={s} className="flex items-center gap-1.5">
-          {i > 0 && <span className={`h-px w-4 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
-          <button
-            type="button"
-            disabled={!onStep || s > step}
-            onClick={() => onStep?.(s)}
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition ${s === step ? "bg-[#1D1D1F] text-white" : s < step ? "border border-[#1D1D1F] text-[#1D1D1F] hover:bg-black/[0.04]" : "border border-[#D2D2D7] text-[#86868B]"}`}
-          >
-            {s}
-          </button>
-        </span>
-      ))}
-    </div>
+    <nav aria-label="Steg">
+      <p className="text-[13px] text-[#6E6E73] sm:hidden">
+        Steg {step} av 3 · <span className="font-medium text-[#1D1D1F]">{STEP_LABELS[step]}</span>
+      </p>
+      <ol className="hidden items-center gap-1 sm:flex">
+        {([1, 2, 3] as const).map((s) => (
+          <li key={s} className="flex items-center gap-1">
+            {s > 1 && <span className={`mx-1 h-px w-5 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
+            <button
+              type="button"
+              disabled={s > reachable || s === step}
+              onClick={() => onStep(s)}
+              aria-current={s === step ? "step" : undefined}
+              className={`flex items-center gap-2 rounded-full px-2 py-1 text-[13px] transition enabled:hover:bg-black/[0.04] ${s === step ? "font-semibold text-[#1D1D1F]" : s <= reachable ? "text-[#424245]" : "text-[#AEAEB2]"}`}
+            >
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${s === step ? "bg-[#1D1D1F] text-white" : s < step ? "bg-[#E8E8ED] text-[#1D1D1F]" : "border border-[#D2D2D7]"}`}>
+                {s < step ? Icons.check : s}
+              </span>
+              {STEP_LABELS[s]}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 
-export function Primary(props: { children: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; className?: string; type?: "button" | "submit" }) {
+/** Quiet secondary action: underlined text, never competes with the primary button. */
+export function TextLink(props: { children: ReactNode; onClick: () => void; className?: string }) {
+  return (
+    <button type="button" onClick={props.onClick} className={`text-[15px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 transition hover:decoration-black/60 ${props.className ?? ""}`}>
+      {props.children}
+    </button>
+  );
+}
+
+export function Primary(props: { children: ReactNode; onClick?: () => void; disabled?: boolean; loading?: boolean; className?: string; type?: "button" | "submit"; form?: string }) {
   return (
     <button
       type={props.type ?? "button"}
+      form={props.form}
       onClick={props.onClick}
       disabled={props.disabled || props.loading}
-      className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#C7C7CC] ${props.className ?? ""}`}
+      className={`inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#C7C7CC] ${props.className ?? ""}`}
     >
       {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
       {props.children}
@@ -231,7 +222,7 @@ export function Secondary(props: { children: ReactNode; onClick?: () => void; cl
       type="button"
       onClick={props.onClick}
       disabled={props.disabled}
-      className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-5 text-[14px] font-medium text-[#1D1D1F] transition hover:bg-[#F5F5F7] disabled:opacity-50 ${props.className ?? ""}`}
+      className={`inline-flex h-12 items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-6 text-[15px] font-medium text-[#1D1D1F] transition hover:bg-[#F5F5F7] disabled:opacity-50 ${props.className ?? ""}`}
     >
       {props.children}
     </button>
@@ -244,7 +235,7 @@ export function Stepper({ value, step, onChange, min = 1, size = "md" }: { value
   const w = size === "sm" ? "w-8" : "w-11";
   const clampQty = (n: number) => Math.max(min, Math.min(MAX_QTY, n));
   return (
-    <div className={`inline-flex ${h} items-center rounded-lg border border-black/10 bg-white`}>
+    <div className={`inline-flex ${h} items-center overflow-hidden rounded-full border border-black/10 bg-white`}>
       <button type="button" aria-label="Minska" onClick={() => onChange(clampQty(value - step))} className={`${w} h-full text-[17px] text-[#6E6E73] hover:text-[#1D1D1F] disabled:opacity-30`} disabled={value <= min}>
         −
       </button>
@@ -283,7 +274,7 @@ export function BrandMark({ id, name }: { id: string; name: string }) {
 
 export function PlusBadge({ on }: { on: boolean }) {
   return (
-    <span className={`flex h-6 w-6 items-center justify-center rounded-full shadow-sm transition ${on ? "bg-[#2563EB] text-white" : "border border-black/10 bg-white text-[#1D1D1F]"}`}>
+    <span className={`flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition ${on ? "bg-[#1D1D1F] text-white" : "border border-black/10 bg-white text-[#1D1D1F]"}`}>
       {on ? Icons.check : Icons.plus}
     </span>
   );
