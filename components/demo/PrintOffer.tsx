@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { sek } from "@/lib/demoCatalog";
-import { CropThumb, Icons, Primary, Secondary } from "./parts";
+import { fmtDay, visitorsLabel } from "@/lib/demoPackages";
+import { CropThumb, Icons, Primary, Secondary, TrustLine } from "./parts";
 
 export type OfferLine = { id: string; model: string; name: string; spec: string; variant: string; qty: number; unitSek: number; totalSek: number; unit: string; thumb: ReactNode };
 
@@ -14,6 +15,9 @@ type Props = {
   booth: string;
   lines: OfferLine[];
   total: number;
+  eventDate?: string;
+  visitors?: string;
+  delivery?: string;
   onClose: () => void;
 };
 
@@ -40,7 +44,10 @@ export function PrintOffer(p: Props) {
   const rows: [ReactNode, string, string][] = [
     [Icons.user, "Kund", p.brand.name],
     [Icons.calendar, "Event", `${p.event} ${p.date.getFullYear()}`],
-    [Icons.calendar, "Datum", fmtDate(p.date)],
+    ...(p.eventDate ? [[Icons.calendar, "Mässdatum", fmtDay(p.eventDate)] as [ReactNode, string, string]] : []),
+    ...(p.visitors ? [[Icons.user, "Besökare", `ca ${visitorsLabel(p.visitors).toLowerCase()}`] as [ReactNode, string, string]] : []),
+    ...(p.delivery ? [[Icons.truck, "Leverans", p.delivery] as [ReactNode, string, string]] : []),
+    [Icons.calendar, "Offertdatum", fmtDate(p.date)],
     [Icons.doc, "Offertnummer", `#${p.reference}`],
     [Icons.headset, "Kontaktperson", "Er säljare återkommer inom 1 arbetsdag"],
   ];
@@ -129,6 +136,7 @@ export function PrintOffer(p: Props) {
             </p>
           </div>
 
+          <TrustLine className="mt-3 text-[9px] [&_svg]:!h-3 [&_svg]:!w-3" />
           <div className="mt-auto flex items-end justify-between gap-6 pt-4">
             <p className="max-w-[95mm] text-[7.5px] leading-relaxed text-[#86868B]">
               Priserna är riktpriser och kan variera beroende på antal, design och leveranstid. Moms tillkommer. Offerten är giltig i 30 dagar.

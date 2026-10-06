@@ -274,6 +274,24 @@ export const ALL_PRODUCTS = [...BOOTH_PRODUCTS, ...PROMO_PRODUCTS];
 /** Products that start in the booth, as in the summary of the mockup. */
 export const DEFAULT_PROMOS = ["profilklader", "pennor", "vattenflaskor", "godis", "pasar"];
 
+/** Production lead times in working days, counted back from the event date. */
+export const LEAD_DAYS_BOOTH = 10;
+export const LEAD_DAYS_MERCH = 7;
+
+/** Giveaways that run out with the crowd; their quantities follow the expected number of visitors. */
+export const CONSUMABLES = ["pennor", "pasar", "godis", "vattenflaskor", "giveaways"];
+
+export const VISITORS = [
+  { id: "lt500", label: "Under 500", factor: 0.5 },
+  { id: "500-2000", label: "500–2 000", factor: 1 },
+  { id: "2000-10000", label: "2 000–10 000", factor: 2.5 },
+  { id: "10000+", label: "10 000+", factor: 5 },
+] as const;
+export type VisitorsId = (typeof VISITORS)[number]["id"];
+
+export const BUDGET_MIN = 10_000;
+export const BUDGET_MAX = 150_000;
+
 export const SWATCHES = ["#1D1D1F", "#FFFFFF", "#9A9AA0", "#1F3B73"];
 
 /** Line and order totals in whole öre, so 7 × 4,90 kr is 34,30 kr and sums never drift. */

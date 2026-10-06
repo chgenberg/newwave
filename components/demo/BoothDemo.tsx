@@ -2,13 +2,16 @@
 
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoothItem, BoothResult } from "@/lib/demoBooth";
-import { ALL_PRODUCTS, BOOTH_PRODUCTS, BRANDS, DEFAULT_PROMOS, EVENTS, type EventId, PLACEHOLDER_BOOTH, lineTotal, MAX_QTY, PROMO_PRODUCTS, type Product, sek, sumSek } from "@/lib/demoCatalog";
+import { ALL_PRODUCTS, BOOTH_PRODUCTS, BRANDS, CONSUMABLES, DEFAULT_PROMOS, EVENTS, type EventId, PLACEHOLDER_BOOTH, lineTotal, MAX_QTY, PROMO_PRODUCTS, type Product, VISITORS, type VisitorsId, sek, sumSek } from "@/lib/demoCatalog";
+import { PACKAGES, type PackageId, type PackLine, buildPackage, delivery, deliveryText, fitBudget, fmtDay, packageSummary, packageTotal, roundQty } from "@/lib/demoPackages";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 import type { LogoResult } from "@/lib/logo";
+import { OWNED_KEY } from "./ApprovalView";
 import { BoothStage, type Hotspot, type Phase } from "./BoothStage";
+import { EventPlan, type PackageCard, PackageCards } from "./BuyPanel";
 import { type Line, ProductDrawer, ProductVisual } from "./ProductDrawer";
 import { type OfferLine, PrintOffer } from "./PrintOffer";
-import { Header, Icons, PlusBadge, Primary, Secondary, type Step, Stepper, TextLink } from "./parts";
+import { Header, Icons, PlusBadge, Primary, Secondary, type Step, Stepper, TextLink, TrustLine } from "./parts";
 import { TailorCard } from "./TailorCard";
 import { useMockups } from "./useMockups";
 
@@ -54,25 +57,25 @@ const shortName = (raw: string, site: string) => {
 const tileName = (site: string) => BRANDS.find((b) => domainName(b.url) === domainName(site))?.name;
 
 const newLine = (p: Product): Line => ({ qty: p.defaultQty, model: p.models[0].id, color: "", style: p.styles[0] });
-const initialLines = (): Record<string, Line> =>
-  Object.fromEntries([...BOOTH_PRODUCTS, ...PROMO_PRODUCTS.filter((p) => DEFAULT_PROMOS.includes(p.id))].map((p) => [p.id, newLine(p)]));
+const productOf = (id: string) => ALL_PRODUCTS.find((p) => p.id === id)!;
 
-/** Keeps the booth choices and swaps the promo products for the ones recommended for this company. */
-const withMerch = (ls: Record<string, Line>, ids: string[]) => {
-  const next = Object.fromEntries(Object.entries(ls).filter(([id]) => BOOTH_PRODUCTS.some((p) => p.id === id)));
-  for (const p of PROMO_PRODUCTS) if (ids.includes(p.id)) next[p.id] = newLine(p);
-  return next;
-};
+/** Package quantities on top of whatever model and colour the customer already picked for a product. */
+const fromPack = (pack: PackLine[], prev: Record<string, Line> = {}): Record<string, Line> =>
+  Object.fromEntries(pack.map((l) => [l.id, { ...(prev[l.id] ?? newLine(productOf(l.id))), qty: l.qty }]));
+const toPack = (ls: Record<string, Line>): PackLine[] => Object.entries(ls).map(([id, l]) => ({ id, qty: l.qty, model: l.model }));
+const initialLines = () => fromPack(buildPackage("standard", DEFAULT_PROMOS));
 
-/** Steps 2–3 keep the running total and the one next action in view, on every screen size. */
-function BottomBar({ count, total, children }: { count: number; total: number; children: ReactNode }) {
+/** Steps 1–3 keep the running total and the one next action in view, on every screen size. */
+function BottomBar({ count, total, label, children }: { count: number; total: number; label?: string; children: ReactNode }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/[0.06] bg-white/90 backdrop-blur-xl print:hidden">
       <div className={`${WRAP} flex items-center justify-between gap-4 py-3`}>
         <p className="min-w-0 text-[13px] leading-tight text-[#6E6E73] sm:text-[15px]">
-          {count} {count === 1 ? "produkt" : "produkter"}
+          {label ?? `${count} ${count === 1 ? "produkt" : "produkter"}`}
           <span className="block font-semibold tabular-nums text-[#1D1D1F] sm:inline">
-            <span className="hidden sm:inline"> · </span>Totalt {sek(total)}
+            <span className="hidden sm:inline"> · </span>
+            {label ? "ca " : "Totalt "}
+            {sek(total)}
           </span>
         </p>
         {children}
@@ -114,26 +117,70 @@ export function BoothDemo() {
   const [error, setError] = useState<string | null>(null);
   const [boothNote, setBoothNote] = useState<string | null>(null);
   const [booth, setBooth] = useState<Booth | null>(null);
-  const [lines, setLines] = useState<Record<string, Line>>(initialLines);
+  /** The customer's selection before any budget; what is ordered is this, fitted to the budget when one is set. */
+  const [base, setBase] = useState<Record<string, Line>>(initialLines);
+  const [pkg, setPkg] = useState<PackageId | "custom">("standard");
+  const [eventDate, setEventDate] = useState("");
+  const [visitors, setVisitors] = useState<VisitorsId | "">("");
+  const [budget, setBudget] = useState<number | null>(null);
   const [drawer, setDrawer] = useState<string | null>(null);
   const [contact, setContact] = useState<Contact>({ name: "", email: "", company: "" });
-  const [quote, setQuote] = useState<{ reference: string; date: Date } | null>(null);
+  const [quote, setQuote] = useState<{ reference: string; date: Date; emailed: boolean; pdf: string } | null>(null);
   const [sending, setSending] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [shared, setShared] = useState<{ key: string; path: string } | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const run = useRef(0);
   const mockups = useMockups(logo);
 
+  const lines = useMemo(() => (budget === null ? base : fromPack(fitBudget(toPack(base), budget).lines, base)), [base, budget]);
   const brandColor = booth?.color ?? logo?.color ?? "#1D1D1F";
   const name = brandName || "ditt varumärke";
   const boothItems = BOOTH_PRODUCTS.filter((p) => lines[p.id]).map((p) => p.booth!);
   const boothFor = useCallback((p: Product) => (booth && p.booth && booth.items.includes(p.booth) ? booth.url : PLACEHOLDER_BOOTH), [booth]);
   const boothUrl = booth?.url ?? PLACEHOLDER_BOOTH;
   const stale = Boolean(booth) && (booth!.items.length !== boothItems.length || boothItems.some((i) => !booth!.items.includes(i)));
-  const recommended = useMemo(() => new Set(analysis ? analysis.merch.map((m) => m.id) : DEFAULT_PROMOS), [analysis]);
+  const recIds = useMemo(() => (analysis ? analysis.merch.map((m) => m.id) : DEFAULT_PROMOS), [analysis]);
+  const recommended = useMemo(() => new Set(recIds), [recIds]);
+  const notOrdered = booth ? BOOTH_PRODUCTS.filter((p) => booth.items.includes(p.booth!) && !lines[p.id]) : [];
+  const notShown = booth ? BOOTH_PRODUCTS.filter((p) => lines[p.id] && !booth.items.includes(p.booth!)) : [];
+  const names = (ps: Product[]) => ps.map((p) => p.name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " och $1");
+  const staleText = notOrdered.length ? `Bilden visar även ${names(notOrdered)}, som inte ingår i beställningen.` : notShown.length ? `${names(notShown).replace(/^./, (c) => c.toUpperCase())} ingår men syns inte i bilden.` : "";
+
+  const cards: PackageCard[] = useMemo(
+    () =>
+      PACKAGES.map((p) => {
+        const pack = buildPackage(p.id, recIds, visitors || null);
+        const fitted = budget === null ? pack : fitBudget(pack, budget).lines;
+        return { ...p, total: packageTotal(fitted), summary: packageSummary(fitted) };
+      }),
+    [recIds, visitors, budget],
+  );
+
+  const choosePackage = (id: PackageId) => {
+    setPkg(id);
+    setBase((b) => fromPack(buildPackage(id, recIds, visitors || null), b));
+  };
+
+  const chooseVisitors = (v: VisitorsId | "") => {
+    setVisitors(v);
+    if (pkg !== "custom") return setBase((b) => fromPack(buildPackage(pkg, recIds, v || null), b));
+    const f = VISITORS.find((x) => x.id === v)?.factor ?? 1;
+    setBase((b) => Object.fromEntries(Object.entries(b).map(([id, l]) => [id, CONSUMABLES.includes(id) ? { ...l, qty: roundQty(productOf(id), productOf(id).defaultQty * f) } : l])));
+  };
+
+  /** A hand-made change replaces the package, and the budget no longer silently overrides it. */
+  const edit = (fn: (ls: Record<string, Line>) => Record<string, Line>) => {
+    setBase(fn(lines));
+    setBudget(null);
+    setPkg("custom");
+  };
 
   /** Each step is a history entry, so the browser back button moves between steps instead of leaving the demo. */
   const go = (s: Stage, replace = false) => {
+    setToast(null);
     setStage(s);
     window.history[replace ? "replaceState" : "pushState"]({ ...window.history.state, demoStage: s }, "");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -197,7 +244,9 @@ export function BoothDemo() {
     setLogo(l);
     setBrandName(nm);
     setContact((c) => (c.company ? c : { ...c, company: nm }));
-    if (a) setLines((ls) => withMerch(ls, a.merch.map((m) => m.id)));
+    setPkg("standard");
+    setBudget(null);
+    setBase(fromPack(buildPackage("standard", a ? a.merch.map((m) => m.id) : DEFAULT_PROMOS, visitors || null)));
     await buildBooth(l, nm, boothItems, id, a);
   };
 
@@ -211,7 +260,12 @@ export function BoothDemo() {
     setError(null);
     setBrandName("");
     setUrl("");
-    setLines(initialLines());
+    setBase(initialLines());
+    setPkg("standard");
+    setBudget(null);
+    setEventDate("");
+    setVisitors("");
+    setShared(null);
     setContact({ name: "", email: "", company: "" });
     go("start");
   };
@@ -247,7 +301,7 @@ export function BoothDemo() {
   }, [toast]);
 
   const toggle = (p: Product) =>
-    setLines((ls) => {
+    edit((ls) => {
       const next = { ...ls };
       if (next[p.id]) delete next[p.id];
       else next[p.id] = newLine(p);
@@ -255,7 +309,7 @@ export function BoothDemo() {
     });
 
   const setQty = (id: string, qty: number) =>
-    setLines((ls) => (ls[id] ? { ...ls, [id]: { ...ls[id], qty: Math.min(MAX_QTY, Math.max(1, Math.round(qty) || 1)) } } : ls));
+    edit((ls) => (ls[id] ? { ...ls, [id]: { ...ls[id], qty: Math.min(MAX_QTY, Math.max(1, Math.round(qty) || 1)) } } : ls));
 
   const offer: OfferLine[] = useMemo(
     () =>
@@ -294,15 +348,18 @@ export function BoothDemo() {
     if (!offer.length) return;
     setSending(true);
     try {
-      const r = await post<{ reference: string; createdAt: string }>("/api/v1/demo/quote", {
+      const r = await post<{ reference: string; createdAt: string; emailed: boolean; pdf: string }>("/api/v1/demo/quote", {
         brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
         event: EVENTS.find((x) => x.id === event)!.label,
         boothUrl: booth?.url,
         totalSek: total,
         lines: offer.map((l) => ({ id: l.id, model: l.model, qty: l.qty })),
+        eventDate,
+        visitors,
+        package: pkg === "custom" ? "" : pkg,
         contact: { name: contact.name.trim(), email: contact.email.trim(), company: contact.company.trim() },
       });
-      setQuote({ reference: r.reference, date: new Date(r.createdAt) });
+      setQuote({ reference: r.reference, date: new Date(r.createdAt), emailed: r.emailed, pdf: r.pdf });
       go("thanks");
     } catch (err) {
       setToast(err instanceof Error ? err.message : "Kunde inte skicka förfrågan");
@@ -311,13 +368,68 @@ export function BoothDemo() {
     }
   };
 
-  const share = async () => {
-    const link = `${window.location.origin}/demo?site=${encodeURIComponent(logo?.site || url)}&event=${event}`;
+  /** One link per offer version; the colleague's page shows exactly what was shared, priced on the server. */
+  const shareForApproval = async () => {
+    const body = {
+      brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
+      boothUrl: booth?.url,
+      lines: offer.map((l) => ({ id: l.id, model: l.model, qty: l.qty })),
+      eventDate,
+      visitors,
+      reference: quote?.reference ?? "",
+    };
+    const key = JSON.stringify(body);
+    setSharing(true);
+    let link: string;
+    try {
+      let path = shared?.key === key ? shared.path : null;
+      if (!path) {
+        const r = await post<{ id: string; path: string }>("/api/v1/demo/share", body);
+        path = r.path;
+        setShared({ key, path });
+        try {
+          const owned = JSON.parse(localStorage.getItem(OWNED_KEY) ?? "[]");
+          localStorage.setItem(OWNED_KEY, JSON.stringify([r.id, ...(Array.isArray(owned) ? owned : [])].slice(0, 50)));
+        } catch {}
+      }
+      link = `${window.location.origin}${path}`;
+    } catch (err) {
+      setSharing(false);
+      return setToast(err instanceof Error ? err.message : "Kunde inte skapa länken");
+    }
+    setSharing(false);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Offert för ${name}`, text: "Kan du godkänna offerten för mässmontern?", url: link });
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(link);
-      setToast("Länken är kopierad");
+      setToast("Länken är kopierad – skicka den till din kollega");
     } catch {
-      setToast(link);
+      setToast("Kopiera länken nedan och skicka den till din kollega");
+    }
+  };
+
+  /** The server PDF is the real document; if it cannot be made, the browser's print view is the fallback. */
+  const downloadPdf = async () => {
+    if (!quote) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(quote.pdf);
+      if (!res.ok) throw new Error(String(res.status));
+      const href = URL.createObjectURL(await res.blob());
+      const a = Object.assign(document.createElement("a"), { href, download: `Offert-${quote.reference}.pdf` });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
+    } catch {
+      setPrinting(true);
+      setTimeout(() => window.print(), 700);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -328,10 +440,31 @@ export function BoothDemo() {
   const eventLabel = EVENTS.find((e) => e.id === event)!.label;
   const ready = Boolean(logo) && !phase;
   const industry = analysis?.industry?.toLowerCase();
+  const del = delivery(eventDate, offer.map((l) => l.id));
+  const deliveryNote = del ? { text: deliveryText(del), late: del.late } : null;
+  const pkgName = PACKAGES.find((p) => p.id === pkg)?.name;
+  const orderLabel = !stale ? "Beställ montern som den ser ut" : pkgName ? `Beställ paket ${pkgName}` : "Granska offert";
+  const shareLink = shared && (
+    <p className="mt-3 break-all text-[13px] text-[#6E6E73]">
+      Länk för godkännande:{" "}
+      <a href={shared.path} target="_blank" rel="noreferrer" className="font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4">
+        {typeof window === "undefined" ? shared.path : `${window.location.host}${shared.path}`}
+      </a>{" "}
+      – öppna den för att se om den är godkänd.
+    </p>
+  );
+  const staleNote = staleText && phase !== "booth" && (
+    <p className="mt-3 text-[13px] text-[#6E6E73]">
+      {staleText}{" "}
+      <TextLink onClick={rebuild} className="text-[13px]">
+        Uppdatera montern
+      </TextLink>
+    </p>
+  );
 
   return (
     <>
-      <div className={`min-h-screen bg-white text-[#1D1D1F] print:hidden ${shown === "products" || shown === "offer" ? "pb-28" : ""}`}>
+      <div className={`min-h-screen bg-white text-[#1D1D1F] print:hidden ${shown === "products" || shown === "offer" || (shown === "start" && ready) ? "pb-28" : ""}`}>
         <Header
           logo={ready ? (logo?.light ?? null) : null}
           name={name}
@@ -412,12 +545,9 @@ export function BoothDemo() {
                     )}
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
-                  <Primary onClick={() => go("products")}>Nästa: välj produkter {Icons.arrow}</Primary>
-                  <TextLink onClick={reset} className="text-[13px]">
-                    Prova en annan webbadress
-                  </TextLink>
-                </div>
+                <TextLink onClick={reset} className="shrink-0 text-[13px]">
+                  Prova en annan webbadress
+                </TextLink>
               </div>
             )}
             <BoothStage
@@ -426,10 +556,45 @@ export function BoothDemo() {
               loading={loading}
               className={`aspect-[3/2] w-full rounded-2xl ${phase ? "mt-4" : "mt-6"}`}
             />
-            {ready && analysis && (
-              <div className="mt-4">
-                <TailorCard analysis={analysis} />
-              </div>
+            {ready && (
+              <>
+                {staleNote}
+                <section className="mt-10">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h2 className="text-[17px] font-semibold">Välj paket</h2>
+                    <TextLink onClick={() => go("products")} className="text-[13px]">
+                      Anpassa produkter
+                    </TextLink>
+                  </div>
+                  <p className="mt-1 text-[13px] text-[#6E6E73]">{pkg === "custom" ? "Du har gjort egna val – välj ett paket för att börja om." : "Allt trycks med er logga. Priserna är exkl. moms."}</p>
+                  <div className="mt-4">
+                    <PackageCards cards={cards} selected={pkg} onSelect={choosePackage} />
+                  </div>
+                </section>
+                <section className="mt-6">
+                  <EventPlan
+                    eventDate={eventDate}
+                    onDate={setEventDate}
+                    visitors={visitors}
+                    onVisitors={chooseVisitors}
+                    budget={budget}
+                    onBudget={setBudget}
+                    delivery={deliveryNote}
+                    fittedTotal={budget === null ? null : total}
+                  />
+                </section>
+                {analysis && (
+                  <div className="mt-6">
+                    <TailorCard analysis={analysis} />
+                  </div>
+                )}
+                <BottomBar count={count} total={total} label={pkgName ? `Paket ${pkgName}` : `${count} produkter`}>
+                  <Primary className="shrink-0 px-5 sm:px-6" disabled={!count} onClick={() => go("offer")}>
+                    <span className="sm:hidden">{!stale ? "Beställ montern" : pkgName ? `Beställ ${pkgName}` : "Till offert"}</span>
+                    <span className="hidden sm:inline">{orderLabel}</span> {Icons.arrow}
+                  </Primary>
+                </BottomBar>
+              </>
             )}
           </main>
         )}
@@ -440,14 +605,7 @@ export function BoothDemo() {
             <p className={`mt-2 ${BODY}`}>Allt trycks med er logga. Vi har valt det som passar {name} – tryck på en produkt för att ändra modell, färg eller antal.</p>
             <div className="mx-auto mt-6 max-w-[860px]">
               <BoothStage src={boothUrl} alt={`Mässmonter för ${name}`} spots={spots} onSpot={setDrawer} loading={phase === "booth" ? loading : null} className="aspect-[3/2] w-full rounded-2xl" />
-              {stale && phase !== "booth" && (
-                <p className="mt-3 text-[13px] text-[#6E6E73]">
-                  Bilden visar inte dina senaste monterval.{" "}
-                  <TextLink onClick={rebuild} className="text-[13px]">
-                    Uppdatera montern
-                  </TextLink>
-                </p>
-              )}
+              {staleNote}
             </div>
             {(
               [
@@ -529,31 +687,61 @@ export function BoothDemo() {
               <p className="text-[22px] font-semibold tabular-nums">{sek(total)}</p>
             </div>
 
+            {(eventDate || deliveryNote) && (
+              <p className={`flex items-center gap-1.5 text-[13px] [&_svg]:h-3.5 [&_svg]:w-3.5 ${deliveryNote?.late ? "text-[#B54708]" : "text-[#424245]"}`}>
+                {Icons.calendar} {eventDate && `Mässan ${fmtDay(eventDate)}. `}
+                {deliveryNote?.text}
+              </p>
+            )}
+
             <form id="demo-quote" onSubmit={requestQuote} className="mt-6">
-              <h2 className="text-[17px] font-semibold">Dina uppgifter</h2>
-              <p className="mt-1 text-[13px] text-[#6E6E73]">Valfritt – så vet vi vem vi ska kontakta.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {(
-                  [
-                    ["name", "Namn", "text", "name"],
-                    ["email", "E-post", "email", "email"],
-                    ["company", "Företag", "text", "organization"],
-                  ] as const
-                ).map(([key, label, type, auto]) => (
-                  <label key={key} className={key === "company" ? "sm:col-span-2" : ""}>
-                    <span className="text-[13px] font-medium">{label}</span>
-                    <input
-                      type={type}
-                      autoComplete={auto}
-                      maxLength={key === "email" ? 120 : 80}
-                      value={contact[key]}
-                      onChange={(e) => setContact((c) => ({ ...c, [key]: e.target.value }))}
-                      className="mt-1.5 h-12 w-full rounded-xl border border-black/15 bg-white px-4 text-[15px] outline-none transition focus:border-[#1D1D1F]"
-                    />
-                  </label>
-                ))}
-              </div>
+              <h2 className="text-[17px] font-semibold">Vart ska vi skicka offerten?</h2>
+              <label className="mt-3 block">
+                <span className="text-[13px] font-medium">E-post</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  maxLength={120}
+                  value={contact.email}
+                  onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))}
+                  placeholder="namn@foretag.se"
+                  className="mt-1.5 h-12 w-full rounded-xl border border-black/15 bg-white px-4 text-[15px] outline-none transition placeholder:text-[#AEAEB2] focus:border-[#1D1D1F]"
+                />
+              </label>
+              <details className="group mt-3">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-[#1D1D1F] [&::-webkit-details-marker]:hidden">
+                  <span className="transition group-open:rotate-45">{Icons.plus}</span> Lägg till namn och företag
+                </summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      ["name", "Namn", "name"],
+                      ["company", "Företag", "organization"],
+                    ] as const
+                  ).map(([key, label, auto]) => (
+                    <label key={key}>
+                      <span className="text-[13px] font-medium">{label}</span>
+                      <input
+                        autoComplete={auto}
+                        maxLength={80}
+                        value={contact[key]}
+                        onChange={(e) => setContact((c) => ({ ...c, [key]: e.target.value }))}
+                        className="mt-1.5 h-12 w-full rounded-xl border border-black/15 bg-white px-4 text-[15px] outline-none transition focus:border-[#1D1D1F]"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
             </form>
+            <TrustLine className="mt-6" />
+            <div className="mt-8 border-t border-black/[0.06] pt-6">
+              <p className="text-[13px] text-[#6E6E73]">Behöver någon annan säga ja först?</p>
+              <Secondary className="mt-2 h-11" onClick={shareForApproval} disabled={sharing || !count}>
+                {Icons.link} Skicka till kollega för godkännande
+              </Secondary>
+              {shareLink}
+            </div>
             <BottomBar count={count} total={total}>
               <Primary type="submit" form="demo-quote" className="shrink-0 px-5 sm:px-6" loading={sending} disabled={!count}>
                 <span className="sm:hidden">Skicka</span>
@@ -567,32 +755,55 @@ export function BoothDemo() {
           <main className="mx-auto w-full max-w-[560px] px-5 py-12 text-center sm:py-16">
             <span className="ifk-pop mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1D1D1F] text-white [&_svg]:h-6 [&_svg]:w-6">{Icons.check}</span>
             <h1 className={`mt-6 ${H1}`}>Tack!</h1>
-            <p className={`mt-3 ${BODY}`}>Vi har tagit emot din förfrågan och återkommer inom en arbetsdag med pris och leveranstid.</p>
+            <p className={`mt-3 ${BODY}`}>
+              {quote.emailed ? (
+                <>
+                  Vi har skickat offerten som PDF till <span className="font-medium text-[#1D1D1F]">{contact.email.trim()}</span>. Er säljare återkommer inom en arbetsdag med korrektur och leveransdatum.
+                </>
+              ) : (
+                <>
+                  Vi har tagit emot förfrågan och hör av oss till <span className="font-medium text-[#1D1D1F]">{contact.email.trim()}</span> inom en arbetsdag. Ingen kopia har skickats via e-post – ladda ner offerten som PDF här.
+                </>
+              )}
+            </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={boothUrl} alt={`Mässmonter för ${name}`} className="mt-8 aspect-[3/2] w-full rounded-2xl object-cover" />
             <dl className="mt-6 divide-y divide-black/[0.06] border-y border-black/[0.06] text-left text-[15px]">
               {[
                 ["Referens", `#${quote.reference}`],
                 ["Produkter", String(count)],
+                ...(eventDate ? [["Mässan", fmtDay(eventDate)]] : []),
+                ...(deliveryNote ? [["Leverans", deliveryNote.late ? "Kort om tid – vi hör av oss om express" : "I tid till mässan"]] : []),
                 ["Totalt exkl. moms", sek(total)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 py-3">
                   <dt className="text-[#6E6E73]">{k}</dt>
-                  <dd className="font-semibold tabular-nums">{v}</dd>
+                  <dd className="text-right font-semibold tabular-nums">{v}</dd>
                 </div>
               ))}
             </dl>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Primary
-                onClick={() => {
-                  setPrinting(true);
-                  setTimeout(() => window.print(), 700);
-                }}
-              >
-                {Icons.download} Ladda ner PDF
-              </Primary>
-              <Secondary onClick={share}>{Icons.link} Dela</Secondary>
+              {quote.emailed ? (
+                <>
+                  <Primary onClick={shareForApproval} loading={sharing}>
+                    {Icons.link} Skicka till kollega för godkännande
+                  </Primary>
+                  <Secondary onClick={downloadPdf} disabled={downloading}>
+                    {Icons.download} Ladda ner PDF
+                  </Secondary>
+                </>
+              ) : (
+                <>
+                  <Primary onClick={downloadPdf} loading={downloading}>
+                    {Icons.download} Ladda ner PDF
+                  </Primary>
+                  <Secondary onClick={shareForApproval} disabled={sharing}>
+                    {Icons.link} Skicka till kollega för godkännande
+                  </Secondary>
+                </>
+              )}
             </div>
+            {shareLink}
             <TextLink onClick={reset} className="mt-8 text-[13px]">
               Skapa en ny monter
             </TextLink>
@@ -610,9 +821,9 @@ export function BoothDemo() {
           boothFor={boothFor}
           onClose={() => setDrawer(null)}
           onSave={(line) => {
-            setLines((ls) => ({ ...ls, [drawerProduct.id]: line }));
+            edit((ls) => ({ ...ls, [drawerProduct.id]: line }));
             setDrawer(null);
-            setToast(`${drawerProduct.name} är vald`);
+            if (shown === "products") setToast(`${drawerProduct.name} är vald`);
           }}
         />
       )}
@@ -626,6 +837,9 @@ export function BoothDemo() {
           booth={boothUrl}
           lines={offer}
           total={total}
+          eventDate={eventDate}
+          visitors={visitors}
+          delivery={deliveryNote?.text ?? ""}
           onClose={() => setPrinting(false)}
         />
       )}

@@ -142,6 +142,25 @@ export const Icons = {
   ),
 };
 
+const TRUST: [ReactNode, string][] = [
+  [Icons.check, "Korrektur innan tryck"],
+  [Icons.calendar, "Fast leveransdatum"],
+  [Icons.pencil, "Ändra fritt fram till korrektur"],
+];
+
+export function TrustLine({ className = "" }: { className?: string }) {
+  return (
+    <ul className={`flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-[#424245] ${className}`}>
+      {TRUST.map(([icon, label]) => (
+        <li key={label} className="flex items-center gap-1.5 [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:text-[#1E8E3E]">
+          {icon}
+          {label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export type Step = 1 | 2 | 3;
 export const STEP_LABELS: Record<Step, string> = { 1: "Varumärke", 2: "Produkter", 3: "Offert" };
 

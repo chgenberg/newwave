@@ -1,11 +1,15 @@
+import { randomBytes } from "node:crypto";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { ALL_PRODUCTS, EVENTS, MAX_QTY, lineTotal, sumSek } from "@/lib/demoCatalog";
-import { SITE, cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
+import { EVENTS } from "@/lib/demoCatalog";
+import { cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
+import { sendQuoteMail } from "@/lib/demoMail";
+import { OfferFields, priceLines } from "@/lib/demoOffer";
+
+export const maxDuration = 60;
 
 const DIR = path.join(process.cwd(), ".data", "demo", "quotes");
-const BOOTH_URL = /^(\/api\/v1\/files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg|\/demo\/booth-placeholder\.jpg)$/;
 
 const limiter = createLimiter(() => ({
   perKey: envInt("DEMO_QUOTE_PER_IP_HOUR", 10),
@@ -15,30 +19,14 @@ const limiter = createLimiter(() => ({
 const MAX_STORED = () => envInt("DEMO_QUOTE_MAX_STORED", 5000);
 
 const Body = z.object({
-  brand: z.object({ name: z.string().max(80), site: z.union([z.literal(""), z.string().toLowerCase().max(120).regex(SITE)]) }),
+  ...OfferFields,
   event: z.enum(EVENTS.map((e) => e.label) as [string, ...string[]]),
-  boothUrl: z.string().max(120).regex(BOOTH_URL).optional(),
   totalSek: z.number().nonnegative().max(1e10).optional(),
-  lines: z
-    .array(
-      z.object({
-        id: z.string().max(40),
-        model: z.string().max(40).optional(),
-        name: z.string().max(80).optional(),
-        spec: z.string().max(120).optional(),
-        qty: z.number().int().min(1).max(MAX_QTY),
-        unitSek: z.number().nonnegative().max(1e6).optional(),
-      }),
-    )
-    .min(1)
-    .max(ALL_PRODUCTS.length),
-  contact: z
-    .object({
-      name: z.string().max(80).default(""),
-      email: z.union([z.literal(""), z.email().max(120)]).default(""),
-      company: z.string().max(80).default(""),
-    })
-    .optional(),
+  contact: z.object({
+    name: z.string().max(80).default(""),
+    email: z.email().max(120),
+    company: z.string().max(80).default(""),
+  }),
 });
 
 export async function POST(req: Request) {
@@ -46,16 +34,8 @@ export async function POST(req: Request) {
   if (body === undefined) return Response.json({ error: "Förfrågan är för stor" }, { status: 413 });
   const parsed = Body.safeParse(body);
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-
-  const seen = new Set<string>();
-  const lines = [];
-  for (const l of parsed.data.lines) {
-    const p = ALL_PRODUCTS.find((x) => x.id === l.id);
-    const m = p && (l.model ? p.models.find((x) => x.id === l.model) : p.models[0]);
-    if (!p || !m || seen.has(p.id)) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-    seen.add(p.id);
-    lines.push({ id: p.id, model: m.id, name: p.name, spec: m.id === p.models[0].id ? p.spec : m.name, qty: l.qty, unitSek: m.priceSek, totalSek: lineTotal(l.qty, m.priceSek) });
-  }
+  const priced = priceLines(parsed.data.lines);
+  if (!priced) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
 
   const verdict = limiter.take(clientIp(req));
   if (!verdict.ok) {
@@ -72,23 +52,37 @@ export async function POST(req: Request) {
   const today = files.filter((f) => f.startsWith(prefix)).length;
   const record = {
     createdAt: now.toISOString(),
+    token: randomBytes(16).toString("base64url"),
     brand: { name: cleanText(parsed.data.brand.name, 80) || "Okänt varumärke", site: parsed.data.brand.site },
     event: parsed.data.event,
+    eventDate: parsed.data.eventDate ?? "",
+    visitors: parsed.data.visitors ?? "",
+    package: parsed.data.package ?? "",
     boothUrl: parsed.data.boothUrl,
-    contact: parsed.data.contact && {
+    contact: {
       name: cleanText(parsed.data.contact.name, 80),
       email: parsed.data.contact.email.toLowerCase(),
       company: cleanText(parsed.data.contact.company, 80),
     },
-    totalSek: sumSek(lines.map((l) => l.totalSek)),
-    lines,
+    ...priced,
   };
   for (let n = today + 1; n < today + 20; n++) {
     const reference = `${prefix}${String(n).padStart(3, "0")}`;
+    const file = path.join(DIR, `${reference}.json`);
     try {
-      await writeFile(path.join(DIR, `${reference}.json`), JSON.stringify({ reference, ...record }, null, 2), { flag: "wx" });
-      return Response.json({ reference, createdAt: record.createdAt, totalSek: record.totalSek });
-    } catch {}
+      await writeFile(file, JSON.stringify({ reference, ...record }, null, 2), { flag: "wx" });
+    } catch {
+      continue;
+    }
+    const mail = await sendQuoteMail({ reference, ...record });
+    await writeFile(file, JSON.stringify({ reference, ...record, emailed: mail.sent }, null, 2)).catch(() => {});
+    return Response.json({
+      reference,
+      createdAt: record.createdAt,
+      totalSek: record.totalSek,
+      emailed: mail.sent,
+      pdf: `/api/v1/demo/quote/pdf?ref=${reference}&t=${record.token}`,
+    });
   }
   return Response.json({ error: "Kunde inte spara förfrågan" }, { status: 500 });
 }
