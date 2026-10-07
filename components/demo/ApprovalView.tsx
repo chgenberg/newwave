@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { sek } from "@/lib/demoCatalog";
+import { useEffect, useRef, useState } from "react";
+import { PLACEHOLDERS, sek } from "@/lib/demoCatalog";
 import { delivery, deliveryText, fmtDay, visitorsLabel } from "@/lib/demoPackages";
 import type { Share } from "@/lib/demoShare";
-import { Icons, Primary, Secondary, TrustLine } from "./parts";
+import { Icons, Primary, Secondary, StepHeader, TrustLine } from "./parts";
 
 export const OWNED_KEY = "demo-shares";
 
@@ -32,6 +32,13 @@ export function ApprovalView({ initial }: { initial: Share }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState<"approve" | "comment" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The booth file may be gone after a redeploy; the neutral booth keeps the page whole. */
+  const [lostBooth, setLostBooth] = useState(false);
+  const boothImg = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const img = boothImg.current;
+    if (img?.complete && !img.naturalWidth) setLostBooth(true);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setOwner(ownedIds().includes(initial.id)), 0);
@@ -91,13 +98,22 @@ export function ApprovalView({ initial }: { initial: Share }) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-[720px] px-5 py-8 sm:px-8 sm:py-10">
-        <h1 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.022em] sm:text-[40px]">{owner ? "Din offert" : "Godkänn offert"}</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-[#6E6E73]">
-          {owner ? "Du ser här när din kollega har svarat." : `Mässmonter och profilprodukter för ${share.brand.name}. Godkänn eller lämna en kommentar.`}
-        </p>
+        <StepHeader
+          kicker={share.brand.name}
+          title={owner ? "Din offert" : "Godkänn offert"}
+          sub={owner ? "Du ser här när din kollega har svarat." : `Mässmonter och profilprodukter för ${share.brand.name}. Godkänn eller lämna en kommentar.`}
+        />
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {share.boothUrl && <img src={share.boothUrl} alt={`Mässmonter för ${share.brand.name}`} className={`mt-6 w-full rounded-2xl object-cover ${share.format === "4:3" ? "aspect-[4/3]" : "aspect-[4/3] sm:aspect-[3/2]"}`} />}
+        {share.boothUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={lostBooth ? PLACEHOLDERS[share.format ?? "3:2"] : share.boothUrl}
+            alt={lostBooth ? "Mässmonter" : `Mässmonter för ${share.brand.name}`}
+            ref={boothImg}
+            onError={() => setLostBooth(true)}
+            className={`mt-6 w-full rounded-2xl object-cover ${share.format === "4:3" ? "aspect-[4/3]" : "aspect-[4/3] sm:aspect-[3/2]"}`}
+          />
+        )}
 
         <ul className="mt-6 divide-y divide-black/[0.06] border-y border-black/[0.06]">
           {share.lines.map((l) => (

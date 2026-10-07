@@ -5,13 +5,13 @@ import { BUDGET_MAX, BUDGET_MIN, VISITORS, type VisitorsId, sek } from "@/lib/de
 import type { PackageId } from "@/lib/demoPackages";
 import { Icons } from "./parts";
 
-export type PackageCard = { id: PackageId; name: string; blurb: string; total: number; summary: string[] };
+export type PackageCard = { id: PackageId | "custom"; name: string; blurb: string; total: number; summary: string[] };
 
 const FIELD = "mt-1.5 h-11 w-full rounded-xl border border-black/15 bg-white px-3.5 text-[15px] outline-none transition focus:border-[#1D1D1F]";
 
-export function PackageCards({ cards, selected, onSelect }: { cards: PackageCard[]; selected: PackageId | "custom"; onSelect: (id: PackageId) => void }) {
+export function PackageCards({ cards, selected, onSelect }: { cards: PackageCard[]; selected: PackageId | "custom"; onSelect: (id: PackageId | "custom") => void }) {
   return (
-    <div role="radiogroup" aria-label="Paket" className="grid gap-3 sm:grid-cols-3">
+    <div role="radiogroup" aria-label="Paket" className={`grid gap-3 ${cards.length > 3 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
       {cards.map((c) => {
         const on = selected === c.id;
         return (

@@ -161,19 +161,42 @@ export function TrustLine({ className = "" }: { className?: string }) {
   );
 }
 
+/** The same calm card opens every step: optional kicker, one title, one line, and small secondary actions. */
+export function StepHeader(props: { kicker?: string; title: ReactNode; sub?: ReactNode; children?: ReactNode; align?: "center" | "left"; className?: string }) {
+  const left = props.align === "left";
+  return (
+    <div className={`rounded-3xl bg-[#F5F5F7] px-6 py-6 sm:px-9 sm:py-7 ${left ? "text-left" : "mx-auto max-w-[640px] text-center"} ${props.className ?? ""}`}>
+      {props.kicker && <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">{props.kicker}</p>}
+      <h1 className={`text-[23px] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[28px] ${props.kicker ? "mt-1.5" : ""}`}>{props.title}</h1>
+      {props.sub && <p className="mt-1.5 text-[14px] leading-relaxed text-[#6E6E73] sm:text-[15px]">{props.sub}</p>}
+      {props.children && <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] ${left ? "" : "justify-center"}`}>{props.children}</div>}
+    </div>
+  );
+}
+
+export function BackLink({ children, onClick, className = "" }: { children: ReactNode; onClick: () => void; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} className={`inline-flex h-10 items-center gap-1.5 rounded-full pr-3 text-[14px] font-medium text-[#1D1D1F] transition hover:text-black ${className}`}>
+      {Icons.back} {children}
+    </button>
+  );
+}
+
 export type Step = 1 | 2 | 3;
 export const STEP_LABELS: Record<Step, string> = { 1: "Varumärke", 2: "Produkter", 3: "Offert" };
 
 export function Header(props: { logo: string | null; name: string; step: Step | null; reachable: Step; onStep: (s: Step) => void; onHome: () => void }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const logo = props.logo && props.logo !== broken ? props.logo : null;
   return (
     <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/85 backdrop-blur-xl print:hidden">
       <div className="mx-auto flex h-14 max-w-[1120px] items-center justify-between gap-4 px-5 sm:px-8">
         <button type="button" onClick={props.onHome} className="flex h-10 min-w-0 items-center" aria-label="Till början">
-          {props.logo ? (
+          {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={props.logo} alt={props.name} className="max-h-7 max-w-[140px] object-contain" />
+            <img src={logo} alt={props.name} onError={() => setBroken(logo)} className="max-h-7 max-w-[140px] object-contain" />
           ) : (
-            <span className="text-[15px] font-semibold tracking-[0.16em]">DIN LOGO</span>
+            <span className="text-[15px] font-semibold tracking-[0.16em]">{props.logo ? props.name.toUpperCase() : "DIN LOGO"}</span>
           )}
         </button>
         {props.step && <Steps step={props.step} reachable={props.reachable} onStep={props.onStep} />}
@@ -185,9 +208,25 @@ export function Header(props: { logo: string | null; name: string; step: Step | 
 function Steps({ step, reachable, onStep }: { step: Step; reachable: Step; onStep: (s: Step) => void }) {
   return (
     <nav aria-label="Steg">
-      <p className="text-[13px] text-[#6E6E73] sm:hidden">
-        Steg {step} av 3 · <span className="font-medium text-[#1D1D1F]">{STEP_LABELS[step]}</span>
-      </p>
+      <ol className="flex items-center gap-1 sm:hidden">
+        {([1, 2, 3] as const).map((s) => (
+          <li key={s} className="flex items-center">
+            {s > 1 && <span className={`h-px w-2.5 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
+            <button
+              type="button"
+              disabled={s > reachable || s === step}
+              onClick={() => onStep(s)}
+              aria-label={`Steg ${s}: ${STEP_LABELS[s]}`}
+              aria-current={s === step ? "step" : undefined}
+              className="flex h-9 w-9 items-center justify-center"
+            >
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold ${s === step ? "bg-[#1D1D1F] text-white" : s <= reachable ? "bg-[#E8E8ED] text-[#1D1D1F]" : "border border-[#D2D2D7] text-[#AEAEB2]"}`}>
+                {s < step ? Icons.check : s}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
       <ol className="hidden items-center gap-1 sm:flex">
         {([1, 2, 3] as const).map((s) => (
           <li key={s} className="flex items-center gap-1">

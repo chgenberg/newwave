@@ -1,11 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { PROMO_PRODUCTS } from "@/lib/demoCatalog";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 
 /** Collapsed by default: the booth speaks for itself, the details are there for the curious. */
 export function TailorCard({ analysis }: { analysis: SiteAnalysis }) {
-  const images = [...analysis.images].sort((a, b) => Number(b.selected) - Number(a.selected)).slice(0, 6);
+  /** Stored files can disappear (e.g. a wiped disk after a redeploy); missing pictures are dropped instead of shown broken. */
+  const [failed, setFailed] = useState<Set<string>>(() => new Set());
+  const images = [...analysis.images]
+    .sort((a, b) => Number(b.selected) - Number(a.selected))
+    .slice(0, 6)
+    .filter((im) => !failed.has(im.url));
   const merch = analysis.merch.map((m) => ({ ...m, product: PROMO_PRODUCTS.find((p) => p.id === m.id) })).filter((m) => m.product);
   return (
     <details className="group rounded-2xl border border-black/[0.08] bg-white">
@@ -34,7 +40,7 @@ export function TailorCard({ analysis }: { analysis: SiteAnalysis }) {
               {images.map((im) => (
                 <span key={im.url} className={`aspect-square overflow-hidden rounded-lg bg-[#F5F5F7] ${im.selected ? "ring-2 ring-[#1D1D1F]" : ""}`} title={im.caption}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={im.url} alt={im.caption} loading="lazy" className="h-full w-full object-cover" />
+                  <img src={im.url} alt={im.caption} onError={() => setFailed((f) => new Set(f).add(im.url))} className="h-full w-full object-cover" />
                 </span>
               ))}
             </div>

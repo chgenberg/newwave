@@ -281,6 +281,13 @@ Text: ${scrape.text}
 
 const inFlight = new Map<string, Promise<SiteAnalysis>>();
 
+/** Files live on a disk that a redeploy can wipe; an analysis pointing at a lost file is redone rather than served half-broken. */
+async function filesExist(a: SiteAnalysis) {
+  const urls = [...a.images.map((i) => i.url), ...(a.logo.result ? [a.logo.result.light, a.logo.result.dark] : [])];
+  const ids = urls.map((u) => /^\/api\/v1\/files\/([^/?#]+)$/.exec(u)?.[1]).filter((id): id is string => Boolean(id));
+  return (await Promise.all(ids.map((id) => loadFile(id)))).every(Boolean);
+}
+
 /** Cached analyses are always served; new ones need an API key, a free slot and rate-limit headroom. */
 export async function analyzeSite(site: string, light: string, ip: string): Promise<SiteAnalysis> {
   if (!SITE.test(site)) throw new BoothError("Ogiltig webbadress.", 400);
@@ -291,7 +298,7 @@ export async function analyzeSite(site: string, light: string, ip: string): Prom
   if (!print) throw new BoothError("Kunde inte läsa loggan. Hämta den igen.", 400);
   const id = hash([VERSION, site, print]);
   const hit = await readAnalysis(id);
-  if (hit) return hit;
+  if (hit && (await filesExist(hit))) return hit;
 
   let job = inFlight.get(id);
   if (!job) {
