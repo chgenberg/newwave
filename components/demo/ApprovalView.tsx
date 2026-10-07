@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PLACEHOLDERS, sek } from "@/lib/demoCatalog";
+import { sek } from "@/lib/demoCatalog";
+import { eventOf } from "@/lib/demoEvents";
 import { delivery, deliveryText, fmtDay, visitorsLabel } from "@/lib/demoPackages";
 import type { Share } from "@/lib/demoShare";
 import { Icons, Primary, Secondary, StepHeader, TrustLine } from "./parts";
@@ -81,11 +82,12 @@ export function ApprovalView({ initial }: { initial: Share }) {
     }
   };
 
-  const d = delivery(share.eventDate, share.lines.map((l) => l.id), new Date(share.createdAt));
+  const ev = eventOf(share.event);
+  const d = delivery(share.eventDate, share.lines.map((l) => l.id), new Date(share.createdAt), ev.id);
   const [label, tone] = STATUS[share.status];
   const facts = [
-    share.eventDate && ["Mässdatum", fmtDay(share.eventDate)],
-    share.visitors && ["Besökare", `ca ${visitorsLabel(share.visitors).toLowerCase()}`],
+    share.eventDate && [ev.pdfDateLabel, fmtDay(share.eventDate)],
+    share.visitors && [ev.people.replace(/^./, (c) => c.toUpperCase()), `ca ${visitorsLabel(share.visitors, ev.id).toLowerCase()}`],
     share.reference && ["Referens", `#${share.reference}`],
   ].filter(Boolean) as [string, string][];
 
@@ -101,14 +103,14 @@ export function ApprovalView({ initial }: { initial: Share }) {
         <StepHeader
           kicker={share.brand.name}
           title={owner ? "Din offert" : "Godkänn offert"}
-          sub={owner ? "Du ser här när din kollega har svarat." : `Mässmonter och profilprodukter för ${share.brand.name}. Godkänn eller lämna en kommentar.`}
+          sub={owner ? "Du ser här när din kollega har svarat." : `${ev.title} och profilprodukter för ${share.brand.name}. Godkänn eller lämna en kommentar.`}
         />
 
         {share.boothUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={lostBooth ? PLACEHOLDERS[share.format ?? "3:2"] : share.boothUrl}
-            alt={lostBooth ? "Mässmonter" : `Mässmonter för ${share.brand.name}`}
+            src={lostBooth ? ev.placeholders[share.format ?? "3:2"] : share.boothUrl}
+            alt={lostBooth ? ev.title : `${ev.title} för ${share.brand.name}`}
             ref={boothImg}
             onError={() => setLostBooth(true)}
             className={`mt-6 w-full rounded-2xl object-cover ${share.format === "4:3" ? "aspect-[4/3]" : "aspect-[4/3] sm:aspect-[3/2]"}`}

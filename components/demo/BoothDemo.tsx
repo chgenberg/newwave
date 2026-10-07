@@ -2,8 +2,9 @@
 
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoothItem, BoothResult } from "@/lib/demoBooth";
-import { ALL_PRODUCTS, BOOTH_PRODUCTS, type BoothFormat, BRANDS, CONSUMABLES, DEFAULT_PROMOS, EVENTS, type EventId, PLACEHOLDERS, lineTotal, spotOf, MAX_QTY, PROMO_PRODUCTS, type Product, VISITORS, type VisitorsId, sek, sumSek } from "@/lib/demoCatalog";
-import { PACKAGES, type PackageId, type PackLine, buildPackage, delivery, deliveryText, fitBudget, fmtDay, packageSummary, packageTotal, roundQty } from "@/lib/demoPackages";
+import { ALL_PRODUCTS, type BoothFormat, BRANDS, lineTotal, MAX_QTY, type Product, type VisitorsId, sek, sumSek } from "@/lib/demoCatalog";
+import { EVENT_LIST, EVENTS, type EventId, isEventId, qtyOf, spotOf } from "@/lib/demoEvents";
+import { type PackageId, type PackLine, buildPackage, delivery, deliveryText, fitBudget, fmtDay, packageSummary, packagesFor, packageTotal, scaledQty } from "@/lib/demoPackages";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 import type { LogoResult } from "@/lib/logo";
 import { OWNED_KEY } from "./ApprovalView";
@@ -15,11 +16,12 @@ import { BackLink, Header, Icons, PlusBadge, Primary, Secondary, type Step, Step
 import { TailorCard } from "./TailorCard";
 import { useMockups } from "./useMockups";
 
-type Stage = "start" | "products" | "offer" | "thanks";
-type Booth = BoothResult & { items: BoothItem[] };
+type Stage = "type" | "start" | "products" | "offer" | "thanks";
+type Booth = BoothResult & { items: BoothItem[]; event: EventId };
 type Contact = { name: string; email: string; company: string };
 
-const STEP_OF: Record<Stage, Step | null> = { start: 1, products: 2, offer: 3, thanks: null };
+const STEP_OF: Record<Stage, Step | null> = { type: 1, start: 2, products: 3, offer: 4, thanks: null };
+const STAGE_OF: Record<Step, Stage> = { 1: "type", 2: "start", 3: "products", 4: "offer" };
 const COLOR_NAMES: Record<string, string> = { "#1D1D1F": "Svart", "#FFFFFF": "Vit", "#9A9AA0": "Grå", "#1F3B73": "Marinblå" };
 
 /** Phones get a 4:3 booth; the choice is made once per run so a resize never swaps the image. */
@@ -59,14 +61,16 @@ const shortName = (raw: string, site: string) => {
 
 const tileName = (site: string) => BRANDS.find((b) => domainName(b.url) === domainName(site))?.name;
 
-const newLine = (p: Product): Line => ({ qty: p.defaultQty, model: p.models[0].id, color: "", style: p.styles[0] });
+const newLine = (p: Product, ev: EventId): Line => ({ qty: qtyOf(p, ev), model: p.models[0].id, color: "", style: p.styles[0] });
 const productOf = (id: string) => ALL_PRODUCTS.find((p) => p.id === id)!;
 
 /** Package quantities on top of whatever model and colour the customer already picked for a product. */
 const fromPack = (pack: PackLine[], prev: Record<string, Line> = {}): Record<string, Line> =>
-  Object.fromEntries(pack.map((l) => [l.id, { ...(prev[l.id] ?? newLine(productOf(l.id))), qty: l.qty }]));
+  Object.fromEntries(pack.map((l) => [l.id, { ...(prev[l.id] ?? newLine(productOf(l.id), "massa")), qty: l.qty }]));
 const toPack = (ls: Record<string, Line>): PackLine[] => Object.entries(ls).map(([id, l]) => ({ id, qty: l.qty, model: l.model }));
-const initialLines = () => fromPack(buildPackage("standard", DEFAULT_PROMOS));
+/** The site analysis picks merch per kind of occasion; without it the occasion's defaults are used. */
+const recOf = (a: SiteAnalysis | null, ev: EventId) => (!a ? EVENTS[ev].defaults : ev === "massa" ? a.merch.map((m) => m.id) : (a.events?.[ev]?.merch ?? EVENTS[ev].defaults));
+const initialLines = (ev: EventId = "massa", a: SiteAnalysis | null = null, visitors: VisitorsId | "" = "") => fromPack(buildPackage("standard", recOf(a, ev), visitors || null, ev));
 
 /** Steps 1–3 keep the running total and the one next action in view, on every screen size. */
 function BottomBar({ count, total, label, children }: { count: number; total: number; label?: string; children: ReactNode }) {
@@ -110,8 +114,10 @@ function ProductTile({ product, line, recommended, mockups, boothFor, onOpen, on
 }
 
 export function BoothDemo() {
-  const [stage, setStage] = useState<Stage>("start");
+  const [stage, setStage] = useState<Stage>("type");
   const [event, setEvent] = useState<EventId>("massa");
+  /** The card picked on the first step; it becomes the event only on "Nästa". */
+  const [pick, setPick] = useState<EventId | null>(null);
   const [url, setUrl] = useState("");
   const [logo, setLogo] = useState<LogoResult | null>(null);
   const [brandName, setBrandName] = useState("");
@@ -122,7 +128,7 @@ export function BoothDemo() {
   const [booth, setBooth] = useState<Booth | null>(null);
   const [format, setFormat] = useState<BoothFormat>("3:2");
   /** The customer's selection before any budget; what is ordered is this, fitted to the budget when one is set. */
-  const [base, setBase] = useState<Record<string, Line>>(initialLines);
+  const [base, setBase] = useState<Record<string, Line>>(() => initialLines());
   const [pkg, setPkg] = useState<PackageId | "custom">("standard");
   /** The last hand-made selection, kept as its own card so trying a package never throws it away. */
   const [customBase, setCustomBase] = useState<Record<string, Line> | null>(null);
@@ -143,57 +149,62 @@ export function BoothDemo() {
   const [sharing, setSharing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const run = useRef(0);
-  const mockups = useMockups(logo);
+  const ev = EVENTS[event];
+  const setProducts = useMemo(() => EVENTS[event].set.map(productOf), [event]);
+  const merchProducts = useMemo(() => EVENTS[event].merch.map(productOf), [event]);
+  const mockups = useMockups(logo, merchProducts);
 
   const liveBooth = booth && booth.url !== brokenBooth ? booth : null;
-  const lines = useMemo(() => (budget === null ? base : fromPack(fitBudget(toPack(base), budget).lines, base)), [base, budget]);
+  const lines = useMemo(() => (budget === null ? base : fromPack(fitBudget(toPack(base), budget, event).lines, base)), [base, budget, event]);
   const brandColor = booth?.color ?? logo?.color ?? "#1D1D1F";
   const name = brandName || "ditt varumärke";
-  const boothItems = BOOTH_PRODUCTS.filter((p) => lines[p.id]).map((p) => p.booth!);
+  const boothItems = setProducts.filter((p) => lines[p.id]).map((p) => p.booth!);
   const fmt = booth?.format ?? format;
+  const placeholder = ev.placeholders[fmt];
   const boothFor = useCallback(
     (p: Product): BoothView =>
-      liveBooth && p.booth && liveBooth.items.includes(p.booth) ? { url: liveBooth.url, format: liveBooth.format } : { url: PLACEHOLDERS[fmt], format: fmt },
-    [liveBooth, fmt],
+      liveBooth && p.booth && liveBooth.items.includes(p.booth) ? { url: liveBooth.url, format: liveBooth.format, event: liveBooth.event } : { url: EVENTS[event].placeholders[fmt], format: fmt, event },
+    [liveBooth, fmt, event],
   );
-  const boothUrl = liveBooth?.url ?? PLACEHOLDERS[fmt];
+  const boothUrl = liveBooth?.url ?? placeholder;
   const stale = Boolean(booth) && (booth!.items.length !== boothItems.length || boothItems.some((i) => !booth!.items.includes(i)));
-  const recIds = useMemo(() => (analysis ? analysis.merch.map((m) => m.id) : DEFAULT_PROMOS), [analysis]);
+  const recIds = useMemo(() => recOf(analysis, event), [analysis, event]);
   const recommended = useMemo(() => new Set(recIds), [recIds]);
-  const notOrdered = booth ? BOOTH_PRODUCTS.filter((p) => booth.items.includes(p.booth!) && !lines[p.id]) : [];
-  const notShown = booth ? BOOTH_PRODUCTS.filter((p) => lines[p.id] && !booth.items.includes(p.booth!)) : [];
+  const notOrdered = booth ? setProducts.filter((p) => booth.items.includes(p.booth!) && !lines[p.id]) : [];
+  const notShown = booth ? setProducts.filter((p) => lines[p.id] && !booth.items.includes(p.booth!)) : [];
   const names = (ps: Product[]) => ps.map((p) => p.name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " och $1");
   const staleText = notOrdered.length ? `Bilden visar även ${names(notOrdered)}, som inte ingår i beställningen.` : notShown.length ? `${names(notShown).replace(/^./, (c) => c.toUpperCase())} ingår men syns inte i bilden.` : "";
 
   const cards: PackageCard[] = useMemo(
     () =>
-      PACKAGES.map((p) => {
-        const pack = buildPackage(p.id, recIds, visitors || null);
-        const fitted = budget === null ? pack : fitBudget(pack, budget).lines;
-        return { ...p, total: packageTotal(fitted), summary: packageSummary(fitted) } as PackageCard;
-      }).concat(
-        customBase
-          ? (() => {
-              const own = toPack(customBase);
-              const fitted = budget === null ? own : fitBudget(own, budget).lines;
-              return [{ id: "custom" as const, name: "Eget urval", blurb: "Dina egna val från produktsidan", total: packageTotal(fitted), summary: packageSummary(fitted) }];
-            })()
-          : [],
-      ),
-    [recIds, visitors, budget, customBase],
+      packagesFor(event)
+        .map((p) => {
+          const pack = buildPackage(p.id, recIds, visitors || null, event);
+          const fitted = budget === null ? pack : fitBudget(pack, budget, event).lines;
+          return { ...p, total: packageTotal(fitted), summary: packageSummary(fitted, event) } as PackageCard;
+        })
+        .concat(
+          customBase
+            ? (() => {
+                const own = toPack(customBase);
+                const fitted = budget === null ? own : fitBudget(own, budget, event).lines;
+                return [{ id: "custom" as const, name: "Eget urval", blurb: "Dina egna val från produktsidan", total: packageTotal(fitted), summary: packageSummary(fitted, event) }];
+              })()
+            : [],
+        ),
+    [recIds, visitors, budget, customBase, event],
   );
 
   const choosePackage = (id: PackageId | "custom") => {
     setPkg(id);
     if (id === "custom") return customBase && setBase(customBase);
-    setBase((b) => fromPack(buildPackage(id, recIds, visitors || null), b));
+    setBase((b) => fromPack(buildPackage(id, recIds, visitors || null, event), b));
   };
 
   const chooseVisitors = (v: VisitorsId | "") => {
     setVisitors(v);
-    if (pkg !== "custom") return setBase((b) => fromPack(buildPackage(pkg, recIds, v || null), b));
-    const f = VISITORS.find((x) => x.id === v)?.factor ?? 1;
-    const scale = (b: Record<string, Line>) => Object.fromEntries(Object.entries(b).map(([id, l]) => [id, CONSUMABLES.includes(id) ? { ...l, qty: roundQty(productOf(id), productOf(id).defaultQty * f) } : l]));
+    if (pkg !== "custom") return setBase((b) => fromPack(buildPackage(pkg, recIds, v || null, event), b));
+    const scale = (b: Record<string, Line>) => Object.fromEntries(Object.entries(b).map(([id, l]) => [id, ev.scales.includes(id) ? { ...l, qty: scaledQty(productOf(id), event, v) } : l]));
     setBase(scale);
     setCustomBase((c) => c && scale(c));
   };
@@ -224,7 +235,7 @@ export function BoothDemo() {
   };
 
   /** A failed booth (no API key, rate limit, model error) never blocks the flow: the neutral booth stays usable. */
-  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number, a: SiteAnalysis | null, f: BoothFormat) => {
+  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number, a: SiteAnalysis | null, f: BoothFormat, kind: EventId) => {
     setPhase("booth");
     setBoothNote(null);
     try {
@@ -235,9 +246,10 @@ export function BoothDemo() {
         light: l.light,
         products: items,
         format: f,
+        event: kind,
         ...(a && a.host === l.site ? { analysisId: a.id } : {}),
       });
-      if (run.current === id) setBooth({ ...b, items });
+      if (run.current === id) setBooth({ ...b, items, event: kind });
     } catch (e) {
       if (run.current === id) setBoothNote(e instanceof Error ? e.message : String(e));
     } finally {
@@ -245,7 +257,8 @@ export function BoothDemo() {
     }
   };
 
-  const start = async (raw: string, knownName?: string, keepSelection = false) => {
+  /** The occasion is passed in because a new choice is not yet in state when the run starts. */
+  const start = async (raw: string, knownName?: string, keepSelection = false, kind: EventId = event) => {
     const value = raw.trim();
     if (value.length < 3) return setError("Ange en webbadress, till exempel volvocars.com");
     const id = ++run.current;
@@ -275,7 +288,7 @@ export function BoothDemo() {
     let a: SiteAnalysis | null = null;
     if (l.site) {
       setPhase("site");
-      a = await post<SiteAnalysis>("/api/v1/demo/analyze", { site: l.site, light: l.light }).catch(() => null);
+      a = await post<SiteAnalysis>("/api/v1/demo/analyze", { site: l.site, light: l.light, event: kind }).catch(() => null);
       if (run.current !== id) return;
     }
     if (a?.logo.result) l = a.logo.result;
@@ -288,12 +301,12 @@ export function BoothDemo() {
       setPkg("standard");
       setBudget(null);
       setCustomBase(null);
-      setBase(fromPack(buildPackage("standard", a ? a.merch.map((m) => m.id) : DEFAULT_PROMOS, visitors || null)));
+      setBase(initialLines(kind, a, visitors));
     }
-    await buildBooth(l, nm, boothItems, id, a, f);
+    await buildBooth(l, nm, keepSelection ? boothItems : [...EVENTS[kind].set], id, a, f, kind);
   };
 
-  const reset = () => {
+  const reset = (to: Stage = "start") => {
     run.current++;
     setPhase(null);
     setLogo(null);
@@ -303,7 +316,7 @@ export function BoothDemo() {
     setError(null);
     setBrandName("");
     setUrl("");
-    setBase(initialLines());
+    setBase(initialLines(event));
     setPkg("standard");
     setCustomBase(null);
     setBudget(null);
@@ -311,11 +324,26 @@ export function BoothDemo() {
     setVisitors("");
     setShared(null);
     setContact({ name: "", email: "", company: "" });
-    go("start");
+    go(to);
   };
 
   const rebuild = () => {
-    if (logo) buildBooth(logo, brandName, boothItems, ++run.current, analysis, format);
+    if (logo) buildBooth(logo, brandName, boothItems, ++run.current, analysis, format, event);
+  };
+
+  /** A new occasion means a new picture and new products, so a brand already read is rebuilt for it. */
+  const chooseEvent = (kind: EventId) => {
+    setPick(kind);
+    if (kind === event && (logo || phase)) return go("start");
+    setEvent(kind);
+    setPkg("standard");
+    setBudget(null);
+    setCustomBase(null);
+    setShared(null);
+    setBase(initialLines(kind, analysis, visitors));
+    go("start");
+    const site = logo?.site || (phase ? url : "");
+    if (site) start(site, brandName || undefined, false, kind);
   };
 
   /** A lost booth file usually means the logo and site images are gone too, so the whole read runs again, keeping the choices. */
@@ -334,19 +362,24 @@ export function BoothDemo() {
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       setToast(null);
-      setStage((e.state?.demoStage as Stage | undefined) ?? "start");
+      setStage((e.state?.demoStage as Stage | undefined) ?? "type");
       setFrom((e.state?.demoFrom as Stage | undefined) ?? null);
     };
     window.addEventListener("popstate", onPop);
     const q = new URLSearchParams(window.location.search);
     const site = q.get("site")?.slice(0, 200);
-    const ev = q.get("event") as EventId | null;
+    const raw = q.get("event");
+    const kind = isEventId(raw) ? raw : null;
     const t = setTimeout(() => {
-      if (ev && EVENTS.some((e) => e.id === ev)) setEvent(ev);
-      if (site) {
-        go("start", true);
-        start(site, tileName(site));
+      if (kind) {
+        setEvent(kind);
+        setPick(kind);
+        setBase(initialLines(kind));
       }
+      if (!kind && !site) return;
+      window.history.replaceState({ ...window.history.state, demoStage: "type", demoFrom: null }, "");
+      go("start");
+      if (site) start(site, tileName(site), false, kind ?? "massa");
     }, 0);
     return () => {
       clearTimeout(t);
@@ -365,7 +398,7 @@ export function BoothDemo() {
     edit((ls) => {
       const next = { ...ls };
       if (next[p.id]) delete next[p.id];
-      else next[p.id] = newLine(p);
+      else next[p.id] = newLine(p, event);
       return next;
     });
 
@@ -374,7 +407,7 @@ export function BoothDemo() {
 
   const offer: OfferLine[] = useMemo(
     () =>
-      ALL_PRODUCTS.filter((p) => lines[p.id]).map((p) => {
+      [...setProducts, ...merchProducts].filter((p) => lines[p.id]).map((p) => {
         const l = lines[p.id];
         const m = p.models.find((x) => x.id === l.model) ?? p.models[0];
         const color = !l.color || l.color.toLowerCase() === brandColor.toLowerCase() ? "varumärkesfärg" : (COLOR_NAMES[l.color] ?? l.color).toLowerCase();
@@ -391,15 +424,15 @@ export function BoothDemo() {
           thumb: <ProductVisual product={p} model={l.model} mockups={mockups} boothFor={boothFor} aspect={1} />,
         };
       }),
-    [lines, mockups, boothFor, brandColor],
+    [lines, mockups, boothFor, brandColor, setProducts, merchProducts],
   );
   const total = sumSek(offer.map((l) => l.totalSek));
   const count = offer.length;
 
-  const spots: Hotspot[] = ALL_PRODUCTS.filter((p) => spotOf(p, fmt) && (!p.booth || !booth || booth.items.includes(p.booth))).map((p) => ({
+  const spots: Hotspot[] = [...setProducts, ...merchProducts].filter((p) => spotOf(p, fmt, event) && (!p.booth || !booth || booth.items.includes(p.booth))).map((p) => ({
     id: p.id,
-    x: spotOf(p, fmt)!.x,
-    y: spotOf(p, fmt)!.y,
+    x: spotOf(p, fmt, event)!.x,
+    y: spotOf(p, fmt, event)!.y,
     label: p.name,
     added: Boolean(lines[p.id]),
   }));
@@ -411,7 +444,7 @@ export function BoothDemo() {
     try {
       const r = await post<{ reference: string; createdAt: string; emailed: boolean; pdf: string }>("/api/v1/demo/quote", {
         brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
-        event: EVENTS.find((x) => x.id === event)!.label,
+        event,
         boothUrl: booth?.url,
         format: fmt,
         totalSek: total,
@@ -436,6 +469,7 @@ export function BoothDemo() {
       brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
       boothUrl: booth?.url,
       format: fmt,
+      event,
       lines: offer.map((l) => ({ id: l.id, model: l.model, qty: l.qty })),
       eventDate,
       visitors,
@@ -463,7 +497,7 @@ export function BoothDemo() {
     setSharing(false);
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Offert för ${name}`, text: "Kan du godkänna offerten för mässmontern?", url: link });
+        await navigator.share({ title: `Offert för ${name}`, text: ev.shareText, url: link });
         return;
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
@@ -499,14 +533,16 @@ export function BoothDemo() {
   /** History entries can point at steps whose data is gone (e.g. after a reload); fall back to the start. */
   const shown: Stage = (!logo && (stage === "products" || stage === "offer")) || (stage === "thanks" && !quote) ? "start" : stage;
   const drawerProduct = ALL_PRODUCTS.find((p) => p.id === drawer);
-  const loading = phase ? { phase, name, industry: analysis?.industry ?? "" } : null;
-  const eventLabel = EVENTS.find((e) => e.id === event)!.label;
+  const loading = phase ? { phase, name, industry: analysis?.industry ?? "", copy: ev.loading } : null;
   const ready = Boolean(logo) && !phase;
   const industry = analysis?.industry?.toLowerCase();
-  const del = delivery(eventDate, offer.map((l) => l.id));
+  const del = delivery(eventDate, offer.map((l) => l.id), undefined, event);
   const deliveryNote = del ? { text: deliveryText(del), late: del.late } : null;
-  const pkgName = PACKAGES.find((p) => p.id === pkg)?.name;
-  const orderLabel = !stale ? "Beställ montern som den ser ut" : pkgName ? `Beställ paket ${pkgName}` : "Granska offert";
+  const pkgName = packagesFor(event).find((p) => p.id === pkg)?.name;
+  const orderLabel = !stale ? ev.orderAll : pkgName ? `Beställ paket ${pkgName}` : "Granska offert";
+  const neutral = event === "massa" ? "en neutral monter" : "en neutral bild";
+  const updateLabel = event === "massa" ? "Uppdatera montern" : "Uppdatera bilden";
+  const pictureAlt = liveBooth ? `${ev.title} för ${name}` : `${ev.title} med plats för din logga`;
   const shareLink = shared && (
     <p className="mt-3 break-all text-[13px] text-[#6E6E73]">
       Länk för godkännande:{" "}
@@ -516,7 +552,7 @@ export function BoothDemo() {
       – öppna den för att se om den är godkänd.
     </p>
   );
-  const kicker = (st: Step) => `Steg ${st} av 3 · ${STEP_LABELS[st]}`;
+  const kicker = (st: Step) => `Steg ${st} av 4 · ${STEP_LABELS[st]}`;
   const lostNote = booth && !liveBooth && !phase && (
     <p className="mt-3 text-center text-[13px] text-[#6E6E73]">
       Bilden behöver skapas om.{" "}
@@ -530,7 +566,7 @@ export function BoothDemo() {
     <p className="mt-3 text-[13px] text-[#6E6E73]">
       {staleText}{" "}
       <TextLink onClick={rebuild} className="text-[13px]">
-        Uppdatera montern
+        {updateLabel}
       </TextLink>
     </p>
   );
@@ -542,20 +578,58 @@ export function BoothDemo() {
           logo={ready ? (logo?.light ?? null) : null}
           name={name}
           step={STEP_OF[shown]}
-          reachable={ready ? 3 : 1}
-          onStep={(s) => back(s === 1 ? "start" : s === 2 ? "products" : "offer")}
-          onHome={() => (ready ? go("start") : reset())}
+          reachable={ready ? 4 : 2}
+          onStep={(s) => back(STAGE_OF[s])}
+          onHome={() => (ready ? go("start") : reset("type"))}
         />
+
+        {shown === "type" && (
+          <main className={`${WRAP} py-8 sm:py-12`}>
+            <StepHeader kicker={kicker(1)} title="Vad ska ni planera?" sub="Välj typ av tillfälle så anpassar vi bilden, produkterna och offerten efter det." />
+            <div role="radiogroup" aria-label="Typ" className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-4">
+              {EVENT_LIST.map((e) => {
+                const on = pick === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setPick(e.id)}
+                    onDoubleClick={() => chooseEvent(e.id)}
+                    onKeyDown={(k) => {
+                      if (k.key !== "Enter") return;
+                      k.preventDefault();
+                      chooseEvent(e.id);
+                    }}
+                    className={`group relative flex flex-col overflow-hidden rounded-2xl bg-white text-left transition ${on ? "ring-2 ring-[#1D1D1F]" : "ring-1 ring-black/[0.08] hover:ring-black/25"}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={e.image} alt="" className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
+                    <span className="block px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-4">
+                      <span className="block text-[15px] font-semibold sm:text-[17px]">{e.label}</span>
+                      <span className="mt-0.5 block text-[13px] leading-snug text-[#6E6E73]">{e.blurb}</span>
+                    </span>
+                    <span className={`absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full transition ${on ? "bg-[#1D1D1F] text-white" : "bg-white/90 text-transparent ring-1 ring-black/10"}`}>{Icons.check}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-6 flex justify-end sm:mt-8">
+              <Primary className="w-full sm:w-auto" disabled={!pick} onClick={() => pick && chooseEvent(pick)}>
+                Nästa {Icons.arrow}
+              </Primary>
+            </div>
+          </main>
+        )}
 
         {shown === "start" && !phase && !logo && (
           <main className={`${WRAP} grid items-center gap-10 py-12 lg:min-h-[calc(100svh-56px)] lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-16`}>
             <div className="max-w-[480px]">
-              <StepHeader
-                align="left"
-                kicker={kicker(1)}
-                title="Din mässmonter på en minut"
-                sub="Ange företagets webbadress så bygger vi en monter med er logga, era färger och produkter som passar er bransch."
-              />
+              <BackLink onClick={() => back("type")} className="mb-3">
+                Byt typ
+              </BackLink>
+              <StepHeader align="left" kicker={kicker(2)} title={ev.startTitle} sub={ev.startSub} />
               <form
                 className="mt-6 flex flex-col gap-2.5 sm:flex-row"
                 onSubmit={(e: FormEvent) => {
@@ -575,7 +649,7 @@ export function BoothDemo() {
                   inputMode="url"
                   className="h-12 w-full min-w-0 rounded-full border sm:flex-1 border-black/15 bg-white px-5 text-[15px] outline-none transition placeholder:text-[#AEAEB2] focus:border-[#1D1D1F]"
                 />
-                <Primary type="submit">Skapa min monter</Primary>
+                <Primary type="submit">{ev.cta}</Primary>
               </form>
               {error && <p className="mt-3 text-[13px] text-[#B42318]">{error}</p>}
               <p className="mt-5 text-[13px] text-[#6E6E73]">
@@ -591,8 +665,8 @@ export function BoothDemo() {
               </p>
             </div>
             <picture>
-              <source media={PHONE} srcSet={PLACEHOLDERS["4:3"]} />
-              <img src={PLACEHOLDERS["3:2"]} alt="Exempel på mässmonter" className="aspect-[4/3] w-full rounded-2xl object-cover md:aspect-[3/2]" />
+              <source media={PHONE} srcSet={ev.placeholders["4:3"]} />
+              <img src={ev.placeholders["3:2"]} alt={`Exempel: ${ev.title.toLowerCase()}`} className="aspect-[4/3] w-full rounded-2xl object-cover md:aspect-[3/2]" />
             </picture>
           </main>
         )}
@@ -600,23 +674,23 @@ export function BoothDemo() {
         {shown === "start" && (phase || logo) && (
           <main className={`${WRAP} py-8 sm:py-10`}>
             {phase ? (
-              <StepHeader kicker={kicker(1)} title={`Skapar monter för ${brandName || url}`} sub="Det tar ungefär en minut. Du kan följa stegen i bilden.">
-                <TextLink onClick={reset} className="text-[13px] text-[#6E6E73]">
+              <StepHeader kicker={kicker(2)} title={`${ev.creating} ${brandName || url}`} sub="Det tar ungefär en minut. Du kan följa stegen i bilden.">
+                <TextLink onClick={() => reset()} className="text-[13px] text-[#6E6E73]">
                   Avbryt
                 </TextLink>
               </StepHeader>
             ) : (
               <StepHeader
-                kicker={kicker(1)}
-                title={`Montern för ${name} är klar`}
+                kicker={kicker(2)}
+                title={ev.ready(name)}
                 sub={
                   liveBooth
                     ? industry
                       ? `Anpassad för ${industry} utifrån er webbplats.`
                       : "Med er logga och era färger."
                     : booth
-                      ? "Vi visar en neutral monter tills bilden är skapad igen."
-                      : (boothNote ?? "Vi visar en neutral monter.")
+                      ? `Vi visar ${neutral} tills bilden är skapad igen.`
+                      : (boothNote ?? `Vi visar ${neutral}.`)
                 }
               >
                 {!booth && boothNote && (
@@ -629,14 +703,17 @@ export function BoothDemo() {
                     Bilden behöver skapas om – Skapa om
                   </TextLink>
                 )}
-                <TextLink onClick={reset} className="text-[13px]">
+                <TextLink onClick={() => reset()} className="text-[13px]">
                   Prova en annan webbadress
+                </TextLink>
+                <TextLink onClick={() => back("type")} className="text-[13px]">
+                  Byt typ
                 </TextLink>
               </StepHeader>
             )}
             <BoothStage
               src={boothUrl}
-              alt={liveBooth ? `Mässmonter för ${name}` : "Mässmonter med plats för din logga"}
+              alt={pictureAlt}
               loading={loading}
               className={`${frame(fmt)} mt-6 w-full rounded-2xl`}
             />
@@ -657,6 +734,7 @@ export function BoothDemo() {
                 </section>
                 <section className="mt-6">
                   <EventPlan
+                    event={ev}
                     eventDate={eventDate}
                     onDate={setEventDate}
                     visitors={visitors}
@@ -669,12 +747,12 @@ export function BoothDemo() {
                 </section>
                 {analysis && (
                   <div className="mt-6">
-                    <TailorCard analysis={analysis} />
+                    <TailorCard analysis={analysis} event={ev} />
                   </div>
                 )}
                 <BottomBar count={count} total={total} label={pkgName ? `Paket ${pkgName}` : "Eget urval"}>
                   <Primary className="shrink-0 px-5 sm:px-6" disabled={!count} onClick={() => go("offer")}>
-                    <span className="sm:hidden">{!stale ? "Beställ montern" : pkgName ? `Beställ ${pkgName}` : "Till offert"}</span>
+                    <span className="sm:hidden">{!stale ? ev.orderShort : pkgName ? `Beställ ${pkgName}` : "Till offert"}</span>
                     <span className="hidden sm:inline">{orderLabel}</span> {Icons.arrow}
                   </Primary>
                 </BottomBar>
@@ -688,16 +766,16 @@ export function BoothDemo() {
             <BackLink onClick={() => back("start")} className="mb-3">
               Tillbaka till paketen
             </BackLink>
-            <StepHeader kicker={kicker(2)} title="Välj produkter" sub={`Allt trycks med er logga. Vi har valt det som passar ${name} – tryck på en produkt för att ändra modell, färg eller antal.`} />
+            <StepHeader kicker={kicker(3)} title="Välj produkter" sub={`Allt trycks med er logga. Vi har valt det som passar ${name} – tryck på en produkt för att ändra modell, färg eller antal.`} />
             <div className="mx-auto mt-6 max-w-[860px]">
-              <BoothStage src={boothUrl} alt={`Mässmonter för ${name}`} spots={spots} onSpot={setDrawer} loading={phase === "booth" ? loading : null} className={`${frame(fmt)} w-full rounded-2xl`} />
+              <BoothStage src={boothUrl} alt={pictureAlt} spots={spots} onSpot={setDrawer} loading={phase === "booth" ? loading : null} className={`${frame(fmt)} w-full rounded-2xl`} />
               {lostNote}
               {staleNote}
             </div>
             {(
               [
-                ["Montern", BOOTH_PRODUCTS, "lg:grid-cols-5"],
-                ["Profilprodukter", PROMO_PRODUCTS, "lg:grid-cols-4"],
+                [ev.setTitle, setProducts, setProducts.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-5"],
+                ["Profilprodukter", merchProducts, "lg:grid-cols-4"],
               ] as const
             ).map(([title, products, cols]) => (
               <section key={title} className="mt-10">
@@ -738,13 +816,15 @@ export function BoothDemo() {
             <BackLink onClick={() => back(offerBack)} className="mb-3">
               {offerBack === "products" ? "Tillbaka till produkterna" : "Tillbaka till paketen"}
             </BackLink>
-            <StepHeader kicker={kicker(3)} title="Granska offert" sub="Vi återkommer inom en arbetsdag med pris och leveranstid. Förfrågan är inte bindande." />
+            <StepHeader kicker={kicker(4)} title="Granska offert" sub="Vi återkommer inom en arbetsdag med pris och leveranstid. Förfrågan är inte bindande." />
 
             <div className="mt-8 flex items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={boothUrl} alt={`Mässmonter för ${name}`} className={`${frame(fmt)} w-32 shrink-0 rounded-xl object-cover sm:w-40`} />
+              <img src={boothUrl} alt={pictureAlt} className={`${frame(fmt)} w-32 shrink-0 rounded-xl object-cover sm:w-40`} />
               <div className="min-w-0">
-                <p className="text-[15px] font-semibold">Mässmonter för {name}</p>
+                <p className="text-[15px] font-semibold">
+                  {ev.title} för {name}
+                </p>
                 <TextLink onClick={() => go("products")} className="mt-1 text-[13px]">
                   Ändra produkter
                 </TextLink>
@@ -784,7 +864,7 @@ export function BoothDemo() {
 
             {(eventDate || deliveryNote) && (
               <p className={`flex items-center gap-1.5 text-[13px] [&_svg]:h-3.5 [&_svg]:w-3.5 ${deliveryNote?.late ? "text-[#B54708]" : "text-[#424245]"}`}>
-                {Icons.calendar} {eventDate && `Mässan ${fmtDay(eventDate)}. `}
+                {Icons.calendar} {eventDate && `${ev.dateLabel} ${fmtDay(eventDate)}. `}
                 {deliveryNote?.text}
               </p>
             )}
@@ -868,13 +948,13 @@ export function BoothDemo() {
               }
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={boothUrl} alt={`Mässmonter för ${name}`} className={`mt-8 ${frame(fmt)} w-full rounded-2xl object-cover`} />
+            <img src={boothUrl} alt={pictureAlt} className={`mt-8 ${frame(fmt)} w-full rounded-2xl object-cover`} />
             <dl className="mt-6 divide-y divide-black/[0.06] border-y border-black/[0.06] text-left text-[15px]">
               {[
                 ["Referens", `#${quote.reference}`],
                 ["Produkter", String(count)],
-                ...(eventDate ? [["Mässan", fmtDay(eventDate)]] : []),
-                ...(deliveryNote ? [["Leverans", deliveryNote.late ? "Kort om tid – vi hör av oss om express" : "I tid till mässan"]] : []),
+                ...(eventDate ? [[ev.dateLabel, fmtDay(eventDate)]] : []),
+                ...(deliveryNote ? [["Leverans", deliveryNote.late ? "Kort om tid – vi hör av oss om express" : `I tid till ${ev.dateLabel.toLowerCase()}`]] : []),
                 ["Totalt exkl. moms", sek(total)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 py-3">
@@ -905,8 +985,8 @@ export function BoothDemo() {
               )}
             </div>
             {shareLink}
-            <TextLink onClick={reset} className="mt-8 text-[13px]">
-              Skapa en ny monter
+            <TextLink onClick={() => reset("type")} className="mt-8 text-[13px]">
+              Skapa {ev.again}
             </TextLink>
           </main>
         )}
@@ -932,7 +1012,7 @@ export function BoothDemo() {
       {printing && quote && (
         <PrintOffer
           brand={{ name: brandName || "Ditt företag", logo: logo?.light ?? null, site: logo?.site ?? "", tagline: analysis?.tagline ?? "", industry: analysis?.industry ?? "" }}
-          event={eventLabel}
+          event={ev}
           date={quote.date}
           reference={quote.reference}
           booth={boothUrl}

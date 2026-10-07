@@ -182,8 +182,9 @@ export function BackLink({ children, onClick, className = "" }: { children: Reac
   );
 }
 
-export type Step = 1 | 2 | 3;
-export const STEP_LABELS: Record<Step, string> = { 1: "Varumärke", 2: "Produkter", 3: "Offert" };
+export type Step = 1 | 2 | 3 | 4;
+export const STEP_LABELS: Record<Step, string> = { 1: "Typ", 2: "Varumärke", 3: "Produkter", 4: "Offert" };
+const STEPS = [1, 2, 3, 4] as const;
 
 export function Header(props: { logo: string | null; name: string; step: Step | null; reachable: Step; onStep: (s: Step) => void; onHome: () => void }) {
   const [broken, setBroken] = useState<string | null>(null);
@@ -208,17 +209,17 @@ export function Header(props: { logo: string | null; name: string; step: Step | 
 function Steps({ step, reachable, onStep }: { step: Step; reachable: Step; onStep: (s: Step) => void }) {
   return (
     <nav aria-label="Steg">
-      <ol className="flex items-center gap-1 sm:hidden">
-        {([1, 2, 3] as const).map((s) => (
+      <ol className="flex items-center gap-0.5 sm:hidden">
+        {STEPS.map((s) => (
           <li key={s} className="flex items-center">
-            {s > 1 && <span className={`h-px w-2.5 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
+            {s > 1 && <span className={`h-px w-2 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
             <button
               type="button"
               disabled={s > reachable || s === step}
               onClick={() => onStep(s)}
               aria-label={`Steg ${s}: ${STEP_LABELS[s]}`}
               aria-current={s === step ? "step" : undefined}
-              className="flex h-9 w-9 items-center justify-center"
+              className="flex h-9 w-8 items-center justify-center"
             >
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold ${s === step ? "bg-[#1D1D1F] text-white" : s <= reachable ? "bg-[#E8E8ED] text-[#1D1D1F]" : "border border-[#D2D2D7] text-[#AEAEB2]"}`}>
                 {s < step ? Icons.check : s}
@@ -228,9 +229,9 @@ function Steps({ step, reachable, onStep }: { step: Step; reachable: Step; onSte
         ))}
       </ol>
       <ol className="hidden items-center gap-1 sm:flex">
-        {([1, 2, 3] as const).map((s) => (
+        {STEPS.map((s) => (
           <li key={s} className="flex items-center gap-1">
-            {s > 1 && <span className={`mx-1 h-px w-5 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
+            {s > 1 && <span className={`mx-0.5 h-px w-4 lg:mx-1 lg:w-5 ${s <= step ? "bg-[#1D1D1F]" : "bg-[#D2D2D7]"}`} />}
             <button
               type="button"
               disabled={s > reachable || s === step}

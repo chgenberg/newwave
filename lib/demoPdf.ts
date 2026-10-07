@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Browser } from "playwright-core";
 import { type BoothFormat, sek } from "./demoCatalog";
 import type { PricedLine } from "./demoOffer";
+import { type EventId, eventOf } from "./demoEvents";
 import { delivery, deliveryText, fmtDay, visitorsLabel } from "./demoPackages";
 import { loadFile } from "./store";
 
@@ -10,7 +11,9 @@ export type QuoteDoc = {
   reference: string;
   createdAt: string;
   brand: { name: string; site: string };
+  /** Swedish label; `eventId` is missing on quotes made before the event choice existed. */
   event: string;
+  eventId?: EventId;
   eventDate: string;
   visitors: string;
   boothUrl?: string;
@@ -37,12 +40,13 @@ async function boothData(url?: string) {
 
 export async function quoteHtml(q: QuoteDoc) {
   const booth = await boothData(q.boothUrl);
-  const d = delivery(q.eventDate, q.lines.map((l) => l.id), new Date(q.createdAt));
+  const ev = eventOf(q.eventId ?? q.event);
+  const d = delivery(q.eventDate, q.lines.map((l) => l.id), new Date(q.createdAt), ev.id);
   const rows: [string, string][] = [
     ["Kund", q.contact.company || q.brand.name],
-    ["Event", q.event],
-    ...(q.eventDate ? ([["Mässdatum", fmtDay(q.eventDate)]] as [string, string][]) : []),
-    ...(q.visitors ? ([["Besökare", `ca ${visitorsLabel(q.visitors).toLowerCase()}`]] as [string, string][]) : []),
+    ["Typ", ev.label],
+    ...(q.eventDate ? ([[ev.pdfDateLabel, fmtDay(q.eventDate)]] as [string, string][]) : []),
+    ...(q.visitors ? ([[ev.people.replace(/^./, (c) => c.toUpperCase()), `ca ${visitorsLabel(q.visitors, ev.id).toLowerCase()}`]] as [string, string][]) : []),
     ["Offertdatum", new Date(q.createdAt).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Stockholm" })],
     ["Kontakt", [q.contact.name, q.contact.email].filter(Boolean).join(" · ")],
   ];
@@ -66,9 +70,9 @@ td{padding:1.6mm 0;border-bottom:1px solid #0000000f}.r{text-align:right;font-va
 .foot{margin-top:auto;padding-top:5mm;font-size:7.5px;line-height:1.5;color:#86868b}
 </style></head><body><div class="page">
 <div class="top"><span class="brand">${esc(q.brand.name.toUpperCase())}</span><span>Offertnummer #${esc(q.reference)}</span></div>
-<p class="eyebrow">Offertförslag</p><h1>Mässmonter med produkter</h1>
+<p class="eyebrow">Offertförslag</p><h1>${esc(ev.title)} med produkter</h1>
 <div class="grid"><div class="info">${rows.map(([k, v]) => `<div><p class="k" style="margin:0">${esc(k)}</p><p class="v" style="margin:0">${esc(v)}</p></div>`).join("")}</div>
-${booth ? `<img class="booth" src="${booth}" alt="Montern">` : `<div class="booth"></div>`}</div>
+${booth ? `<img class="booth" src="${booth}" alt="${esc(ev.title)}">` : `<div class="booth"></div>`}</div>
 ${d ? `<div class="note">${esc(deliveryText(d))}</div>` : ""}
 <table><thead><tr><th>Produkt</th><th>Specifikation</th><th class="r">Antal</th><th class="r">À-pris</th><th class="r">Summa</th></tr></thead><tbody>
 ${q.lines.map((l) => `<tr><td><b style="font-weight:500">${esc(l.name)}</b></td><td style="color:#424245">${esc(l.spec)}</td><td class="r">${qty(l.qty)} ${esc(l.unit)}</td><td class="r">${esc(sek(l.unitSek))}</td><td class="r"><b style="font-weight:500">${esc(sek(l.totalSek))}</b></td></tr>`).join("")}

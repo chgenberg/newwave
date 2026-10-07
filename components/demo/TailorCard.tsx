@@ -2,21 +2,25 @@
 
 import { useState } from "react";
 import { PROMO_PRODUCTS } from "@/lib/demoCatalog";
+import type { EventConfig } from "@/lib/demoEvents";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 
 /** Collapsed by default: the booth speaks for itself, the details are there for the curious. */
-export function TailorCard({ analysis }: { analysis: SiteAnalysis }) {
+export function TailorCard({ analysis, event }: { analysis: SiteAnalysis; event: EventConfig }) {
   /** Stored files can disappear (e.g. a wiped disk after a redeploy); missing pictures are dropped instead of shown broken. */
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
   const images = [...analysis.images]
     .sort((a, b) => Number(b.selected) - Number(a.selected))
     .slice(0, 6)
     .filter((im) => !failed.has(im.url));
-  const merch = analysis.merch.map((m) => ({ ...m, product: PROMO_PRODUCTS.find((p) => p.id === m.id) })).filter((m) => m.product);
+  const direction = event.id === "massa" ? null : analysis.events?.[event.id];
+  const picks = direction ? direction.merch.map((id) => ({ id, reason: direction.reasons[id] ?? "" })) : analysis.merch;
+  const merch = picks.map((m) => ({ ...m, product: PROMO_PRODUCTS.find((p) => p.id === m.id) })).filter((m) => m.product);
+  const theme = event.id === "massa" ? analysis.tagline : direction?.theme;
   return (
     <details className="group rounded-2xl border border-black/[0.08] bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
-        Se hur vi anpassade montern
+        Se hur vi anpassade {event.the}
         <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[#6E6E73] transition group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 8l5 5 5-5" />
         </svg>
@@ -28,7 +32,11 @@ export function TailorCard({ analysis }: { analysis: SiteAnalysis }) {
             {analysis.industry || "Okänd"}
             {analysis.offering && ` – ${analysis.offering}`}
           </p>
-          {analysis.tagline && <p className="mt-2">På mässväggen: ”{analysis.tagline}”</p>}
+          {theme && (
+            <p className="mt-2">
+              {event.themeLabel}: ”{theme}”
+            </p>
+          )}
           {analysis.logo.status !== "ok" && (
             <p className="mt-2">{analysis.logo.status === "replaced" ? "Vi hittade en bättre version av er logga i sidhuvudet och använder den." : "Vi satte namnet som ordmärke tills ni laddar upp er logga."}</p>
           )}

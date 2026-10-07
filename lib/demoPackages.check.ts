@@ -1,6 +1,8 @@
 /** Quick sanity checks for the package maths: `npx jiti lib/demoPackages.check.ts`. */
 import assert from "node:assert/strict";
-import { buildPackage, delivery, fitBudget, packageTotal } from "./demoPackages";
+import { ALL_PRODUCTS } from "./demoCatalog";
+import { EVENT_IDS, EVENTS } from "./demoEvents";
+import { buildPackage, delivery, fitBudget, packageSummary, packageTotal } from "./demoPackages";
 
 const rec = ["profilklader", "kepsar", "vattenflaskor", "muggar", "pennor"];
 
@@ -32,4 +34,21 @@ assert.deepEqual(d, { orderBy: "2026-11-06", late: false, leadDays: 10 });
 assert.equal(delivery("2026-10-12", ["pennor"], new Date(2026, 9, 6))!.late, true, "too late for merch");
 assert.equal(delivery("2026-02-30", ["pennor"]), null, "invalid date");
 
-console.log("demoPackages: all checks passed", { bas: packageTotal(bas), standard: packageTotal(std), komplett: packageTotal(full), fit25k: packageTotal(tight.lines), fit25kLines: tight.lines });
+const perEvent: Record<string, number[]> = {};
+for (const ev of EVENT_IDS) {
+  const e = EVENTS[ev];
+  for (const id of [...e.set, ...e.merch, ...e.defaults, ...e.basSet]) assert.ok(ALL_PRODUCTS.some((p) => p.id === id), `${ev}: unknown product ${id}`);
+  for (const id of e.set) assert.ok(ALL_PRODUCTS.find((p) => p.id === id)!.booth === id, `${ev}: ${id} is a set piece`);
+  const [b, s, k] = (["bas", "standard", "komplett"] as const).map((id) => buildPackage(id, [], null, ev));
+  assert.ok(packageTotal(b) < packageTotal(s) && packageTotal(s) < packageTotal(k), `${ev}: packages grow in price`);
+  assert.ok(b.every((l) => [...e.set, ...e.merch].includes(l.id)) && k.every((l) => [...e.set, ...e.merch].includes(l.id)), `${ev}: only its own products`);
+  assert.equal(fitBudget(k, 20_000, ev).lines[0].id, e.set[0], `${ev}: main piece kept`);
+  assert.ok(packageSummary(s, ev).length > 0);
+  perEvent[ev] = [packageTotal(b), packageTotal(s), packageTotal(k)];
+}
+assert.deepEqual(buildPackage("standard", ["glas", "lanyard"], null, "konferens").filter((l) => !(EVENTS.konferens.set as string[]).includes(l.id)).map((l) => l.id), ["lanyard"], "foreign recommendations are dropped");
+assert.equal(buildPackage("standard", [], null, "kickoff").find((l) => l.id === "bordsduk")!.qty, 4, "per-event quantities");
+assert.ok(buildPackage("standard", [], "300+" as never, "kickoff").length > 0);
+assert.equal(delivery("2026-11-20", ["hoodies"], new Date(2026, 9, 6), "kickoff")!.leadDays, 10, "kick-off merch lead time");
+
+console.log("demoPackages: all checks passed", perEvent, { bas: packageTotal(bas), standard: packageTotal(std), komplett: packageTotal(full), fit25k: packageTotal(tight.lines), fit25kLines: tight.lines });

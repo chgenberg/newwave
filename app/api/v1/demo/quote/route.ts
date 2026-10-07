@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { EVENTS } from "@/lib/demoCatalog";
+import { EVENTS } from "@/lib/demoEvents";
 import { cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
 import { sendQuoteMail } from "@/lib/demoMail";
 import { OfferFields, priceLines } from "@/lib/demoOffer";
@@ -20,7 +20,6 @@ const MAX_STORED = () => envInt("DEMO_QUOTE_MAX_STORED", 5000);
 
 const Body = z.object({
   ...OfferFields,
-  event: z.enum(EVENTS.map((e) => e.label) as [string, ...string[]]),
   totalSek: z.number().nonnegative().max(1e10).optional(),
   contact: z.object({
     name: z.string().max(80).default(""),
@@ -34,7 +33,7 @@ export async function POST(req: Request) {
   if (body === undefined) return Response.json({ error: "Förfrågan är för stor" }, { status: 413 });
   const parsed = Body.safeParse(body);
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-  const priced = priceLines(parsed.data.lines);
+  const priced = priceLines(parsed.data.lines, parsed.data.event);
   if (!priced) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
 
   const verdict = limiter.take(clientIp(req));
@@ -54,7 +53,8 @@ export async function POST(req: Request) {
     createdAt: now.toISOString(),
     token: randomBytes(16).toString("base64url"),
     brand: { name: cleanText(parsed.data.brand.name, 80) || "Okänt varumärke", site: parsed.data.brand.site },
-    event: parsed.data.event,
+    event: EVENTS[parsed.data.event].label,
+    eventId: parsed.data.event,
     eventDate: parsed.data.eventDate ?? "",
     visitors: parsed.data.visitors ?? "",
     package: parsed.data.package ?? "",

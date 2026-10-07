@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BOOTH_ITEMS, BoothError, LOGO_URL, brandedBooth } from "@/lib/demoBooth";
 import { BOOTH_FORMATS } from "@/lib/demoCatalog";
+import { EVENTS, EVENT_IDS } from "@/lib/demoEvents";
 import { ANALYSIS_ID } from "@/lib/demoSiteCache";
 import { SITE, clientIp, readJson } from "@/lib/demoLimit";
 import { errorMessage } from "@/lib/openai";
@@ -12,9 +13,10 @@ const Body = z.object({
   site: z.union([z.literal(""), z.string().trim().toLowerCase().max(120).regex(SITE)]).default(""),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#1D1D1F"),
   light: z.string().max(80).regex(LOGO_URL),
-  products: z.array(z.enum(BOOTH_ITEMS)).max(BOOTH_ITEMS.length).default([...BOOTH_ITEMS]),
+  products: z.array(z.enum(BOOTH_ITEMS)).max(BOOTH_ITEMS.length).optional(),
   analysisId: z.string().regex(ANALYSIS_ID).optional(),
   format: z.enum(BOOTH_FORMATS).default("3:2"),
+  event: z.enum(EVENT_IDS).default("massa"),
 });
 
 export async function POST(req: Request) {
@@ -23,13 +25,15 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(body);
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   try {
-    return Response.json(await brandedBooth({ ...parsed.data, products: [...new Set(parsed.data.products)] }, clientIp(req)));
+    const set = EVENTS[parsed.data.event].set;
+    const products = set.filter((i) => (parsed.data.products ?? set).includes(i));
+    return Response.json(await brandedBooth({ ...parsed.data, products }, clientIp(req)));
   } catch (e) {
     if (e instanceof BoothError) {
       const headers = e.retryAfterSec ? { "Retry-After": String(e.retryAfterSec) } : undefined;
       return Response.json({ error: e.message }, { status: e.status, headers });
     }
     console.error("demo/booth", errorMessage(e));
-    return Response.json({ error: "Kunde inte bygga montern just nu. Försök igen." }, { status: 502 });
+    return Response.json({ error: parsed.data.event === "massa" ? "Kunde inte bygga montern just nu. Försök igen." : "Kunde inte skapa bilden just nu. Försök igen." }, { status: 502 });
   }
 }

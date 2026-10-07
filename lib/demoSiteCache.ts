@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import type { EventDirection } from "./demoScenes";
 import type { LogoResult } from "./logo";
 
 export type SiteAnalysis = {
@@ -17,6 +18,8 @@ export type SiteAnalysis = {
   scene: { screen: string; rollup: string; counter: string; shelves: string; staff: string; materials: string; lighting: string };
   images: { url: string; hash: string; caption: string; description: string; selected: boolean }[];
   merch: { id: string; reason: string }[];
+  /** Art direction for conference, kick-off and event; missing on analyses made before those existed. */
+  events?: Partial<Record<"konferens" | "kickoff" | "event", EventDirection & { reasons: Record<string, string> }>>;
   logo: { status: "ok" | "replaced" | "wordmark"; note: string; result: LogoResult | null };
   timings: { scrapeMs: number; analyzeMs: number };
 };

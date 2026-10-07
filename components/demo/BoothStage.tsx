@@ -1,29 +1,18 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { EVENTS, type EventConfig } from "@/lib/demoEvents";
 import { Icons } from "./parts";
 
 export type Hotspot = { id: string; x: number; y: number; label: string; added: boolean };
 
 export type Phase = "logo" | "site" | "booth";
-type Loading = { phase: Phase; name: string; industry?: string };
+type Loading = { phase: Phase; name: string; industry?: string; copy?: EventConfig["loading"] };
 
 const SITE_LINES = ["Hittar produkter och tjänster…", "Tittar på bilder och produkter…", "Läser in varumärkets ton…", "Väljer profilprodukter som passar…"];
-/** One booth request renders, reviews and possibly retakes; the server doesn't stream, so the stages follow typical timings. */
-const BOOTH_STAGES: [number, string][] = [
-  [0, "Bygger montern…"],
-  [4, "Trycker mässväggen…"],
-  [8, "Ställer fram era produkter…"],
-  [12, "Klär personalen i profilkläder…"],
-  [16, "Kvalitetsgranskar bilden…"],
-  [23, "Gör om en detalj…"],
-  [38, "Kvalitetsgranskar igen…"],
-  [45, "Gör om en detalj…"],
-  [60, "Sista detaljerna…"],
-];
-
-/** Progress bands: logo 0-15 %, site reading 15-45 %, booth image 45-95 %. */
-function BuildingOverlay({ phase, name, industry }: Loading) {
+/** Progress bands: logo 0-15 %, site reading 15-45 %, booth image 45-95 %. One image request renders, reviews and possibly
+ * retakes; the server doesn't stream, so the stage lines follow typical timings. */
+function BuildingOverlay({ phase, name, industry, copy = EVENTS.massa.loading }: Loading) {
   const [now, setNow] = useState(() => Date.now());
   const [since, setSince] = useState(() => ({ phase, at: Date.now() }));
   const [peak, setPeak] = useState(0);
@@ -37,7 +26,7 @@ function BuildingOverlay({ phase, name, industry }: Loading) {
   const target = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(25);
   if (target > peak) setPeak(target);
   const progress = Math.max(peak, target);
-  const boothLine = industry && elapsed < 4 ? `Anpassar montern för ${industry.toLowerCase()}…` : [...BOOTH_STAGES].reverse().find(([t]) => elapsed >= t)![1];
+  const boothLine = industry && elapsed < 4 ? `${copy.tailoring} ${industry.toLowerCase()}…` : [...copy.stages].sort((a, b) => b[0] - a[0]).find(([t]) => elapsed >= t)![1];
   const line =
     phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? SITE_LINES[Math.min(SITE_LINES.length - 1, Math.floor(elapsed / 9))] : boothLine;
   const sub =
@@ -45,7 +34,7 @@ function BuildingOverlay({ phase, name, industry }: Loading) {
       ? "Vi letar upp logga och färger på webbplatsen."
       : phase === "site"
         ? `Vi läser ${name}s webbplats för att förstå vad ni erbjuder.`
-        : `Vi bygger en unik monter för ${name}. Vi granskar varje bild innan du får se den.`;
+        : `${copy.sub(name)} Vi granskar varje bild innan du får se den.`;
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 backdrop-blur-[6px]" role="status" aria-live="polite">
       <div className="w-[min(380px,86%)] rounded-3xl bg-white/95 p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.12)]">
@@ -85,7 +74,7 @@ export function BoothStage(props: {
             onClick={() => props.onSpot?.(s.id)}
             style={{ left: `${s.x}%`, top: `${s.y}%` }}
             className="group absolute z-[5] hidden -translate-x-1/2 -translate-y-1/2 sm:block"
-            aria-label={`${s.label}${s.added ? " – i montern" : " – lägg till"}`}
+            aria-label={`${s.label}${s.added ? " – vald" : " – lägg till"}`}
           >
             <span className="absolute inset-0 animate-ping rounded-full bg-[#2563EB]/40 [animation-duration:2.4s]" />
             <span className="relative flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#2563EB] text-white shadow-[0_4px_14px_rgba(37,99,235,0.45)] transition group-hover:scale-110">

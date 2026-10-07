@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BOOTH_ASPECTS, type BoothFormat, cropOf, lineTotal, type Product, SWATCHES, sek } from "@/lib/demoCatalog";
+import { BOOTH_ASPECTS, type BoothFormat, lineTotal, type Product, SWATCHES, sek } from "@/lib/demoCatalog";
+import { type EventId, cropOf } from "@/lib/demoEvents";
 import { CropThumb, Icons, Primary, Stepper } from "./parts";
 
 export type Line = { qty: number; model: string; color: string; style: string };
-/** The booth photo a product crop is cut from, and the framing its crop coordinates belong to. */
-export type BoothView = { url: string; format: BoothFormat };
+/** The photo a set piece is cut from, and the framing and scene its crop coordinates belong to. */
+export type BoothView = { url: string; format: BoothFormat; event: EventId };
 
 export function productImage(p: Product, modelId: string, mockups: Record<string, string>) {
   const m = p.models.find((x) => x.id === modelId) ?? p.models[0];
@@ -14,10 +15,9 @@ export function productImage(p: Product, modelId: string, mockups: Record<string
 }
 
 export function ProductVisual({ product, model, mockups, boothFor, className = "", aspect = 4 / 3 }: { product: Product; model: string; mockups: Record<string, string>; boothFor: (p: Product) => BoothView; className?: string; aspect?: number }) {
-  if (product.crop) {
-    const b = boothFor(product);
-    return <CropThumb url={b.url} crop={cropOf(product, b.format) ?? product.crop} source={BOOTH_ASPECTS[b.format]} aspect={aspect} className={className} />;
-  }
+  const b = product.booth ? boothFor(product) : null;
+  const crop = b && cropOf(product, b.format, b.event);
+  if (b && crop) return <CropThumb url={b.url} crop={crop} source={BOOTH_ASPECTS[b.format]} aspect={aspect} className={className} />;
   const src = productImage(product, model, mockups);
   return (
     <div className={`flex items-center justify-center overflow-hidden bg-white ${className}`} style={{ aspectRatio: String(aspect) }}>

@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BOOTH_ASPECTS, type BoothFormat, type Crop, sek } from "@/lib/demoCatalog";
+import { BOOTH_ASPECTS, type BoothFormat, sek } from "@/lib/demoCatalog";
+import type { EventConfig } from "@/lib/demoEvents";
 import { fmtDay, visitorsLabel } from "@/lib/demoPackages";
 import { CropThumb, Icons, Primary, Secondary, TrustLine } from "./parts";
 
@@ -9,7 +10,7 @@ export type OfferLine = { id: string; model: string; name: string; spec: string;
 
 type Props = {
   brand: { name: string; logo: string | null; site: string; tagline?: string; industry?: string };
-  event: string;
+  event: EventConfig;
   date: Date;
   reference: string;
   booth: string;
@@ -20,18 +21,6 @@ type Props = {
   visitors?: string;
   delivery?: string;
   onClose: () => void;
-};
-
-/** Detail crops on page 2; a 4:3 booth has the same layout with ceiling and floor added, so its coordinates differ. */
-const DETAILS: Record<BoothFormat, [Crop, Crop]> = {
-  "3:2": [
-    { cx: 84, cy: 45, w: 30 },
-    { cx: 50, cy: 62, w: 40 },
-  ],
-  "4:3": [
-    { cx: 81, cy: 48, w: 28 },
-    { cx: 50, cy: 62, w: 37 },
-  ],
 };
 
 const fmtDate = (d: Date) => d.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" });
@@ -55,12 +44,14 @@ function Logo({ brand }: { brand: Props["brand"] }) {
 
 export function PrintOffer(p: Props) {
   const format = p.format ?? "3:2";
-  const [shelves, counter] = DETAILS[format];
+  const ev = p.event;
+  /** A 4:3 image has the same layout with ceiling and floor added, so its detail crops differ. */
+  const [first, second] = ev.detailCrops[format];
   const rows: [ReactNode, string, string][] = [
     [Icons.user, "Kund", p.brand.name],
-    [Icons.calendar, "Event", `${p.event} ${p.date.getFullYear()}`],
-    ...(p.eventDate ? [[Icons.calendar, "Mässdatum", fmtDay(p.eventDate)] as [ReactNode, string, string]] : []),
-    ...(p.visitors ? [[Icons.user, "Besökare", `ca ${visitorsLabel(p.visitors).toLowerCase()}`] as [ReactNode, string, string]] : []),
+    [Icons.calendar, "Typ", `${ev.label} ${p.date.getFullYear()}`],
+    ...(p.eventDate ? [[Icons.calendar, ev.pdfDateLabel, fmtDay(p.eventDate)] as [ReactNode, string, string]] : []),
+    ...(p.visitors ? [[Icons.user, ev.people.replace(/^./, (c) => c.toUpperCase()), `ca ${visitorsLabel(p.visitors, ev.id).toLowerCase()}`] as [ReactNode, string, string]] : []),
     ...(p.delivery ? [[Icons.truck, "Leverans", p.delivery] as [ReactNode, string, string]] : []),
     [Icons.calendar, "Offertdatum", fmtDate(p.date)],
     [Icons.doc, "Offertnummer", `#${p.reference}`],
@@ -90,12 +81,10 @@ export function PrintOffer(p: Props) {
           <div className="mt-[7mm] grid grid-cols-[62mm_1fr] items-start gap-[7mm]">
             <div>
               <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#6E6E73]">Offertförslag</p>
-              <h1 className="mt-2 text-[25px] font-semibold leading-[1.05] tracking-tight">Mässmonter med produkter</h1>
+              <h1 className="mt-2 text-[25px] font-semibold leading-[1.05] tracking-tight">{ev.title} med produkter</h1>
               {p.brand.tagline && <p className="mt-2 text-[12px] font-medium italic leading-snug text-[#1D1D1F]">”{p.brand.tagline}”</p>}
               <p className="mt-3 text-[10px] leading-relaxed text-[#424245]">
-                {p.brand.industry
-                  ? `Ett komplett förslag på mässmonter anpassad för ${p.brand.industry.toLowerCase()}, med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger.`
-                  : "Ett komplett förslag på mässmonter med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger."}
+                {`Ett komplett förslag på ${ev.pitch}${p.brand.industry ? ` anpassad för ${p.brand.industry.toLowerCase()}` : ""}, med varumärkesprofil och utvalda produkter. Alla produkter är anpassade med er logotyp och era färger.`}
               </p>
               <div className="mt-4 space-y-2 rounded-xl bg-[#F5F5F7] p-3.5">
                 {rows.map(([icon, k, v]) => (
@@ -110,7 +99,7 @@ export function PrintOffer(p: Props) {
               </div>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.booth} alt="Montern" className="aspect-[3/2] w-full rounded-xl object-cover" />
+            <img src={p.booth} alt={ev.title} className="aspect-[3/2] w-full rounded-xl object-cover" />
           </div>
 
           <h2 className="mt-[6mm] text-[13px] font-semibold">Produkter i offerten</h2>
@@ -165,22 +154,22 @@ export function PrintOffer(p: Props) {
             <Logo brand={p.brand} />
             <p className="text-[9px] text-[#86868B]">Offertnummer #{p.reference} · Sida 2 av 2</p>
           </div>
-          <h2 className="mt-[9mm] text-[22px] font-semibold tracking-tight">Visualisering av montern</h2>
+          <h2 className="mt-[9mm] text-[22px] font-semibold tracking-tight">Visualisering av {ev.the}</h2>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.booth} alt="Montern" className="mt-4 aspect-[3/2] w-full rounded-xl object-cover" />
+          <img src={p.booth} alt={ev.title} className="mt-4 aspect-[3/2] w-full rounded-xl object-cover" />
           <div className="mt-[5mm] grid grid-cols-2 gap-[5mm]">
             <figure>
-              <CropThumb url={p.booth} crop={shelves} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
-              <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">Detalj: produktdisplay</figcaption>
+              <CropThumb url={p.booth} crop={first} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
+              <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">{ev.details[0]}</figcaption>
             </figure>
             <figure>
-              <CropThumb url={p.booth} crop={counter} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
-              <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">Detalj: mässdisk och profilprodukter</figcaption>
+              <CropThumb url={p.booth} crop={second} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
+              <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">{ev.details[1]}</figcaption>
             </figure>
           </div>
           <div className="mt-auto grid grid-cols-4 gap-[4mm] border-t border-black/10 pt-[6mm]">
             {[
-              [Icons.truck, "Helhetslösning", "Allt du behöver för en lyckad mässa på ett ställe."],
+              [Icons.truck, "Helhetslösning", `Allt du behöver för ${ev.bigOne.replace(/^(en|ett) stort? /, (m) => (m.startsWith("ett") ? "ett lyckat " : "en lyckad "))} på ett ställe.`],
               [Icons.brush, "Varumärkesanpassat", "Alla produkter med er logotyp och era färger."],
               [Icons.doc, "Snabb leverans", "Vi ser till att allt levereras i tid inför ert event."],
               [Icons.headset, "Personlig kontakt", "En av våra säljare hjälper er hela vägen."],

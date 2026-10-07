@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BUDGET_MAX, BUDGET_MIN, VISITORS, type VisitorsId, sek } from "@/lib/demoCatalog";
+import type { EventConfig } from "@/lib/demoEvents";
 import type { PackageId } from "@/lib/demoPackages";
 import { Icons } from "./parts";
 
@@ -46,6 +47,7 @@ export function PackageCards({ cards, selected, onSelect }: { cards: PackageCard
 }
 
 type PlanProps = {
+  event: EventConfig;
   eventDate: string;
   onDate: (v: string) => void;
   visitors: VisitorsId | "";
@@ -68,16 +70,16 @@ export function EventPlan(p: PlanProps) {
     <div className="rounded-2xl bg-[#F5F5F7] p-4 sm:p-5">
       <div className="grid gap-3 sm:grid-cols-3">
         <label>
-          <span className="text-[13px] font-medium">När är mässan?</span>
+          <span className="text-[13px] font-medium">{p.event.dateQuestion}</span>
           <input type="date" min={min} value={p.eventDate} onChange={(e) => p.onDate(e.target.value)} className={FIELD} />
         </label>
         <label>
-          <span className="text-[13px] font-medium">Ungefär hur många besökare?</span>
+          <span className="text-[13px] font-medium">Ungefär hur många {p.event.people}?</span>
           <select value={p.visitors} onChange={(e) => p.onVisitors(e.target.value as VisitorsId | "")} className={FIELD}>
             <option value="">Vet inte</option>
-            {VISITORS.map((v) => (
+            {VISITORS.map((v, i) => (
               <option key={v.id} value={v.id}>
-                {v.label}
+                {p.event.audience[i]}
               </option>
             ))}
           </select>

@@ -17,6 +17,7 @@ const Body = z.object({
   lines: OfferFields.lines,
   eventDate: OfferFields.eventDate,
   visitors: OfferFields.visitors,
+  event: OfferFields.event,
   reference: z.union([z.literal(""), z.string().regex(/^MF-\d{4}-\d{4}-\d{3}$/)]).optional(),
 });
 
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   if (body === undefined) return Response.json({ error: "Förfrågan är för stor" }, { status: 413 });
   const parsed = Body.safeParse(body);
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-  const priced = priceLines(parsed.data.lines);
+  const priced = priceLines(parsed.data.lines, parsed.data.event);
   if (!priced) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
 
   const verdict = limiter.take(clientIp(req));
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     brand: { name: cleanText(parsed.data.brand.name, 80) || "Okänt varumärke", site: parsed.data.brand.site },
     boothUrl: parsed.data.boothUrl,
     format: parsed.data.format,
+    event: parsed.data.event,
     ...priced,
     eventDate: parsed.data.eventDate ?? "",
     visitors: parsed.data.visitors ?? "",

@@ -3,17 +3,18 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { toFile } from "openai";
 import sharp from "sharp";
-import type { BoothFormat } from "./demoCatalog";
+import { BOOTH_ITEMS, type BoothFormat, type BoothItem } from "./demoCatalog";
+import { EVENTS, type EventId } from "./demoEvents";
 import { SITE, cleanText, createLimiter, envInt } from "./demoLimit";
 import { type BoothReview, reviewBooth } from "./demoBoothQa";
+import { SCENES, type Scene, closeUpFor, rangeText } from "./demoScenes";
 import { type SiteAnalysis, readAnalysis } from "./demoSiteCache";
 import { IMAGE_MODEL, IMAGE_QUALITY, hasOpenAIKey, openai } from "./openai";
 import { loadFile, saveFile } from "./store";
 
-export const BOOTH_ITEMS = ["massvagg", "rollup", "beachflagga", "massdisk", "skyltstall"] as const;
-export type BoothItem = (typeof BOOTH_ITEMS)[number];
+export { BOOTH_ITEMS, type BoothItem };
 
-export type BoothRequest = { name: string; site: string; color: string; light: string; products: BoothItem[]; analysisId?: string; format: BoothFormat };
+export type BoothRequest = { name: string; site: string; color: string; light: string; products: BoothItem[]; analysisId?: string; format: BoothFormat; event: EventId };
 export type BoothResult = { url: string; color: string; cached: boolean; attempts?: number; format: BoothFormat };
 
 export class BoothError extends Error {
@@ -56,7 +57,7 @@ const FORMATS: Record<BoothFormat, { reference: string; size: "1536x1024" | "102
       "square frame. Keep the framing of the first reference image exactly: the whole booth fits horizontally with small margins at both sides (the beach flag and the shelving are never cut off), the booth sits in the vertical middle, with the hall ceiling above and the carpet floor below",
   },
 };
-const reference = (f: BoothFormat) => path.join(process.cwd(), "public", "demo", FORMATS[f].reference);
+const reference = (f: BoothFormat, ev: EventId) => path.join(process.cwd(), "public", "demo", ev === "massa" ? FORMATS[f].reference : SCENES[ev].reference[f]);
 
 /** Horizontal positions (percent of the image width) in each format's reference. */
 const AT: Record<BoothFormat, { flag: string; rollup: string; stand: string; shelves: string }> = {
@@ -96,7 +97,7 @@ const EXPECTED: [BoothItem | null, string][] = [
   [null, "open shelving with products and merch on the right"],
 ];
 
-const MISSING: Record<BoothItem, string> = {
+const MISSING: Partial<Record<BoothItem, string>> = {
   massvagg: "The back wall is a plain neutral light grey wall without logo or print.",
   rollup: "There is no roll-up banner; leave that floor space empty.",
   beachflagga: "There is no beach flag; leave that space empty.",
@@ -118,8 +119,11 @@ export function boothColor(hex: string) {
   return sat < 0.18 ? "#14233C" : hex.toUpperCase();
 }
 
+const missingOf = (req: BoothRequest, text: Partial<Record<BoothItem, string>>) =>
+  EVENTS[req.event].set.filter((i) => !req.products.includes(i)).flatMap((i) => (text[i] ? [text[i]] : []));
+
 function prompt(req: BoothRequest, color: string) {
-  const missing = BOOTH_ITEMS.filter((i) => !req.products.includes(i)).map((i) => MISSING[i]);
+  const missing = missingOf(req, MISSING);
   return `Photorealistic photo of a professionally built trade show booth for the company "${promptName(req.name, req.site)}"${SITE.test(req.site) ? ` (${req.site})` : ""}, shot on a full-frame camera, eye level, straight on, ${FORMATS[req.format].framing}.
 The first reference image shows the exact booth layout, camera angle, framing, lighting, people and object positions: keep all of them the same, only rebrand the booth.
 The second reference image is the company's logo. Replace every "DIN LOGO" placeholder with this exact logo – identical shapes, letters and proportions, no invented or distorted characters, no other text. On dark surfaces print the logo in white, on light surfaces in its own colours.
@@ -130,7 +134,7 @@ ${REALISM}`;
 }
 
 function tailoredPrompt(req: BoothRequest, a: SiteAnalysis, color: string, refs: string[]) {
-  const missing = BOOTH_ITEMS.filter((i) => !req.products.includes(i)).map((i) => MISSING[i]);
+  const missing = missingOf(req, MISSING);
   const name = promptName(a.brandName || req.name, req.site);
   const what = [a.industryEn && `a ${a.industryEn} company`, a.offeringEn].filter(Boolean).join(" – ");
   const s = a.scene;
@@ -157,6 +161,27 @@ ${[
     .join("\n")}
 ${missing.join("\n")}
 ${REALISM}`;
+}
+
+/** Conference, kick-off and event share one prompt shape; the scene supplies layout, people and what the analysis may change. */
+function scenePrompt(req: BoothRequest, sc: Scene, color: string, a: SiteAnalysis | null, refs: string[]) {
+  const d = a?.events?.[req.event as Exclude<EventId, "massa">] ?? null;
+  const name = promptName(a?.brandName || req.name, req.site);
+  const what = a ? [a.industryEn && `a ${a.industryEn} company`, a.offeringEn].filter(Boolean).join(" – ") : "";
+  return `Photorealistic photo of ${sc.subject} for "${name}"${what ? `, ${what}` : SITE.test(req.site) ? ` (${req.site})` : ""}, shot on a full-frame camera, eye level, straight on, ${req.format === "4:3" ? sc.framing43 : "landscape"}. It must look like it was produced specifically for this company by a top event agency.
+${sc.intro}
+The first reference image shows the exact layout, camera angle, framing, lighting, people and object positions: keep all of them the same, only restyle and brand the scene for this company.
+The second reference image is the company's logo. Replace every "DIN LOGO" placeholder with this exact logo – identical shapes, letters and proportions, no invented or distorted characters, no other text. On dark surfaces print the logo in white, on light surfaces in its own colours.
+${refs.length ? `The remaining reference images are the company's real products or services from its website: ${refs.map((r, i) => `(${i + 3}) ${r}`).join("; ")}. Reproduce these exact items – same shapes, packaging and colours, without readable small print – ${sc.productsGo}.
+` : ""}Brand colour: ${color}. ${a?.tone ? `Visual tone: ${a.tone}. ` : ""}Use the brand colour as the dominant colour of ${sc.colours}, combined with white and natural materials. Premium, clean Scandinavian design.
+${sc.layout(rangeText(req.format))}
+Company-specific content at those positions:
+${sc.content(d).filter(Boolean).join("\n")}
+${missingOf(req, sc.missing).join("\n")}
+Realism requirements (most important):
+- It must look like an unedited photo by a professional event photographer: physically plausible light, shadows and reflections, correct perspective, nothing floating in the air.
+${sc.people}
+- Every logo is spelled exactly as in the logo reference, letter for letter. No garbled, invented or nonsense text anywhere; small print on products may be illegible but must not look like fake letters.`;
 }
 
 /** The logo's own colour wins; monochrome logos borrow the brand colour the analysis saw on the site. */
@@ -218,9 +243,11 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
     .resize(1024, 1024, { fit: "contain", background: "#FFFFFF" })
     .png()
     .toBuffer();
-  const booth = await readFile(reference(req.format));
+  const booth = await readFile(reference(req.format, req.event));
   const fmt = FORMATS[req.format];
-  const base = analysis ? tailoredPrompt(req, analysis, color, refs.map((r) => r.description)) : prompt(req, color);
+  const sc = req.event === "massa" ? null : SCENES[req.event];
+  const descriptions = refs.map((r) => r.description);
+  const base = sc ? scenePrompt(req, sc, color, analysis, descriptions) : analysis ? tailoredPrompt(req, analysis, color, descriptions) : prompt(req, color);
   const generate = async (fixes: string[]) => {
     const res = await openai().images.edit({
       model: IMAGE_MODEL,
@@ -232,6 +259,7 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
     });
     const b64 = res.data?.[0]?.b64_json;
     if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
+    if (res.usage) console.info(`demo/booth ${req.event} ${req.format} usage in=${res.usage.input_tokens} out=${res.usage.output_tokens}`);
     const out = await sharp(Buffer.from(b64, "base64")).resize({ width: fmt.width, withoutEnlargement: true }).toBuffer();
     const cut = fmt.crop ? sharp(out).extract({ left: 0, top: fmt.crop.top, width: fmt.width, height: fmt.crop.height }) : sharp(out);
     return cut.jpeg({ quality: 84, mozjpeg: true }).toBuffer();
@@ -251,8 +279,16 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
       if (!best) throw e;
       break;
     }
-    const review = await reviewBooth(jpg, logo, { name: promptName(analysis?.brandName || req.name, req.site), tagline: analysis?.tagline, layout: EXPECTED.filter(([i]) => !i || req.products.includes(i)).map(([, d]) => d), format: req.format });
-    console.info(`demo/booth ${req.site} attempt ${attempts}: ${review ? (review.ok ? "ok" : review.issues.join(" | ")) : "review failed"} (${Date.now() - t0} ms)`);
+    const expected = sc ? sc.expected : EXPECTED;
+    const direction = sc ? analysis?.events?.[req.event as Exclude<EventId, "massa">] : null;
+    const review = await reviewBooth(jpg, logo, {
+      name: promptName(analysis?.brandName || req.name, req.site),
+      tagline: sc ? (sc.printedTheme ? direction?.theme : undefined) : analysis?.tagline,
+      layout: expected.filter(([i]) => !i || req.products.includes(i)).map(([, d]) => d),
+      format: req.format,
+      scene: sc ? { subject: sc.subject, people: sc.reviewPeople, closeUp: closeUpFor(sc.closeUp, req.format) } : undefined,
+    });
+    console.info(`demo/booth ${req.event} ${req.site} attempt ${attempts}: ${review ? (review.ok ? "ok" : review.issues.join(" | ")) : "review failed"} (${Date.now() - t0} ms)`);
     if (!best || (review && (!best.review || review.issues.length < best.review.issues.length))) best = { jpg, review };
     if (!review || review.ok) break;
     fixes = review.issues;
@@ -261,7 +297,7 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
   await mkdir(CACHE, { recursive: true });
   await writeFile(
     path.join(CACHE, `${key}.json`),
-    JSON.stringify({ url: file.url, color, format: req.format, site: req.site, products: req.products, analysisId: analysis?.id, attempts, review: best!.review, createdAt: new Date().toISOString() }),
+    JSON.stringify({ url: file.url, color, format: req.format, event: req.event, site: req.site, products: req.products, analysisId: analysis?.id, attempts, review: best!.review, createdAt: new Date().toISOString() }),
   );
   return { url: file.url, color, cached: false, attempts, format: req.format };
 }
@@ -277,24 +313,26 @@ export async function brandedBooth(req: BoothRequest, ip: string): Promise<Booth
   if (!print) throw new BoothError("Kunde inte läsa loggan. Hämta den igen.", 400);
   const found = req.analysisId ? await readAnalysis(req.analysisId) : null;
   const analysis = found && found.host === req.site ? found : null;
-  /** 3:2 keys are unchanged so existing desktop booths stay cached. */
-  const framing = req.format === "3:2" ? [] : [req.format];
+  /** 3:2 trade-show keys are unchanged so existing desktop booths stay cached. */
+  const framing = [...(req.format === "3:2" ? [] : [req.format]), ...(req.event === "massa" ? [] : [req.event])];
+  const directed = req.event !== "massa" && analysis?.events?.[req.event] ? ["directed"] : [];
   const key = analysis
-    ? hash([PIPELINE, TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash), ...framing])
+    ? hash([PIPELINE, TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash), ...framing, ...directed])
     : hash([PIPELINE, VERSION, req.site, print, boothColor(req.color), productKey(req), ...framing]);
   const hit = await readCache(key);
   if (hit) return hit;
 
   let job = inFlight.get(key);
   if (!job) {
-    if (!hasOpenAIKey()) throw new BoothError("Bildgenerering är inte aktiverad här, så vi visar en neutral monter. Resten av demon fungerar som vanligt.", 503);
-    if (inFlight.size >= MAX_CONCURRENT()) throw new BoothError("Många bygger montrar just nu. Försök igen om en minut – eller fortsätt med den neutrala montern.", 429, 60);
+    const w = req.event === "massa" ? { a: "en neutral monter", the: "den neutrala montern", many: "montrar" } : { a: "en neutral bild", the: "den neutrala bilden", many: "bilder" };
+    if (!hasOpenAIKey()) throw new BoothError(`Bildgenerering är inte aktiverad här, så vi visar ${w.a}. Resten av demon fungerar som vanligt.`, 503);
+    if (inFlight.size >= MAX_CONCURRENT()) throw new BoothError(`Många skapar ${w.many} just nu. Försök igen om en minut – eller fortsätt med ${w.the}.`, 429, 60);
     const verdict = limiter.take(ip);
     if (!verdict.ok) {
       const msg =
         verdict.reason === "key"
-          ? "Du har byggt många montrar på kort tid. Försök igen om en stund – eller fortsätt med den neutrala montern."
-          : "Demon har nått sin gräns för nya montrar just nu. Försök igen senare – eller fortsätt med den neutrala montern.";
+          ? `Du har skapat många ${w.many} på kort tid. Försök igen om en stund – eller fortsätt med ${w.the}.`
+          : `Demon har nått sin gräns för nya ${w.many} just nu. Försök igen senare – eller fortsätt med ${w.the}.`;
       throw new BoothError(msg, 429, verdict.retryAfterSec);
     }
     job = render(req, logo.data, key, analysis).finally(() => inFlight.delete(key));

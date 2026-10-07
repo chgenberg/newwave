@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { BoothFormat } from "./demoCatalog";
+import type { EventId } from "./demoEvents";
 import type { PricedLine } from "./demoOffer";
 
 export type ShareEvent = { at: string; action: "approve" | "comment"; name: string; comment: string };
@@ -12,6 +13,8 @@ export type Share = {
   boothUrl?: string;
   /** Missing on links shared before booths had a format. */
   format?: BoothFormat;
+  /** Missing on links shared before the event choice existed (all trade shows). */
+  event?: EventId;
   lines: PricedLine[];
   totalSek: number;
   eventDate: string;

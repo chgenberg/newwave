@@ -1,4 +1,5 @@
 import { sek } from "./demoCatalog";
+import { eventOf } from "./demoEvents";
 import { type QuoteDoc, quotePdf } from "./demoPdf";
 
 export type MailResult = { sent: true } | { sent: false; reason: "not_configured" | "failed" };
@@ -16,10 +17,10 @@ export async function sendQuoteMail(q: QuoteDoc): Promise<MailResult> {
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       signal: AbortSignal.timeout(20_000),
       body: JSON.stringify({
-        from: process.env.DEMO_MAIL_FROM || "Mässmonter <onboarding@resend.dev>",
+        from: process.env.DEMO_MAIL_FROM || "Offertförslag <onboarding@resend.dev>",
         to: [q.contact.email],
         ...(process.env.DEMO_MAIL_BCC ? { bcc: [process.env.DEMO_MAIL_BCC] } : {}),
-        subject: `Er offert ${q.reference} – mässmonter för ${q.brand.name}`,
+        subject: `Er offert ${q.reference} – ${eventOf(q.eventId ?? q.event).title.toLowerCase()} för ${q.brand.name}`,
         text: [
           `Hej${q.contact.name ? ` ${q.contact.name}` : ""}!`,
           "",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PROMO_PRODUCTS } from "@/lib/demoCatalog";
+import type { Product } from "@/lib/demoCatalog";
 import type { LogoResult } from "@/lib/logo";
 import type { ProductLibrary } from "@/lib/merch";
 import { composeMerch } from "@/lib/merchCompose";
@@ -11,13 +11,13 @@ const library = (which: "products" | "demo") =>
   (libraries[which] ??= fetch(which === "demo" ? "/demo/products/library.json" : "/products/library.json").then((r): Promise<ProductLibrary> => (r.ok ? r.json() : Promise.resolve({}))));
 
 /** Composes the logo onto every product photo in the browser, default models first. Keyed by product:model. */
-export function useMockups(logo: LogoResult | null) {
+export function useMockups(logo: LogoResult | null, products: Product[]) {
   const [state, setState] = useState<{ key: string; urls: Record<string, string> }>({ key: "", urls: {} });
   useEffect(() => {
     if (!logo) return;
     let cancelled = false;
     const key = logo.light;
-    const jobs = [0, 1, 2].flatMap((i) => PROMO_PRODUCTS.flatMap((p) => (p.models[i]?.mockup ? [{ p, m: p.models[i] }] : [])));
+    const jobs = [0, 1, 2].flatMap((i) => products.flatMap((p) => (p.models[i]?.mockup ? [{ p, m: p.models[i] }] : [])));
     const wide = logo.width / logo.height > 3.5;
     (async () => {
       for (const { p, m } of jobs) {
@@ -42,6 +42,6 @@ export function useMockups(logo: LogoResult | null) {
     return () => {
       cancelled = true;
     };
-  }, [logo]);
+  }, [logo, products]);
   return logo && state.key === logo.light ? state.urls : {};
 }
