@@ -24,14 +24,19 @@ const BOOTH_STAGES: [number, string][] = [
 
 /** Progress bands: logo 0-15 %, site reading 15-45 %, booth image 45-95 %. */
 function BuildingOverlay({ phase, name, industry }: Loading) {
-  const [elapsed, setElapsed] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const [since, setSince] = useState(() => ({ phase, at: Date.now() }));
+  const [peak, setPeak] = useState(0);
+  if (since.phase !== phase) setSince({ phase, at: now });
   useEffect(() => {
-    const started = Date.now();
-    const t = setInterval(() => setElapsed((Date.now() - started) / 1000), 400);
+    const t = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(t);
-  }, [phase]);
+  }, []);
+  const elapsed = since.phase === phase ? Math.max(0, (now - since.at) / 1000) : 0;
   const ease = (tau: number) => 1 - Math.exp(-elapsed / tau);
-  const progress = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(25);
+  const target = phase === "logo" ? 0.02 + 0.13 * ease(10) : phase === "site" ? 0.15 + 0.3 * ease(22) : 0.45 + 0.5 * ease(25);
+  if (target > peak) setPeak(target);
+  const progress = Math.max(peak, target);
   const boothLine = industry && elapsed < 4 ? `Anpassar montern för ${industry.toLowerCase()}…` : [...BOOTH_STAGES].reverse().find(([t]) => elapsed >= t)![1];
   const line =
     phase === "logo" ? "Läser webbplatsen…" : phase === "site" ? SITE_LINES[Math.min(SITE_LINES.length - 1, Math.floor(elapsed / 9))] : boothLine;
@@ -50,7 +55,7 @@ function BuildingOverlay({ phase, name, industry }: Loading) {
         </p>
         <p className="mt-1 text-[13px] text-[#6E6E73]">{sub}</p>
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[#E8E8ED]">
-          <div className="h-full rounded-full bg-[#2563EB] transition-[width] duration-500" style={{ width: `${Math.round(progress * 100)}%` }} />
+          <div className="h-full rounded-full bg-[#2563EB] transition-[width] duration-300 ease-linear" style={{ width: `${(progress * 100).toFixed(1)}%` }} />
         </div>
         <p className="mt-2 text-[11px] tabular-nums text-[#86868B]">{Math.round(progress * 100)} %</p>
       </div>
