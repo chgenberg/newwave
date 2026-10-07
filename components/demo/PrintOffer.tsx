@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { sek } from "@/lib/demoCatalog";
+import { BOOTH_ASPECTS, type BoothFormat, type Crop, sek } from "@/lib/demoCatalog";
 import { fmtDay, visitorsLabel } from "@/lib/demoPackages";
 import { CropThumb, Icons, Primary, Secondary, TrustLine } from "./parts";
 
@@ -13,12 +13,25 @@ type Props = {
   date: Date;
   reference: string;
   booth: string;
+  format?: BoothFormat;
   lines: OfferLine[];
   total: number;
   eventDate?: string;
   visitors?: string;
   delivery?: string;
   onClose: () => void;
+};
+
+/** Detail crops on page 2; a 4:3 booth has the same layout with ceiling and floor added, so its coordinates differ. */
+const DETAILS: Record<BoothFormat, [Crop, Crop]> = {
+  "3:2": [
+    { cx: 84, cy: 45, w: 30 },
+    { cx: 50, cy: 62, w: 40 },
+  ],
+  "4:3": [
+    { cx: 81, cy: 48, w: 28 },
+    { cx: 50, cy: 62, w: 37 },
+  ],
 };
 
 const fmtDate = (d: Date) => d.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" });
@@ -41,6 +54,8 @@ function Logo({ brand }: { brand: Props["brand"] }) {
 }
 
 export function PrintOffer(p: Props) {
+  const format = p.format ?? "3:2";
+  const [shelves, counter] = DETAILS[format];
   const rows: [ReactNode, string, string][] = [
     [Icons.user, "Kund", p.brand.name],
     [Icons.calendar, "Event", `${p.event} ${p.date.getFullYear()}`],
@@ -155,11 +170,11 @@ export function PrintOffer(p: Props) {
           <img src={p.booth} alt="Montern" className="mt-4 aspect-[3/2] w-full rounded-xl object-cover" />
           <div className="mt-[5mm] grid grid-cols-2 gap-[5mm]">
             <figure>
-              <CropThumb url={p.booth} crop={{ cx: 84, cy: 45, w: 30 }} aspect={3 / 2} className="rounded-xl" />
+              <CropThumb url={p.booth} crop={shelves} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
               <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">Detalj: produktdisplay</figcaption>
             </figure>
             <figure>
-              <CropThumb url={p.booth} crop={{ cx: 50, cy: 62, w: 40 }} aspect={3 / 2} className="rounded-xl" />
+              <CropThumb url={p.booth} crop={counter} source={BOOTH_ASPECTS[format]} aspect={3 / 2} className="rounded-xl" />
               <figcaption className="mt-1.5 text-[8px] text-[#6E6E73]">Detalj: mässdisk och profilprodukter</figcaption>
             </figure>
           </div>

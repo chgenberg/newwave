@@ -12,6 +12,12 @@ export type EventId = (typeof EVENTS)[number]["id"];
 export const PLACEHOLDER_BOOTH = "/demo/booth-placeholder.jpg";
 export const BOOTH_ASPECT = 1536 / 1024;
 
+/** Desktop booths are 3:2; phones get 4:3 so the booth fills the screen width without being tiny. */
+export const BOOTH_FORMATS = ["3:2", "4:3"] as const;
+export type BoothFormat = (typeof BOOTH_FORMATS)[number];
+export const BOOTH_ASPECTS: Record<BoothFormat, number> = { "3:2": BOOTH_ASPECT, "4:3": 4 / 3 };
+export const PLACEHOLDERS: Record<BoothFormat, string> = { "3:2": PLACEHOLDER_BOOTH, "4:3": "/demo/booth-placeholder-43.jpg" };
+
 export const BRANDS = [
   { id: "volvo", name: "Volvo", url: "volvocars.com" },
   { id: "scania", name: "Scania", url: "scania.com" },
@@ -45,6 +51,9 @@ export type Product = {
   booth?: BoothItem;
   crop?: Crop;
   spot?: Spot;
+  /** The same areas measured on the 4:3 neutral booth. */
+  crop43?: Crop;
+  spot43?: Spot;
   styles: string[];
   models: Model[];
 };
@@ -74,6 +83,8 @@ export const BOOTH_PRODUCTS: Product[] = [
     booth: "massvagg",
     crop: { cx: 51, cy: 30, w: 62 },
     spot: { x: 30, y: 13 },
+    crop43: { cx: 51, cy: 40, w: 57 },
+    spot43: { x: 32, y: 22 },
     styles: ["Med logotyp", "Helprint", "Tryck"],
     models: [
       { id: "rak", name: "Rak mässvägg", desc: "Textilvägg med aluminiumram och heltäckande tryck. Snabb att montera.", priceSek: 8900 },
@@ -91,6 +102,8 @@ export const BOOTH_PRODUCTS: Product[] = [
     booth: "rollup",
     crop: { cx: 22.5, cy: 34, w: 15 },
     spot: { x: 22, y: 36 },
+    crop43: { cx: 24.5, cy: 39, w: 14 },
+    spot43: { x: 24, y: 41 },
     styles: ["Med logotyp", "Tryck"],
     models: [
       { id: "classic", name: "Roll-up Classic", desc: "Lätt kassett med väska. Tryck på slitstarkt PET-material.", priceSek: 1990 },
@@ -108,6 +121,8 @@ export const BOOTH_PRODUCTS: Product[] = [
     booth: "beachflagga",
     crop: { cx: 10, cy: 26, w: 17 },
     spot: { x: 10, y: 26 },
+    crop43: { cx: 13, cy: 32.5, w: 16 },
+    spot43: { x: 13, y: 32.5 },
     styles: ["Med logotyp", "Tryck"],
     models: [
       { id: "feather", name: "Beachflagga Feather", desc: "Böjd flagga med kryssfot för inomhus. Tryck på båda sidor.", priceSek: 1490 },
@@ -125,6 +140,8 @@ export const BOOTH_PRODUCTS: Product[] = [
     booth: "massdisk",
     crop: { cx: 51, cy: 70, w: 38 },
     spot: { x: 51, y: 76 },
+    crop43: { cx: 51, cy: 68.5, w: 35 },
+    spot43: { x: 51, y: 73 },
     styles: ["Med logotyp", "Helprint", "Tryck"],
     models: [
       { id: "standard", name: "Mässdisk Standard", desc: "Disk med hylla och utbytbar tryckt front.", priceSek: 5900 },
@@ -142,6 +159,8 @@ export const BOOTH_PRODUCTS: Product[] = [
     booth: "skyltstall",
     crop: { cx: 31, cy: 58, w: 14 },
     spot: { x: 31, y: 56 },
+    crop43: { cx: 32.5, cy: 58.5, w: 13 },
+    spot43: { x: 32.5, y: 57 },
     styles: ["Svart", "Silver"],
     models: [
       { id: "a4", name: "Broschyrställ A4", desc: "Hopfällbart ställ i aluminium med fem fack och väska.", priceSek: 1790 },
@@ -159,6 +178,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 20,
     step: 5,
     spot: { x: 85, y: 46 },
+    spot43: { x: 82, y: 49 },
     styles: ["Broderad", "Med logotyp", "Tryck"],
     models: [
       { id: "pike", name: "Piké", desc: "Klassisk piké i bomullspiké med broderad logga på bröstet.", priceSek: 299, mockup: own("polo", "Piké", "dark", { kind: "fabric", folds: 0.8 }, 0.7) },
@@ -175,6 +195,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 300,
     step: 50,
     spot: { x: 55, y: 50 },
+    spot43: { x: 54.5, y: 52 },
     styles: PRINT,
     models: [
       { id: "classic", name: "Classic Pen", desc: "Klassisk reklampenna med din logotyp. Hög kvalitet och lång livslängd.", priceSek: 4.9, mockup: own("pen-classic", "Classic Pen", "dark", { kind: "flat" }, 0.9) },
@@ -190,6 +211,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 10,
     step: 1,
     spot: { x: 49, y: 49 },
+    spot43: { x: 49, y: 51 },
     styles: ["Tryck", "Etikett"],
     models: [
       { id: "ask", name: "Godisask", desc: "Vit ask med tryckt logga och egen godismix, 1 kg per förpackning.", priceSek: 199, mockup: own("candy", "Godisask", "light", { kind: "flat" }, 0.8) },
@@ -204,6 +226,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 100,
     step: 10,
     spot: { x: 62, y: 47 },
+    spot43: { x: 61, y: 50 },
     styles: PRINT,
     models: [
       { id: "termos", name: "Termosflaska", desc: "Stålflaska med bambulock, håller kallt i 24 h.", priceSek: 39, mockup: existing("termos", 0.85) },
@@ -219,6 +242,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 100,
     step: 10,
     spot: { x: 93, y: 40 },
+    spot43: { x: 89.5, y: 44 },
     styles: PRINT,
     models: [
       { id: "tyg", name: "Tygpåse", desc: "Naturvit bomullspåse med långa handtag.", priceSek: 29, mockup: own("tote", "Tygpåse", "light", { kind: "fabric", folds: 0.6 }, 0.75) },
@@ -249,6 +273,7 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 50,
     step: 10,
     spot: { x: 83, y: 62 },
+    spot43: { x: 80.5, y: 62 },
     styles: PRINT,
     models: [
       { id: "kopp", name: "Keramikmugg", desc: "Matt keramik, 30 cl.", priceSek: 59, mockup: existing("kaffekopp", 0.8) },
@@ -264,10 +289,14 @@ export const PROMO_PRODUCTS: Product[] = [
     defaultQty: 50,
     step: 10,
     spot: { x: 86, y: 20 },
+    spot43: { x: 83, y: 27.5 },
     styles: ["Broderad", "Med logotyp"],
     models: [{ id: "keps", name: "Keps", desc: "Sexpanelskeps i bomullstwill med brodyr.", priceSek: 129, mockup: existing("keps", 1) }],
   },
 ];
+
+export const cropOf = (p: Product, f: BoothFormat) => (f === "4:3" ? p.crop43 : p.crop);
+export const spotOf = (p: Product, f: BoothFormat) => (f === "4:3" ? p.spot43 : p.spot);
 
 export const ALL_PRODUCTS = [...BOOTH_PRODUCTS, ...PROMO_PRODUCTS];
 

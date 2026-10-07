@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import type { BoothFormat } from "./demoCatalog";
 import { cleanText } from "./demoLimit";
 import { TEXT_MODEL, errorMessage, openai } from "./openai";
 
@@ -21,16 +22,28 @@ Check carefully, especially the close-up:
 Ignore background visitors in the blurred hall unless they are grotesquely deformed. Do not flag style choices, colours or minor imperfections a real photo could have.
 ok = true only if there are no real issues. issues: short, concrete English fix instructions an image model can act on (e.g. "Remove the extra disembodied hand on the counter in front of the man; he has only his own two hands resting on the counter."), max 5.`;
 
+/** Where the counter and staff sit in each framing, as fractions of the image. */
+const CLOSE_UP: Record<BoothFormat, { left: number; top: number; width: number; height: number }> = {
+  "3:2": { left: 0.3, top: 0.18, width: 0.4, height: 0.62 },
+  "4:3": { left: 0.32, top: 0.24, width: 0.38, height: 0.54 },
+};
+
+const FRAMING: Record<BoothFormat, string> = {
+  "3:2": "",
+  "4:3": "\nFraming: a 4:3 photo where the whole booth is visible with a little hall ceiling above and floor below. Flag it if the beach flag, roll-up, counter or shelving is cut off by any edge of the frame.",
+};
+
 const dataUrl = (buf: Buffer) => `data:image/jpeg;base64,${buf.toString("base64")}`;
 
 /** Vision QA for one booth render; null when the reviewer itself fails, so the caller keeps the image. */
-export async function reviewBooth(jpg: Buffer, logo: Buffer, opts: { name: string; tagline?: string; layout: string[] }): Promise<BoothReview | null> {
+export async function reviewBooth(jpg: Buffer, logo: Buffer, opts: { name: string; tagline?: string; layout: string[]; format?: BoothFormat }): Promise<BoothReview | null> {
   try {
     const img = sharp(jpg);
     const { width = 1536, height = 1024 } = await img.metadata();
     const full = await sharp(jpg).resize(1536, 1024, { fit: "inside" }).jpeg({ quality: 82 }).toBuffer();
+    const c = CLOSE_UP[opts.format ?? "3:2"];
     const crop = await sharp(jpg)
-      .extract({ left: Math.round(width * 0.3), top: Math.round(height * 0.18), width: Math.round(width * 0.4), height: Math.round(height * 0.62) })
+      .extract({ left: Math.round(width * c.left), top: Math.round(height * c.top), width: Math.round(width * c.width), height: Math.round(height * c.height) })
       .resize(1024, 1024, { fit: "inside" })
       .jpeg({ quality: 85 })
       .toBuffer();
@@ -43,7 +56,7 @@ export async function reviewBooth(jpg: Buffer, logo: Buffer, opts: { name: strin
           {
             role: "user",
             content: [
-              { type: "input_text", text: `Booth for "${cleanText(opts.name, 40)}".${opts.tagline ? ` The back wall also carries the tagline "${cleanText(opts.tagline, 40)}".` : ""}\nExpected layout from left to right: ${opts.layout.join(", ")}.\n(1) Full photo:` },
+              { type: "input_text", text: `Booth for "${cleanText(opts.name, 40)}".${opts.tagline ? ` The back wall also carries the tagline "${cleanText(opts.tagline, 40)}".` : ""}\nExpected layout from left to right: ${opts.layout.join(", ")}.${FRAMING[opts.format ?? "3:2"]}\n(1) Full photo:` },
               { type: "input_image", image_url: dataUrl(full), detail: "high" },
               { type: "input_text", text: "(2) Close-up of the counter and staff:" },
               { type: "input_image", image_url: dataUrl(crop), detail: "high" },

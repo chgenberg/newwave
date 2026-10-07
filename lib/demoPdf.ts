@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Browser } from "playwright-core";
-import { sek } from "./demoCatalog";
+import { type BoothFormat, sek } from "./demoCatalog";
 import type { PricedLine } from "./demoOffer";
 import { delivery, deliveryText, fmtDay, visitorsLabel } from "./demoPackages";
 import { loadFile } from "./store";
@@ -14,6 +14,7 @@ export type QuoteDoc = {
   eventDate: string;
   visitors: string;
   boothUrl?: string;
+  format?: BoothFormat;
   contact: { name: string; email: string; company: string };
   lines: PricedLine[];
   totalSek: number;
@@ -53,10 +54,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Aria
 .brand{font-size:15px;font-weight:600;letter-spacing:.16em;color:#1d1d1f}
 .eyebrow{margin:8mm 0 0;font-size:8px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#6e6e73}
 h1{margin:2mm 0 0;font-size:24px;line-height:1.05;letter-spacing:-.01em}
-.grid{margin-top:6mm;display:grid;grid-template-columns:62mm 1fr;gap:7mm;align-items:start}
+.grid{margin-top:6mm;display:grid;grid-template-columns:${q.format === "4:3" ? "70mm" : "62mm"} 1fr;gap:7mm;align-items:start}
 .info{background:#f5f5f7;border-radius:10px;padding:3.5mm}.info div{margin:0 0 2.2mm}.info div:last-child{margin:0}
 .k{font-size:8px;color:#86868b}.v{font-size:10px;font-weight:500}
-.booth{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:10px;background:#f5f5f7}
+.booth{width:100%;aspect-ratio:${q.format === "4:3" ? "4/3" : "3/2"};object-fit:cover;border-radius:10px;background:#f5f5f7}
 .note{margin-top:5mm;padding:3mm 3.5mm;border-radius:10px;font-size:10px;background:${d?.late ? "#fff4e5" : "#f0f7f1"}}
 table{margin-top:5mm;width:100%;border-collapse:collapse;font-size:9px}th{text-align:left;font-weight:500;font-size:8px;color:#6e6e73;border-bottom:1px solid #0000001a;padding:1.5mm 0}
 td{padding:1.6mm 0;border-bottom:1px solid #0000000f}.r{text-align:right;font-variant-numeric:tabular-nums}

@@ -13,6 +13,7 @@ const MAX_STORED = () => envInt("DEMO_SHARE_MAX_STORED", 5000);
 const Body = z.object({
   brand: OfferFields.brand,
   boothUrl: OfferFields.boothUrl,
+  format: OfferFields.format,
   lines: OfferFields.lines,
   eventDate: OfferFields.eventDate,
   visitors: OfferFields.visitors,
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
     brand: { name: cleanText(parsed.data.brand.name, 80) || "Okänt varumärke", site: parsed.data.brand.site },
     boothUrl: parsed.data.boothUrl,
+    format: parsed.data.format,
     ...priced,
     eventDate: parsed.data.eventDate ?? "",
     visitors: parsed.data.visitors ?? "",

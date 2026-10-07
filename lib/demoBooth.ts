@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { toFile } from "openai";
 import sharp from "sharp";
+import type { BoothFormat } from "./demoCatalog";
 import { SITE, cleanText, createLimiter, envInt } from "./demoLimit";
 import { type BoothReview, reviewBooth } from "./demoBoothQa";
 import { type SiteAnalysis, readAnalysis } from "./demoSiteCache";
@@ -12,8 +13,8 @@ import { loadFile, saveFile } from "./store";
 export const BOOTH_ITEMS = ["massvagg", "rollup", "beachflagga", "massdisk", "skyltstall"] as const;
 export type BoothItem = (typeof BOOTH_ITEMS)[number];
 
-export type BoothRequest = { name: string; site: string; color: string; light: string; products: BoothItem[]; analysisId?: string };
-export type BoothResult = { url: string; color: string; cached: boolean; attempts?: number };
+export type BoothRequest = { name: string; site: string; color: string; light: string; products: BoothItem[]; analysisId?: string; format: BoothFormat };
+export type BoothResult = { url: string; color: string; cached: boolean; attempts?: number; format: BoothFormat };
 
 export class BoothError extends Error {
   constructor(message: string, readonly status: number, readonly retryAfterSec?: number) {
@@ -40,22 +41,43 @@ const PIPELINE = "q1";
 const MAX_IMAGES = 3;
 const FILE_JPG = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
 const CACHE = path.join(process.cwd(), ".data", "demo", "booths");
-const PLACEHOLDER = path.join(process.cwd(), "public", "demo", "booth-placeholder.jpg");
+/**
+ * The image API has no 4:3 size, so 4:3 booths are rendered square from a square reference (the neutral booth with extra ceiling
+ * and floor) and the band that holds the booth is cut out; scripts/demo-assets.mjs crops the 4:3 placeholder at the same offset.
+ */
+const FORMATS: Record<BoothFormat, { reference: string; size: "1536x1024" | "1024x1024"; width: number; crop?: { top: number; height: number }; framing: string }> = {
+  "3:2": { reference: "booth-placeholder.jpg", size: "1536x1024", width: 1536, framing: "landscape" },
+  "4:3": {
+    reference: "booth-placeholder-43-sq.jpg",
+    size: "1024x1024",
+    width: 1024,
+    crop: { top: 112, height: 768 },
+    framing:
+      "square frame. Keep the framing of the first reference image exactly: the whole booth fits horizontally with small margins at both sides (the beach flag and the shelving are never cut off), the booth sits in the vertical middle, with the hall ceiling above and the carpet floor below",
+  },
+};
+const reference = (f: BoothFormat) => path.join(process.cwd(), "public", "demo", FORMATS[f].reference);
 
-const LAYOUT = `Fixed composition, left to right, exactly as in the first reference image:
-- FAR LEFT (about 4-12% from the left edge): a tall curved beach flag (feather flag) on a pole.
-- LEFT (about 14-24%): a roll-up banner standing on the floor.
-- LEFT OF CENTRE (about 26-33%): a black brochure stand with several stacked leaflets.
+/** Horizontal positions (percent of the image width) in each format's reference. */
+const AT: Record<BoothFormat, { flag: string; rollup: string; stand: string; shelves: string }> = {
+  "3:2": { flag: "4-12%", rollup: "14-24%", stand: "26-33%", shelves: "68-92%" },
+  "4:3": { flag: "8-15%", rollup: "17-26%", stand: "28-34%", shelves: "67-89%" },
+};
+
+const layout = (f: BoothFormat) => `Fixed composition, left to right, exactly as in the first reference image:
+- FAR LEFT (about ${AT[f].flag} from the left edge): a tall curved beach flag (feather flag) on a pole.
+- LEFT (about ${AT[f].rollup}): a roll-up banner standing on the floor.
+- LEFT OF CENTRE (about ${AT[f].stand}): a black brochure stand with several stacked leaflets.
 - CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel. Two friendly staff, a man and a woman in matching branded polo shirts, stand behind the counter, relaxed and facing the camera, each with both hands resting on the counter top. On the counter: two branded coffee mugs, two branded water bottles, a bowl of wrapped candy and a few pens.
-- RIGHT (about 68-92%): open wooden shelving with branded t-shirts and polo shirts on hangers, branded baseball caps on a shelf, branded tote bags hanging on hooks and a row of branded mugs.`;
+- RIGHT (about ${AT[f].shelves}): open wooden shelving with branded t-shirts and polo shirts on hangers, branded baseball caps on a shelf, branded tote bags hanging on hooks and a row of branded mugs.`;
 
 /** Same positions as LAYOUT, but the content comes from the site analysis. */
-const POSITIONS = `Fixed composition, left to right, exactly as in the first reference image (keep every object at the same position and size):
-- FAR LEFT (about 4-12% from the left edge): a tall curved beach flag (feather flag) on a pole.
-- LEFT (about 14-24%): a roll-up banner standing on the floor.
-- LEFT OF CENTRE (about 26-33%): a black brochure stand with several stacked leaflets.
+const positions = (f: BoothFormat) => `Fixed composition, left to right, exactly as in the first reference image (keep every object at the same position and size):
+- FAR LEFT (about ${AT[f].flag} from the left edge): a tall curved beach flag (feather flag) on a pole.
+- LEFT (about ${AT[f].rollup}): a roll-up banner standing on the floor.
+- LEFT OF CENTRE (about ${AT[f].stand}): a black brochure stand with several stacked leaflets.
 - CENTRE: a straight back wall across the booth with the large logo centred at the top of the wall, and a wall-mounted flat screen slightly right of centre. In front, centred in the lower half, a reception counter with the logo on its front panel and two staff behind it, standing relaxed and facing the camera, each with both hands resting on the counter top or one hand holding a single item naturally. On the counter, next to the company's own items, two branded coffee mugs, a branded water bottle and a few pens.
-- RIGHT (about 68-92%): open shelving that mixes the company's own products with branded t-shirts on hangers, branded caps and branded tote bags.`;
+- RIGHT (about ${AT[f].shelves}): open shelving that mixes the company's own products with branded t-shirts on hangers, branded caps and branded tote bags.`;
 
 const REALISM = `Realism requirements (most important):
 - It must look like an unedited photo by a professional event photographer: physically plausible light, shadows and reflections, correct perspective, nothing floating in the air.
@@ -98,11 +120,11 @@ export function boothColor(hex: string) {
 
 function prompt(req: BoothRequest, color: string) {
   const missing = BOOTH_ITEMS.filter((i) => !req.products.includes(i)).map((i) => MISSING[i]);
-  return `Photorealistic photo of a professionally built trade show booth for the company "${promptName(req.name, req.site)}"${SITE.test(req.site) ? ` (${req.site})` : ""}, shot on a full-frame camera, eye level, straight on, landscape.
+  return `Photorealistic photo of a professionally built trade show booth for the company "${promptName(req.name, req.site)}"${SITE.test(req.site) ? ` (${req.site})` : ""}, shot on a full-frame camera, eye level, straight on, ${FORMATS[req.format].framing}.
 The first reference image shows the exact booth layout, camera angle, framing, lighting, people and object positions: keep all of them the same, only rebrand the booth.
 The second reference image is the company's logo. Replace every "DIN LOGO" placeholder with this exact logo – identical shapes, letters and proportions, no invented or distorted characters, no other text. On dark surfaces print the logo in white, on light surfaces in its own colours.
 Brand colour: ${color}. Use it as the dominant colour of the back wall, roll-up, beach flag, counter front and staff shirts, combined with white and a little warm wood. Premium, clean Scandinavian design.
-${LAYOUT}
+${layout(req.format)}
 ${missing.join("\n")}
 ${REALISM}`;
 }
@@ -113,12 +135,12 @@ function tailoredPrompt(req: BoothRequest, a: SiteAnalysis, color: string, refs:
   const what = [a.industryEn && `a ${a.industryEn} company`, a.offeringEn].filter(Boolean).join(" – ");
   const s = a.scene;
   const line = (label: string, v: string) => (v ? `- ${label}: ${v}` : "");
-  return `Photorealistic photo of a professionally built trade show booth for "${name}"${what ? `, ${what}` : ""}, shot on a full-frame camera, eye level, straight on, landscape. It must look like it was designed specifically for this company and its industry by a top exhibition agency.
+  return `Photorealistic photo of a professionally built trade show booth for "${name}"${what ? `, ${what}` : ""}, shot on a full-frame camera, eye level, straight on, ${FORMATS[req.format].framing}. It must look like it was designed specifically for this company and its industry by a top exhibition agency.
 The first reference image shows the exact booth layout, camera angle, framing and object positions: keep them, but restyle and refill the booth for this company.
 The second reference image is the company's logo. Replace every "DIN LOGO" placeholder with this exact logo – identical shapes, letters and proportions, no invented or distorted characters. On dark surfaces print the logo in white, on light surfaces in its own colours.
 ${refs.length ? `The remaining reference images are the company's real products or services from its website: ${refs.map((d, i) => `(${i + 3}) ${d}`).join("; ")}. Reproduce these exact items – same shapes, packaging and colours, without readable small print – on the counter, on the shelves and on the roll-up and wall screen.
 ` : ""}Brand colour: ${color}. ${a.tone ? `Visual tone: ${a.tone}. ` : ""}Use the brand colour as the dominant accent of the back wall, roll-up, beach flag and counter front.
-${POSITIONS}
+${positions(req.format)}
 Industry-specific content at those positions:
 ${[
     `- Back wall: the logo centred at the top${a.tagline ? `, and below it the tagline "${a.tagline}" in clean, well-spaced type (this is the only other text allowed)` : ", no other text"}.`,
@@ -172,9 +194,9 @@ export async function logoPrint(png: Buffer) {
 
 async function readCache(key: string): Promise<BoothResult | null> {
   try {
-    const hit = JSON.parse(await readFile(path.join(CACHE, `${key}.json`), "utf8")) as { url: string; color: string };
+    const hit = JSON.parse(await readFile(path.join(CACHE, `${key}.json`), "utf8")) as { url: string; color: string; format?: BoothFormat };
     const id = hit.url.split("/").pop()!;
-    return (await loadFile(id)) ? { url: hit.url, color: hit.color, cached: true } : null;
+    return (await loadFile(id)) ? { url: hit.url, color: hit.color, cached: true, format: hit.format ?? "3:2" } : null;
   } catch {
     return null;
   }
@@ -196,20 +218,23 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
     .resize(1024, 1024, { fit: "contain", background: "#FFFFFF" })
     .png()
     .toBuffer();
-  const booth = await readFile(PLACEHOLDER);
+  const booth = await readFile(reference(req.format));
+  const fmt = FORMATS[req.format];
   const base = analysis ? tailoredPrompt(req, analysis, color, refs.map((r) => r.description)) : prompt(req, color);
   const generate = async (fixes: string[]) => {
     const res = await openai().images.edit({
       model: IMAGE_MODEL,
       image: [await toFile(booth, "booth.jpg", { type: "image/jpeg" }), await toFile(logoRef, "logo.png", { type: "image/png" }), ...refFiles],
       prompt: fixes.length ? `${base}\nA previous attempt had these problems – make sure they do not happen this time:\n${fixes.map((f) => `- ${f}`).join("\n")}` : base,
-      size: "1536x1024",
+      size: fmt.size,
       quality: IMAGE_QUALITY,
       output_format: "jpeg",
     });
     const b64 = res.data?.[0]?.b64_json;
     if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
-    return sharp(Buffer.from(b64, "base64")).resize({ width: 1536, withoutEnlargement: true }).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
+    const out = await sharp(Buffer.from(b64, "base64")).resize({ width: fmt.width, withoutEnlargement: true }).toBuffer();
+    const cut = fmt.crop ? sharp(out).extract({ left: 0, top: fmt.crop.top, width: fmt.width, height: fmt.crop.height }) : sharp(out);
+    return cut.jpeg({ quality: 84, mozjpeg: true }).toBuffer();
   };
 
   /** Keeps the first clean render, else the one with the fewest issues; a failing reviewer never blocks the booth. */
@@ -226,7 +251,7 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
       if (!best) throw e;
       break;
     }
-    const review = await reviewBooth(jpg, logo, { name: promptName(analysis?.brandName || req.name, req.site), tagline: analysis?.tagline, layout: EXPECTED.filter(([i]) => !i || req.products.includes(i)).map(([, d]) => d) });
+    const review = await reviewBooth(jpg, logo, { name: promptName(analysis?.brandName || req.name, req.site), tagline: analysis?.tagline, layout: EXPECTED.filter(([i]) => !i || req.products.includes(i)).map(([, d]) => d), format: req.format });
     console.info(`demo/booth ${req.site} attempt ${attempts}: ${review ? (review.ok ? "ok" : review.issues.join(" | ")) : "review failed"} (${Date.now() - t0} ms)`);
     if (!best || (review && (!best.review || review.issues.length < best.review.issues.length))) best = { jpg, review };
     if (!review || review.ok) break;
@@ -236,9 +261,9 @@ async function render(req: BoothRequest, logo: Buffer, key: string, analysis: Si
   await mkdir(CACHE, { recursive: true });
   await writeFile(
     path.join(CACHE, `${key}.json`),
-    JSON.stringify({ url: file.url, color, site: req.site, products: req.products, analysisId: analysis?.id, attempts, review: best!.review, createdAt: new Date().toISOString() }),
+    JSON.stringify({ url: file.url, color, format: req.format, site: req.site, products: req.products, analysisId: analysis?.id, attempts, review: best!.review, createdAt: new Date().toISOString() }),
   );
-  return { url: file.url, color, cached: false, attempts };
+  return { url: file.url, color, cached: false, attempts, format: req.format };
 }
 
 const inFlight = new Map<string, Promise<BoothResult>>();
@@ -252,9 +277,11 @@ export async function brandedBooth(req: BoothRequest, ip: string): Promise<Booth
   if (!print) throw new BoothError("Kunde inte läsa loggan. Hämta den igen.", 400);
   const found = req.analysisId ? await readAnalysis(req.analysisId) : null;
   const analysis = found && found.host === req.site ? found : null;
+  /** 3:2 keys are unchanged so existing desktop booths stay cached. */
+  const framing = req.format === "3:2" ? [] : [req.format];
   const key = analysis
-    ? hash([PIPELINE, TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash)])
-    : hash([PIPELINE, VERSION, req.site, print, boothColor(req.color), productKey(req)]);
+    ? hash([PIPELINE, TAILORED, req.site, print, tailoredColor(req.color, analysis), productKey(req), analysis.id, ...analysis.images.filter((i) => i.selected).map((i) => i.hash), ...framing])
+    : hash([PIPELINE, VERSION, req.site, print, boothColor(req.color), productKey(req), ...framing]);
   const hit = await readCache(key);
   if (hit) return hit;
 

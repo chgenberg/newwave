@@ -2,14 +2,14 @@
 
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BoothItem, BoothResult } from "@/lib/demoBooth";
-import { ALL_PRODUCTS, BOOTH_PRODUCTS, BRANDS, CONSUMABLES, DEFAULT_PROMOS, EVENTS, type EventId, PLACEHOLDER_BOOTH, lineTotal, MAX_QTY, PROMO_PRODUCTS, type Product, VISITORS, type VisitorsId, sek, sumSek } from "@/lib/demoCatalog";
+import { ALL_PRODUCTS, BOOTH_PRODUCTS, type BoothFormat, BRANDS, CONSUMABLES, DEFAULT_PROMOS, EVENTS, type EventId, PLACEHOLDERS, lineTotal, spotOf, MAX_QTY, PROMO_PRODUCTS, type Product, VISITORS, type VisitorsId, sek, sumSek } from "@/lib/demoCatalog";
 import { PACKAGES, type PackageId, type PackLine, buildPackage, delivery, deliveryText, fitBudget, fmtDay, packageSummary, packageTotal, roundQty } from "@/lib/demoPackages";
 import type { SiteAnalysis } from "@/lib/demoSiteCache";
 import type { LogoResult } from "@/lib/logo";
 import { OWNED_KEY } from "./ApprovalView";
 import { BoothStage, type Hotspot, type Phase } from "./BoothStage";
 import { EventPlan, type PackageCard, PackageCards } from "./BuyPanel";
-import { type Line, ProductDrawer, ProductVisual } from "./ProductDrawer";
+import { type BoothView, type Line, ProductDrawer, ProductVisual } from "./ProductDrawer";
 import { type OfferLine, PrintOffer } from "./PrintOffer";
 import { Header, Icons, PlusBadge, Primary, Secondary, type Step, Stepper, TextLink, TrustLine } from "./parts";
 import { TailorCard } from "./TailorCard";
@@ -21,6 +21,11 @@ type Contact = { name: string; email: string; company: string };
 
 const STEP_OF: Record<Stage, Step | null> = { start: 1, products: 2, offer: 3, thanks: null };
 const COLOR_NAMES: Record<string, string> = { "#1D1D1F": "Svart", "#FFFFFF": "Vit", "#9A9AA0": "Grå", "#1F3B73": "Marinblå" };
+
+/** Phones get a 4:3 booth; the choice is made once per run so a resize never swaps the image. */
+const PHONE = "(max-width: 767px)";
+/** A 3:2 booth on a phone is shown 4:3 with object-cover; hotspots are hidden there, so they never point at cropped areas. */
+const frame = (f: BoothFormat) => (f === "4:3" ? "aspect-[4/3]" : "aspect-[4/3] sm:aspect-[3/2]");
 
 const H1 = "text-[32px] font-semibold leading-[1.08] tracking-[-0.022em] sm:text-[44px]";
 const BODY = "text-[15px] leading-relaxed text-[#6E6E73]";
@@ -84,7 +89,7 @@ function BottomBar({ count, total, label, children }: { count: number; total: nu
   );
 }
 
-function ProductTile({ product, line, recommended, mockups, boothFor, onOpen, onToggle }: { product: Product; line?: Line; recommended: boolean; mockups: Record<string, string>; boothFor: (p: Product) => string; onOpen: () => void; onToggle: () => void }) {
+function ProductTile({ product, line, recommended, mockups, boothFor, onOpen, onToggle }: { product: Product; line?: Line; recommended: boolean; mockups: Record<string, string>; boothFor: (p: Product) => BoothView; onOpen: () => void; onToggle: () => void }) {
   const on = Boolean(line);
   const from = product.models[0].priceSek;
   return (
@@ -117,6 +122,7 @@ export function BoothDemo() {
   const [error, setError] = useState<string | null>(null);
   const [boothNote, setBoothNote] = useState<string | null>(null);
   const [booth, setBooth] = useState<Booth | null>(null);
+  const [format, setFormat] = useState<BoothFormat>("3:2");
   /** The customer's selection before any budget; what is ordered is this, fitted to the budget when one is set. */
   const [base, setBase] = useState<Record<string, Line>>(initialLines);
   const [pkg, setPkg] = useState<PackageId | "custom">("standard");
@@ -139,8 +145,12 @@ export function BoothDemo() {
   const brandColor = booth?.color ?? logo?.color ?? "#1D1D1F";
   const name = brandName || "ditt varumärke";
   const boothItems = BOOTH_PRODUCTS.filter((p) => lines[p.id]).map((p) => p.booth!);
-  const boothFor = useCallback((p: Product) => (booth && p.booth && booth.items.includes(p.booth) ? booth.url : PLACEHOLDER_BOOTH), [booth]);
-  const boothUrl = booth?.url ?? PLACEHOLDER_BOOTH;
+  const fmt = booth?.format ?? format;
+  const boothFor = useCallback(
+    (p: Product): BoothView => (booth && p.booth && booth.items.includes(p.booth) ? { url: booth.url, format: booth.format } : { url: PLACEHOLDERS[format], format }),
+    [booth, format],
+  );
+  const boothUrl = booth?.url ?? PLACEHOLDERS[fmt];
   const stale = Boolean(booth) && (booth!.items.length !== boothItems.length || boothItems.some((i) => !booth!.items.includes(i)));
   const recIds = useMemo(() => (analysis ? analysis.merch.map((m) => m.id) : DEFAULT_PROMOS), [analysis]);
   const recommended = useMemo(() => new Set(recIds), [recIds]);
@@ -187,7 +197,7 @@ export function BoothDemo() {
   };
 
   /** A failed booth (no API key, rate limit, model error) never blocks the flow: the neutral booth stays usable. */
-  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number, a: SiteAnalysis | null) => {
+  const buildBooth = async (l: LogoResult, nm: string, items: BoothItem[], id: number, a: SiteAnalysis | null, f: BoothFormat) => {
     setPhase("booth");
     setBoothNote(null);
     try {
@@ -197,6 +207,7 @@ export function BoothDemo() {
         color: l.color,
         light: l.light,
         products: items,
+        format: f,
         ...(a && a.host === l.site ? { analysisId: a.id } : {}),
       });
       if (run.current === id) setBooth({ ...b, items });
@@ -211,6 +222,8 @@ export function BoothDemo() {
     const value = raw.trim();
     if (value.length < 3) return setError("Ange en webbadress, till exempel volvocars.com");
     const id = ++run.current;
+    const f: BoothFormat = window.matchMedia(PHONE).matches ? "4:3" : "3:2";
+    setFormat(f);
     setUrl(value);
     setError(null);
     setBoothNote(null);
@@ -247,7 +260,7 @@ export function BoothDemo() {
     setPkg("standard");
     setBudget(null);
     setBase(fromPack(buildPackage("standard", a ? a.merch.map((m) => m.id) : DEFAULT_PROMOS, visitors || null)));
-    await buildBooth(l, nm, boothItems, id, a);
+    await buildBooth(l, nm, boothItems, id, a, f);
   };
 
   const reset = () => {
@@ -271,7 +284,7 @@ export function BoothDemo() {
   };
 
   const rebuild = () => {
-    if (logo) buildBooth(logo, brandName, boothItems, ++run.current, analysis);
+    if (logo) buildBooth(logo, brandName, boothItems, ++run.current, analysis, format);
   };
 
   useEffect(() => {
@@ -335,10 +348,10 @@ export function BoothDemo() {
   const total = sumSek(offer.map((l) => l.totalSek));
   const count = offer.length;
 
-  const spots: Hotspot[] = ALL_PRODUCTS.filter((p) => p.spot && (!p.booth || !booth || booth.items.includes(p.booth))).map((p) => ({
+  const spots: Hotspot[] = ALL_PRODUCTS.filter((p) => spotOf(p, fmt) && (!p.booth || !booth || booth.items.includes(p.booth))).map((p) => ({
     id: p.id,
-    x: p.spot!.x,
-    y: p.spot!.y,
+    x: spotOf(p, fmt)!.x,
+    y: spotOf(p, fmt)!.y,
     label: p.name,
     added: Boolean(lines[p.id]),
   }));
@@ -352,6 +365,7 @@ export function BoothDemo() {
         brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
         event: EVENTS.find((x) => x.id === event)!.label,
         boothUrl: booth?.url,
+        format: fmt,
         totalSek: total,
         lines: offer.map((l) => ({ id: l.id, model: l.model, qty: l.qty })),
         eventDate,
@@ -373,6 +387,7 @@ export function BoothDemo() {
     const body = {
       brand: { name: brandName || "Okänt varumärke", site: logo?.site ?? "" },
       boothUrl: booth?.url,
+      format: fmt,
       lines: offer.map((l) => ({ id: l.id, model: l.model, qty: l.qty })),
       eventDate,
       visitors,
@@ -513,8 +528,10 @@ export function BoothDemo() {
                 ))}
               </p>
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={PLACEHOLDER_BOOTH} alt="Exempel på mässmonter" className="aspect-[3/2] w-full rounded-2xl object-cover" />
+            <picture>
+              <source media={PHONE} srcSet={PLACEHOLDERS["4:3"]} />
+              <img src={PLACEHOLDERS["3:2"]} alt="Exempel på mässmonter" className="aspect-[4/3] w-full rounded-2xl object-cover md:aspect-[3/2]" />
+            </picture>
           </main>
         )}
 
@@ -554,7 +571,7 @@ export function BoothDemo() {
               src={boothUrl}
               alt={booth ? `Mässmonter för ${name}` : "Mässmonter med plats för din logga"}
               loading={loading}
-              className={`aspect-[3/2] w-full rounded-2xl ${phase ? "mt-4" : "mt-6"}`}
+              className={`${frame(fmt)} w-full rounded-2xl ${phase ? "mt-4" : "mt-6"}`}
             />
             {ready && (
               <>
@@ -604,7 +621,7 @@ export function BoothDemo() {
             <h1 className={H1}>Välj produkter</h1>
             <p className={`mt-2 ${BODY}`}>Allt trycks med er logga. Vi har valt det som passar {name} – tryck på en produkt för att ändra modell, färg eller antal.</p>
             <div className="mx-auto mt-6 max-w-[860px]">
-              <BoothStage src={boothUrl} alt={`Mässmonter för ${name}`} spots={spots} onSpot={setDrawer} loading={phase === "booth" ? loading : null} className="aspect-[3/2] w-full rounded-2xl" />
+              <BoothStage src={boothUrl} alt={`Mässmonter för ${name}`} spots={spots} onSpot={setDrawer} loading={phase === "booth" ? loading : null} className={`${frame(fmt)} w-full rounded-2xl`} />
               {staleNote}
             </div>
             {(
@@ -647,7 +664,7 @@ export function BoothDemo() {
 
             <div className="mt-8 flex items-center gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={boothUrl} alt={`Mässmonter för ${name}`} className="aspect-[3/2] w-32 shrink-0 rounded-xl object-cover sm:w-40" />
+              <img src={boothUrl} alt={`Mässmonter för ${name}`} className={`${frame(fmt)} w-32 shrink-0 rounded-xl object-cover sm:w-40`} />
               <div className="min-w-0">
                 <p className="text-[15px] font-semibold">Mässmonter för {name}</p>
                 <TextLink onClick={() => go("products")} className="mt-1 text-[13px]">
@@ -767,7 +784,7 @@ export function BoothDemo() {
               )}
             </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={boothUrl} alt={`Mässmonter för ${name}`} className="mt-8 aspect-[3/2] w-full rounded-2xl object-cover" />
+            <img src={boothUrl} alt={`Mässmonter för ${name}`} className={`mt-8 ${frame(fmt)} w-full rounded-2xl object-cover`} />
             <dl className="mt-6 divide-y divide-black/[0.06] border-y border-black/[0.06] text-left text-[15px]">
               {[
                 ["Referens", `#${quote.reference}`],
@@ -835,6 +852,7 @@ export function BoothDemo() {
           date={quote.date}
           reference={quote.reference}
           booth={boothUrl}
+          format={fmt}
           lines={offer}
           total={total}
           eventDate={eventDate}

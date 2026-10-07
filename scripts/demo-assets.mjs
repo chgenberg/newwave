@@ -1,5 +1,5 @@
 // Kör: node scripts/demo-assets.mjs [id ...] [--force]
-// Skapar statiska bilder till /demo i public/demo/ (hjältebild, kort, neutral monter, produktbilder med tryckyta).
+// Skapar statiska bilder till /demo i public/demo/ (hjältebild, kort, neutral monter i 3:2 och 4:3, produktbilder med tryckyta).
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -34,6 +34,47 @@ const SCENES = {
   "card-kickoff": `${PHOTO}\nA joyful company kick-off: a group of colleagues in casual clothes doing an enthusiastic high-five in a bright modern office event space, warm light. No readable text or logos.`,
   "card-event": `${PHOTO}\nAn elegant evening company event: a long table with champagne glasses in the foreground, warm bokeh lights and guests mingling in the background. No readable text or logos.`,
 };
+
+/**
+ * Mobile (4:3) booth: the 3:2 neutral booth is scaled to 92 % of a square and the model only paints the ceiling, floor and side
+ * margins around it, so both formats share one layout. The square is the edit reference; its centre band is the 4:3 placeholder.
+ */
+const BOOTH_43 = {
+  source: "booth-placeholder",
+  square: "booth-placeholder-43-sq",
+  inner: { left: 40, top: 198, width: 944, height: 629 },
+  crop: { top: 112, height: 768 },
+  prompt: `${PHOTO}
+Extend this trade show booth photo outwards into a square image. The booth in the middle stays exactly as it is. Fill the transparent area seamlessly:
+- Above: more of the bright exhibition hall ceiling with white trusses, rows of lights and high windows, continuing the perspective of the photo.
+- Below: more of the light grey carpet floor in front of the booth with soft, natural shadows.
+- Left and right: a little more of the softly out-of-focus hall with a few visitors in the distance.
+Eye-level, straight-on camera, no tilt. Do not add any objects, people, text or logos to the booth itself.`,
+};
+
+async function booth43() {
+  const { inner } = BOOTH_43;
+  const src = await sharp(path.join(OUT, `${BOOTH_43.source}.jpg`)).resize(inner.width, inner.height, { fit: "fill" }).png().toBuffer();
+  const canvas = await sharp({ create: { width: 1024, height: 1024, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: src, left: inner.left, top: inner.top }])
+    .png()
+    .toBuffer();
+  const res = await client.images.edit({
+    model: MODEL,
+    image: await toFile(canvas, "booth.png", { type: "image/png" }),
+    mask: await toFile(canvas, "mask.png", { type: "image/png" }),
+    prompt: BOOTH_43.prompt,
+    size: "1024x1024",
+    quality: QUALITY,
+    output_format: "jpeg",
+  });
+  /** The model re-renders the whole frame; pasting the original back would leave visible seams, so its output is used as is. */
+  const square = await sharp(Buffer.from(res.data[0].b64_json, "base64")).resize(1024, 1024).jpeg({ quality: 86, mozjpeg: true }).toBuffer();
+  await writeFile(path.join(OUT, `${BOOTH_43.square}.jpg`), square);
+  const { top, height } = BOOTH_43.crop;
+  await writeFile(path.join(OUT, "booth-placeholder-43.jpg"), await sharp(square).extract({ left: 0, top, width: 1024, height }).jpeg({ quality: 84, mozjpeg: true }).toBuffer());
+  console.log("booth-placeholder-43: klar");
+}
 
 const STUDIO =
   "Professional e-commerce studio product photo on a seamless pure white background (#FFFFFF), soft even studio lighting, a subtle soft contact shadow, the product centred and filling about 75% of the frame. Photorealistic, crisp, premium catalogue quality. No text, no logos, no brand marks, no people.";
@@ -124,9 +165,9 @@ async function main() {
   await mkdir(PRODUCTS, { recursive: true });
   const force = process.argv.includes("--force");
   const wanted = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  const all = [...Object.keys(SCENES), ...Object.keys(ITEMS)];
+  const all = [...Object.keys(SCENES), "booth-placeholder-43", ...Object.keys(ITEMS)];
   const ids = (wanted.length ? wanted : all).filter((id) => {
-    const file = id in SCENES ? path.join(OUT, `${id}.jpg`) : path.join(PRODUCTS, `${id}.jpg`);
+    const file = id in ITEMS ? path.join(PRODUCTS, `${id}.jpg`) : path.join(OUT, `${id}.jpg`);
     return force || wanted.length || !existsSync(file);
   });
   const library = JSON.parse(await readFile(LIBRARY, "utf8").catch(() => "{}"));
@@ -134,7 +175,8 @@ async function main() {
   const worker = async () => {
     for (let id = queue.shift(); id; id = queue.shift()) {
       try {
-        if (id in SCENES) await scene(id);
+        if (id === "booth-placeholder-43") await booth43();
+        else if (id in SCENES) await scene(id);
         else if (id in ITEMS) {
           library[id] = await product(id);
           await writeFile(LIBRARY, JSON.stringify(library, null, 2));

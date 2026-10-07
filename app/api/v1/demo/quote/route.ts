@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     visitors: parsed.data.visitors ?? "",
     package: parsed.data.package ?? "",
     boothUrl: parsed.data.boothUrl,
+    format: parsed.data.format,
     contact: {
       name: cleanText(parsed.data.contact.name, 80),
       email: parsed.data.contact.email.toLowerCase(),

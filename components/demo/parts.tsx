@@ -5,16 +5,16 @@ import { BOOTH_ASPECT, type Crop, MAX_QTY } from "@/lib/demoCatalog";
 
 const clamp = (v: number) => Math.min(100, Math.max(0, v));
 
-/** Background style that shows one area of the booth photo in a tile with the given width/height ratio. */
-export function cropStyle(url: string, crop: Crop, aspect: number): CSSProperties {
-  const v = Math.min(100, (crop.w * BOOTH_ASPECT) / aspect);
+/** Background style that shows one area of the booth photo (with the given source ratio) in a tile with the given width/height ratio. */
+export function cropStyle(url: string, crop: Crop, aspect: number, source = BOOTH_ASPECT): CSSProperties {
+  const v = Math.min(100, (crop.w * source) / aspect);
   const x = crop.w >= 100 ? 50 : clamp(((crop.cx - crop.w / 2) / (100 - crop.w)) * 100);
   const y = v >= 100 ? 50 : clamp(((crop.cy - v / 2) / (100 - v)) * 100);
   return { backgroundImage: `url(${url})`, backgroundSize: `${(100 / crop.w) * 100}% auto`, backgroundPosition: `${x}% ${y}%`, backgroundRepeat: "no-repeat" };
 }
 
-export function CropThumb({ url, crop, aspect = 4 / 3, className = "" }: { url: string; crop: Crop; aspect?: number; className?: string }) {
-  return <div className={`bg-[#F5F5F7] ${className}`} style={{ ...cropStyle(url, crop, aspect), aspectRatio: String(aspect) }} />;
+export function CropThumb({ url, crop, aspect = 4 / 3, source, className = "" }: { url: string; crop: Crop; aspect?: number; source?: number; className?: string }) {
+  return <div className={`bg-[#F5F5F7] ${className}`} style={{ ...cropStyle(url, crop, aspect, source), aspectRatio: String(aspect) }} />;
 }
 
 const icon = "h-5 w-5";

@@ -1,18 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lineTotal, type Product, SWATCHES, sek } from "@/lib/demoCatalog";
+import { BOOTH_ASPECTS, type BoothFormat, cropOf, lineTotal, type Product, SWATCHES, sek } from "@/lib/demoCatalog";
 import { CropThumb, Icons, Primary, Stepper } from "./parts";
 
 export type Line = { qty: number; model: string; color: string; style: string };
+/** The booth photo a product crop is cut from, and the framing its crop coordinates belong to. */
+export type BoothView = { url: string; format: BoothFormat };
 
 export function productImage(p: Product, modelId: string, mockups: Record<string, string>) {
   const m = p.models.find((x) => x.id === modelId) ?? p.models[0];
   return mockups[`${p.id}:${m.id}`] ?? m.mockup?.blank ?? null;
 }
 
-export function ProductVisual({ product, model, mockups, boothFor, className = "", aspect = 4 / 3 }: { product: Product; model: string; mockups: Record<string, string>; boothFor: (p: Product) => string; className?: string; aspect?: number }) {
-  if (product.crop) return <CropThumb url={boothFor(product)} crop={product.crop} aspect={aspect} className={className} />;
+export function ProductVisual({ product, model, mockups, boothFor, className = "", aspect = 4 / 3 }: { product: Product; model: string; mockups: Record<string, string>; boothFor: (p: Product) => BoothView; className?: string; aspect?: number }) {
+  if (product.crop) {
+    const b = boothFor(product);
+    return <CropThumb url={b.url} crop={cropOf(product, b.format) ?? product.crop} source={BOOTH_ASPECTS[b.format]} aspect={aspect} className={className} />;
+  }
   const src = productImage(product, model, mockups);
   return (
     <div className={`flex items-center justify-center overflow-hidden bg-white ${className}`} style={{ aspectRatio: String(aspect) }}>
@@ -27,7 +32,7 @@ export function ProductDrawer(props: {
   line: Line | null;
   brandColor: string;
   mockups: Record<string, string>;
-  boothFor: (p: Product) => string;
+  boothFor: (p: Product) => BoothView;
   onSave: (line: Line) => void;
   onClose: () => void;
 }) {

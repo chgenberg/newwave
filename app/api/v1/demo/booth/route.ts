@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BOOTH_ITEMS, BoothError, LOGO_URL, brandedBooth } from "@/lib/demoBooth";
+import { BOOTH_FORMATS } from "@/lib/demoCatalog";
 import { ANALYSIS_ID } from "@/lib/demoSiteCache";
 import { SITE, clientIp, readJson } from "@/lib/demoLimit";
 import { errorMessage } from "@/lib/openai";
@@ -13,6 +14,7 @@ const Body = z.object({
   light: z.string().max(80).regex(LOGO_URL),
   products: z.array(z.enum(BOOTH_ITEMS)).max(BOOTH_ITEMS.length).default([...BOOTH_ITEMS]),
   analysisId: z.string().regex(ANALYSIS_ID).optional(),
+  format: z.enum(BOOTH_FORMATS).default("3:2"),
 });
 
 export async function POST(req: Request) {

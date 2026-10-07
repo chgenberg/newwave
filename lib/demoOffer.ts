@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { ALL_PRODUCTS, MAX_QTY, VISITORS, lineTotal, sumSek } from "./demoCatalog";
+import { ALL_PRODUCTS, BOOTH_FORMATS, MAX_QTY, VISITORS, lineTotal, sumSek } from "./demoCatalog";
 import { SITE } from "./demoLimit";
 import { PACKAGES } from "./demoPackages";
 
-export const BOOTH_URL = /^(\/api\/v1\/files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg|\/demo\/booth-placeholder\.jpg)$/;
+export const BOOTH_URL = /^(\/api\/v1\/files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg|\/demo\/booth-placeholder(-43)?\.jpg)$/;
 
 export const LineInput = z.object({
   id: z.string().max(40),
@@ -17,6 +17,7 @@ export const LineInput = z.object({
 export const OfferFields = {
   brand: z.object({ name: z.string().max(80), site: z.union([z.literal(""), z.string().toLowerCase().max(120).regex(SITE)]) }),
   boothUrl: z.string().max(120).regex(BOOTH_URL).optional(),
+  format: z.enum(BOOTH_FORMATS).default("3:2"),
   lines: z.array(LineInput).min(1).max(ALL_PRODUCTS.length),
   eventDate: z.union([z.literal(""), z.string().regex(/^20\d\d-\d\d-\d\d$/)]).optional(),
   visitors: z.union([z.literal(""), z.enum(VISITORS.map((v) => v.id) as [string, ...string[]])]).optional(),

@@ -97,7 +97,7 @@ export function ApprovalView({ initial }: { initial: Share }) {
         </p>
 
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        {share.boothUrl && <img src={share.boothUrl} alt={`Mässmonter för ${share.brand.name}`} className="mt-6 aspect-[3/2] w-full rounded-2xl object-cover" />}
+        {share.boothUrl && <img src={share.boothUrl} alt={`Mässmonter för ${share.brand.name}`} className={`mt-6 w-full rounded-2xl object-cover ${share.format === "4:3" ? "aspect-[4/3]" : "aspect-[4/3] sm:aspect-[3/2]"}`} />}
 
         <ul className="mt-6 divide-y divide-black/[0.06] border-y border-black/[0.06]">
           {share.lines.map((l) => (
