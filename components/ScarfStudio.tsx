@@ -312,14 +312,16 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                   ] as const
                 ).map(([label, ref, side]) => (
                   <figure key={label}>
-                    <div className={zoom ? "overflow-x-auto rounded-xl" : ""}>
-                      <div className={`flex items-stretch ${zoom ? "w-[420%]" : "w-full"}`}>
+                    <div className={zoom ? "overflow-x-auto rounded-xl" : "-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0"}>
+                      <div className={`flex items-stretch ${zoom ? "w-[420%]" : "w-[260%] sm:w-full"}`}>
                         <Fringe color={palette[side.bg]} />
                         <canvas ref={ref} className="block h-auto min-w-0 flex-1 rounded-[3px] shadow-[0_6px_18px_rgba(0,0,0,0.12)]" style={{ aspectRatio: `${SCARF.rows * 6} / ${SCARF.side * 8}` }} />
                         <Fringe color={palette[side.bg]} />
                       </div>
                     </div>
-                    <figcaption className="mt-2 text-[12px] text-[#86868B]">{label} · fransar utanför de 1 210 maskraderna</figcaption>
+                    <figcaption className="mt-2 text-[12px] text-[#86868B]">
+                      {label} · fransar utanför de 1 210 maskraderna{!zoom && <span className="sm:hidden"> · svep för att se hela</span>}
+                    </figcaption>
                   </figure>
                 ))}
               </div>
