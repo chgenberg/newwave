@@ -502,6 +502,9 @@ export function MerchStudio({ copy, kind, defaultClubId }: { copy: BrandCopy; ki
               <Link href="/match" className="inline-flex min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-medium text-[#86868B] hover:text-[#1D1D1F] md:min-h-0 md:px-0 md:text-xs">
                 Matchcentral
               </Link>
+              <Link href={`/halsduk${clubId ? `?club=${clubId}` : ""}`} className="inline-flex min-h-11 items-center whitespace-nowrap px-2 text-[13px] font-medium text-[#86868B] hover:text-[#1D1D1F] md:min-h-0 md:px-0 md:text-xs">
+                Halsduk
+              </Link>
             </>
           )}
           {club && step !== "club" && (
@@ -964,6 +967,14 @@ function PackPreview({ item, club, personalize }: { item: PackItem; club: Club; 
     <section>
       <p className="text-xs text-[#86868B]">{item.concept.signal}</p>
       <h2 className="font-display text-3xl uppercase text-[var(--brand,#234B9A)] [overflow-wrap:anywhere]">{item.concept.slogan}</h2>
+      {personalize && (
+        <Link
+          href={`/halsduk?club=${club.id}&slogan=${encodeURIComponent(item.concept.slogan)}`}
+          className="mt-2 inline-flex min-h-11 items-center text-[14px] font-medium text-[var(--brand,#234B9A)] underline decoration-current/30 underline-offset-4 md:min-h-0"
+        >
+          Gör stickad halsduk av motivet
+        </Link>
+      )}
 
       {/* eslint-disable @next/next/no-img-element */}
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
