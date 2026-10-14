@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadImage } from "@/lib/compose";
 import { SCARF, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, type ScarfCheck } from "@/lib/scarf";
-import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
+import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, portraitYarns, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
 import type { Club } from "@/lib/types";
 
 type ClubListItem = { id: string; name: string; city: string; nicknames: string[] };
@@ -57,7 +57,11 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   const [crest, setCrest] = useState<HTMLImageElement | null>(null);
   const [portraitUrl, setPortraitUrl] = useState(SAMPLE_PORTRAIT);
   const [portrait, setPortrait] = useState<HTMLImageElement | null>(null);
+  const [portraitColor, setPortraitColor] = useState(false);
   const [palette, setPalette] = useState<string[]>([]);
+  const paletteRef = useRef<string[]>([]);
+  const clubRef = useRef<Club | null>(null);
+  const portraitColorRef = useRef(false);
   const [front, setFront] = useState<SideSpec | null>(null);
   const [back, setBack] = useState<SideSpec | null>(null);
   const [font, setFont] = useState<"block" | "tall">("block");
@@ -95,13 +99,52 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   }, [font, fonts]);
 
   useEffect(() => {
+    paletteRef.current = palette;
+    clubRef.current = club;
+  }, [palette, club]);
+
+  /** Swaps the yarns and keeps every side's background, text and detail on the nearest new yarn. */
+  const switchPalette = (next: string[]) => {
+    const prev = paletteRef.current;
+    const map = (i: number) => indexOfNear(next, prev[i] ?? next[0]);
+    setFront((s) => s && { ...s, bg: map(s.bg), ink: map(s.ink), accent: map(s.accent) });
+    setBack((s) => s && { ...s, bg: map(s.bg), ink: map(s.ink), accent: map(s.accent) });
+    updatePalette(next);
+  };
+
+  const updatePalette = (next: string[]) => {
+    paletteRef.current = next;
+    setPalette(next);
+  };
+
+  const portraitPalette = (c: Club, img: HTMLImageElement | null, color: boolean) =>
+    color && img ? clubScarfPalette(c, portraitYarns(img, [...c.palette.map((p) => p.hex), ...c.crestColors])) : clubScarfPalette(c);
+
+  const togglePortraitColor = (color: boolean) => {
+    portraitColorRef.current = color;
+    setPortraitColor(color);
+    if (club) switchPalette(portraitPalette(club, portrait, color));
+  };
+
+  useEffect(() => {
     let live = true;
     loadImage(portraitUrl)
       .catch(() => null)
-      .then((img) => live && setPortrait(img));
+      .then((img) => {
+        if (!live) return;
+        setPortrait(img);
+        const c = clubRef.current;
+        if (!c || !portraitColorRef.current) return;
+        if (!img) {
+          portraitColorRef.current = false;
+          setPortraitColor(false);
+        }
+        switchPalette(portraitPalette(c, img, Boolean(img)));
+      });
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- switchPalette only touches refs and state setters
   }, [portraitUrl]);
 
   useEffect(() => {
@@ -113,6 +156,8 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
         if (!live) return;
         const c = d.club;
         const pal = clubScarfPalette(c);
+        portraitColorRef.current = false;
+        setPortraitColor(false);
         const primary = indexOfNear(pal, c.palette[0]?.hex ?? pal[0]);
         const white = indexOfNear(pal, "#FFFFFF");
         const accent = pal.length > 3 ? indexOfNear(pal, c.palette[3]?.hex ?? pal[2]) : primary;
@@ -136,14 +181,14 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   useEffect(() => {
     if (!front || !back || !palette.length || !fontReady) return;
     const t = setTimeout(() => {
-      const { cells, minTextMm } = composeScarf({ palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script });
+      const { cells, minTextMm } = composeScarf({ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script });
       const hasPortrait = Boolean(portrait) && (front.template === "portratt" || back.template === "portratt");
-      const { checks, counts } = checkGrid(cells, palette, minTextMm, hasPortrait);
+      const { checks, counts } = checkGrid(cells, palette, minTextMm, hasPortrait ? (portraitColor ? "color" : "grey") : null);
       if (club) checks.push(crestOnlyCheck(club, palette, [front, back]));
       setResult({ cells, checks, counts });
     }, 120);
     return () => clearTimeout(t);
-  }, [front, back, palette, crest, portrait, font, fonts, fontReady, club]);
+  }, [front, back, palette, crest, portrait, portraitColor, font, fonts, fontReady, club]);
 
   useEffect(() => {
     if (!result) return;
@@ -153,7 +198,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
         [backRef, 1],
       ] as const) {
         const c = ref.current;
-        const composeInput = front && back ? { palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script } : undefined;
+        const composeInput = front && back ? { palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script } : undefined;
         if (c) renderKnit(c, result.cells, palette, side, zoom ? undefined : (c.clientWidth || 1000) * Math.min(2, window.devicePixelRatio || 1), composeInput);
       }
       return;
@@ -164,12 +209,12 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
     c.width = pat.width;
     c.height = pat.height;
     c.getContext("2d")!.drawImage(pat, 0, 0);
-  }, [result, view, palette, zoom, front, back, crest, portrait, font, fonts]);
+  }, [result, view, palette, zoom, front, back, crest, portrait, portraitColor, font, fonts]);
 
   const removeColor = (i: number) => {
     if (palette.length <= 2) return;
     const fix = (n: number) => (n === i ? 0 : n > i ? n - 1 : n);
-    setPalette(palette.filter((_, j) => j !== i));
+    updatePalette(palette.filter((_, j) => j !== i));
     setFront((s) => s && { ...s, bg: fix(s.bg), ink: fix(s.ink), accent: fix(s.accent) });
     setBack((s) => s && { ...s, bg: fix(s.bg), ink: fix(s.ink), accent: fix(s.accent) });
     setResult((r) => r && { ...r, cells: r.cells.map(fix), counts: [] });
@@ -293,8 +338,8 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
           </section>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <SideEditor label="Framsida" side={front} onChange={setFront} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} />
-            <SideEditor label="Baksida" side={back} onChange={setBack} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} />
+            <SideEditor label="Framsida" side={front} onChange={setFront} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} portraitColor={portraitColor} onPortraitColor={togglePortraitColor} />
+            <SideEditor label="Baksida" side={back} onChange={setBack} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} portraitColor={portraitColor} onPortraitColor={togglePortraitColor} />
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -310,7 +355,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                         <input
                           type="color"
                           value={hex.toLowerCase()}
-                          onChange={(e) => setPalette(palette.map((h, j) => (j === i ? e.target.value.toUpperCase() : h)))}
+                          onChange={(e) => updatePalette(palette.map((h, j) => (j === i ? e.target.value.toUpperCase() : h)))}
                           className="absolute inset-0 cursor-pointer opacity-0"
                           aria-label={`Ändra färg ${i + 1}`}
                         />
@@ -327,7 +372,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                 })}
               </ul>
               {palette.length < SCARF.maxColors && (
-                <button type="button" onClick={() => setPalette([...palette, "#808080"])} className="mt-3 text-[14px] font-medium underline decoration-black/20 underline-offset-4">
+                <button type="button" onClick={() => updatePalette([...palette, "#808080"])} className="mt-3 text-[14px] font-medium underline decoration-black/20 underline-offset-4">
                   Lägg till färg
                 </button>
               )}
@@ -385,7 +430,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             cells={result?.cells ?? null}
             palette={palette}
             headline={front.line1 || back.line1}
-            composeInput={{ palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script }}
+            composeInput={{ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script }}
           />
         </div>
       )}
@@ -624,7 +669,7 @@ function ScarfPhotoStudio({
             {fourPhotos.map((p) => (
               <figure key={p.id} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt={p.label} className="aspect-square w-full rounded-xl object-cover" />
+                <img src={p.url} alt={p.label} className="aspect-[2/3] w-full rounded-xl object-cover" />
                 <figcaption className="mt-2 flex items-center justify-between px-1 text-[13px]">
                   <span className="font-medium">{p.label}</span>
                   <a href={p.url} download={`halsduk-${p.id}.jpg`} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
@@ -713,6 +758,8 @@ function SideEditor(props: {
   palette: string[];
   hasCrest: boolean;
   onPortrait: (url: string) => void;
+  portraitColor: boolean;
+  onPortraitColor: (color: boolean) => void;
 }) {
   const { side, onChange, club, palette } = props;
   const set = (patch: Partial<SideSpec>) => onChange({ ...side, ...patch });
@@ -761,7 +808,31 @@ function SideEditor(props: {
         ) : side.template === "portratt" ? (
           <>
             <div>
-              <span className="text-[12px] text-[#86868B]">Foto (stickas i högupplöst gråskaleraster)</span>
+              <span className="text-[12px] text-[#86868B]">Stickas i</span>
+              <div className="mt-1 mb-3 inline-flex rounded-full bg-[#F5F5F7] p-1">
+                {(
+                  [
+                    [false, "Gråskala"],
+                    [true, "Färg"],
+                  ] as const
+                ).map(([color, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={props.portraitColor === color}
+                    onClick={() => props.onPortraitColor(color)}
+                    className={`h-7 rounded-full px-3.5 text-[13px] font-medium transition ${props.portraitColor === color ? "bg-white text-[#1D1D1F] shadow-sm" : "text-[#6E6E73] hover:text-[#1D1D1F]"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="-mt-1 mb-3 text-[12px] text-[#86868B]">
+                {props.portraitColor
+                  ? "Hud- och hårtoner hämtas ur fotot och delar de sju garnerna med klubbfärgerna."
+                  : "Fyra gråtoner: vitt, ljusgrått, mörkgrått och svart."}
+              </p>
+              <span className="block text-[12px] text-[#86868B]">Foto</span>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <label className="inline-flex h-9 cursor-pointer items-center rounded-full bg-[#F5F5F7] px-4 text-[13px] font-medium hover:bg-[#E8E8ED]">
                   Byt foto

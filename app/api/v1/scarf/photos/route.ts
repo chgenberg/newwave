@@ -80,6 +80,10 @@ async function editToStoredJpg(files: { buf: Buffer; name: string }[], prompt: s
 const REALISM =
   "Hyperrealistic editorial photography shot on a full-frame camera with an 85mm f/1.8 lens, natural skin texture, realistic knitted jacquard wool/acrylic yarn texture and fringes, natural fabric folds and lighting. Indistinguishable from a real photograph. No extra limbs or fingers, no watermarks.";
 
+/** The one way the scarf is worn in every photo: hung around the neck, both ends straight down the chest. */
+const DRAPE =
+  "How the scarf is worn (strict): the classic football supporter way – the scarf lies once loosely around the back of the neck and BOTH ends hang straight down the front of the body, side by side and parallel, one on each side of the chest, reaching about to the waist. Each hanging end lies flat and untwisted with its crest, end stripes and fringes at the bottom, facing the camera and fully readable. The scarf is NOT wrapped around the neck, NOT knotted, NOT looped, NOT tucked into the jacket, NOT thrown over one shoulder and NOT held in the hands. Both hands are relaxed and do not cover the scarf.";
+
 export async function POST(req: Request) {
   if (!hasOpenAIKey()) return Response.json({ error: "OpenAI-nyckel saknas på servern." }, { status: 503 });
   const verdict = limiter.take(clientIp(req));
@@ -107,7 +111,9 @@ export async function POST(req: Request) {
         REALISM,
         "Image 1 is a photo of a real person. Image 2 is the exact custom knitted football supporter scarf to place on them.",
         "Keep the person in Image 1 completely identical — same face, facial features, expression, hair, glasses, skin tone, lighting and background.",
-        `Drape the knitted supporter scarf from Image 2 (${clubName}${textHint}) naturally around their neck and over their shoulders so the scarf's colours, end crests, stripes, fringes and central design from Image 2 are clearly visible and follow the natural folds of a real knitted jacquard scarf.`,
+        `Put the knitted supporter scarf from Image 2 (${clubName}${textHint}) on the person so its colours, end crests, stripes, fringes and design from Image 2 are clearly visible with the soft weight and gentle folds of a real knitted jacquard scarf.`,
+        DRAPE,
+        "If the photo is cropped at the chest, the two ends simply continue straight down out of the frame.",
       ].join("\n");
       const url = await editToStoredJpg(
         [
@@ -125,25 +131,25 @@ export async function POST(req: Request) {
         id: "stand",
         label: "På läktaren",
         scene:
-          "A smiling Scandinavian woman in her late 20s in a dark wool coat standing in a football stadium stand at dusk with warm floodlights and softly blurred crowd behind her, wearing the exact knitted supporter scarf from the reference image draped around her neck and shoulders so the front design, crests and fringes are clearly visible.",
+          "Waist-up photo, facing the camera: a smiling Scandinavian woman in her late 20s in a dark wool coat standing in a football stadium stand at dusk with warm floodlights and a softly blurred crowd behind her, wearing the exact knitted supporter scarf from the reference image.",
       },
       {
         id: "arena",
         label: "Utanför arenan",
         scene:
-          "A proud Scandinavian man in his late 30s in a dark jacket outside a modern Scandinavian football stadium on an autumn match evening, holding and wearing the exact knitted supporter scarf from the reference image across his chest and shoulders so the full pattern, lettering and crests are clearly visible.",
+          "Waist-up photo, facing the camera: a proud Scandinavian man in his late 30s in a dark jacket outside a modern Scandinavian football stadium on an autumn match evening, wearing the exact knitted supporter scarf from the reference image.",
       },
       {
         id: "street",
         label: "På väg till matchen",
         scene:
-          "A joyful young adult supporter walking along a cobblestone city street in Gothenburg in golden afternoon light, wearing a neutral dark sweater with the exact knitted supporter scarf from the reference image draped over both shoulders so its colours, crests, stripes and lettering show clearly.",
+          "Waist-up photo, facing the camera: a joyful young adult supporter on a cobblestone city street in Gothenburg in golden afternoon light, in a neutral dark sweater, wearing the exact knitted supporter scarf from the reference image.",
       },
       {
         id: "closeup",
         label: "Porträtt i kvällsljus",
         scene:
-          "An editorial half-body portrait of a charismatic Scandinavian supporter in their 40s in a classic coat in warm evening light, wearing the exact knitted supporter scarf from the reference image wrapped once around the neck with both ends hanging down the chest, showing the knitted jacquard texture, crests and fringes.",
+          "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian supporter in their 40s in a classic coat in warm evening light, wearing the exact knitted supporter scarf from the reference image.",
       },
     ];
 
@@ -153,9 +159,10 @@ export async function POST(req: Request) {
           REALISM,
           `The reference image shows the exact custom knitted football scarf for ${clubName}${textHint}.`,
           s.scene,
+          DRAPE,
           "Reproduce the scarf's exact colours, end stripes, club crests, fringes and central graphic/text from the reference image with realistic knitted yarn texture. Fictional generic person, no other brand logos.",
         ].join("\n");
-        const url = await editToStoredJpg([{ buf: scarfPng, name: "scarf.png" }], prompt, "1024x1024");
+        const url = await editToStoredJpg([{ buf: scarfPng, name: "scarf.png" }], prompt, "1024x1536");
         return { id: s.id, label: s.label, url } satisfies ScarfPhoto;
       }),
     );

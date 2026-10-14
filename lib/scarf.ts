@@ -46,20 +46,23 @@ export function deltaE(a: string, b: string) {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
-/** Includes two mid-grey yarns within the 7-colour cap so photo portraits knit with 4 greyscale tones (white, light grey, dark grey, black) like on an IMS/OPEK 365. */
-export function clubScarfPalette(club: { palette: { hex: string }[]; crestColors: string[] }) {
+/** Black, dark grey and light grey: with white these give photo portraits 4 greyscale tones like on an IMS/OPEK 365. */
+export const GREY_YARNS = ["#0A0A0A", "#555960", "#A6AAB0"];
+
+/**
+ * Up to 7 yarns: the primary colour, every crest colour and the second club colour always come first so the crest knits correctly,
+ * then the portrait yarns (`extras`), then any remaining club colours.
+ */
+export function clubScarfPalette(club: { palette: { hex: string }[]; crestColors: string[] }, extras: string[] = GREY_YARNS) {
   const out: string[] = [];
-  const clubCandidates = [...club.palette.map((c) => c.hex), ...club.crestColors].map((c) => c.toUpperCase());
-  const greys = ["#A6AAB0", "#555960"];
-  for (const h of clubCandidates) {
-    if (out.length < SCARF.maxColors - greys.length && !out.some((o) => deltaE(o, h) < 14)) out.push(h);
-  }
-  for (const g of greys) {
-    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, g) < 8)) out.push(g);
-  }
-  for (const h of clubCandidates) {
-    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, h) < 6)) out.push(h);
-  }
+  const add = (hex: string | undefined, minDelta: number) => {
+    if (!hex) return;
+    const h = hex.toUpperCase();
+    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, h) < minDelta)) out.push(h);
+  };
+  [club.palette[0]?.hex, ...club.crestColors, club.palette[1]?.hex].forEach((h) => add(h, 6));
+  extras.forEach((h) => add(h, 8));
+  club.palette.forEach((p) => add(p.hex, 6));
   return out;
 }
 
@@ -88,6 +91,8 @@ const PANTONE: [string, string][] = [
   ["375 C", "#97D700"], ["368 C", "#78BE20"], ["7741 C", "#44883E"], ["347 C", "#009A44"], ["356 C", "#007A33"], ["349 C", "#046A38"],
   ["342 C", "#006747"], ["3425 C", "#006341"],
   ["2685 C", "#330072"], ["268 C", "#582C83"], ["259 C", "#6D2077"],
+  ["7506 C", "#EFDBB2"], ["4685 C", "#E0C6AD"], ["475 C", "#F1C6A7"], ["7513 C", "#E1B087"], ["7515 C", "#C4956C"], ["7517 C", "#9A5B2F"],
+  ["7522 C", "#B05C52"], ["4705 C", "#7C4D3A"], ["476 C", "#4E3629"], ["7533 C", "#4B3D2A"], ["7530 C", "#A39382"],
 ];
 
 export function nearestPantone(hex: string) {
@@ -103,7 +108,12 @@ export function nearestPantone(hex: string) {
 export type ScarfCheck = { id: string; ok: boolean; title: string; note: string };
 
 /** Stitch-level checks on the finished 240×1210 grid. */
-export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: number | null, hasPortrait = false): { checks: ScarfCheck[]; counts: number[] } {
+export function checkGrid(
+  cells: Uint8Array,
+  palette: string[],
+  minTextMm: number | null,
+  portrait: "grey" | "color" | null = null,
+): { checks: ScarfCheck[]; counts: number[] } {
   const counts = new Array(palette.length).fill(0);
   let isolated = 0;
   const W = SCARF.needles;
@@ -130,12 +140,15 @@ export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: numbe
           title: minTextMm >= MIN_TEXT_MM ? "Texten går att läsa" : "För liten text",
           note: `Minsta bokstavshöjd ${Math.round(minTextMm)} mm${minTextMm >= MIN_TEXT_MM ? "" : ` – minst ${MIN_TEXT_MM} mm behövs för att den ska synas i stickningen`}.`,
         },
-    hasPortrait
+    portrait
       ? {
           id: "dots",
           ok: true,
-          title: "Fotoporträtt i jacquard-raster",
-          note: "Ansiktet stickas med halftonsraster i 4 gråtoner för mjuka övergångar på OPEK 365.",
+          title: portrait === "color" ? "Färgporträtt i jacquard-raster" : "Fotoporträtt i jacquard-raster",
+          note:
+            portrait === "color"
+              ? "Ansiktet stickas med färgraster av hudtoner och klubbfärger inom de sju garnerna – enstaka maskor är avsiktliga."
+              : "Ansiktet stickas med halftonsraster i 4 gråtoner för mjuka övergångar på OPEK 365.",
         }
       : {
           id: "dots",
