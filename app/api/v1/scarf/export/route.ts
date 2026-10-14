@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import sharp from "sharp";
 import { z } from "zod";
 import { readJson } from "@/lib/demoLimit";
-import { CELLS, SCARF, checkGrid, hexToRgb, nearestPantone, readMe } from "@/lib/scarf";
+import { CELLS, SCARF, checkGrid, colorCsv, hexToRgb, readMe } from "@/lib/scarf";
 
 export const maxDuration = 30;
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   ]);
 
   const { counts } = checkGrid(new Uint8Array(cells), palette, null);
-  const csv = ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i]}`)].join("\n");
+  const csv = colorCsv(palette, counts);
   const date = new Date().toISOString().slice(0, 10);
 
   const zip = new JSZip();

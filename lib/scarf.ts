@@ -46,6 +46,25 @@ export function deltaE(a: string, b: string) {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
+export function clubScarfPalette(club: { palette: { hex: string }[]; crestColors: string[] }) {
+  const out: string[] = [];
+  for (const hex of [...club.palette.map((c) => c.hex), ...club.crestColors]) {
+    const h = hex.toUpperCase();
+    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, h) < 6)) out.push(h);
+  }
+  return out;
+}
+
+export function indexOfNear(palette: string[], hex: string, fallback = 0) {
+  let best = fallback;
+  let bestD = Infinity;
+  palette.forEach((p, i) => {
+    const d = deltaE(p, hex);
+    if (d < bestD) [best, bestD] = [i, d];
+  });
+  return best;
+}
+
 /** Common Pantone Solid Coated references as sRGB approximations. Seger matches yarn from the Pantone code. */
 const PANTONE: [string, string][] = [
   ["White", "#FFFFFF"], ["Black 6 C", "#101820"], ["Black C", "#2D2926"], ["Cool Gray 11 C", "#53565A"], ["Cool Gray 7 C", "#97999B"],
@@ -111,6 +130,10 @@ export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: numbe
     },
   ];
   return { checks, counts };
+}
+
+export function colorCsv(palette: string[], counts: number[]) {
+  return ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i] ?? 0}`)].join("\n");
 }
 
 export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string }) {

@@ -1,6 +1,6 @@
 import { CELLS, ROW_H_MM, SCARF, STITCH_W_MM, hexToRgb } from "./scarf";
 
-export type Template = "klassisk" | "smeknamn" | "arena" | "motiv" | "personlig";
+export type Template = "klassisk" | "smeknamn" | "arena" | "motiv" | "personlig" | "trupp" | "portratt" | "autograf";
 
 export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
   { id: "klassisk", label: "Klassisk", hint: "Klubbnamn, sköld och ränder" },
@@ -8,17 +8,50 @@ export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
   { id: "arena", label: "Arenan", hint: "Hemmaplanen och året" },
   { id: "motiv", label: "Motiv", hint: "Agentens slogan" },
   { id: "personlig", label: "Personlig", hint: "Eget namn och nummer" },
+  { id: "trupp", label: "Truppen", hint: "Spelarnas namn och nummer längs hela halsduken" },
+  { id: "portratt", label: "Porträtt", hint: "Foto som grafiskt porträtt i tre färger" },
+  { id: "autograf", label: "Autograf", hint: "Signatur som du ritar eller skriver" },
 ];
 
+export const DEFAULT_ROSTER = [
+  "1 LINDKVIST",
+  "3 SVENSSON",
+  "4 BERG",
+  "6 ERIKSSON",
+  "7 NILSSON",
+  "8 LARSSON",
+  "9 HOLM",
+  "10 EKSTRÖM",
+  "11 DAHL",
+  "14 KARLSSON",
+  "17 STRÖM",
+  "21 NYMAN",
+].join("\n");
+
+export type Stroke = [number, number][];
+
 /** Colours are indexes into the scarf palette. */
-export type SideSpec = { template: Template; bg: number; ink: number; accent: number; line1: string; line2: string; number: string; crest: boolean };
+export type SideSpec = {
+  template: Template;
+  bg: number;
+  ink: number;
+  accent: number;
+  line1: string;
+  line2: string;
+  number: string;
+  roster: string;
+  strokes: Stroke[];
+  crest: boolean;
+};
 
 export type ComposeInput = {
   palette: string[];
   front: SideSpec;
   back: SideSpec;
   crest: HTMLImageElement | null;
+  portrait?: HTMLImageElement | null;
   font: string;
+  scriptFont?: string;
 };
 
 export type Composed = { cells: Uint8Array; minTextMm: number | null };
@@ -63,7 +96,13 @@ function drawSide(ctx: Ctx, side: SideSpec, input: ComposeInput, texts: number[]
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
-  if (side.template === "personlig" && side.number.trim()) {
+  if (side.template === "trupp") {
+    drawRoster(ctx, side, input, mid, texts);
+  } else if (side.template === "portratt") {
+    drawPortraitSide(ctx, side, input, mid, texts);
+  } else if (side.template === "autograf") {
+    drawAutographSide(ctx, side, input, mid, texts);
+  } else if (side.template === "personlig" && side.number.trim()) {
     const numW = span * 0.3;
     const numCap = fitText(ctx, side.number.trim(), input.font, numW, 128);
     drawText(ctx, side.number.trim(), input.font, numCap, mid.x0 + numW / 2, W / 2);
@@ -102,6 +141,141 @@ function drawSide(ctx: Ctx, side: SideSpec, input: ComposeInput, texts: number[]
     }
   }
   ctx.restore();
+}
+
+function drawRoster(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: number; x1: number }, texts: number[]) {
+  const players = side.roster
+    .split(/\r?\n|,/)
+    .map((s) => s.trim().toLocaleUpperCase("sv-SE"))
+    .filter(Boolean)
+    .slice(0, 18);
+  const cols = Math.max(1, Math.ceil(players.length / 3));
+  const rows = Math.min(3, Math.max(1, Math.ceil(players.length / cols)));
+  const title = side.line1.trim();
+  const topY = title ? 48 : 22;
+  if (title) {
+    const tCap = fitText(ctx, title, input.font, (mid.x1 - mid.x0) * 0.9, 22);
+    ctx.fillStyle = input.palette[side.accent] ?? input.palette[side.ink];
+    drawText(ctx, title, input.font, tCap, (mid.x0 + mid.x1) / 2, 26);
+    texts.push(tCap);
+  }
+  const colW = (mid.x1 - mid.x0) / cols;
+  const rowH = (W - topY - 14) / rows;
+  const maxCap = Math.min(26, rowH * 0.62);
+  ctx.fillStyle = input.palette[side.ink] ?? input.palette[0];
+  players.forEach((p, idx) => {
+    const c = Math.floor(idx / rows);
+    const r = idx % rows;
+    const cap = fitText(ctx, p, input.font, colW - 14, maxCap);
+    drawText(ctx, p, input.font, cap, mid.x0 + (c + 0.5) * colW, topY + (r + 0.5) * rowH);
+    texts.push(cap);
+  });
+}
+
+/** Three-tone posterised portrait so any face photo becomes flat, knittable blocks. */
+function drawPortraitSide(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: number; x1: number }, texts: number[]) {
+  const box = W - 26;
+  const x0 = mid.x0 + 8;
+  const y0 = (W - box) / 2;
+  const tones = ([side.bg, side.accent, side.ink].map((i) => hexToRgb(input.palette[i] ?? input.palette[0])) as [number, number, number][]).sort(
+    (a, b) => a[0] * 0.3 + a[1] * 0.59 + a[2] * 0.11 - (b[0] * 0.3 + b[1] * 0.59 + b[2] * 0.11),
+  );
+  if (input.portrait) {
+    const cell = portraitCanvas(input.portrait, tones);
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, box, box, 12);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(cell, x0, y0, box, box);
+    ctx.restore();
+  }
+  ctx.strokeStyle = input.palette[side.ink] ?? "#FFFFFF";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(x0, y0, box, box, 12);
+  ctx.stroke();
+
+  const tx0 = x0 + box + 24;
+  const span = Math.max(80, mid.x1 - tx0);
+  const main = side.line1.trim();
+  const sub = side.line2.trim();
+  ctx.fillStyle = input.palette[side.ink] ?? input.palette[0];
+  if (main) {
+    const cap = fitText(ctx, main, input.font, span, sub ? 68 : 90);
+    if (sub) {
+      const subCap = fitText(ctx, sub, input.font, span * 0.85, 24);
+      drawText(ctx, main, input.font, cap, tx0 + span / 2, W / 2 - subCap / 2 - 6);
+      drawText(ctx, sub, input.font, subCap, tx0 + span / 2, W / 2 + cap / 2 + 10);
+      texts.push(subCap);
+    } else {
+      drawText(ctx, main, input.font, cap, tx0 + span / 2, W / 2);
+    }
+    texts.push(cap);
+  }
+}
+
+function portraitCanvas(img: HTMLImageElement, tones: [number, number, number][]) {
+  const N = 96;
+  const c = document.createElement("canvas");
+  c.width = N;
+  c.height = N;
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  const iw = img.naturalWidth || 1;
+  const ih = img.naturalHeight || 1;
+  const s = Math.min(iw, ih);
+  g.drawImage(img, (iw - s) / 2, (ih - s) * 0.25, s, s, 0, 0, N, N);
+  const im = g.getImageData(0, 0, N, N);
+  const lums: number[] = [];
+  for (let i = 0; i < im.data.length; i += 4) lums.push(im.data[i] * 0.3 + im.data[i + 1] * 0.59 + im.data[i + 2] * 0.11);
+  const sorted = [...lums].sort((a, b) => a - b);
+  const t1 = sorted[Math.floor(sorted.length * 0.36)];
+  const t2 = sorted[Math.floor(sorted.length * 0.72)];
+  for (let i = 0; i < lums.length; i++) {
+    const tone = lums[i] < t1 ? tones[0] : lums[i] < t2 ? tones[1] : tones[2];
+    im.data.set([tone[0], tone[1], tone[2], 255], i * 4);
+  }
+  g.putImageData(im, 0, 0);
+  return c;
+}
+
+function drawAutographSide(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: number; x1: number }, texts: number[]) {
+  const span = mid.x1 - mid.x0;
+  const sub = side.line2.trim();
+  const sigTop = 18;
+  const sigH = sub ? W - 64 : W - 36;
+  ctx.strokeStyle = input.palette[side.ink] ?? "#FFFFFF";
+  ctx.fillStyle = input.palette[side.ink] ?? "#FFFFFF";
+  if (side.strokes.length) {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 5;
+    for (const s of side.strokes) {
+      if (!s.length) continue;
+      ctx.beginPath();
+      s.forEach(([nx, ny], i) => {
+        const px = mid.x0 + 20 + nx * (span - 40);
+        const py = sigTop + ny * sigH;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      if (s.length === 1) ctx.lineTo(mid.x0 + 20 + s[0][0] * (span - 40) + 0.5, sigTop + s[0][1] * sigH);
+      ctx.stroke();
+    }
+    ctx.restore();
+    texts.push(28);
+  } else if (side.line1.trim()) {
+    const fam = input.scriptFont ?? input.font;
+    const cap = fitText(ctx, side.line1.trim(), fam, span * 0.86, sigH * 0.72);
+    drawText(ctx, side.line1.trim(), fam, cap, (mid.x0 + mid.x1) / 2, sigTop + sigH / 2);
+    texts.push(cap);
+  }
+  if (sub) {
+    const subCap = fitText(ctx, sub, input.font, span * 0.75, 22);
+    drawText(ctx, sub, input.font, subCap, (mid.x0 + mid.x1) / 2, W - 22);
+    texts.push(subCap);
+  }
 }
 
 function drawContain(ctx: Ctx, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
@@ -230,6 +404,7 @@ export function renderKnit(canvas: HTMLCanvasElement, cells: Uint8Array, palette
   ctx.fillStyle = ctx.createPattern(stitchTile(), "repeat")!;
   ctx.fillRect(0, 0, src.width, src.height);
   ctx.globalCompositeOperation = "source-over";
+
   const goal = targetWidth && targetWidth < src.width ? Math.round(targetWidth) : src.width;
   while (src.width / 2 >= goal) {
     const half = document.createElement("canvas");
@@ -245,6 +420,26 @@ export function renderKnit(canvas: HTMLCanvasElement, cells: Uint8Array, palette
   const out = canvas.getContext("2d")!;
   out.imageSmoothingQuality = "high";
   out.drawImage(src, 0, 0, canvas.width, canvas.height);
+}
+
+/** 240×1210 pixel canvas where every pixel is one stitch; exported as PNG or JPG for Seger. */
+export function renderPatternCanvas(cells: Uint8Array, palette: string[]) {
+  const c = document.createElement("canvas");
+  c.width = SCARF.needles;
+  c.height = SCARF.rows;
+  const ctx = c.getContext("2d")!;
+  const img = ctx.createImageData(SCARF.needles, SCARF.rows);
+  const rgb = palette.map(hexToRgb);
+  for (let i = 0; i < cells.length; i++) {
+    const p = rgb[cells[i]] ?? rgb[0];
+    const o = i * 4;
+    img.data[o] = p[0];
+    img.data[o + 1] = p[1];
+    img.data[o + 2] = p[2];
+    img.data[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
 }
 
 export function cellsToBase64(cells: Uint8Array) {

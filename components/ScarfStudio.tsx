@@ -3,48 +3,37 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadImage } from "@/lib/compose";
-import { SCARF, checkGrid, deltaE, nearestPantone, type ScarfCheck } from "@/lib/scarf";
-import { TEMPLATES, cellsToBase64, composeScarf, renderKnit, type SideSpec, type Template } from "@/lib/scarfCompose";
+import { SCARF, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, type ScarfCheck } from "@/lib/scarf";
+import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, renderKnit, renderPatternCanvas, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
 import type { Club } from "@/lib/types";
 
 type ClubListItem = { id: string; name: string; city: string; nicknames: string[] };
-type Fonts = { block: string; tall: string };
+type Fonts = { block: string; tall: string; script: string };
 type View = "knit" | "file";
 
 const DEFAULT_CLUB = "ifk-goteborg";
+const SAMPLE_PORTRAIT = "/demo/portrait.jpg";
 
-function startPalette(club: Club) {
-  const out: string[] = [];
-  for (const hex of [...club.palette.map((c) => c.hex), ...club.crestColors]) {
-    const h = hex.toUpperCase();
-    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, h) < 6)) out.push(h);
-  }
-  return out;
-}
-
-const indexOfNear = (palette: string[], hex: string, fallback = 0) => {
-  let best = fallback;
-  let bestD = Infinity;
-  palette.forEach((p, i) => {
-    const d = deltaE(p, hex);
-    if (d < bestD) [best, bestD] = [i, d];
-  });
-  return best;
-};
-
-function linesFor(t: Template, club: Club, slogan: string): Pick<SideSpec, "line1" | "line2" | "number"> {
+function linesFor(t: Template, club: Club, slogan: string): Pick<SideSpec, "line1" | "line2" | "number" | "roster" | "strokes" | "crest"> {
   const up = (s: string) => s.toLocaleUpperCase("sv-SE");
+  const base = { roster: DEFAULT_ROSTER, strokes: [] as Stroke[], crest: true };
   switch (t) {
     case "klassisk":
-      return { line1: up(club.name), line2: `SEDAN ${club.founded}`, number: "" };
+      return { ...base, line1: up(club.name), line2: `SEDAN ${club.founded}`, number: "" };
     case "smeknamn":
-      return { line1: up(club.nicknames[0] ?? club.shortName), line2: up(club.city), number: "" };
+      return { ...base, line1: up(club.nicknames[0] ?? club.shortName), line2: up(club.city), number: "" };
     case "arena":
-      return { line1: up(club.arena), line2: `${up(club.city)} · ${club.founded}`, number: "" };
+      return { ...base, line1: up(club.arena), line2: `${up(club.city)} · ${club.founded}`, number: "" };
     case "motiv":
-      return { line1: up(slogan || club.tagline), line2: up(club.name), number: "" };
+      return { ...base, line1: up(slogan || club.tagline), line2: up(club.name), number: "" };
     case "personlig":
-      return { line1: "ELLA", line2: up(club.name), number: "7" };
+      return { ...base, line1: "ELLA", line2: up(club.name), number: "7" };
+    case "trupp":
+      return { ...base, line1: `${up(club.shortName)} TRUPPEN`, line2: "", number: "", crest: false };
+    case "portratt":
+      return { ...base, line1: "#9 HOLM", line2: up(club.name), number: "" };
+    case "autograf":
+      return { ...base, line1: "Alex Holm #9", line2: up(club.name), number: "" };
   }
 }
 
@@ -60,18 +49,18 @@ function crestOnlyCheck(club: Club, palette: string[], sides: SideSpec[]): Scarf
     : { id: "crest", ok: true, title: "Klubbens färger", note: "Sköldens egna färger används bara i skölden." };
 }
 
-const forbidsPlayers = (club: Club) => club.rules.some((r) => /spelares namn|spelare.*ansikt/i.test(r));
-
 export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   const [clubs, setClubs] = useState<ClubListItem[]>([]);
   const [clubId, setClubId] = useState<string | null>(null);
   const [club, setClub] = useState<Club | null>(null);
   const [slogan] = useState(() => (typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("slogan")?.slice(0, 60) ?? "")));
   const [crest, setCrest] = useState<HTMLImageElement | null>(null);
+  const [portraitUrl, setPortraitUrl] = useState(SAMPLE_PORTRAIT);
+  const [portrait, setPortrait] = useState<HTMLImageElement | null>(null);
   const [palette, setPalette] = useState<string[]>([]);
   const [front, setFront] = useState<SideSpec | null>(null);
   const [back, setBack] = useState<SideSpec | null>(null);
-  const [font, setFont] = useState<keyof Fonts>("block");
+  const [font, setFont] = useState<"block" | "tall">("block");
   const [loadedFont, setLoadedFont] = useState<string | null>(null);
   const [view, setView] = useState<View>("knit");
   const [zoom, setZoom] = useState(false);
@@ -97,14 +86,23 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   useEffect(() => {
     const family = fonts[font];
     let live = true;
-    document.fonts
-      .load(`400 100px ${family}`)
+    Promise.all([document.fonts.load(`400 100px ${family}`), document.fonts.load(`400 100px ${fonts.script}`)])
       .catch(() => null)
       .then(() => live && setLoadedFont(family));
     return () => {
       live = false;
     };
   }, [font, fonts]);
+
+  useEffect(() => {
+    let live = true;
+    loadImage(portraitUrl)
+      .catch(() => null)
+      .then((img) => live && setPortrait(img));
+    return () => {
+      live = false;
+    };
+  }, [portraitUrl]);
 
   useEffect(() => {
     if (!clubId) return;
@@ -114,15 +112,15 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
         const d = (await fetch(`/api/v1/clubs/${clubId}`).then((r) => r.json())) as { club: Club };
         if (!live) return;
         const c = d.club;
-        const pal = startPalette(c);
+        const pal = clubScarfPalette(c);
         const primary = indexOfNear(pal, c.palette[0]?.hex ?? pal[0]);
         const white = indexOfNear(pal, "#FFFFFF");
         const accent = pal.length > 3 ? indexOfNear(pal, c.palette[3]?.hex ?? pal[2]) : primary;
         const t: Template = slogan ? "motiv" : "klassisk";
         setClub(c);
         setPalette(pal);
-        setFront({ template: t, bg: primary, ink: white, accent, crest: true, ...linesFor(t, c, slogan) });
-        setBack({ template: "smeknamn", bg: white, ink: primary, accent, crest: true, ...linesFor("smeknamn", c, "") });
+        setFront({ template: t, bg: primary, ink: white, accent, ...linesFor(t, c, slogan) });
+        setBack({ template: "smeknamn", bg: white, ink: primary, accent, ...linesFor("smeknamn", c, "") });
         const img = await loadImage(`/api/v1/brand/${c.id}/${c.brand.crest.farg}`).catch(() => null);
         if (live) setCrest(img);
       } catch {
@@ -138,13 +136,13 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   useEffect(() => {
     if (!front || !back || !palette.length || !fontReady) return;
     const t = setTimeout(() => {
-      const { cells, minTextMm } = composeScarf({ palette, front, back, crest, font: fonts[font] });
+      const { cells, minTextMm } = composeScarf({ palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script });
       const { checks, counts } = checkGrid(cells, palette, minTextMm);
       if (club) checks.push(crestOnlyCheck(club, palette, [front, back]));
       setResult({ cells, checks, counts });
     }, 120);
     return () => clearTimeout(t);
-  }, [front, back, palette, crest, font, fonts, fontReady, club]);
+  }, [front, back, palette, crest, portrait, font, fonts, fontReady, club]);
 
   useEffect(() => {
     if (!result) return;
@@ -160,24 +158,19 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
     }
     const c = fileRef.current;
     if (!c) return;
-    c.width = SCARF.needles;
-    c.height = SCARF.rows;
-    const ctx = c.getContext("2d")!;
-    const img = ctx.createImageData(SCARF.needles, SCARF.rows);
-    const rgb = palette.map((h) => [1, 3, 5].map((i) => Number.parseInt(h.slice(i, i + 2), 16)));
-    result.cells.forEach((v, i) => {
-      img.data.set([...(rgb[v] ?? rgb[0]), 255], i * 4);
-    });
-    ctx.putImageData(img, 0, 0);
+    const pat = renderPatternCanvas(result.cells, palette);
+    c.width = pat.width;
+    c.height = pat.height;
+    c.getContext("2d")!.drawImage(pat, 0, 0);
   }, [result, view, palette, zoom]);
 
   const removeColor = (i: number) => {
     if (palette.length <= 2) return;
     const fix = (n: number) => (n === i ? 0 : n > i ? n - 1 : n);
     setPalette(palette.filter((_, j) => j !== i));
-    setResult((r) => r && { ...r, cells: r.cells.map(fix), counts: [] });
     setFront((s) => s && { ...s, bg: fix(s.bg), ink: fix(s.ink), accent: fix(s.accent) });
     setBack((s) => s && { ...s, bg: fix(s.bg), ink: fix(s.ink), accent: fix(s.accent) });
+    setResult((r) => r && { ...r, cells: r.cells.map(fix), counts: [] });
   };
 
   const download = async () => {
@@ -205,7 +198,6 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   };
 
   const allOk = result?.checks.every((c) => c.ok) ?? false;
-  const noPlayers = club ? forbidsPlayers(club) : false;
 
   return (
     <main className="flex min-h-screen flex-col bg-white">
@@ -299,8 +291,8 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
           </section>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <SideEditor label="Framsida" side={front} onChange={setFront} club={club} slogan={slogan} palette={palette} noPlayers={noPlayers} hasCrest={!!crest} />
-            <SideEditor label="Baksida" side={back} onChange={setBack} club={club} slogan={slogan} palette={palette} noPlayers={noPlayers} hasCrest={!!crest} />
+            <SideEditor label="Framsida" side={front} onChange={setFront} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} />
+            <SideEditor label="Baksida" side={back} onChange={setBack} club={club} slogan={slogan} palette={palette} hasCrest={!!crest} onPortrait={setPortraitUrl} />
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -370,12 +362,6 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E8E8ED] text-[11px] font-bold text-[#424245]">i</span>
                   <span className="text-[13px] text-[#6E6E73]">Halsduken stickas som en tub. Ränder runt halsduken får ett litet hack där varven möts.</span>
                 </li>
-                {noPlayers && (
-                  <li className="flex gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E8E8ED] text-[11px] font-bold text-[#424245]">i</span>
-                    <span className="text-[13px] text-[#6E6E73]">Klubbens regler: inga spelares namn, ansikten eller nummer. Trupp och porträtt kräver avtal med klubb och spelare.</span>
-                  </li>
-                )}
               </ul>
               <div className="mt-auto pt-6">
                 <button
@@ -408,8 +394,8 @@ function SideEditor(props: {
   club: Club;
   slogan: string;
   palette: string[];
-  noPlayers: boolean;
   hasCrest: boolean;
+  onPortrait: (url: string) => void;
 }) {
   const { side, onChange, club, palette } = props;
   const set = (patch: Partial<SideSpec>) => onChange({ ...side, ...patch });
@@ -425,7 +411,7 @@ function SideEditor(props: {
   return (
     <section className="rounded-3xl border border-black/[0.08] p-5 sm:p-6">
       <h2 className="text-[17px] font-semibold">{props.label}</h2>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {TEMPLATES.map((t) => (
           <button
             key={t.id}
@@ -433,7 +419,7 @@ function SideEditor(props: {
             aria-pressed={side.template === t.id}
             onClick={() => set({ template: t.id, ...linesFor(t.id, club, props.slogan) })}
             title={t.hint}
-            className={`h-9 rounded-full px-4 text-[13px] font-medium transition ${side.template === t.id ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]"}`}
+            className={`h-8 rounded-full px-3.5 text-[13px] font-medium transition ${side.template === t.id ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]"}`}
           >
             {t.label}
           </button>
@@ -442,11 +428,61 @@ function SideEditor(props: {
       <p className="mt-2 text-[12px] text-[#86868B]">{TEMPLATES.find((t) => t.id === side.template)?.hint}</p>
 
       <div className="mt-4 space-y-3">
-        {side.template === "personlig" && (
-          <Field label="Nummer" value={side.number} max={3} onChange={(v) => set({ number: v.replace(/[^0-9]/g, "") })} />
+        {side.template === "trupp" ? (
+          <>
+            <Field label="Rubrik" value={side.line1} max={28} onChange={(v) => set({ line1: v.toLocaleUpperCase("sv-SE") })} />
+            <label className="block">
+              <span className="text-[12px] text-[#86868B]">Spelare, en per rad</span>
+              <textarea
+                rows={4}
+                value={side.roster}
+                onChange={(e) => set({ roster: e.target.value.slice(0, 400) })}
+                className="mt-1 w-full rounded-xl bg-[#F5F5F7] p-3 text-[14px] leading-snug outline-none focus:ring-2 focus:ring-[#1D1D1F]"
+              />
+            </label>
+          </>
+        ) : side.template === "portratt" ? (
+          <>
+            <div>
+              <span className="text-[12px] text-[#86868B]">Foto (görs om till tre garnfärger)</span>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <label className="inline-flex h-9 cursor-pointer items-center rounded-full bg-[#F5F5F7] px-4 text-[13px] font-medium hover:bg-[#E8E8ED]">
+                  Byt foto
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!f || !f.type.startsWith("image/") || f.size > 10_000_000) return;
+                      const r = new FileReader();
+                      r.onload = () => typeof r.result === "string" && props.onPortrait(r.result);
+                      r.readAsDataURL(f);
+                    }}
+                  />
+                </label>
+                <button type="button" onClick={() => props.onPortrait(SAMPLE_PORTRAIT)} className="text-[13px] text-[#86868B] underline decoration-black/20 underline-offset-4">
+                  Exempelfoto
+                </button>
+              </div>
+            </div>
+            <Field label="Namn och nummer" value={side.line1} max={28} onChange={(v) => set({ line1: v.toLocaleUpperCase("sv-SE") })} />
+            <Field label="Undertext" value={side.line2} max={32} onChange={(v) => set({ line2: v.toLocaleUpperCase("sv-SE") })} />
+          </>
+        ) : side.template === "autograf" ? (
+          <>
+            <SignPad strokes={side.strokes} onChange={(strokes) => set({ strokes })} />
+            {!side.strokes.length && <Field label="Eller skriv namnet som autograf" value={side.line1} max={28} onChange={(v) => set({ line1: v })} />}
+            <Field label="Undertext" value={side.line2} max={32} onChange={(v) => set({ line2: v.toLocaleUpperCase("sv-SE") })} />
+          </>
+        ) : (
+          <>
+            {side.template === "personlig" && <Field label="Nummer" value={side.number} max={3} onChange={(v) => set({ number: v.replace(/[^0-9]/g, "") })} />}
+            <Field label={side.template === "personlig" ? "Namn" : "Huvudtext"} value={side.line1} max={28} onChange={(v) => set({ line1: v.toLocaleUpperCase("sv-SE") })} />
+            <Field label="Undertext" value={side.line2} max={32} onChange={(v) => set({ line2: v.toLocaleUpperCase("sv-SE") })} />
+          </>
         )}
-        <Field label={side.template === "personlig" ? (props.noPlayers ? "Namn (eget namn, inte spelare)" : "Namn") : "Huvudtext"} value={side.line1} max={28} onChange={(v) => set({ line1: v.toLocaleUpperCase("sv-SE") })} />
-        <Field label="Undertext" value={side.line2} max={32} onChange={(v) => set({ line2: v.toLocaleUpperCase("sv-SE") })} />
         {props.hasCrest && (
           <label className="flex items-center gap-2 text-[14px]">
             <input type="checkbox" checked={side.crest} onChange={(e) => set({ crest: e.target.checked })} className="h-4 w-4 accent-[#1D1D1F]" />
@@ -476,6 +512,77 @@ function SideEditor(props: {
         ))}
       </div>
     </section>
+  );
+}
+
+function drawStrokes(c: HTMLCanvasElement, list: Stroke[]) {
+  const ctx = c.getContext("2d")!;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.strokeStyle = "#1D1D1F";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 4;
+  for (const s of list) {
+    if (s.length < 2) continue;
+    ctx.beginPath();
+    s.forEach(([nx, ny], i) => {
+      const px = nx * c.width;
+      const py = ny * c.height;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+}
+
+function SignPad({ strokes, onChange }: { strokes: Stroke[]; onChange: (s: Stroke[]) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const active = useRef<Stroke | null>(null);
+
+  useEffect(() => {
+    if (ref.current) drawStrokes(ref.current, strokes);
+  }, [strokes]);
+
+  const point = (e: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))];
+  };
+
+  const finish = () => {
+    const cur = active.current;
+    active.current = null;
+    if (cur && cur.length >= 2) onChange([...strokes, cur]);
+    else if (ref.current) drawStrokes(ref.current, strokes);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[12px] text-[#86868B]">
+        <span>Rita autografen här</span>
+        {strokes.length > 0 && (
+          <button type="button" onClick={() => onChange([])} className="underline decoration-black/20 underline-offset-4">
+            Rensa
+          </button>
+        )}
+      </div>
+      <canvas
+        ref={ref}
+        width={480}
+        height={130}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          active.current = [point(e)];
+        }}
+        onPointerMove={(e) => {
+          if (!active.current || !ref.current) return;
+          active.current.push(point(e));
+          drawStrokes(ref.current, [...strokes, active.current]);
+        }}
+        onPointerUp={finish}
+        onPointerCancel={finish}
+        className="mt-1 h-24 w-full touch-none rounded-xl border border-black/10 bg-[#F5F5F7]"
+      />
+    </div>
   );
 }
 

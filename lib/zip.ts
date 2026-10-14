@@ -1,8 +1,10 @@
 "use client";
 
 import JSZip from "jszip";
-import { dataUrlToBase64 } from "./compose";
+import { dataUrlToBase64, loadImage } from "./compose";
 import { CHANNELS } from "./links";
+import { checkGrid, clubScarfPalette, colorCsv, indexOfNear, readMe } from "./scarf";
+import { DEFAULT_ROSTER, composeScarf, renderKnit, renderPatternCanvas, type SideSpec } from "./scarfCompose";
 import type { Club, Concept, ContentPack } from "./types";
 
 export type CampaignImages = {
@@ -155,16 +157,41 @@ Varje kanal har en egen spårbar länk, så att ni ser vad som säljer. Ju fler 
 <p>T-shirts och hoodies kan beställas med eget namn och nummer på ryggen, till exempel till barnen i ungdomslagen. Typsnitt och färger är låsta i klubbens stil och namnen kontrolleras automatiskt innan tryck.
 ${family.length ? `<br><b>Familjepaket:</b> ${family.map((f) => esc(f!)).join(", ")} – perfekt att lyfta i inläggen.` : ""}</p>
 
-<h2>4. Regler – ändra inte</h2>
+<h2>4. Stickad halsduk till Seger</h2>
+<p>I varje motivmapp finns <code>Halsduk – Seger</code> med en färdig mönsterfil för Segers OPEK 365 (240 × 1 210 maskor, max 7 färger, med färglista och Pantone-referens) samt en bild på hur halsduken ser ut stickad.</p>
+
+<h2>5. Regler – ändra inte</h2>
 <div class="warn"><ul>
 ${club.rules.map((r) => `<li>${esc(r)}</li>`).join("")}
 <li>Alla motiv har kontrollerats automatiskt: färger pixel för pixel, att inga andra varumärken eller verkliga personer förekommer, och att motivet går att trycka.</li>
 <li>Skölden läggs alltid på automatiskt från klubbens officiella filer (mappen <code>Grafisk profil</code>). Använd bara de filerna – rita aldrig om eller färglägg skölden.</li>
 </ul></div>
 
-<h2>5. För Craft och Intersport</h2>
+<h2>6. För Craft och Intersport</h2>
 <p><code>Tryckfiler</code> innehåller tryckfiler i 300 dpi för ljusa och mörka plagg, motivet som vektorfil (SVG) och baksidor med namn och nummer. <code>intersport-produkter.json</code> är det som skickas till Intersports klubbshop via API. Alla länkar och spårningskoder finns i <code>Länkar och spårning.txt</code>.</p>
 </body></html>`;
+}
+
+async function addScarfFolder(sf: JSZip, club: Club, slogan: string, date: string) {
+  const palette = clubScarfPalette(club);
+  const primary = indexOfNear(palette, club.palette[0]?.hex ?? palette[0]);
+  const white = indexOfNear(palette, "#FFFFFF");
+  const accent = palette.length > 3 ? indexOfNear(palette, club.palette[3]?.hex ?? palette[2]) : primary;
+  const up = (s: string) => s.toLocaleUpperCase("sv-SE");
+  const base = { roster: DEFAULT_ROSTER, strokes: [] as [number, number][][], crest: true, number: "" };
+  const front: SideSpec = { ...base, template: "motiv", bg: primary, ink: white, accent, line1: up(slogan), line2: up(club.name) };
+  const back: SideSpec = { ...base, template: "smeknamn", bg: white, ink: primary, accent, line1: up(club.nicknames[0] ?? club.shortName), line2: up(club.city) };
+  const crest = await loadImage(`/api/v1/brand/${club.id}/${club.brand.crest.farg}`).catch(() => null);
+  const { cells } = composeScarf({ palette, front, back, crest, font: '"Helvetica Neue", Arial, sans-serif' });
+  const { counts } = checkGrid(cells, palette, null);
+  const pat = renderPatternCanvas(cells, palette);
+  const preview = document.createElement("canvas");
+  renderKnit(preview, cells, palette, 0, 1400);
+  sf.file("halsduk.jpg", dataUrlToBase64(pat.toDataURL("image/jpeg", 0.98)), { base64: true });
+  sf.file("halsduk.png", dataUrlToBase64(pat.toDataURL("image/png")), { base64: true });
+  sf.file("forhandsvisning-framsida.png", dataUrlToBase64(preview.toDataURL("image/png")), { base64: true });
+  sf.file("farger.csv", `\uFEFF${colorCsv(palette, counts)}`);
+  sf.file("LAS-MIG.txt", readMe({ club: club.name, palette, counts, date }));
 }
 
 async function fetchBytes(url: string) {
@@ -224,6 +251,8 @@ export async function buildCampaignZip(club: Club, items: PackItem[], onProgress
     png(pr, "tryckfil-morka-plagg-300dpi.png", it.prints.dark);
     pr.file("motiv-vektor.svg", await fetchBytes(it.vectorUrl));
     it.backPrints.forEach((b) => png(pr, b.file, b.dataUrl));
+
+    if (!brand) await addScarfFolder(f.folder("Halsduk – Seger")!, club, it.concept.slogan, date);
 
     f.file("Länkar och spårning.txt", t.links);
   }
