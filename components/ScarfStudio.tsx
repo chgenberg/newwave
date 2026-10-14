@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { loadImage } from "@/lib/compose";
-import { SCARF, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, type ScarfCheck } from "@/lib/scarf";
+import { sek } from "@/lib/demoCatalog";
+import { SCARF, SCARF_ORDER, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, scarfUnitPrice, type ScarfCheck } from "@/lib/scarf";
 import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, portraitYarns, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
 import type { Club } from "@/lib/types";
 
@@ -434,6 +436,15 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             headline={front.line1 || back.line1}
             composeInput={{ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script }}
           />
+
+          <ScarfOrder
+            club={club}
+            cells={result?.cells ?? null}
+            palette={palette}
+            front={[front.line1, front.line2].filter(Boolean).join(" / ")}
+            back={[back.line1, back.line2].filter(Boolean).join(" / ")}
+            composeInput={{ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script }}
+          />
         </div>
       )}
     </main>
@@ -480,6 +491,172 @@ function fileToNormalizedJpeg(file: File): Promise<string> {
   });
 }
 
+function bothSidesDataUrl(cells: Uint8Array, palette: string[], composeInput: ComposeInput) {
+  const sides = ([0, 1] as const).map((s) => {
+    const c = document.createElement("canvas");
+    renderKnit(c, cells, palette, s, 1400, composeInput);
+    return c;
+  });
+  const gap = 24;
+  const out = document.createElement("canvas");
+  out.width = sides[0].width;
+  out.height = sides[0].height + gap + sides[1].height;
+  const ctx = out.getContext("2d")!;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(sides[0], 0, 0);
+  ctx.drawImage(sides[1], 0, sides[0].height + gap);
+  return out.toDataURL("image/png");
+}
+
+const QTY_PRESETS = [100, 250, 500, 1000, 2500];
+
+function ScarfOrder({
+  club,
+  cells,
+  palette,
+  front,
+  back,
+  composeInput,
+}: {
+  club: Club;
+  cells: Uint8Array | null;
+  palette: string[];
+  front: string;
+  back: string;
+  composeInput: ComposeInput;
+}) {
+  const [qtyText, setQtyText] = useState("500");
+  const [contact, setContact] = useState({ name: "", email: "", company: "" });
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<{ reference: string; totalSek: number } | null>(null);
+  const qty = /^\d+$/.test(qtyText) ? Number(qtyText) : NaN;
+  const validQty = Number.isInteger(qty) && qty >= SCARF_ORDER.minQty && qty <= SCARF_ORDER.maxQty;
+  const unit = scarfUnitPrice(validQty ? qty : SCARF_ORDER.minQty);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cells || !validQty || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/scarf/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ club: club.name, qty, front, back, palette, previewDataUrl: bothSidesDataUrl(cells, palette, composeInput), contact }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { reference?: string; totalSek?: number; error?: string };
+      if (!res.ok || !json.reference) throw new Error(json.error || "Kunde inte skicka förfrågan.");
+      setDone({ reference: json.reference, totalSek: json.totalSek ?? unit * qty });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunde inte skicka förfrågan.");
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  };
+
+  const input = "mt-1 h-11 w-full rounded-xl bg-[#F5F5F7] px-3 text-[15px] outline-none focus:ring-2 focus:ring-[#1D1D1F]";
+
+  return (
+    <section className="mt-8 rounded-3xl border border-black/[0.08] bg-white p-5 sm:p-7">
+      <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Beställ</p>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight">Beställ halsduken.</h2>
+      <p className="mt-1 max-w-xl text-[14px] text-[#6E6E73]">
+        Stickas av {SCARF.factory} på {SCARF.machine}. Minsta order {SCARF_ORDER.minQty} st. {SCARF_ORDER.sampleNote}
+      </p>
+
+      {done ? (
+        <div className="mt-6 rounded-2xl bg-[#F5F5F7] p-5">
+          <p className="text-[15px] font-semibold">Tack! Förfrågan är skickad.</p>
+          <p className="mt-1 text-[14px] text-[#424245]">
+            Referens <span className="font-medium text-[#1D1D1F]">{done.reference}</span> · {qty.toLocaleString("sv-SE")} st · {sek(done.totalSek)} exkl. moms. Vi återkommer med
+            korrektur, provstickning och bekräftat leveransdatum.
+          </p>
+          <button type="button" onClick={() => setDone(null)} className="mt-3 text-[13px] font-medium underline decoration-black/20 underline-offset-4">
+            Ny förfrågan
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 grid gap-6 md:grid-cols-2">
+          <div>
+            <span className="text-[12px] text-[#86868B]">Antal</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {QTY_PRESETS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={qty === n}
+                  onClick={() => setQtyText(String(n))}
+                  className={`h-9 rounded-full px-4 text-[14px] font-medium transition ${qty === n ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]"}`}
+                >
+                  {n.toLocaleString("sv-SE")}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 block">
+              <span className="text-[12px] text-[#86868B]">Eget antal</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={qtyText}
+                onChange={(e) => setQtyText(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
+                className={input}
+              />
+            </label>
+            {!validQty && <p className="mt-1 text-[12px] text-[#B3261E]">Välj mellan {SCARF_ORDER.minQty} och {SCARF_ORDER.maxQty.toLocaleString("sv-SE")} st.</p>}
+
+            <dl className="mt-5 space-y-2 rounded-2xl bg-[#F5F5F7] p-4 text-[14px]">
+              <div className="flex justify-between">
+                <dt className="text-[#6E6E73]">Riktpris per halsduk</dt>
+                <dd className="font-medium">{sek(unit)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-[#6E6E73]">Totalt exkl. moms</dt>
+                <dd className="text-[17px] font-semibold">{validQty ? sek(unit * qty) : "–"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-[#6E6E73]">Leveranstid</dt>
+                <dd className="text-right font-medium">{SCARF_ORDER.leadTime}</dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-[12px] text-[#86868B]">
+              Mängdrabatt: {SCARF_ORDER.tiers.map((t) => `${t.from.toLocaleString("sv-SE")}+ st ${sek(t.unitSek)}`).join(" · ")}. Riktpriser – bekräftas med korrekturet.
+            </p>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block">
+              <span className="text-[12px] text-[#86868B]">Namn</span>
+              <input value={contact.name} maxLength={80} onChange={(e) => setContact({ ...contact, name: e.target.value })} autoComplete="name" className={input} />
+            </label>
+            <label className="mt-3 block">
+              <span className="text-[12px] text-[#86868B]">E-post</span>
+              <input type="email" required value={contact.email} maxLength={120} onChange={(e) => setContact({ ...contact, email: e.target.value })} autoComplete="email" className={input} />
+            </label>
+            <label className="mt-3 block">
+              <span className="text-[12px] text-[#86868B]">Klubb eller företag</span>
+              <input value={contact.company} maxLength={80} placeholder={club.name} onChange={(e) => setContact({ ...contact, company: e.target.value })} autoComplete="organization" className={input} />
+            </label>
+            {error && <div className="mt-4 rounded-2xl bg-[#FDECEA] px-4 py-3 text-sm text-[#B3261E]">{error}</div>}
+            <button
+              type="submit"
+              disabled={!cells || !validQty || sending}
+              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC] md:mt-auto"
+            >
+              {sending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+              Skicka förfrågan{validQty ? ` · ${sek(unit * qty)}` : ""}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 function ScarfPhotoStudio({
   club,
   cells,
@@ -499,6 +676,32 @@ function ScarfPhotoStudio({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [qr, setQr] = useState<{ photo: GeneratedPhoto; dataUrl: string } | null>(null);
+  const qrSeq = useRef(0);
+
+  const showQr = async (photo: GeneratedPhoto) => {
+    const seq = ++qrSeq.current;
+    const dataUrl = await QRCode.toDataURL(new URL(photo.url, window.location.origin).href, { margin: 1, width: 640, errorCorrectionLevel: "M" }).catch(() => null);
+    if (dataUrl && seq === qrSeq.current) setQr({ photo, dataUrl });
+  };
+
+  const photoCard = (p: GeneratedPhoto, file: string, aspect: string, key: string) => (
+    <figure key={key} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={p.url} alt={p.label} className={`${aspect} w-full rounded-xl object-cover`} />
+      <figcaption className="mt-2 flex items-center justify-between gap-2 px-1 text-[13px]">
+        <span className="truncate font-medium">{p.label}</span>
+        <span className="flex shrink-0 items-center gap-3">
+          <button type="button" onClick={() => void showQr(p)} className="font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4">
+            QR
+          </button>
+          <a href={p.url} download={file} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
+            Ladda ner
+          </a>
+        </span>
+      </figcaption>
+    </figure>
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -648,18 +851,7 @@ function ScarfPhotoStudio({
         <div className="mt-6">
           <p className="text-[13px] font-medium text-[#1D1D1F]">Dina egna fotografier med halsduken</p>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            {selfPhotos.map((p, idx) => (
-              <figure key={`${p.url}-${idx}`} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt={p.label} className="aspect-square w-full rounded-xl object-cover" />
-                <figcaption className="mt-2 flex items-center justify-between px-1 text-[13px]">
-                  <span className="font-medium">{p.label}</span>
-                  <a href={p.url} download={`halsduk-jag-${idx + 1}.jpg`} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
-                    Ladda ner
-                  </a>
-                </figcaption>
-              </figure>
-            ))}
+            {selfPhotos.map((p, idx) => photoCard(p, `halsduk-jag-${idx + 1}.jpg`, "aspect-square", `${p.url}-${idx}`))}
           </div>
         </div>
       )}
@@ -668,18 +860,22 @@ function ScarfPhotoStudio({
         <div className="mt-6">
           <p className="text-[13px] font-medium text-[#1D1D1F]">Fyra supportrar i er halsduk</p>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-            {fourPhotos.map((p) => (
-              <figure key={p.id} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url} alt={p.label} className="aspect-[2/3] w-full rounded-xl object-cover" />
-                <figcaption className="mt-2 flex items-center justify-between px-1 text-[13px]">
-                  <span className="font-medium">{p.label}</span>
-                  <a href={p.url} download={`halsduk-${p.id}.jpg`} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
-                    Ladda ner
-                  </a>
-                </figcaption>
-              </figure>
-            ))}
+            {fourPhotos.map((p) => photoCard(p, `halsduk-${p.id}.jpg`, "aspect-[2/3]", p.id))}
+          </div>
+        </div>
+      )}
+
+      {qr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setQr(null)}>
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[18px] font-semibold">Ta med bilden i mobilen</h3>
+            <p className="mt-1 text-[13px] text-[#6E6E73]">Skanna med kameran. Håll fingret på bilden för att spara den.</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr.dataUrl} alt={`QR-kod till ${qr.photo.label}`} className="mx-auto mt-4 aspect-square w-full max-w-[280px] [image-rendering:pixelated]" />
+            <p className="mt-3 text-[13px] font-medium">{qr.photo.label}</p>
+            <button type="button" onClick={() => setQr(null)} className="mt-4 h-11 w-full rounded-full bg-[#1D1D1F] text-[14px] font-medium text-white hover:bg-black">
+              Klar
+            </button>
           </div>
         </div>
       )}

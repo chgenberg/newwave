@@ -105,6 +105,27 @@ export function nearestPantone(hex: string) {
   return { code: best[0] === "White" ? "White" : `PMS ${best[0]}`, hex: best[1], deltaE: Math.round(bestD * 10) / 10 };
 }
 
+/** Demo riktpriser per halsduk exkl. moms, sorted by minimum quantity. Seger confirms the real price with the proof. */
+export const SCARF_ORDER = {
+  minQty: 100,
+  maxQty: 20_000,
+  tiers: [
+    { from: 100, unitSek: 89 },
+    { from: 250, unitSek: 72 },
+    { from: 500, unitSek: 59 },
+    { from: 1000, unitSek: 49 },
+    { from: 2500, unitSek: 42 },
+  ],
+  leadTime: "cirka 4–6 veckor efter godkänt korrektur",
+  sampleNote: "En provstickning skickas för godkännande innan produktion.",
+} as const;
+
+export function scarfUnitPrice(qty: number) {
+  let unit: number = SCARF_ORDER.tiers[0].unitSek;
+  for (const t of SCARF_ORDER.tiers) if (qty >= t.from) unit = t.unitSek;
+  return unit;
+}
+
 export type ScarfCheck = { id: string; ok: boolean; title: string; note: string };
 
 /** Stitch-level checks on the finished 240×1210 grid. */
