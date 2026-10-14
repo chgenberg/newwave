@@ -9,7 +9,7 @@ export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
   { id: "motiv", label: "Motiv", hint: "Agentens slogan" },
   { id: "personlig", label: "Personlig", hint: "Eget namn och nummer" },
   { id: "trupp", label: "Truppen", hint: "Spelarnas namn och nummer längs hela halsduken" },
-  { id: "portratt", label: "Porträtt", hint: "Foto som grafiskt porträtt i tre färger" },
+  { id: "portratt", label: "Porträtt", hint: "Fotorealistiskt stickat porträtt i gråskala" },
   { id: "autograf", label: "Autograf", hint: "Signatur som du ritar eller skriver" },
 ];
 
@@ -147,58 +147,164 @@ function drawRoster(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: nu
   });
 }
 
-/** Three-tone posterised portrait so any face photo becomes flat, knittable blocks. */
+const PORTRAIT_W_MM = 186;
+const PORTRAIT_H_MM = W - 12;
+
+/** Draws a realistic knitted greyscale portrait (matching the IMS/OPEK 365 look) in an oval frame and the player/supporter name beside it. */
 function drawPortraitSide(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: number; x1: number }, texts: number[]) {
-  const box = W - 26;
-  const x0 = mid.x0 + 8;
-  const y0 = (W - box) / 2;
-  const tones = ([side.bg, side.accent, side.ink].map((i) => hexToRgb(input.palette[i] ?? input.palette[0])) as [number, number, number][]).sort(
-    (a, b) => a[0] * 0.3 + a[1] * 0.59 + a[2] * 0.11 - (b[0] * 0.3 + b[1] * 0.59 + b[2] * 0.11),
-  );
+  const x0 = mid.x0 + 6;
+  const y0 = (W - PORTRAIT_H_MM) / 2;
   if (input.portrait) {
-    const cell = portraitCanvas(input.portrait, tones);
+    const face = smoothGreyscalePortrait(input.portrait, Math.round(PORTRAIT_W_MM * PX_PER_MM), Math.round(PORTRAIT_H_MM * PX_PER_MM));
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(x0, y0, box, box, 12);
+    ctx.ellipse(x0 + PORTRAIT_W_MM / 2, y0 + PORTRAIT_H_MM / 2, PORTRAIT_W_MM / 2, PORTRAIT_H_MM / 2, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(cell, x0, y0, box, box);
+    ctx.drawImage(face, x0, y0, PORTRAIT_W_MM, PORTRAIT_H_MM);
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = input.palette[side.ink] ?? "#FFFFFF";
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.ellipse(x0 + PORTRAIT_W_MM / 2, y0 + PORTRAIT_H_MM / 2, PORTRAIT_W_MM / 2 - 1.5, PORTRAIT_H_MM / 2 - 1.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
-  ctx.strokeStyle = input.palette[side.ink] ?? "#FFFFFF";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(x0, y0, box, box, 12);
-  ctx.stroke();
-
-  const tx0 = x0 + box + 24;
+  const tx0 = x0 + PORTRAIT_W_MM + 20;
   const span = Math.max(80, mid.x1 - tx0);
   ctx.fillStyle = input.palette[side.ink] ?? input.palette[0];
   drawTwoLines(ctx, side.line1, side.line2, input.font, tx0, span, 68, 90, texts);
 }
 
-function portraitCanvas(img: HTMLImageElement, tones: [number, number, number][]) {
-  const N = 96;
+/** High-resolution greyscale portrait with soft contrast stretch, matching how fine jacquard portraits look on a knitted scarf. */
+function smoothGreyscalePortrait(img: HTMLImageElement, w: number, h: number) {
   const c = document.createElement("canvas");
-  c.width = N;
-  c.height = N;
+  c.width = w;
+  c.height = h;
   const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.fillStyle = "#FFFFFF";
+  g.fillRect(0, 0, w, h);
   const iw = img.naturalWidth || 1;
   const ih = img.naturalHeight || 1;
-  const s = Math.min(iw, ih);
-  g.drawImage(img, (iw - s) / 2, (ih - s) * 0.25, s, s, 0, 0, N, N);
-  const im = g.getImageData(0, 0, N, N);
-  const lums: number[] = [];
-  for (let i = 0; i < im.data.length; i += 4) lums.push(im.data[i] * 0.3 + im.data[i + 1] * 0.59 + im.data[i + 2] * 0.11);
-  const sorted = [...lums].sort((a, b) => a - b);
-  const t1 = sorted[Math.floor(sorted.length * 0.36)];
-  const t2 = sorted[Math.floor(sorted.length * 0.72)];
+  const targetAr = w / h;
+  const srcAr = iw / ih;
+  const [sw, sh] = srcAr > targetAr ? [ih * targetAr, ih] : [iw, iw / targetAr];
+  g.drawImage(img, (iw - sw) / 2, (ih - sh) * 0.18, sw, sh, 0, 0, w, h);
+  const im = g.getImageData(0, 0, w, h);
+  const d = im.data;
+  const lums = new Float32Array(w * h);
+  for (let i = 0; i < lums.length; i++) lums[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
+  const sample: number[] = [];
+  for (let i = 0; i < lums.length; i += 13) sample.push(lums[i]);
+  sample.sort((a, b) => a - b);
+  const lo = sample[Math.floor(sample.length * 0.03)] ?? 0;
+  const hi = Math.max(lo + 1, sample[Math.floor(sample.length * 0.97)] ?? 255);
   for (let i = 0; i < lums.length; i++) {
-    const tone = lums[i] < t1 ? tones[0] : lums[i] < t2 ? tones[1] : tones[2];
-    im.data.set([tone[0], tone[1], tone[2], 255], i * 4);
+    const t = Math.max(0, Math.min(1, (lums[i] - lo) / (hi - lo)));
+    const sCurve = t * t * (3 - 2 * t);
+    const v = Math.round(14 + Math.pow(sCurve, 0.92) * 234);
+    const o = i * 4;
+    d[o] = v;
+    d[o + 1] = v;
+    d[o + 2] = Math.min(255, v + 3);
+    d[o + 3] = 255;
   }
   g.putImageData(im, 0, 0);
   return c;
+}
+
+/**
+ * Knits a photo directly into the stitch grid using Floyd–Steinberg error-diffusion dithering across the palette's greyscale/neutral yarns
+ * (plus dark/light endpoints), matching how an IMS/OPEK 365 renders photorealistic faces.
+ */
+function knitPortraitIntoGrid(
+  cells: Uint8Array,
+  sideIndex: 0 | 1,
+  side: SideSpec,
+  palette: string[],
+  img: HTMLImageElement,
+  midX0Mm: number,
+) {
+  const rgb = palette.map(hexToRgb);
+  const tones = rgb
+    .map(([r, g, b], idx) => {
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const sat = max === 0 ? 0 : (max - min) / max;
+      const lum = r * 0.299 + g * 0.587 + b * 0.114;
+      return { idx, r, g, b, lum, sat };
+    })
+    .filter((t, _, all) => t.sat < 0.28 || t.lum === Math.min(...all.map((a) => a.lum)) || t.lum === Math.max(...all.map((a) => a.lum)))
+    .sort((a, b) => a.lum - b.lum);
+  const ramp = tones.length >= 2 ? tones : rgb.map(([r, g, b], idx) => ({ idx, r, g, b, lum: r * 0.299 + g * 0.587 + b * 0.114, sat: 0 })).sort((a, b) => a.lum - b.lum);
+
+  const r0 = Math.max(0, Math.round((midX0Mm + 6) / ROW_H_MM));
+  const rCount = Math.min(SCARF.rows - r0, Math.round(PORTRAIT_W_MM / ROW_H_MM));
+  const cMargin = Math.round(((W - PORTRAIT_H_MM) / 2) / STITCH_W_MM);
+  const c0 = cMargin;
+  const cCount = SCARF.side - cMargin * 2;
+  if (rCount <= 8 || cCount <= 8) return;
+
+  const samp = document.createElement("canvas");
+  samp.width = rCount;
+  samp.height = cCount;
+  const g = samp.getContext("2d", { willReadFrequently: true })!;
+  g.fillStyle = "#FFFFFF";
+  g.fillRect(0, 0, rCount, cCount);
+  const iw = img.naturalWidth || 1;
+  const ih = img.naturalHeight || 1;
+  const targetAr = PORTRAIT_W_MM / PORTRAIT_H_MM;
+  const srcAr = iw / ih;
+  const [sw, sh] = srcAr > targetAr ? [ih * targetAr, ih] : [iw, iw / targetAr];
+  const sx = (iw - sw) / 2;
+  const sy = (ih - sh) * 0.18;
+  g.drawImage(img, sx, sy, sw, sh, 0, 0, rCount, cCount);
+  const data = g.getImageData(0, 0, rCount, cCount).data;
+
+  const raw: number[] = new Array(rCount * cCount);
+  for (let i = 0; i < raw.length; i++) raw[i] = data[i * 4] * 0.299 + data[i * 4 + 1] * 0.587 + data[i * 4 + 2] * 0.114;
+  const sorted = [...raw].sort((a, b) => a - b);
+  const lo = sorted[Math.floor(sorted.length * 0.04)] ?? 0;
+  const hi = Math.max(lo + 1, sorted[Math.floor(sorted.length * 0.96)] ?? 255);
+
+  const minL = ramp[0].lum;
+  const maxL = ramp[ramp.length - 1].lum;
+  const buf = new Float32Array(rCount * cCount);
+  for (let i = 0; i < raw.length; i++) {
+    const t = Math.max(0, Math.min(1, (raw[i] - lo) / (hi - lo)));
+    const sCurve = t * t * (3 - 2 * t);
+    const gamma = Math.pow(sCurve, 0.9);
+    buf[i] = minL + gamma * (maxL - minL);
+  }
+
+  for (let y = 0; y < cCount; y++) {
+    for (let x = 0; x < rCount; x++) {
+      const dx = (x + 0.5 - rCount / 2) / (rCount / 2);
+      const dy = (y + 0.5 - cCount / 2) / (cCount / 2);
+      const dist = dx * dx + dy * dy;
+      if (dist > 1) continue;
+      const k = y * rCount + x;
+      if (dist > 0.86) {
+        cells[(r0 + x) * SCARF.needles + sideIndex * SCARF.side + (c0 + y)] = side.ink;
+        continue;
+      }
+      const old = buf[k];
+      let best = ramp[0];
+      let bestD = Math.abs(old - best.lum);
+      for (let i = 1; i < ramp.length; i++) {
+        const d = Math.abs(old - ramp[i].lum);
+        if (d < bestD) [best, bestD] = [ramp[i], d];
+      }
+      cells[(r0 + x) * SCARF.needles + sideIndex * SCARF.side + (c0 + y)] = best.idx;
+      const err = (old - best.lum) * 0.85;
+      if (x + 1 < rCount) buf[k + 1] += (err * 7) / 16;
+      if (y + 1 < cCount) {
+        if (x > 0) buf[k + rCount - 1] += (err * 3) / 16;
+        buf[k + rCount] += (err * 5) / 16;
+        if (x + 1 < rCount) buf[k + rCount + 1] += (err * 1) / 16;
+      }
+    }
+  }
 }
 
 function drawAutographSide(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { x0: number; x1: number }, texts: number[]) {
@@ -400,6 +506,10 @@ export function composeScarf(input: ComposeInput): Composed {
         cells[r * SCARF.needles + s * SCARF.side + c] = best;
       }
     }
+    if (side.template === "portratt" && input.portrait) {
+      const midX0 = side.crest && input.crest ? 67 + 14 + 150 + 28 : 67 + 24;
+      knitPortraitIntoGrid(cells, s as 0 | 1, side, input.palette, input.portrait, midX0);
+    }
   }
   return { cells, minTextMm: texts.length ? Math.min(...texts) : null };
 }
@@ -430,35 +540,57 @@ function stitchTile() {
   return t;
 }
 
-/** Knit-texture preview of one side, lying horizontally. Halves in steps down to `targetWidth` so the stitch texture doesn't moiré. */
-export function renderKnit(canvas: HTMLCanvasElement, cells: Uint8Array, palette: string[], side: 0 | 1, targetWidth?: number) {
-  const flat = document.createElement("canvas");
-  flat.width = SCARF.rows;
-  flat.height = SCARF.side;
-  const fctx = flat.getContext("2d")!;
-  const img = fctx.createImageData(SCARF.rows, SCARF.side);
-  const rgb = palette.map(hexToRgb);
-  for (let r = 0; r < SCARF.rows; r++) {
-    for (let c = 0; c < SCARF.side; c++) {
-      const p = rgb[cells[r * SCARF.needles + side * SCARF.side + c]] ?? rgb[0];
-      const o = (c * SCARF.rows + r) * 4;
-      img.data[o] = p[0];
-      img.data[o + 1] = p[1];
-      img.data[o + 2] = p[2];
-      img.data[o + 3] = 255;
+/**
+ * Realistic knitted-scarf preview of one side.
+ * When `input` is provided, draws the high-resolution scarf artwork directly and overlays fine knitted yarn texture so crests, portraits and lettering look like a real knitted scarf photo.
+ */
+export function renderKnit(
+  canvas: HTMLCanvasElement,
+  cells: Uint8Array,
+  palette: string[],
+  side: 0 | 1,
+  targetWidth?: number,
+  input?: ComposeInput,
+) {
+  let art: HTMLCanvasElement;
+  if (input) {
+    art = document.createElement("canvas");
+    art.width = L * PX_PER_MM;
+    art.height = W * PX_PER_MM;
+    const actx = art.getContext("2d")!;
+    drawSide(actx, side === 0 ? input.front : input.back, input, []);
+  } else {
+    art = document.createElement("canvas");
+    art.width = SCARF.rows;
+    art.height = SCARF.side;
+    const fctx = art.getContext("2d")!;
+    const img = fctx.createImageData(SCARF.rows, SCARF.side);
+    const rgb = palette.map(hexToRgb);
+    for (let r = 0; r < SCARF.rows; r++) {
+      for (let c = 0; c < SCARF.side; c++) {
+        const p = rgb[cells[r * SCARF.needles + side * SCARF.side + c]] ?? rgb[0];
+        const o = (c * SCARF.rows + r) * 4;
+        img.data[o] = p[0];
+        img.data[o + 1] = p[1];
+        img.data[o + 2] = p[2];
+        img.data[o + 3] = 255;
+      }
     }
+    fctx.putImageData(img, 0, 0);
   }
-  fctx.putImageData(img, 0, 0);
 
   let src = document.createElement("canvas");
   src.width = SCARF.rows * ROW_PX;
   src.height = SCARF.side * STITCH_PX;
   const ctx = src.getContext("2d")!;
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(flat, 0, 0, src.width, src.height);
+  ctx.imageSmoothingEnabled = Boolean(input);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(art, 0, 0, src.width, src.height);
   ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = 0.55;
   ctx.fillStyle = ctx.createPattern(stitchTile(), "repeat")!;
   ctx.fillRect(0, 0, src.width, src.height);
+  ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
 
   const goal = targetWidth && targetWidth < src.width ? Math.round(targetWidth) : src.width;

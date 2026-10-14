@@ -46,10 +46,18 @@ export function deltaE(a: string, b: string) {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
+/** Includes two mid-grey yarns within the 7-colour cap so photo portraits knit with 4 greyscale tones (white, light grey, dark grey, black) like on an IMS/OPEK 365. */
 export function clubScarfPalette(club: { palette: { hex: string }[]; crestColors: string[] }) {
   const out: string[] = [];
-  for (const hex of [...club.palette.map((c) => c.hex), ...club.crestColors]) {
-    const h = hex.toUpperCase();
+  const clubCandidates = [...club.palette.map((c) => c.hex), ...club.crestColors].map((c) => c.toUpperCase());
+  const greys = ["#A6AAB0", "#555960"];
+  for (const h of clubCandidates) {
+    if (out.length < SCARF.maxColors - greys.length && !out.some((o) => deltaE(o, h) < 14)) out.push(h);
+  }
+  for (const g of greys) {
+    if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, g) < 8)) out.push(g);
+  }
+  for (const h of clubCandidates) {
     if (out.length < SCARF.maxColors && !out.some((o) => deltaE(o, h) < 6)) out.push(h);
   }
   return out;
@@ -95,7 +103,7 @@ export function nearestPantone(hex: string) {
 export type ScarfCheck = { id: string; ok: boolean; title: string; note: string };
 
 /** Stitch-level checks on the finished 240×1210 grid. */
-export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: number | null): { checks: ScarfCheck[]; counts: number[] } {
+export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: number | null, hasPortrait = false): { checks: ScarfCheck[]; counts: number[] } {
   const counts = new Array(palette.length).fill(0);
   let isolated = 0;
   const W = SCARF.needles;
@@ -122,12 +130,19 @@ export function checkGrid(cells: Uint8Array, palette: string[], minTextMm: numbe
           title: minTextMm >= MIN_TEXT_MM ? "Texten går att läsa" : "För liten text",
           note: `Minsta bokstavshöjd ${Math.round(minTextMm)} mm${minTextMm >= MIN_TEXT_MM ? "" : ` – minst ${MIN_TEXT_MM} mm behövs för att den ska synas i stickningen`}.`,
         },
-    {
-      id: "dots",
-      ok: share < 0.004,
-      title: share < 0.004 ? "Rena färgfält" : "Många enstaka maskor",
-      note: `${isolated} maskor står ensamma i sin färg${share < 0.004 ? "." : " – förenkla loggan eller öka storleken."}`,
-    },
+    hasPortrait
+      ? {
+          id: "dots",
+          ok: true,
+          title: "Fotoporträtt i jacquard-raster",
+          note: "Ansiktet stickas med halftonsraster i 4 gråtoner för mjuka övergångar på OPEK 365.",
+        }
+      : {
+          id: "dots",
+          ok: share < 0.004,
+          title: share < 0.004 ? "Rena färgfält" : "Många enstaka maskor",
+          note: `${isolated} maskor står ensamma i sin färg${share < 0.004 ? "." : " – förenkla loggan eller öka storleken."}`,
+        },
   ];
   return { checks, counts };
 }

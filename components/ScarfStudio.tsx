@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadImage } from "@/lib/compose";
 import { SCARF, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, type ScarfCheck } from "@/lib/scarf";
-import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, renderKnit, renderPatternCanvas, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
+import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
 import type { Club } from "@/lib/types";
 
 type ClubListItem = { id: string; name: string; city: string; nicknames: string[] };
@@ -137,7 +137,8 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
     if (!front || !back || !palette.length || !fontReady) return;
     const t = setTimeout(() => {
       const { cells, minTextMm } = composeScarf({ palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script });
-      const { checks, counts } = checkGrid(cells, palette, minTextMm);
+      const hasPortrait = Boolean(portrait) && (front.template === "portratt" || back.template === "portratt");
+      const { checks, counts } = checkGrid(cells, palette, minTextMm, hasPortrait);
       if (club) checks.push(crestOnlyCheck(club, palette, [front, back]));
       setResult({ cells, checks, counts });
     }, 120);
@@ -152,7 +153,8 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
         [backRef, 1],
       ] as const) {
         const c = ref.current;
-        if (c) renderKnit(c, result.cells, palette, side, zoom ? undefined : (c.clientWidth || 1000) * Math.min(2, window.devicePixelRatio || 1));
+        const composeInput = front && back ? { palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script } : undefined;
+        if (c) renderKnit(c, result.cells, palette, side, zoom ? undefined : (c.clientWidth || 1000) * Math.min(2, window.devicePixelRatio || 1), composeInput);
       }
       return;
     }
@@ -162,7 +164,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
     c.width = pat.width;
     c.height = pat.height;
     c.getContext("2d")!.drawImage(pat, 0, 0);
-  }, [result, view, palette, zoom]);
+  }, [result, view, palette, zoom, front, back, crest, portrait, font, fonts]);
 
   const removeColor = (i: number) => {
     if (palette.length <= 2) return;
@@ -377,9 +379,324 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
               </div>
             </section>
           </div>
+
+          <ScarfPhotoStudio
+            club={club}
+            cells={result?.cells ?? null}
+            palette={palette}
+            headline={front.line1 || back.line1}
+            composeInput={{ palette, front, back, crest, portrait, font: fonts[font], scriptFont: fonts.script }}
+          />
         </div>
       )}
     </main>
+  );
+}
+
+type GeneratedPhoto = { id: string; label: string; url: string };
+
+function buildScarfReferenceDataUrl(cells: Uint8Array, palette: string[], composeInput: ComposeInput) {
+  const c = document.createElement("canvas");
+  renderKnit(c, cells, palette, 0, 1600, composeInput);
+  return c.toDataURL("image/png");
+}
+
+function fileToNormalizedJpeg(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Välj en bildfil (JPG, PNG eller WebP)."));
+      return;
+    }
+    if (file.size > 15_000_000) {
+      reject(new Error("Bilden är för stor – välj ett foto under 15 MB."));
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const max = 1024;
+      const scale = Math.min(1, max / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+      const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Kunde inte läsa bildformatet – prova JPG eller PNG."));
+    };
+    img.src = url;
+  });
+}
+
+function ScarfPhotoStudio({
+  club,
+  cells,
+  palette,
+  headline,
+  composeInput,
+}: {
+  club: Club;
+  cells: Uint8Array | null;
+  palette: string[];
+  headline: string;
+  composeInput: ComposeInput;
+}) {
+  const [selfPhotos, setSelfPhotos] = useState<GeneratedPhoto[]>([]);
+  const [fourPhotos, setFourPhotos] = useState<GeneratedPhoto[]>([]);
+  const [busyMode, setBusyMode] = useState<"self" | "four" | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!cameraOpen) {
+      stopCamera();
+      return;
+    }
+    let live = true;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      Promise.resolve().then(() => live && setCameraError("Kameran kunde inte öppnas i den här webbläsaren – välj en bild från enheten i stället."));
+      return;
+    }
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1080 } }, audio: false })
+      .then((stream) => {
+        if (!live) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => null);
+        }
+      })
+      .catch(() => {
+        if (live) setCameraError("Ge tillåtelse till kameran eller välj ett foto från enheten nedan.");
+      });
+    return () => {
+      live = false;
+      stopCamera();
+    };
+  }, [cameraOpen]);
+
+  const runSelfPhoto = async (personDataUrl: string) => {
+    if (!cells) return;
+    setCameraOpen(false);
+    setBusyMode("self");
+    setPhotoError(null);
+    try {
+      const scarfDataUrl = buildScarfReferenceDataUrl(cells, palette, composeInput);
+      const res = await fetch("/api/v1/scarf/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "self", club: club.name, headline, scarfDataUrl, personDataUrl }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { photos?: GeneratedPhoto[]; error?: string };
+      if (!res.ok || !json.photos?.length) throw new Error(json.error || "Kunde inte skapa fotografiet.");
+      setSelfPhotos((prev) => [...json.photos!, ...prev].slice(0, 6));
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : "Kunde inte skapa fotografiet.");
+    } finally {
+      setBusyMode(null);
+    }
+  };
+
+  const snapFromVideo = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) {
+      setCameraError("Kameran är inte redo än – vänta ett ögonblick eller ladda upp ett foto.");
+      return;
+    }
+    const s = Math.min(v.videoWidth, v.videoHeight);
+    const out = document.createElement("canvas");
+    out.width = 1024;
+    out.height = 1024;
+    const ctx = out.getContext("2d")!;
+    ctx.translate(1024, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, 1024, 1024);
+    void runSelfPhoto(out.toDataURL("image/jpeg", 0.92));
+  };
+
+  const runFourPhotos = async () => {
+    if (!cells) return;
+    setBusyMode("four");
+    setPhotoError(null);
+    try {
+      const scarfDataUrl = buildScarfReferenceDataUrl(cells, palette, composeInput);
+      const res = await fetch("/api/v1/scarf/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "four", club: club.name, headline, scarfDataUrl }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { photos?: GeneratedPhoto[]; error?: string };
+      if (!res.ok || !json.photos?.length) throw new Error(json.error || "Kunde inte generera fotografierna.");
+      setFourPhotos(json.photos);
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : "Kunde inte generera fotografierna.");
+    } finally {
+      setBusyMode(null);
+    }
+  };
+
+  return (
+    <section className="mt-8 rounded-3xl border border-black/[0.08] bg-[#F5F5F7] p-5 sm:p-7">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">AI-fotostudio · bär halsduken</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight">Se halsduken på riktiga människor.</h2>
+          <p className="mt-1 max-w-xl text-[14px] text-[#6E6E73]">
+            Ta en bild med kameran eller ladda upp ett foto på dig själv (eller någon annan), eller skapa fyra hyperrealistiska supporterfoton med er design.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2.5 sm:flex-row">
+          <button
+            type="button"
+            disabled={!cells || busyMode !== null}
+            onClick={() => {
+              setCameraError(null);
+              setCameraOpen(true);
+            }}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-6 text-[15px] font-medium text-[#1D1D1F] transition hover:bg-black/[0.04] disabled:opacity-50"
+          >
+            {busyMode === "self" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1D1D1F] border-t-transparent" />}
+            Skapa fotografi med mig själv
+          </button>
+          <button
+            type="button"
+            disabled={!cells || busyMode !== null}
+            onClick={runFourPhotos}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC]"
+          >
+            {busyMode === "four" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+            Generera fyra fotografier
+          </button>
+        </div>
+      </div>
+
+      {busyMode && (
+        <p className="mt-4 text-[13px] text-[#6E6E73]">
+          {busyMode === "self"
+            ? "Sätter halsduken på ditt foto med AI – tar cirka 20–35 sekunder …"
+            : "Fotograferar fyra supportrar i er halsduk – tar cirka 30–45 sekunder …"}
+        </p>
+      )}
+      {photoError && <div className="mt-4 rounded-2xl bg-[#FDECEA] px-4 py-3 text-sm text-[#B3261E]">{photoError}</div>}
+
+      {selfPhotos.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[13px] font-medium text-[#1D1D1F]">Dina egna fotografier med halsduken</p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {selfPhotos.map((p, idx) => (
+              <figure key={`${p.url}-${idx}`} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt={p.label} className="aspect-square w-full rounded-xl object-cover" />
+                <figcaption className="mt-2 flex items-center justify-between px-1 text-[13px]">
+                  <span className="font-medium">{p.label}</span>
+                  <a href={p.url} download={`halsduk-jag-${idx + 1}.jpg`} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
+                    Ladda ner
+                  </a>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {fourPhotos.length > 0 && (
+        <div className="mt-6">
+          <p className="text-[13px] font-medium text-[#1D1D1F]">Fyra supportrar i er halsduk</p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+            {fourPhotos.map((p) => (
+              <figure key={p.id} className="overflow-hidden rounded-2xl bg-white p-2.5 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt={p.label} className="aspect-square w-full rounded-xl object-cover" />
+                <figcaption className="mt-2 flex items-center justify-between px-1 text-[13px]">
+                  <span className="font-medium">{p.label}</span>
+                  <a href={p.url} download={`halsduk-${p.id}.jpg`} className="text-[#86868B] underline decoration-black/20 underline-offset-4 hover:text-[#1D1D1F]">
+                    Ladda ner
+                  </a>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6" onClick={() => setCameraOpen(false)}>
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-6 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[18px] font-semibold">Skapa fotografi med dig själv</h3>
+              <button type="button" onClick={() => setCameraOpen(false)} className="h-9 rounded-full px-3 text-[13px] text-[#86868B] hover:text-[#1D1D1F]">
+                Stäng
+              </button>
+            </div>
+            <p className="mt-1 text-[13px] text-[#6E6E73]">Ta en bild med kameran eller ladda upp ett foto på dig själv eller någon annan – så sätter vi på halsduken.</p>
+
+            <div className="mt-4 overflow-hidden rounded-2xl bg-black">
+              {cameraError ? (
+                <div className="flex aspect-square items-center justify-center p-6 text-center text-[13px] text-white/80">{cameraError}</div>
+              ) : (
+                <video ref={videoRef} playsInline muted autoPlay className="aspect-square w-full object-cover [transform:scaleX(-1)]" />
+              )}
+            </div>
+
+            <input
+              ref={uploadRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try {
+                  const dataUrl = await fileToNormalizedJpeg(f);
+                  void runSelfPhoto(dataUrl);
+                } catch (err) {
+                  setCameraError(err instanceof Error ? err.message : "Kunde inte läsa bilden.");
+                }
+              }}
+            />
+
+            <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+              {!cameraError && (
+                <button
+                  type="button"
+                  onClick={snapFromVideo}
+                  className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-[#1D1D1F] px-5 text-[14px] font-medium text-white hover:bg-black"
+                >
+                  Ta bild nu
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => uploadRef.current?.click()}
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-black/15 bg-white px-5 text-[14px] font-medium text-[#1D1D1F] hover:bg-[#F5F5F7]"
+              >
+                Ladda upp foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -444,7 +761,7 @@ function SideEditor(props: {
         ) : side.template === "portratt" ? (
           <>
             <div>
-              <span className="text-[12px] text-[#86868B]">Foto (görs om till tre garnfärger)</span>
+              <span className="text-[12px] text-[#86868B]">Foto (stickas i högupplöst gråskaleraster)</span>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <label className="inline-flex h-9 cursor-pointer items-center rounded-full bg-[#F5F5F7] px-4 text-[13px] font-medium hover:bg-[#E8E8ED]">
                   Byt foto
