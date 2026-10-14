@@ -111,34 +111,9 @@ function drawSide(ctx: Ctx, side: SideSpec, input: ComposeInput, texts: number[]
     ctx.fillRect(mid.x0 + numW + 10, 34, 3, W - 68);
     ctx.fillStyle = col(side.ink);
     const nameX0 = mid.x0 + numW + 26;
-    const nameCap = fitText(ctx, side.line1, input.font, mid.x1 - nameX0, side.line2 ? 74 : 96);
-    if (side.line2) {
-      const subCap = fitText(ctx, side.line2, input.font, mid.x1 - nameX0, 24);
-      drawText(ctx, side.line1, input.font, nameCap, (nameX0 + mid.x1) / 2, W / 2 - subCap / 2 - 6);
-      drawText(ctx, side.line2, input.font, subCap, (nameX0 + mid.x1) / 2, W / 2 + nameCap / 2 + 10);
-      texts.push(subCap);
-    } else {
-      drawText(ctx, side.line1, input.font, nameCap, (nameX0 + mid.x1) / 2, W / 2);
-    }
-    texts.push(nameCap);
+    drawTwoLines(ctx, side.line1, side.line2, input.font, nameX0, mid.x1 - nameX0, 74, 96, texts);
   } else {
-    const main = side.line1.trim();
-    const sub = side.line2.trim();
-    if (main) {
-      const capMax = sub ? 82 : 112;
-      const cap = fitText(ctx, main, input.font, span, capMax);
-      if (sub) {
-        const subCap = fitText(ctx, sub, input.font, span * 0.8, 24);
-        const gap = 12;
-        const top = (W - cap - gap - subCap) / 2;
-        drawText(ctx, main, input.font, cap, (mid.x0 + mid.x1) / 2, top + cap / 2);
-        drawText(ctx, sub, input.font, subCap, (mid.x0 + mid.x1) / 2, top + cap + gap + subCap / 2);
-        texts.push(subCap);
-      } else {
-        drawText(ctx, main, input.font, cap, (mid.x0 + mid.x1) / 2, W / 2);
-      }
-      texts.push(cap);
-    }
+    drawTwoLines(ctx, side.line1, side.line2, input.font, mid.x0, span, 82, 112, texts);
   }
   ctx.restore();
 }
@@ -198,21 +173,8 @@ function drawPortraitSide(ctx: Ctx, side: SideSpec, input: ComposeInput, mid: { 
 
   const tx0 = x0 + box + 24;
   const span = Math.max(80, mid.x1 - tx0);
-  const main = side.line1.trim();
-  const sub = side.line2.trim();
   ctx.fillStyle = input.palette[side.ink] ?? input.palette[0];
-  if (main) {
-    const cap = fitText(ctx, main, input.font, span, sub ? 68 : 90);
-    if (sub) {
-      const subCap = fitText(ctx, sub, input.font, span * 0.85, 24);
-      drawText(ctx, main, input.font, cap, tx0 + span / 2, W / 2 - subCap / 2 - 6);
-      drawText(ctx, sub, input.font, subCap, tx0 + span / 2, W / 2 + cap / 2 + 10);
-      texts.push(subCap);
-    } else {
-      drawText(ctx, main, input.font, cap, tx0 + span / 2, W / 2);
-    }
-    texts.push(cap);
-  }
+  drawTwoLines(ctx, side.line1, side.line2, input.font, tx0, span, 68, 90, texts);
 }
 
 function portraitCanvas(img: HTMLImageElement, tones: [number, number, number][]) {
@@ -284,20 +246,114 @@ function drawContain(ctx: Ctx, img: HTMLImageElement, x: number, y: number, w: n
   ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
-/** Cap height of upper-case block letters as a share of the font size. */
-const CAP = 0.73;
-
-/** Largest cap height (mm) that fits `maxW` and `maxCap`. */
-function fitText(ctx: Ctx, text: string, font: string, maxW: number, maxCap: number) {
+/** Actual cap height of the font as a fraction of `font-size`, measured from `H`. */
+function fontCap(ctx: Ctx, font: string) {
   ctx.font = `400 100px ${font}`;
-  const w = ctx.measureText(text).width || 1;
-  const sizeForW = (maxW / w) * 100;
-  return Math.max(4, Math.min(maxCap, sizeForW * CAP));
+  return (ctx.measureText("H").actualBoundingBoxAscent || 75) / 100;
 }
 
+const stripNordic = (s: string) => s.replace(/[ÅÄ]/g, "A").replace(/Ö/g, "O");
+
+/** Height of our custom-drawn Å ring or Ä/Ö dots + the gap above the letter body, in mm. */
+function accentExtraMm(text: string, cap: number) {
+  if (!/[ÅÄÖ]/.test(text)) return 0;
+  const gap = Math.max(3.2, cap * 0.08);
+  const dotH = /[Å]/.test(text) ? Math.max(5.2, cap * 0.2) : Math.max(4.2, cap * 0.16);
+  return gap + dotH;
+}
+
+/** Total vertical height (mm) of `text` at `cap`, including our Å/Ä/Ö marks or any font diacritics/descenders. */
+function totalInkMm(ctx: Ctx, text: string, font: string, cap: number) {
+  if (/[ÅÄÖ]/.test(text)) return cap + accentExtraMm(text, cap);
+  ctx.font = `400 ${cap / fontCap(ctx, font)}px ${font}`;
+  const m = ctx.measureText(text);
+  return Math.max(cap, (m.actualBoundingBoxAscent || cap) + (m.actualBoundingBoxDescent || 0));
+}
+
+/** Largest cap height (mm) whose width fits `maxW` and whose total ink height (with Å/Ä/Ö marks) fits `maxTotalH`. */
+function fitText(ctx: Ctx, text: string, font: string, maxW: number, maxTotalH: number) {
+  const capShare = fontCap(ctx, font);
+  ctx.font = `400 100px ${font}`;
+  const w = ctx.measureText(stripNordic(text)).width || 1;
+  let cap = Math.min(maxTotalH, (maxW / w) * 100 * capShare);
+  for (let i = 0; i < 3; i++) {
+    const tot = totalInkMm(ctx, text, font, cap);
+    if (tot > maxTotalH) cap *= maxTotalH / tot;
+  }
+  return Math.max(4, cap);
+}
+
+/**
+ * Centres the full ink box (including diacritics) on `(cx, cy)`.
+ * Upper-case Å, Ä, Ö are drawn as A/O plus crisp block marks with a clear stitch gap, because condensed display fonts put paper-thin marks right on the cap line.
+ */
 function drawText(ctx: Ctx, text: string, font: string, cap: number, cx: number, cy: number) {
-  ctx.font = `400 ${cap / CAP}px ${font}`;
-  ctx.fillText(text, cx, cy + cap / 2);
+  const px = cap / fontCap(ctx, font);
+  ctx.font = `400 ${px}px ${font}`;
+  if (!/[ÅÄÖ]/.test(text)) {
+    const m = ctx.measureText(text);
+    const asc = m.actualBoundingBoxAscent || cap;
+    const desc = m.actualBoundingBoxDescent || 0;
+    ctx.fillText(text, cx, cy + (asc - desc) / 2);
+    return;
+  }
+  const base = stripNordic(text);
+  const extra = accentExtraMm(text, cap);
+  const tot = cap + extra;
+  const baseY = cy + tot / 2;
+  ctx.fillText(base, cx, baseY);
+
+  ctx.save();
+  ctx.textAlign = "left";
+  const totalW = ctx.measureText(base).width;
+  const x0 = cx - totalW / 2;
+  const gap = Math.max(3.2, cap * 0.08);
+  const dotH = Math.max(4.2, cap * 0.16);
+  const dotW = Math.max(3.8, cap * 0.15);
+  const ringR = Math.max(2.6, cap * 0.1);
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch !== "Å" && ch !== "Ä" && ch !== "Ö") continue;
+    const left = x0 + ctx.measureText(base.slice(0, i)).width;
+    const cw = ctx.measureText(base[i]).width;
+    const midX = left + cw / 2;
+    if (ch === "Å") {
+      const cyRing = baseY - cap - gap - ringR;
+      ctx.beginPath();
+      ctx.arc(midX, cyRing, ringR, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const top = baseY - cap - gap - dotH;
+      const sep = Math.max(dotW + 2.4, cw * 0.38);
+      ctx.fillRect(midX - sep / 2 - dotW / 2, top, dotW, dotH);
+      ctx.fillRect(midX + sep / 2 - dotW / 2, top, dotW, dotH);
+    }
+  }
+  ctx.restore();
+}
+
+/** Draws a headline + optional subline inside the 180 mm scarf height, leaving clear margin above Å/Ä/Ö marks. */
+function drawTwoLines(ctx: Ctx, rawMain: string, rawSub: string, font: string, x0: number, span: number, maxMainH: number, maxAloneH: number, texts: number[]) {
+  const main = rawMain.trim();
+  const sub = rawSub.trim();
+  if (!main) return;
+  const cx = x0 + span / 2;
+  const availH = W - 36;
+  if (!sub) {
+    const cap = fitText(ctx, main, font, span, Math.min(maxAloneH, availH));
+    drawText(ctx, main, font, cap, cx, W / 2);
+    texts.push(cap);
+    return;
+  }
+  const gap = 16;
+  const subCap = fitText(ctx, sub, font, span * 0.85, 25);
+  const subInk = totalInkMm(ctx, sub, font, subCap);
+  const cap = fitText(ctx, main, font, span, Math.min(maxMainH, availH - gap - subInk));
+  const mainInk = totalInkMm(ctx, main, font, cap);
+  const top = (W - (mainInk + gap + subInk)) / 2;
+  drawText(ctx, main, font, cap, cx, top + mainInk / 2);
+  drawText(ctx, sub, font, subCap, cx, top + mainInk + gap + subInk / 2);
+  texts.push(cap, subCap);
 }
 
 function nearestIndex(palette: [number, number, number][], r: number, g: number, b: number, a: number, bg: number) {

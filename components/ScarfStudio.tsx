@@ -86,7 +86,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   useEffect(() => {
     const family = fonts[font];
     let live = true;
-    Promise.all([document.fonts.load(`400 100px ${family}`), document.fonts.load(`400 100px ${fonts.script}`)])
+    Promise.all([document.fonts.load(`400 100px ${family}`, "ÅÄÖ"), document.fonts.load(`400 100px ${fonts.script}`, "ÅÄÖ")])
       .catch(() => null)
       .then(() => live && setLoadedFont(family));
     return () => {
