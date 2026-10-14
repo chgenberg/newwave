@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { IFKLoader, useLoader } from "@/components/IFKLoader";
 import { loadImage } from "@/lib/compose";
+import { copyFor } from "@/lib/copy";
 import { sek } from "@/lib/demoCatalog";
 import { SCARF, SCARF_ORDER, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, scarfUnitPrice, type ScarfCheck } from "@/lib/scarf";
 import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, portraitYarns, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
@@ -72,6 +74,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   const [zoom, setZoom] = useState(false);
   const [result, setResult] = useState<{ cells: Uint8Array; checks: ScarfCheck[]; counts: number[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  const loader = useLoader();
   const [error, setError] = useState<string | null>(null);
   const frontRef = useRef<HTMLCanvasElement>(null);
   const backRef = useRef<HTMLCanvasElement>(null);
@@ -226,6 +229,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
     if (!result || !club) return;
     setBusy(true);
     setError(null);
+    loader.start(`Packar mönsterfilen till ${SCARF.factory}`, 90, 2500);
     try {
       const res = await fetch("/api/v1/scarf/export", {
         method: "POST",
@@ -239,7 +243,9 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
       a.download = res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "halsduk.zip";
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      loader.done();
     } catch (e) {
+      loader.fail();
       setError(e instanceof Error ? e.message : "Kunde inte skapa filen.");
     } finally {
       setBusy(false);
@@ -421,7 +427,6 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                   disabled={!result || busy}
                   className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC]"
                 >
-                  {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
                   Ladda ner fil till {SCARF.factory} (.zip)
                 </button>
                 {!allOk && result && <p className="mt-2 text-center text-[12px] text-[#B3261E]">Det finns saker att rätta – filen går ändå att ladda ner.</p>}
@@ -435,9 +440,11 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             palette={palette}
             headline={front.line1 || back.line1}
             composeInput={{ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script }}
+            loader={loader}
           />
 
           <ScarfOrder
+            loader={loader}
             club={club}
             cells={result?.cells ?? null}
             palette={palette}
@@ -446,6 +453,16 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             composeInput={{ palette, front, back, crest, portrait, portraitColor, font: fonts[font], scriptFont: fonts.script }}
           />
         </div>
+      )}
+
+      {club && (
+        <IFKLoader
+          state={loader.state}
+          crestUrl={`/api/v1/brand/${club.id}/${club.brand.crest.farg}`}
+          lines={copyFor(club).loaderLines}
+          doneLine={copyFor(club).loaderDone}
+          wide={club.kind === "brand"}
+        />
       )}
     </main>
   );
@@ -511,7 +528,10 @@ function bothSidesDataUrl(cells: Uint8Array, palette: string[], composeInput: Co
 
 const QTY_PRESETS = [100, 250, 500, 1000, 2500];
 
+type Loader = ReturnType<typeof useLoader>;
+
 function ScarfOrder({
+  loader,
   club,
   cells,
   palette,
@@ -519,6 +539,7 @@ function ScarfOrder({
   back,
   composeInput,
 }: {
+  loader: Loader;
   club: Club;
   cells: Uint8Array | null;
   palette: string[];
@@ -542,6 +563,7 @@ function ScarfOrder({
     sendingRef.current = true;
     setSending(true);
     setError(null);
+    loader.start(`Skickar förfrågan till ${SCARF.factory}`, 90, 1500);
     try {
       const res = await fetch("/api/v1/scarf/order", {
         method: "POST",
@@ -551,7 +573,9 @@ function ScarfOrder({
       const json = (await res.json().catch(() => ({}))) as { reference?: string; totalSek?: number; error?: string };
       if (!res.ok || !json.reference) throw new Error(json.error || "Kunde inte skicka förfrågan.");
       setDone({ reference: json.reference, totalSek: json.totalSek ?? unit * qty });
+      loader.done();
     } catch (err) {
+      loader.fail();
       setError(err instanceof Error ? err.message : "Kunde inte skicka förfrågan.");
     } finally {
       sendingRef.current = false;
@@ -647,7 +671,6 @@ function ScarfOrder({
               disabled={!cells || !validQty || sending}
               className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC] md:mt-auto"
             >
-              {sending && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
               Skicka förfrågan{validQty ? ` · ${sek(unit * qty)}` : ""}
             </button>
           </div>
@@ -663,7 +686,9 @@ function ScarfPhotoStudio({
   palette,
   headline,
   composeInput,
+  loader,
 }: {
+  loader: Loader;
   club: Club;
   cells: Uint8Array | null;
   palette: string[];
@@ -748,8 +773,10 @@ function ScarfPhotoStudio({
     setCameraOpen(false);
     setBusyMode("self");
     setPhotoError(null);
+    loader.start("Lägger upp halsduken och fotot", 15, 1500);
     try {
       const scarfDataUrl = buildScarfReferenceDataUrl(cells, palette, composeInput);
+      loader.stage("Sätter halsduken på dig med AI", 95, 28000);
       const res = await fetch("/api/v1/scarf/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -758,7 +785,9 @@ function ScarfPhotoStudio({
       const json = (await res.json().catch(() => ({}))) as { photos?: GeneratedPhoto[]; error?: string };
       if (!res.ok || !json.photos?.length) throw new Error(json.error || "Kunde inte skapa fotografiet.");
       setSelfPhotos((prev) => [...json.photos!, ...prev].slice(0, 6));
+      loader.done();
     } catch (e) {
+      loader.fail();
       setPhotoError(e instanceof Error ? e.message : "Kunde inte skapa fotografiet.");
     } finally {
       setBusyMode(null);
@@ -786,8 +815,10 @@ function ScarfPhotoStudio({
     if (!cells) return;
     setBusyMode("four");
     setPhotoError(null);
+    loader.start("Lägger upp halsduken i studion", 15, 1500);
     try {
       const scarfDataUrl = buildScarfReferenceDataUrl(cells, palette, composeInput);
+      loader.stage("Fotograferar fyra supportrar i er halsduk", 95, 24000);
       const res = await fetch("/api/v1/scarf/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -796,7 +827,9 @@ function ScarfPhotoStudio({
       const json = (await res.json().catch(() => ({}))) as { photos?: GeneratedPhoto[]; error?: string };
       if (!res.ok || !json.photos?.length) throw new Error(json.error || "Kunde inte generera fotografierna.");
       setFourPhotos(json.photos);
+      loader.done();
     } catch (e) {
+      loader.fail();
       setPhotoError(e instanceof Error ? e.message : "Kunde inte generera fotografierna.");
     } finally {
       setBusyMode(null);
@@ -823,7 +856,6 @@ function ScarfPhotoStudio({
             }}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-6 text-[15px] font-medium text-[#1D1D1F] transition hover:bg-black/[0.04] disabled:opacity-50"
           >
-            {busyMode === "self" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#1D1D1F] border-t-transparent" />}
             Skapa fotografi med mig själv
           </button>
           <button
@@ -832,19 +864,11 @@ function ScarfPhotoStudio({
             onClick={runFourPhotos}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#1D1D1F] px-6 text-[15px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC]"
           >
-            {busyMode === "four" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
             Generera fyra fotografier
           </button>
         </div>
       </div>
 
-      {busyMode && (
-        <p className="mt-4 text-[13px] text-[#6E6E73]">
-          {busyMode === "self"
-            ? "Sätter halsduken på ditt foto med AI – tar cirka 20–35 sekunder …"
-            : "Fotograferar fyra supportrar i er halsduk – tar cirka 30–45 sekunder …"}
-        </p>
-      )}
       {photoError && <div className="mt-4 rounded-2xl bg-[#FDECEA] px-4 py-3 text-sm text-[#B3261E]">{photoError}</div>}
 
       {selfPhotos.length > 0 && (
