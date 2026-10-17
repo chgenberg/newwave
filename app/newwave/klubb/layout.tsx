@@ -1,4 +1,4 @@
-import { Oswald } from "next/font/google";
+import localFont from "next/font/local";
 import type { NavItem } from "@/components/newwave/DashNav";
 import { DashShell } from "@/components/newwave/DashShell";
 import { ASA_IF } from "@/lib/newwave/club";
@@ -9,13 +9,14 @@ import { clubTheme } from "@/lib/newwave/theme";
 const BASE = "/newwave/klubb";
 const ITEMS: NavItem[] = [
   { href: BASE, label: "Översikt", icon: "home" },
+  { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
   { href: `${BASE}/material`, label: "Material", icon: "spark" },
   { href: `${BASE}/butik`, label: "Butik", icon: "bag" },
   { href: `${BASE}/varumarke`, label: "Varumärke", icon: "drop" },
   { href: `${BASE}/support`, label: "Support", icon: "chat" },
 ];
 
-const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-club" });
+const oswald = localFont({ src: "../../fonts/oswald.woff2", weight: "500 700", variable: "--font-club" });
 
 export default async function ClubLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [approvals, saved] = await Promise.all([listApprovals(ASA_IF.id), readBrand(ASA_IF.id)]);

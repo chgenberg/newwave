@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Anton, Bebas_Neue, Caveat } from "next/font/google";
+import localFont from "next/font/local";
 import { ScarfStudio } from "@/components/ScarfStudio";
 
-const anton = Anton({ subsets: ["latin", "latin-ext"], weight: "400" });
-const bebas = Bebas_Neue({ subsets: ["latin", "latin-ext"], weight: "400" });
-const caveat = Caveat({ subsets: ["latin", "latin-ext"], weight: "700" });
+const anton = localFont({ src: "../fonts/anton.woff2", weight: "400" });
+const bebas = localFont({ src: "../fonts/bebas-neue.woff2", weight: "400" });
+const caveat = localFont({ src: "../fonts/caveat.woff2", weight: "700" });
 
 export const metadata: Metadata = { title: "Halsduksagenten – stickad halsduk för klubben" };
 

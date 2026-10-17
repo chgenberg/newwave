@@ -1,15 +1,14 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { nwProduct } from "./catalog";
 import { defaultDesign, METHOD_INFO, type Method } from "./marking";
 import { priceQuote, type Quote, type QuoteEvent, type QuoteLineInput, type QuoteStatus, type Reseller } from "./reseller";
+import { readData, writeData } from "./workspace";
 
 /** Återförsäljarnas butiker och offerter. Demodata skapas första gången. */
 
 type State = { resellers: Reseller[]; quotes: Quote[] };
 
-const FILE = path.join(process.cwd(), ".data", "newwave", "shop", "state.json");
+const FILE = "newwave/shop/state.json";
 
 /** Återförsäljaren som är inloggad i demon. */
 export const CURRENT_RESELLER = "vastkust-profil";
@@ -242,19 +241,16 @@ let chain: Promise<unknown> = Promise.resolve();
 
 async function load(): Promise<State> {
   try {
-    return JSON.parse(await readFile(FILE, "utf8")) as State;
-  } catch {
-    const resellers = seedResellers();
-    const state = { resellers, quotes: seedQuotes(resellers) };
-    await save(state);
-    return state;
-  }
+    const raw = await readData(FILE);
+    if (raw) return JSON.parse(raw) as State;
+  } catch {}
+  const resellers = seedResellers();
+  const state = { resellers, quotes: seedQuotes(resellers) };
+  await save(state);
+  return state;
 }
 
-async function save(state: State) {
-  await mkdir(path.dirname(FILE), { recursive: true });
-  await writeFile(FILE, JSON.stringify(state, null, 2));
-}
+const save = (state: State) => writeData(FILE, JSON.stringify(state, null, 2));
 
 export const readShop = () => load();
 
@@ -291,7 +287,8 @@ export async function quoteByToken(token: string) {
 
 export const event = (who: string, text: string): QuoteEvent => ({ at: new Date().toISOString(), who, text });
 
-export async function createQuote(resellerId: string, input: Pick<Quote, "company" | "needBy" | "message"> & { lines: QuoteLineInput[] }) {
+/** `studio` när återförsäljaren själv gjort offerten i designstudion, annars kom förfrågan från webbshoppen. */
+export async function createQuote(resellerId: string, input: Pick<Quote, "company" | "needBy" | "message"> & { lines: QuoteLineInput[]; source?: "studio" }) {
   return updateShop((s) => {
     const r = s.resellers.find((x) => x.id === resellerId);
     if (!r) return null;
@@ -308,7 +305,7 @@ export async function createQuote(resellerId: string, input: Pick<Quote, "compan
       ...priced,
       status: "ny",
       createdAt: new Date().toISOString(),
-      events: [event(input.company.contact, "Skickade en förfrågan från webbshoppen.")],
+      events: [input.source === "studio" ? event(r.name, `Gjorde offerten åt ${input.company.name} i designstudion.`) : event(input.company.contact, "Skickade en förfrågan från webbshoppen.")],
     };
     s.quotes.unshift(quote);
     return quote;

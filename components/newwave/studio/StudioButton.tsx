@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { nwProduct } from "@/lib/newwave/catalog";
 import { type Customized, defaultDesign, type Design } from "@/lib/newwave/marking";
 import { sek } from "@/lib/newwave/reseller";
+import { upload } from "../shop/api";
 import type { Proof, StudioArt, StudioResult } from "./DesignStudio";
 
 const DesignStudio = dynamic(() => import("./DesignStudio").then((m) => m.DesignStudio), {
@@ -26,13 +27,6 @@ export type SaveTarget =
   | { kind: "craft"; materialId: string };
 
 export type Saved = Customized & { proofs: Proof[] };
-
-async function upload(dataUrl: string) {
-  const res = await fetch("/api/v1/files", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ dataUrl }) });
-  const data = (await res.json().catch(() => ({}))) as { url?: string };
-  if (!res.ok || !data.url) throw new Error("Kunde inte spara bilden.");
-  return data.url;
-}
 
 /** Studions bilder laddas upp som filer, så att bara länkar sparas i designen. */
 async function store(r: StudioResult): Promise<Saved> {

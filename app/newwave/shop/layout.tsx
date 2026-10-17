@@ -7,6 +7,7 @@ import { clubTheme } from "@/lib/newwave/theme";
 const BASE = "/newwave/shop";
 const ITEMS: NavItem[] = [
   { href: BASE, label: "Översikt", icon: "home" },
+  { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
   { href: `${BASE}/butiken`, label: "Butiken", icon: "store" },
   { href: `${BASE}/offerter`, label: "Offerter", icon: "doc" },
   { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },

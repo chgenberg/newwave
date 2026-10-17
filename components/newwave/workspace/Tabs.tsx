@@ -11,17 +11,18 @@ import { PLACEHOLDER } from "../shop/cart";
 import { ProductMock } from "../shop/ProductMock";
 import { ShopFrame, ShopHome } from "../shop/Storefront";
 
-export type Item = { id: string; color: string; design: Design; preview?: string };
+/** `sent` när produkten lagts ut, skickats eller offererats; en ny design nollställer den. */
+export type Item = { id: string; color: string; design: Design; preview?: string; sent?: boolean };
 
-const PAGE = "mx-auto w-full max-w-[1100px] px-5 py-8 min-[900px]:px-10 min-[900px]:py-10";
-const H = "text-[26px] font-semibold tracking-[-0.03em] min-[900px]:text-[32px]";
-const LEAD = "mt-1 max-w-[56ch] text-[14px] leading-relaxed text-[#6F6B63]";
-const GHOST = "inline-flex h-10 items-center rounded-full border border-[rgba(17,17,17,0.14)] px-4 text-[13px] font-semibold transition hover:border-[#111]";
-const SOLID = "inline-flex h-11 items-center gap-2 rounded-full bg-[var(--shop)] px-5 text-[14px] font-semibold text-[var(--shop-on)] transition hover:opacity-90 active:scale-[0.97]";
+export const PAGE = "mx-auto w-full max-w-[1100px] px-5 py-8 min-[900px]:px-10 min-[900px]:py-10";
+export const H = "text-[26px] font-semibold tracking-[-0.03em] min-[900px]:text-[32px]";
+export const LEAD = "mt-1 max-w-[56ch] text-[14px] leading-relaxed text-[#6F6B63]";
+export const GHOST = "inline-flex h-10 items-center rounded-full border border-[rgba(17,17,17,0.14)] px-4 text-[13px] font-semibold transition hover:border-[#111]";
+export const SOLID = "inline-flex h-11 items-center gap-2 rounded-full bg-[var(--shop)] px-5 text-[14px] font-semibold text-[var(--shop-on)] transition hover:opacity-90 active:scale-[0.97]";
 
-const logoOf = (kit: BrandKit, d: Design) => ({ logo: d.logo ?? kit.logo ?? PLACEHOLDER.light, logoDark: d.logo ? d.logoDark : (kit.logoDark ?? PLACEHOLDER.dark) });
+export const logoOf = (kit: BrandKit, d: Design) => ({ logo: d.logo ?? kit.logo ?? PLACEHOLDER.light, logoDark: d.logo ? d.logoDark : (kit.logoDark ?? (kit.logo ? undefined : PLACEHOLDER.dark)) });
 
-function Empty({ onStart }: { onStart: () => void }) {
+export function Empty({ onStart }: { onStart: () => void }) {
   return (
     <div className="mt-8 grid place-items-center rounded-[22px] border border-dashed border-[rgba(17,17,17,0.18)] px-6 py-16 text-center">
       <p className="text-[15px] font-semibold">Kollektionen är tom</p>
@@ -33,13 +34,20 @@ function Empty({ onStart }: { onStart: () => void }) {
   );
 }
 
-export function CollectionTab({ kit, items, onEdit, onRemove, onStart }: { kit: BrandKit; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void }) {
+export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next }: { kit: BrandKit; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void; next: { label: string; go: () => void } }) {
   const total = items.reduce((sum, i) => sum + (nwProduct(i.id)?.priceSek ?? 0), 0);
   return (
     <div className={PAGE}>
       <p className="nw-kicker text-[#6F6B63]">{kit.name}</p>
       <h2 className={H}>Kollektion</h2>
-      <p className={LEAD}>Allt ni har designat i samma varumärke. Öppna en produkt för att ändra trycket, eller lägg den i klubbshopen.</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <p className={LEAD}>Allt ni har designat i samma varumärke. Öppna en produkt för att ändra trycket.</p>
+        {items.length ? (
+          <button type="button" onClick={next.go} className={SOLID}>
+            {next.label} <span aria-hidden>→</span>
+          </button>
+        ) : null}
+      </div>
       {items.length ? (
         <>
           <ul className="mt-8 grid grid-cols-2 gap-3 min-[700px]:grid-cols-3 min-[1100px]:grid-cols-4">
@@ -59,7 +67,7 @@ export function CollectionTab({ kit, items, onEdit, onRemove, onStart }: { kit: 
                   <div className="flex items-start justify-between gap-2 bg-white px-3.5 py-3">
                     <span className="min-w-0">
                       <span className="block truncate text-[14px] font-semibold">{p.name}</span>
-                      <span className="block truncate text-[12px] text-[#6F6B63]">{designSummary(p, i.design)}</span>
+                      <span className="block truncate text-[12px] text-[#6F6B63]">{i.sent ? "✓ Skickad · " : ""}{designSummary(p, i.design)}</span>
                     </span>
                     <button type="button" onClick={() => onRemove(i.id)} aria-label={`Ta bort ${p.name}`} className="-mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[16px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]">
                       ×

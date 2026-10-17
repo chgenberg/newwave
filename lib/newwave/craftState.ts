@@ -1,8 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { NW_CATALOG } from "./catalog";
 import type { Customized } from "./marking";
+import { readData, writeData } from "./workspace";
 
 export type Campaign = {
   id: string;
@@ -23,6 +22,8 @@ export type Campaign = {
   reminded?: boolean;
   /** Godkännande-id per klubb med varumärkeskit i navet. */
   approvals?: Record<string, string>;
+  /** Tryck och färg per produkt när kampanjen designats i studion; klubbens egen logga trycks. */
+  designs?: Record<string, Omit<Customized, "mockupUrl">>;
 };
 
 export type ClubSettings = { autopilot: boolean; threshold: number };
@@ -54,12 +55,12 @@ export const DEFAULT_RULES: CraftRules = {
   minScore: 7,
 };
 
-const FILE = path.join(process.cwd(), ".data", "newwave", "craft", "state.json");
+const FILE = "newwave/craft/state.json";
 const EMPTY: State = { campaigns: [], settings: {}, gates: {}, log: [], dismissed: [] };
 
 export async function readState(): Promise<State> {
   try {
-    return { ...EMPTY, ...(JSON.parse(await readFile(FILE, "utf8")) as Partial<State>) };
+    return { ...EMPTY, ...(JSON.parse((await readData(FILE)) ?? "{}") as Partial<State>) };
   } catch {
     return { ...EMPTY };
   }
@@ -68,8 +69,7 @@ export async function readState(): Promise<State> {
 export async function updateState(fn: (s: State) => void | Promise<void>) {
   const state = await readState();
   await fn(state);
-  await mkdir(path.dirname(FILE), { recursive: true });
-  await writeFile(FILE, JSON.stringify(state, null, 2));
+  await writeData(FILE, JSON.stringify(state, null, 2));
   return state;
 }
 

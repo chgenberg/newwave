@@ -1,9 +1,6 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 import type { Customized } from "@/lib/newwave/marking";
-
-const DIR = path.join(process.cwd(), ".data", "intersport");
+import { readData, writeData } from "@/lib/newwave/workspace";
 
 export const MOCK_API_KEY = process.env.INTERSPORT_API_KEY || "demo-intersport-key";
 
@@ -25,24 +22,23 @@ export const ProductSchema = z.object({
 /** `custom` finns när någon anpassat produkten i designstudion. */
 export type ShopProduct = z.infer<typeof ProductSchema> & { id: string; publishedAt: string; clubShopId: string; custom?: Omit<Customized, "mockupUrl"> };
 
-const file = (shopId: string) => path.join(DIR, `${shopId.replace(/[^a-z0-9-]/g, "")}.json`);
+const file = (shopId: string) => `intersport/${shopId.replace(/[^a-z0-9-]/g, "")}.json`;
 
 export async function listProducts(shopId: string): Promise<ShopProduct[]> {
   try {
-    return JSON.parse(await readFile(file(shopId), "utf8"));
+    return JSON.parse((await readData(file(shopId))) ?? "[]");
   } catch {
     return [];
   }
 }
 
 export async function addProducts(shopId: string, products: (z.infer<typeof ProductSchema> & Pick<ShopProduct, "custom">)[]) {
-  await mkdir(DIR, { recursive: true });
   const existing = await listProducts(shopId);
   const now = new Date().toISOString();
   const added: ShopProduct[] = products.map((p) => ({ ...p, id: `isp-${Math.random().toString(36).slice(2, 10)}`, publishedAt: now, clubShopId: shopId }));
   const bySku = new Map(existing.map((p) => [p.sku, p]));
   for (const p of added) bySku.set(p.sku, p);
-  await writeFile(file(shopId), JSON.stringify([...bySku.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)), null, 2));
+  await writeData(file(shopId), JSON.stringify([...bySku.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)), null, 2));
   return added;
 }
 
@@ -53,6 +49,6 @@ export async function customizeProduct(shopId: string, id: string, c: Customized
   if (!p) return null;
   p.images = [{ url: c.mockupUrl, alt: p.images[0]?.alt ?? p.title, kind: "mockup" }];
   p.custom = { design: c.design, color: c.color };
-  await writeFile(file(shopId), JSON.stringify(list, null, 2));
+  await writeData(file(shopId), JSON.stringify(list, null, 2));
   return p;
 }

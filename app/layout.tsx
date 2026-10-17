@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Source_Sans_3 } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const brand = Source_Sans_3({ subsets: ["latin"], weight: ["400", "600", "900"], variable: "--font-brand" });
+const inter = localFont({ src: "./fonts/inter.woff2", weight: "100 900", variable: "--font-inter" });
+const brand = localFont({ src: "./fonts/source-sans-3.woff2", weight: "200 900", variable: "--font-brand" });
 
 export const metadata: Metadata = {
   title: "Craft Content Engine – klubbmerch på beställning",

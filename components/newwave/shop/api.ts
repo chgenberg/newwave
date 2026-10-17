@@ -5,6 +5,13 @@ export async function call<T>(url: string, body: unknown, method: "POST" | "PATC
   return json as T;
 }
 
+/** Laddar upp en bild från studion och ger tillbaka fil-URL:en, så att bara länken sparas. */
+export async function upload(dataUrl: string) {
+  const { url } = await call<{ url?: string }>("/api/v1/files", { dataUrl });
+  if (!url) throw new Error("Kunde inte spara bilden.");
+  return url;
+}
+
 export const readDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const r = new FileReader();

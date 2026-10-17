@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PORTALS, type PortalId } from "@/lib/newwave/hub";
-import { DashBottomBar, DashCrumb, DashRail, Icon, type NavItem } from "./DashNav";
+import { DashBottomBar, DashCrumb, DashMain, DashRail, Icon, type NavItem } from "./DashNav";
 import { HubSwitch } from "./HubSwitch";
 import { HubFooterSlim } from "./HubFooter";
 import { LogoMark } from "./Logo";
@@ -70,11 +70,7 @@ export function DashShell({ portal, base, items, label, title, subtitle, logo, o
               <HubSwitch active={portal} />
               <DashRail {...nav} />
             </div>
-            <main className="min-w-0 flex-1 px-4 py-6 min-[900px]:px-10 min-[900px]:py-10">
-              <div className="mx-auto" style={{ maxWidth: width }}>
-                {children}
-              </div>
-            </main>
+            <DashMain width={width}>{children}</DashMain>
           </div>
         </div>
         <HubFooterSlim />

@@ -11,13 +11,13 @@ export type Brandbook = {
   rules: string[];
 };
 
-/** Varumärket som studion på förstasidan designar med. Sparas bara i webbläsaren. */
+/** Varumärket som studion designar med. Sparas bara i webbläsaren. */
 export type BrandKit = Brandbook & {
   logo: string | null;
   logoDark: string | null;
   site: string;
   /** Var varumärket kom ifrån, för att visa rätt kvitto i panelen. */
-  source: { kind: "standard" | "logga" | "webb" | "brandbook"; label: string };
+  source: { kind: "standard" | "profil" | "logga" | "webb" | "brandbook"; label: string };
 };
 
 export const MAX_COLORS = 6;
@@ -39,22 +39,22 @@ export const DEFAULT_KIT: BrandKit = {
 
 export const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9A-F]{6}$/i.test(v);
 
-/** Läser ett sparat varumärke och faller tillbaka fält för fält. */
-export function readKit(raw: unknown): BrandKit {
-  if (!raw || typeof raw !== "object") return DEFAULT_KIT;
+/** Läser ett sparat varumärke och faller tillbaka fält för fält på `base`. */
+export function readKit(raw: unknown, base: BrandKit = DEFAULT_KIT): BrandKit {
+  if (!raw || typeof raw !== "object") return base;
   const r = raw as Partial<BrandKit>;
   const colors = Array.isArray(r.colors) ? r.colors.filter((c) => c && isHex(c.hex) && typeof c.name === "string").slice(0, MAX_COLORS) : [];
   const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : []);
   return {
-    name: typeof r.name === "string" && r.name.trim() ? r.name : DEFAULT_KIT.name,
-    colors: colors.length ? colors.map((c) => ({ name: c.name, hex: c.hex.toUpperCase() })) : DEFAULT_KIT.colors,
+    name: typeof r.name === "string" && r.name.trim() ? r.name : base.name,
+    colors: colors.length ? colors.map((c) => ({ name: c.name, hex: c.hex.toUpperCase() })) : base.colors,
     fonts: strings(r.fonts),
     tone: typeof r.tone === "string" ? r.tone : "",
     rules: strings(r.rules),
     logo: typeof r.logo === "string" ? r.logo : null,
     logoDark: typeof r.logoDark === "string" ? r.logoDark : null,
     site: typeof r.site === "string" ? r.site : "",
-    source: r.source && typeof r.source.label === "string" ? r.source : DEFAULT_KIT.source,
+    source: r.source && typeof r.source.label === "string" ? r.source : base.source,
   };
 }
 

@@ -12,6 +12,7 @@ const ICONS: Record<string, React.ReactNode> = {
   drop: <path d="M12 3.5c3.5 4 6 7.2 6 10.5a6 6 0 0 1-12 0c0-3.3 2.5-6.5 6-10.5z" />,
   chat: <path d="M5 5.5h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-8l-4.5 3.5V17H5a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  cube: <path d="M12 3 4 7.5v9L12 21l8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9" />,
   shield: <path d="M12 3.5 19 6v5.5c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6z" />,
   grid: <path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" />,
   send: <path d="M4 11.5 20 4l-6.5 16-2.5-6.5z" />,
@@ -107,5 +108,17 @@ export function DashBottomBar({ base, items, label, overview = [], badge, badges
         );
       })}
     </nav>
+  );
+}
+
+/** Sidans innehåll med dashboardens bredd; designmotorn (`/designa`) får hela ytan bredvid menyn. */
+export function DashMain({ width, children }: { width: number; children: React.ReactNode }) {
+  const wide = usePathname().endsWith("/designa");
+  return (
+    <main className={`min-w-0 flex-1 ${wide ? "" : "px-4 py-6 min-[900px]:px-10 min-[900px]:py-10"}`}>
+      <div className="mx-auto" style={{ maxWidth: wide ? undefined : width }}>
+        {children}
+      </div>
+    </main>
   );
 }

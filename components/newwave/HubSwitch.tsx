@@ -2,9 +2,14 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { PORTALS, type PortalId } from "@/lib/newwave/hub";
 import { Icon } from "./DashNav";
+import { STORAGE_PREFIX } from "./workspace/roles";
+
+/** Studions val av öppen panel är en inställning, inte demodata. */
+const RAIL_KEY = "nw.studio.rail";
 
 type Target = PortalId | "studio";
 
@@ -14,6 +19,46 @@ const TARGETS: { id: Target; href: string; title: string; who: string; icon: str
   { id: "studio", href: "/newwave#studio", title: "Designmotorn", who: "Designa med ert varumärke", icon: "drop" },
   ...PORTALS.map((p) => ({ id: p.id, href: p.href, title: p.title, who: p.who, icon: ICON[p.id] })),
 ];
+
+/** Rensar besökarens egen demomiljö på servern och det studion sparat i webbläsaren. */
+function Restart() {
+  const router = useRouter();
+  const [step, setStep] = useState<"idle" | "confirm" | "busy">("idle");
+
+  const restart = async () => {
+    setStep("busy");
+    await fetch("/api/v1/newwave/demo", { method: "DELETE" }).catch(() => null);
+    for (const k of Object.keys(localStorage)) if ((k.startsWith(STORAGE_PREFIX) && k !== RAIL_KEY) || k.startsWith("nw-shop:")) localStorage.removeItem(k);
+    if (window.location.pathname === "/newwave") window.location.reload();
+    else router.push("/newwave");
+  };
+
+  return (
+    <div className="mt-1 border-t border-[rgba(17,17,17,0.07)] px-2 pb-1 pt-2">
+      {step === "idle" ? (
+        <button type="button" onClick={() => setStep("confirm")} className="flex min-h-9 w-full items-center gap-2 rounded-full px-1 text-left text-[13px] text-[#6F6B63] transition hover:text-[#111]">
+          <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          Börja om demon
+        </button>
+      ) : (
+        <div role="group" aria-label="Börja om demon">
+          <p className="px-1 text-[12.5px] leading-snug text-[#6F6B63]">Allt du har skapat och ändrat försvinner. Ingen annan påverkas.</p>
+          <div className="mt-2 flex gap-1.5">
+            <button type="button" disabled={step === "busy"} onClick={restart} className="min-h-9 flex-1 rounded-full bg-[#111] px-3 text-[13px] font-semibold text-white transition disabled:opacity-60">
+              {step === "busy" ? "Börjar om…" : "Ja, börja om"}
+            </button>
+            <button type="button" disabled={step === "busy"} onClick={() => setStep("idle")} className="min-h-9 rounded-full px-3 text-[13px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]">
+              Avbryt
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Växlar mellan designmotorn och de fyra dashboardsen. På datorn en diskret pil längst till vänster om menyn,
@@ -88,6 +133,7 @@ export function HubSwitch({ active, bar }: { active: Target; bar?: boolean }) {
                 </Link>
               );
             })}
+            <Restart />
           </motion.nav>
         ) : null}
       </AnimatePresence>

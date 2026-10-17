@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
   const res = await fetch(`${internalOrigin(req)}/api/mock-intersport/v1/club-shops/${club.id}/products`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${MOCK_API_KEY}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${MOCK_API_KEY}`, Cookie: req.headers.get("cookie") ?? "" },
     body: JSON.stringify({ products }),
   });
   const json = await res.json();

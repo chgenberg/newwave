@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { addProducts } from "@/lib/intersport";
 import type { ProductSchema } from "@/lib/intersport";
@@ -8,8 +6,8 @@ import type { Customized } from "./marking";
 import type { z } from "zod";
 import { APPROVALS, FEED, type FeedItem } from "./club";
 import { readCraftRules } from "./craftState";
+import { readData, writeData } from "./workspace";
 
-const DIR = path.join(process.cwd(), ".data", "newwave");
 const TZ = "Europe/Stockholm";
 
 export type ApprovalStatus = "väntar" | "godkänd" | "ändring";
@@ -72,21 +70,18 @@ export type BrandState = {
   ownRules?: OwnRule[];
 };
 
-const file = (clubId: string, name: string) => path.join(DIR, clubId.replace(/[^a-z0-9-]/g, ""), `${name}.json`);
+const file = (clubId: string, name: string) => `newwave/${clubId.replace(/[^a-z0-9-]/g, "")}/${name}.json`;
 
 async function read<T>(clubId: string, name: string, fallback: () => T): Promise<T> {
   try {
-    return JSON.parse(await readFile(file(clubId, name), "utf8")) as T;
+    const raw = await readData(file(clubId, name));
+    return raw === null ? fallback() : (JSON.parse(raw) as T);
   } catch {
     return fallback();
   }
 }
 
-async function write(clubId: string, name: string, data: unknown) {
-  const f = file(clubId, name);
-  await mkdir(path.dirname(f), { recursive: true });
-  await writeFile(f, JSON.stringify(data, null, 2));
-}
+const write = (clubId: string, name: string, data: unknown) => writeData(file(clubId, name), JSON.stringify(data, null, 2));
 
 export const stamp = (d = new Date()) =>
   new Intl.DateTimeFormat("sv-SE", { dateStyle: "short", timeStyle: "short", timeZone: TZ }).format(d);

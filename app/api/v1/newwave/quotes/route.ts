@@ -30,6 +30,7 @@ const Create = z.object({
   needBy: z.iso.date().optional(),
   message: text(1000).optional(),
   lines: z.array(Line).min(1).max(20),
+  source: z.literal("studio").optional(),
 });
 
 const Patch = z.discriminatedUnion("action", [

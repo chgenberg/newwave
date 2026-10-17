@@ -1,10 +1,13 @@
 import { listProducts } from "@/lib/intersport";
 import { nwProduct } from "./catalog";
+import { colorName } from "./colors";
 import type { Customized } from "./marking";
 import { ASA_IF } from "./club";
 import { type Campaign, type ClubSettings, type CraftRules, type LogItem, DEFAULT_RULES, logItem, readState, updateState } from "./craftState";
 import { ONBOARD_STEPS } from "./craftQuery";
+import { serverMockup } from "./serverMockup";
 import { addFeed, createApproval, listApprovals, readBrand, type ApprovalStatus } from "./store";
+import { workspaceId } from "./workspace";
 
 export type CraftClub = {
   id: string;
@@ -239,19 +242,56 @@ const priceOf = (id: string) => nwProduct(id)?.priceSek ?? 299;
 // --- Utskick -------------------------------------------------------------------
 
 /** Lägger kampanjen som godkännande hos klubbarna som har varumärkeskit i navet och returnerar deras godkännande-id. */
-export async function deliverCampaign(c: Campaign): Promise<Record<string, string>> {
+/**
+ * Lägger kampanjen hos varje klubb i navet. En kampanj från designstudion får klubbens logga på produkterna
+ * och färdiga butiksprodukter, så att ett godkännande lägger ut dem i klubbens butik hos Intersport.
+ */
+export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<string, string>> {
   const products = c.products.map(nwProduct).filter((p) => p !== undefined);
   const date = c.date ? ` Kampanjdatum: ${new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "long" }).format(new Date(`${c.date}T12:00:00Z`))}.` : "";
   const deadline = c.deadline ? ` Godkänn senast ${new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "long" }).format(new Date(`${c.deadline}T12:00:00Z`))}.` : "";
   const out: Record<string, string> = {};
   for (const clubId of c.clubIds.filter(isLive)) {
+    const club = craftClub(clubId);
+    const studio = c.designs && club?.logo ? { light: club.logo, dark: club.logoDark ?? club.logo } : undefined;
+    const made = await Promise.all(
+      products.map(async (p) => {
+        const custom = c.designs?.[p.id];
+        const print = studio && (p.dark ? studio.dark : studio.light);
+        return { p, custom, print, mockupUrl: (custom && print && (await serverMockup(p, print).catch(() => null))) || p.photo };
+      }),
+    );
     const a = await createApproval(clubId, {
       kind: "Craft-kampanj",
       title: c.title,
       occasion: c.occasion,
       story: `${c.brief}${date}${deadline}`,
       from: "Craft",
-      products: products.map((p) => ({ id: p.id, name: `${p.name.split(",")[0]} ${p.garmentColor.toLowerCase()}`, priceSek: p.priceSek, mockupUrl: p.photo })),
+      printFiles: studio,
+      products: made.map(({ p, custom, mockupUrl }) => ({ id: p.id, name: `${p.name.split(",")[0]} ${p.garmentColor.toLowerCase()}`, priceSek: p.priceSek, mockupUrl, custom })),
+      shopProducts:
+        studio && club
+          ? made.flatMap(({ p, custom, print, mockupUrl }) =>
+              custom && print
+                ? [
+                    {
+                      sku: `CRAFT-POD-${p.id.toUpperCase()}-${c.id.toUpperCase()}`,
+                      title: `${club.name} – ${c.title} – ${p.name} ${colorName(custom.color).toLowerCase()}`,
+                      description: `${p.name} med ${club.name}s logga, från Crafts kampanj "${c.title}".`,
+                      priceSek: p.priceSek,
+                      sizes: p.sizes,
+                      images: [{ url: mockupUrl, alt: `${p.name} med ${club.name}s logga`, kind: "mockup" as const }],
+                      printFileUrl: `${origin}${print}`,
+                      fulfilment: "print-on-demand" as const,
+                      dropId: `kampanj-${c.id}`,
+                      signal: c.occasion,
+                      tags: [club.name, c.title, "Craft"],
+                      custom,
+                    },
+                  ]
+                : [],
+            )
+          : undefined,
     });
     await addFeed(clubId, "Craft", `Skickade kampanjen "${c.title}" med ${products.length} produkter.`);
     out[clubId] = a.id;
@@ -259,7 +299,7 @@ export async function deliverCampaign(c: Campaign): Promise<Record<string, strin
   return out;
 }
 
-let delivering: Promise<void> | null = null;
+const delivering = new Map<string, Promise<void>>();
 
 /** Skickar schemalagda kampanjer som har nått sitt datum och de automatiska påminnelserna. */
 async function deliverDue(now: number) {
@@ -289,8 +329,13 @@ async function deliverDue(now: number) {
 export type CraftData = { rows: ClubRow[]; campaigns: CampaignResult[]; rules: CraftRules; log: LogItem[]; dismissed: string[] };
 
 export async function craftData(now = Date.now()): Promise<CraftData> {
-  delivering ??= deliverDue(now).finally(() => (delivering = null));
-  await delivering;
+  const ws = (await workspaceId()) ?? "";
+  let run = delivering.get(ws);
+  if (!run) {
+    run = deliverDue(now).finally(() => delivering.delete(ws));
+    delivering.set(ws, run);
+  }
+  await run;
   const state = await readState();
   const rules = state.rules ?? DEFAULT_RULES;
   const campaigns = [...SEED_CAMPAIGNS, ...state.campaigns];
