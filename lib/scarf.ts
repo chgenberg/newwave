@@ -185,11 +185,20 @@ export function colorCsv(palette: string[], counts: number[]) {
   return ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i] ?? 0}`)].join("\n");
 }
 
-export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string }) {
+const SCARF_FILES: [string, string][] = [
+  ["halsduk.jpg", "JPG i högsta kvalitet, för Draw Designer (JPG kan ge små färgavvikelser i kanterna)"],
+  ["halsduk.png", "samma mönster förlustfritt, exakt de färger som står nedan"],
+  ["halsduk-x4.png", "förstorad för granskning på skärm"],
+  ["farger.csv", "färglista"],
+];
+
+export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files?: [string, string][] }) {
   const lines = opts.palette.map((hex, i) => {
     const p = nearestPantone(hex);
     return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}  (${opts.counts[i] ?? 0} maskor)`;
   });
+  const files = opts.files ?? SCARF_FILES;
+  const pad = Math.max(15, ...files.map(([name]) => name.length)) + 2;
   return [
     `Halsduk – ${opts.club}`,
     `Skapad ${opts.date}`,
@@ -203,9 +212,6 @@ export function readMe(opts: { club: string; palette: string[]; counts: number[]
     ...lines,
     "",
     "Filer:",
-    "  halsduk.jpg      – JPG i högsta kvalitet, för Draw Designer (JPG kan ge små färgavvikelser i kanterna)",
-    "  halsduk.png      – samma mönster förlustfritt, exakt de färger som står nedan",
-    "  halsduk-x4.png   – förstorad för granskning på skärm",
-    "  farger.csv       – färglista",
+    ...files.map(([name, what]) => `  ${name.padEnd(pad)}– ${what}`),
   ].join("\n");
 }

@@ -2,6 +2,7 @@ import { listProducts } from "@/lib/intersport";
 import { ASA_IF } from "./club";
 import { craftData } from "./craft";
 import type { Payload } from "./hub";
+import { listDeliveries } from "./hubDelivery";
 import { isOrder, ordersSince, sek, type Quote, type Reseller } from "./reseller";
 import { readShop } from "./shopState";
 import { listApprovals, listFeed } from "./store";
@@ -29,7 +30,14 @@ const lastEvent = (q: Quote) => q.events[q.events.length - 1]?.at ?? q.createdAt
 const units = (qs: Quote[]) => qs.reduce((s, q) => s + q.lines.reduce((n, l) => n + l.qty, 0), 0);
 
 export async function hubLive(now = Date.now()) {
-  const [shop, craft, asaApprovals, asaFeed, asaProducts] = await Promise.all([readShop(), craftData(now), listApprovals(ASA_IF.id), listFeed(ASA_IF.id), listProducts(ASA_IF.id)]);
+  const [shop, craft, asaApprovals, asaFeed, asaProducts, deliveries] = await Promise.all([
+    readShop(),
+    craftData(now),
+    listApprovals(ASA_IF.id),
+    listFeed(ASA_IF.id),
+    listProducts(ASA_IF.id),
+    listDeliveries(),
+  ]);
   const { resellers, quotes } = shop;
   const nameOf = (id: string) => resellers.find((r) => r.id === id)?.name ?? id;
 
@@ -70,7 +78,7 @@ export async function hubLive(now = Date.now()) {
 
   const files = [...toStart, ...inProd].reduce((s, q) => s + q.lines.length, 0);
   const payloads: Record<Payload, number> = {
-    tryckfiler: files,
+    tryckfiler: files + deliveries.reduce((s, d) => s + d.jobs.length, 0),
     ordrar: toStart.length + inProd.length,
     offerter: open.length,
     produktdata: shopProducts.size,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { MotionRoot } from "@/components/newwave/motion/Motion";
 import { ScrollToTop } from "@/components/newwave/ScrollToTop";
+import { SITE } from "@/lib/newwave/site";
 import "./newwave.css";
 
 const sans = localFont({
@@ -12,9 +13,6 @@ const sans = localFont({
   variable: "--font-nw",
 });
 const mono = localFont({ src: "../fonts/fragment-mono.woff2", weight: "400", variable: "--font-nw-mono" });
-
-/** Docker-bygget får inga Railway-variabler, och /newwave är statisk – därför produktionsadressen som reserv. */
-const SITE = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : process.env.NODE_ENV === "production" ? "https://newwave-production.up.railway.app" : "http://localhost:3210";
 
 const SHARE = {
   title: "Next Wave – testa själv",

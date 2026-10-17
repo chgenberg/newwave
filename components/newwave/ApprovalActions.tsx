@@ -12,6 +12,7 @@ export function ApprovalActions({
   note,
   shopCount,
   weekly,
+  delivery,
 }: {
   clubId: string;
   id: string;
@@ -20,6 +21,8 @@ export function ApprovalActions({
   shopCount: number;
   /** Veckans paket: neka ger näst bästa motivet i stället för en ändring. */
   weekly?: boolean;
+  /** Produktionsfilerna som gick till New Waves hub när materialet godkändes. */
+  delivery?: { href: string; files: number; products: number };
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -54,13 +57,23 @@ export function ApprovalActions({
       <div className="mt-6 rounded-[var(--nw-radius)] bg-[var(--club)] p-5 text-white">
         <p className="nw-club-heading text-[18px]">Godkänd</p>
         <p className="mt-1 text-[14px] text-white/70">
-          {published ? `${published} produkter ligger nu i klubbens butik.` : "Materialet är skickat vidare till New Wave via API."}
+          {published ? `${published} produkter ligger nu i klubbens butik. ` : ""}
+          {delivery
+            ? `${delivery.files} produktionsfiler för ${delivery.products} produkter är skickade till New Waves hub via API.`
+            : published
+              ? ""
+              : "Materialet är skickat vidare till New Wave via API."}
           {weekly ? " Inläggen, bannern och nyhetsbrevet finns i zip-filen – lägg upp dem när det passar er." : ""}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
           {shopCount ? (
             <Link href="/newwave/klubb/butik" className="nw-btn nw-club-btn">
               Se i butiken
+            </Link>
+          ) : null}
+          {delivery ? (
+            <Link href={delivery.href} className={shopCount ? "text-[14px] font-medium text-white underline underline-offset-4" : "nw-btn nw-club-btn"}>
+              Så landar filerna hos New Wave{shopCount ? " →" : ""}
             </Link>
           ) : null}
           <Link href="/newwave/craft" className="text-[14px] font-medium text-white underline underline-offset-4">

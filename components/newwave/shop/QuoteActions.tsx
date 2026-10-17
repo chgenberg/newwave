@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type Saved, StudioButton } from "@/components/newwave/studio/StudioButton";
-import { priceLine, type QuoteLine, sek } from "@/lib/newwave/reseller";
+import { isDemoEmail, priceLine, type QuoteLine, sek } from "@/lib/newwave/reseller";
 import { call } from "./api";
 
 function useAction() {
@@ -25,37 +25,81 @@ function useAction() {
   return { busy, error, run };
 }
 
-/** Återförsäljaren skickar offerten med en hälsning till kunden. */
-export function SendQuote({ id, contact, resend }: { id: string; contact: string; resend?: boolean }) {
+/** Återförsäljaren mejlar offerten med en hälsning; demokundernas påhittade adresser byts mot en egen. */
+export function SendQuote({ id, contact, email, reply: sent, resend }: { id: string; contact: string; email: string; reply?: string; resend?: boolean }) {
   const { busy, error, run } = useAction();
-  const [reply, setReply] = useState(`Hej ${contact.split(" ")[0]}! Tack för förfrågan. Här är offerten – vi skickar ett provtryck innan vi kör. Hör av er om ni vill ändra något.`);
+  const demo = isDemoEmail(email);
+  const [to, setTo] = useState(demo ? "" : email);
+  const [reply, setReply] = useState(sent ?? `Hej ${contact.split(" ")[0]}! Tack för förfrågan. Här är offerten – vi skickar ett provtryck innan vi kör. Hör av er om ni vill ändra något.`);
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim());
   return (
     <div className="rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-4 sm:p-5">
-      <label htmlFor="reply" className="text-[13px] font-semibold text-[var(--nw-ink)]">
+      <label htmlFor="to" className="text-[13px] font-semibold text-[var(--nw-ink)]">
+        Till
+      </label>
+      <input id="to" type="email" value={to} onChange={(e) => setTo(e.target.value)} maxLength={120} autoComplete="email" placeholder={demo ? "er@epost.se" : undefined} className="nw-input mt-2 w-full bg-white" />
+      {demo ? <p className="mt-1.5 text-[12.5px] text-[var(--nw-muted)]">{email} är en påhittad demokund. Skriv in er egen adress, så ser ni mejlet kunden får.</p> : null}
+      <label htmlFor="reply" className="mt-4 block text-[13px] font-semibold text-[var(--nw-ink)]">
         Hälsning till kunden
       </label>
       <textarea id="reply" value={reply} onChange={(e) => setReply(e.target.value)} rows={3} maxLength={1000} className="nw-input mt-2 w-full resize-y bg-white" />
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button type="button" disabled={busy || !reply.trim()} onClick={() => run({ action: "send", id, reply })} className="nw-btn nw-club-btn disabled:opacity-50">
+        <button type="button" disabled={busy || !reply.trim() || !valid} onClick={() => run({ action: "send", id, reply, to: to.trim() })} className="nw-btn nw-club-btn disabled:opacity-50">
           {busy ? "Skickar…" : resend ? "Skicka igen" : "Skicka offerten"}
         </button>
-        <p className="text-[12.5px] text-[var(--nw-muted)]">Kunden får en länk där offerten kan godkännas.</p>
+        <p className="text-[12.5px] text-[var(--nw-muted)]">Kunden får offerten med bilder och PDF, och godkänner eller tackar nej direkt från mejlet.</p>
       </div>
       {error ? <p className="mt-2 text-[13px] text-[#B42318]">{error}</p> : null}
     </div>
   );
 }
 
-/** Kunden godkänner eller tackar nej på sin offertsida. */
-export function CustomerDecision({ token }: { token: string }) {
+export function CopyLink({ url, label }: { url: string; label: string }) {
+  const [done, setDone] = useState(false);
+  const copy = () =>
+    navigator.clipboard?.writeText(url).then(() => {
+      setDone(true);
+      setTimeout(() => setDone(false), 1600);
+    });
+  return (
+    <button type="button" onClick={copy} className="nw-btn nw-btn-ghost">
+      {done ? "Kopierad" : label}
+    </button>
+  );
+}
+
+/** Uppdaterar sidan medan den är öppen, så att kundens svar syns utan att ladda om. */
+export function LiveRefresh({ seconds = 8 }: { seconds?: number }) {
+  const router = useRouter();
+  useEffect(() => {
+    const tick = () => document.visibilityState === "visible" && router.refresh();
+    const t = setInterval(tick, seconds * 1000);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", tick);
+    };
+  }, [router, seconds]);
+  return null;
+}
+
+/**
+ * Kunden godkänner eller tackar nej på sin offertsida. Knapparna i mejlet öppnar sidan med svaret förvalt (`ask`);
+ * kunden bekräftar här, eftersom e-postfilter öppnar länkar i mejl av sig själva.
+ */
+export function CustomerDecision({ token, ask }: { token: string; ask?: "godkann" | "neka" }) {
   const { busy, error, run } = useAction();
-  const [declining, setDeclining] = useState(false);
+  const [declining, setDeclining] = useState(ask === "neka");
   const [reason, setReason] = useState("");
   return (
     <div>
+      {ask && !declining ? <p className="mb-3 text-[16px] font-semibold">Bekräfta att ni godkänner offerten</p> : null}
       {declining ? (
         <div className="flex flex-col gap-2">
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} placeholder="Vad skulle behöva ändras? (valfritt)" className="w-full rounded-xl border border-[var(--shop-line)] bg-white p-3 text-[14px]" />
+          <label htmlFor="reason" className="text-[14px] font-semibold">
+            Vad skulle behöva ändras? <span className="font-normal opacity-60">(valfritt)</span>
+          </label>
+          <textarea id="reason" autoFocus={ask === "neka"} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} className="w-full rounded-xl border border-[var(--shop-line)] bg-white p-3 text-[14px]" />
           <div className="flex gap-2">
             <button type="button" disabled={busy} onClick={() => run({ action: "decline", token, reason: reason || undefined })} className="h-11 rounded-full border border-[#1D1D1F] px-5 text-[14px] font-semibold disabled:opacity-50">
               Tacka nej

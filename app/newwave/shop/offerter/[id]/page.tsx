@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SendQuote } from "@/components/newwave/shop/QuoteActions";
+import { CopyLink, LiveRefresh, SendQuote } from "@/components/newwave/shop/QuoteActions";
 import { QuoteFlow, QuoteLines, StatusPill, Timeline } from "@/components/newwave/shop/QuoteParts";
-import { fmtDay, shopUrl } from "@/lib/newwave/reseller";
+import { quoteLinks } from "@/lib/newwave/quoteDoc";
+import { canEdit, fmtDay, fmtWhen, shopUrl } from "@/lib/newwave/reseller";
 import { CURRENT_RESELLER, getReseller, quotesFor } from "@/lib/newwave/shopState";
+import { workspaceId } from "@/lib/newwave/workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
   const quote = quotes.find((q) => q.id === id);
   if (!reseller || !quote) notFound();
   const link = `${shopUrl(reseller)}/offert/${quote.token}`;
-
+  const links = quoteLinks(reseller, quote.token, await workspaceId());
   return (
     <div className="nw-page">
       <p className="text-[13px] text-[var(--nw-muted)]">
@@ -50,17 +52,54 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
               <p className="mb-1 text-[12px] font-semibold text-[var(--nw-muted)]">Från {quote.company.contact}</p>”{quote.message}”
             </blockquote>
           ) : null}
-          <QuoteLines quote={quote} cost edit={quote.status === "ny" || quote.status === "skickad" ? { quoteId: quote.id, markup: reseller.markup } : undefined} />
+          <QuoteLines quote={quote} cost edit={canEdit(quote.status) ? { quoteId: quote.id, markup: reseller.markup } : undefined} />
           <div className="mt-6">
-            {quote.status === "ny" ? <SendQuote id={quote.id} contact={quote.company.contact} /> : null}
+            {quote.status === "ny" ? <SendQuote id={quote.id} contact={quote.company.contact} email={quote.company.email} /> : null}
             {quote.status === "skickad" ? (
               <div className="rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-4 text-[14px] sm:p-5">
+                <LiveRefresh />
                 <p className="font-semibold text-[var(--nw-ink)]">Skickad – väntar på kunden</p>
-                {quote.reply ? <p className="mt-1 text-[13.5px] text-[var(--nw-muted)]">”{quote.reply}”</p> : null}
-                <p className="mt-1 text-[13px] text-[var(--nw-muted)]">Giltig till {quote.validUntil ? fmtDay(quote.validUntil) : "–"}.</p>
-                <Link href={link} className="nw-btn nw-btn-ghost mt-3 inline-flex">
-                  Öppna kundens vy
-                </Link>
+                {quote.mailed && !quote.mailed.error ? (
+                  <p className="mt-1 text-[13.5px] text-[var(--nw-ink)]">
+                    Mejlad till {quote.mailed.to} {fmtWhen(quote.mailed.at)}. Kunden godkänner eller tackar nej direkt från mejlet, och svaret syns här.
+                  </p>
+                ) : quote.mailed ? (
+                  <p className="mt-1 text-[13.5px] text-[#8A4B00]">
+                    {quote.mailed.error === "not_configured" ? "E-post är inte inkopplad än, så mejlet gick inte iväg." : `Mejlet till ${quote.mailed.to} gick inte fram.`} Skicka länken till kunden själv, eller visa mejlet här.
+                  </p>
+                ) : null}
+                {quote.reply ? <p className="mt-2 text-[13.5px] text-[var(--nw-muted)]">”{quote.reply}”</p> : null}
+                <p className="mt-1 text-[13px] text-[var(--nw-muted)]">Giltig till {quote.validUntil ? fmtDay(quote.validUntil) : "–"}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link href={link} className="nw-btn nw-btn-ghost">
+                    Öppna kundens vy
+                  </Link>
+                  <a href={`/api/v1/newwave/quotes/mejl?id=${quote.id}`} target="_blank" rel="noreferrer" className="nw-btn nw-btn-ghost">
+                    Visa mejlet
+                  </a>
+                  <CopyLink url={links.page} label="Kopiera kundens länk" />
+                  <a href={`/api/v1/newwave/quotes/pdf?t=${quote.token}`} className="nw-btn nw-btn-ghost">
+                    PDF
+                  </a>
+                </div>
+                <details className="mt-4 border-t border-[var(--nw-line)] pt-3">
+                  <summary className="cursor-pointer text-[13.5px] font-semibold text-[var(--nw-ink)]">Skicka igen</summary>
+                  <div className="mt-3">
+                    <SendQuote id={quote.id} contact={quote.company.contact} email={quote.company.email} reply={quote.reply} resend />
+                  </div>
+                </details>
+              </div>
+            ) : null}
+            {quote.status === "nekad" ? (
+              <div className="flex flex-col gap-4">
+                <div className="rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-4 text-[14px] sm:p-5">
+                  <p className="font-semibold text-[var(--nw-ink)]">
+                    {quote.company.contact} tackade nej{quote.declined ? ` ${fmtWhen(quote.declined.at)}` : ""}
+                  </p>
+                  {quote.declined?.reason ? <p className="mt-1 text-[13.5px] text-[var(--nw-ink)]">”{quote.declined.reason}”</p> : null}
+                  <p className="mt-1 text-[13.5px] text-[var(--nw-muted)]">Justera designen eller antalen ovan och skicka en ny offert.</p>
+                </div>
+                <SendQuote id={quote.id} contact={quote.company.contact} email={quote.company.email} reply={quote.reply} resend />
               </div>
             ) : null}
             {quote.status === "godkänd" || quote.status === "produktion" || quote.status === "levererad" ? (

@@ -6,6 +6,7 @@ const BASE = "/newwave/new-wave";
 const ITEMS: NavItem[] = [
   { href: BASE, label: "Navet", icon: "home" },
   { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },
+  { href: `${BASE}/tryckfiler`, label: "Tryckfiler", icon: "layers" },
   { href: `${BASE}/aterforsaljare`, label: "Återförsäljare", icon: "store" },
   { href: `${BASE}/klubbar`, label: "Klubbar", icon: "shield" },
 ];

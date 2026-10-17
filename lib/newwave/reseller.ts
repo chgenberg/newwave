@@ -64,6 +64,9 @@ export const QUOTE_FLOW: { id: QuoteStatus; label: string; who: string }[] = [
 
 export const ORDER_FLOW: typeof QUOTE_FLOW = [{ id: "godkänd", label: "Beställd", who: "Kunden" }, ...QUOTE_FLOW.slice(3)];
 
+/** Återförsäljaren kan ändra och skicka om offerten tills kunden har godkänt den. */
+export const canEdit = (s: QuoteStatus) => s === "ny" || s === "skickad" || s === "nekad";
+
 export const STATUS_LABEL: Record<QuoteStatus, string> = { ny: "Ny förfrågan", skickad: "Skickad", godkänd: "Godkänd", produktion: "I produktion", levererad: "Levererad", nekad: "Nekad" };
 
 /** Ett korrektur per tryckposition, fotat i designstudion. */
@@ -115,6 +118,10 @@ export type Quote = {
   validUntil?: string;
   /** Återförsäljarens hälsning när offerten skickas. */
   reply?: string;
+  /** Senaste utskicket; `error` när e-post inte är inkopplad eller mejlet inte gick fram. */
+  mailed?: { to: string; at: string; error?: "not_configured" | "failed" };
+  /** Kundens svar när offerten nekades. */
+  declined?: { at: string; reason?: string };
   events: QuoteEvent[];
   /** Beställd direkt i webbshoppen till butikens pris, utan offert. */
   direct?: boolean;
@@ -179,6 +186,9 @@ export const DEMO_CUSTOMERS = [
   { name: "Kaffebaren Lyktan", contact: "Leo Berg", email: "leo@lyktan.se", color: "#6E3F1F", ...kund("lyktan") },
   { name: "TechVäst AB", contact: "Ali Reza", email: "ali@techvast.se", color: "#5B3FD0", ...kund("techvast") },
 ];
+
+/** Demokundernas påhittade adresser, som inte ska få riktiga mejl. */
+export const isDemoEmail = (email: string) => DEMO_CUSTOMERS.some((c) => c.email === email.toLowerCase());
 
 export type ShopPack = { id: string; name: string; text: string; products: string[]; markup: number };
 

@@ -7,6 +7,7 @@ import { OfficeMail, ZipButton } from "@/components/newwave/PackZip";
 import { WeeklyPick } from "@/components/newwave/WeeklyParts";
 import { ASA_IF as CLUB } from "@/lib/club";
 import { ASA_IF, packClub } from "@/lib/newwave/club";
+import { deliveryFor, deliveryStats } from "@/lib/newwave/hubDelivery";
 import { getApproval, readBrand } from "@/lib/newwave/store";
 import { clubTheme } from "@/lib/newwave/theme";
 
@@ -17,6 +18,8 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
   const a = await getApproval(ASA_IF.id, id);
   if (!a) notFound();
   const theme = clubTheme((await readBrand(ASA_IF.id)).palette ?? CLUB.palette);
+  const sent = a.status === "godkänd" ? await deliveryFor(ASA_IF.id, a.id) : null;
+  const delivery = sent ? { href: `/newwave/new-wave/tryckfiler/${sent.id}`, ...deliveryStats(sent) } : undefined;
   const club = packClub(ASA_IF, theme);
   const zip =
     a.content && a.assets
@@ -58,6 +61,18 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
         </div>
       ) : null}
 
+      {a.knit ? (
+        <p className="mt-3 rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-4 text-[14px] text-[var(--nw-muted)]">
+          <span className="font-medium text-[var(--nw-ink)]">Plus en stickad halsduk · {a.knit.priceSek} kr</span> – ”{a.knit.front}” på framsidan och ”{a.knit.back}” på baksidan, i klubbens garner.
+        </p>
+      ) : null}
+
+      {a.status === "väntar" && (a.products?.length || a.knit) && !a.content ? (
+        <p className="mt-3 text-[13.5px] text-[var(--nw-muted)]">
+          När ni godkänner gör navet produktionsfilerna för varje produkt – tryckfiler, separationer, brodyrfil och stickfil – och skickar dem till New Wave via API.
+        </p>
+      ) : null}
+
       {a.content && a.assets ? (
         <PackView
           club={club}
@@ -88,7 +103,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
             <p className="mt-1 whitespace-pre-line text-[14px] text-[var(--nw-muted)] [overflow-wrap:anywhere]">{a.content.newsletter.body}</p>
           </section>
         </div>
-      ) : !a.previewUrl ? (
+      ) : !a.previewUrl && !a.products?.length ? (
         <p className="mt-6 rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-5 text-[14px] text-[var(--nw-muted)]">
           Tryckfilen ligger hos Designagenten. Godkänn så skickas den till New Wave via API.
         </p>
@@ -101,7 +116,15 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
         </div>
       ) : null}
 
-      <ApprovalActions clubId={ASA_IF.id} id={a.id} status={a.status} note={a.note} shopCount={a.shopProducts?.length ?? 0} weekly={Boolean(a.weekly)} />
+      <ApprovalActions
+        clubId={ASA_IF.id}
+        id={a.id}
+        status={a.status}
+        note={a.note}
+        shopCount={a.shopProducts?.length ?? 0}
+        weekly={Boolean(a.weekly)}
+        delivery={delivery}
+      />
     </div>
   );
 }

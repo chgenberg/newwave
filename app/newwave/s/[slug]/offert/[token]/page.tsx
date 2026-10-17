@@ -9,8 +9,8 @@ import { quoteByToken } from "@/lib/newwave/shopState";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Er beställning", robots: { index: false } };
 
-export default async function KundOffert({ params }: { params: Promise<{ slug: string; token: string }> }) {
-  const { slug, token } = await params;
+export default async function KundOffert({ params, searchParams }: { params: Promise<{ slug: string; token: string }>; searchParams: Promise<{ svar?: string }> }) {
+  const [{ slug, token }, { svar }] = await Promise.all([params, searchParams]);
   const found = await quoteByToken(token);
   if (!found || !answersTo(found.reseller, slug)) notFound();
   const { quote, reseller } = found;
@@ -20,7 +20,7 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
     quote.status === "ny"
       ? { title: "Tack! Förfrågan är skickad", text: `${shop} går igenom den och skickar en offert, oftast inom en arbetsdag. Spara länken till den här sidan.` }
       : quote.status === "skickad"
-        ? { title: `Offert från ${shop}`, text: quote.validUntil ? `Giltig till ${fmtDay(quote.validUntil)}.` : "" }
+        ? { title: `Offert från ${shop}`, text: quote.validUntil ? `Giltig till ${fmtDay(quote.validUntil)}` : "" }
         : quote.status === "nekad"
           ? { title: "Ni tackade nej", text: `${shop} har fått besked och hör av sig om något kan ändras.` }
           : quote.status === "levererad"
@@ -53,12 +53,17 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
       </div>
 
       {quote.status === "skickad" ? (
-        <div className="mt-8">
-          <CustomerDecision token={token} />
+        <div id="svar" className="mt-8 scroll-mt-24">
+          <CustomerDecision token={token} ask={svar === "godkann" || svar === "neka" ? svar : undefined} />
           <p className="mt-3 text-[12.5px] opacity-55">När ni godkänner går ordern direkt till tryck. Ni får ett provtryck att godkänna först.</p>
         </div>
       ) : null}
       {quote.needBy ? <p className="mt-8 text-[13px] opacity-60">Önskat leveransdatum: {fmtDay(quote.needBy)}</p> : null}
+      {quote.status !== "ny" ? (
+        <a href={`/api/v1/newwave/quotes/pdf?t=${token}`} className="mt-4 inline-block text-[13.5px] font-semibold underline underline-offset-4">
+          Ladda ner som PDF
+        </a>
+      ) : null}
     </div>
     </>
   );

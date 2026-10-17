@@ -14,6 +14,8 @@ export type ApprovalStatus = "väntar" | "godkänd" | "ändring";
 
 export type ApprovalProduct = { id: string; name: string; priceSek: number; mockupUrl: string; printUrl?: string; custom?: Omit<Customized, "mockupUrl"> };
 
+export type Knit = { front: string; back: string; priceSek: number };
+
 export type PackContent = Pick<ContentPack, "instagram" | "facebook" | "newsletter"> & Partial<Pick<ContentPack, "banner" | "tiktok" | "plan">>;
 
 /** Färdiga bilder till kanalerna, i samma motiv och med samma tryck. */
@@ -44,6 +46,8 @@ export type Approval = {
   /** Satt när materialet kommer från veckans automatiska körning. */
   weekly?: WeeklyRun;
   products?: ApprovalProduct[];
+  /** En stickad halsduk i klubbens garner, med text på fram- och baksidan. */
+  knit?: Knit;
   shopProducts?: z.infer<typeof ProductSchema>[];
   note?: string;
   decidedAt?: string;
@@ -91,7 +95,14 @@ const SEEDED = "asa-if";
 
 const seedApprovals = (clubId: string): Approval[] => (clubId === SEEDED ? APPROVALS.map((a) => ({ ...a, status: "väntar" })) : []);
 
-export const listApprovals = (clubId: string) => read<Approval[]>(clubId, "approvals", () => seedApprovals(clubId));
+/** Sparad startdata från innan startposten fick produkter tar produkterna, texterna och motivet från startdatan. */
+function withSeed(a: Approval): Approval {
+  const seed = APPROVALS.find((s) => s.id === a.id);
+  return seed?.products && !a.products ? { ...a, ...seed, status: a.status, note: a.note, decidedAt: a.decidedAt } : a;
+}
+
+export const listApprovals = (clubId: string) =>
+  read<Approval[]>(clubId, "approvals", () => seedApprovals(clubId)).then((list) => (clubId === SEEDED ? list.map(withSeed) : list));
 
 export async function getApproval(clubId: string, id: string) {
   return (await listApprovals(clubId)).find((a) => a.id === id) ?? null;

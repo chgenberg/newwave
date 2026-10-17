@@ -1,5 +1,6 @@
 import { upcomingOccasions } from "@/lib/calendar";
 import type { Signal } from "@/lib/types";
+import type { ApprovalProduct, Knit } from "./store";
 
 export type DemoClub = {
   id: string;
@@ -45,8 +46,16 @@ export type SeedApproval = {
   title: string;
   occasion: string;
   createdAt: string;
+  story?: string;
   content?: { instagram: { caption: string; hashtags: string[] }; facebook: { post: string }; newsletter: { subject: string; body: string } };
+  printFiles?: { light: string; dark: string };
+  products?: ApprovalProduct[];
+  knit?: Knit;
 };
+
+const CREST = "/api/v1/brand/asa-if/skold-farg.png";
+const CUP = "/newwave/clubs/asa-if/cupen";
+const PLAYERS = ["Ella", "Noah", "Wilma", "Liam", "Saga", "Hugo", "Alva", "Elton"];
 
 export const APPROVALS: SeedApproval[] = [
   {
@@ -79,7 +88,39 @@ export const APPROVALS: SeedApproval[] = [
       },
     },
   },
-  { id: "a3", kind: "Tryckfil", title: "Åsa Cupen-tröja 2026", occasion: "Åsa Cupen", createdAt: "2026-10-14" },
+  {
+    id: "a3",
+    kind: "Tryckfiler",
+    title: "Åsa Cupen-kollektionen 2026",
+    occasion: "Åsa Cupen",
+    createdAt: "2026-10-14",
+    story: "Cuptröjor till lagen med namn på ryggen, keps och vattenflaska till ledarna, kasse och anteckningsbok till kansliet – och en stickad halsduk till läktaren.",
+    printFiles: { light: CREST, dark: CREST },
+    products: [
+      { id: "p001", name: "T-shirt vit", priceSek: 249, mockupUrl: `${CUP}/p001.jpg` },
+      {
+        id: "p008",
+        name: "Funktions-t-shirt svart",
+        priceSek: 299,
+        mockupUrl: `${CUP}/p008.jpg`,
+        custom: {
+          design: { method: "transfer", colors: 2, shape: "original", zone: "brost", sizeCm: 20, names: { list: PLAYERS, zone: "rygg", sizeCm: 24 } },
+          color: "#111111",
+        },
+      },
+      { id: "p011", name: "Keps svart", priceSek: 249, mockupUrl: `${CUP}/p011.jpg` },
+      {
+        id: "p014",
+        name: "Tygkasse sand",
+        priceSek: 149,
+        mockupUrl: `${CUP}/p014.jpg`,
+        custom: { design: { method: "screentryck", colors: 2, shape: "original", zone: "front", sizeCm: 18 }, color: "#C8B08C" },
+      },
+      { id: "p020", name: "Vattenflaska svart", priceSek: 199, mockupUrl: `${CUP}/p020.jpg` },
+      { id: "p026", name: "Anteckningsbok svart", priceSek: 149, mockupUrl: `${CUP}/p026.jpg` },
+    ],
+    knit: { front: "ÅSA CUPEN 2026", back: "HEJA ÅSA", priceSek: 199 },
+  },
 ];
 
 export type FeedItem = { id: string; at: string; who: string; text: string };
@@ -88,7 +129,7 @@ export const FEED: FeedItem[] = [
   { id: "f1", at: "2026-10-16 14:12", who: "Signalagenten", text: "Hittade nyheten om F2014:s två guld i Quality Hotel Cup på asaif.com." },
   { id: "f2", at: "2026-10-16 14:15", who: "Contentagenten", text: "Skapade inlägg och story om guldet – granskat mot klubbens färger." },
   { id: "f3", at: "2026-10-15 09:30", who: "Utskicksagenten", text: "Skickade Åsabladet för november för godkännande." },
-  { id: "f4", at: "2026-10-14 16:45", who: "Designagenten", text: "Tog fram tryckfil och mockup för Åsa Cupen-tröjan i svart och gult." },
+  { id: "f4", at: "2026-10-14 16:45", who: "Designagenten", text: "Tog fram motiv och mockups för Åsa Cupen-kollektionen i svart och gult." },
 ];
 
 /** Kalenderns texter är skrivna för IFK Göteborg; en breddklubb får egna. */

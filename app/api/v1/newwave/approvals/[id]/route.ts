@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { CLUBS } from "@/lib/club";
+import { deliverApproval, deliveryStats } from "@/lib/newwave/hubDelivery";
 import { addFeed, decideApproval } from "@/lib/newwave/store";
+
+export const maxDuration = 60;
 
 const Body = z.object({
   clubId: z.string(),
@@ -21,11 +24,21 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!result) return Response.json({ error: "Hittades inte" }, { status: 404 });
 
   const { approval, published } = result;
+  let delivery = null;
   if (decision === "godkänd") {
     await addFeed(clubId, "Kansliet", `Godkände "${approval.title}".`);
     if (published) await addFeed(clubId, "Butiksagenten", `Lade ut ${published} produkter med "${approval.title}" i klubbens butik hos Intersport.`);
+    const d = await deliverApproval(clubId, approval).catch((e) => {
+      console.error("Hub-leveransen misslyckades", e);
+      return null;
+    });
+    if (d) {
+      const s = deliveryStats(d);
+      delivery = { id: d.id, ...s };
+      await addFeed(clubId, "Produktionsagenten", `Skapade ${s.files} produktionsfiler för ${s.products} produkter och skickade dem till New Waves hub via API.`);
+    }
   } else {
     await addFeed(clubId, "Kansliet", `Bad om ändring på "${approval.title}": ${note}`);
   }
-  return Response.json({ approval, published });
+  return Response.json({ approval, published, delivery });
 }

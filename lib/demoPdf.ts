@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { Browser } from "playwright-core";
 import { type BoothFormat, sek } from "./demoCatalog";
 import type { PricedLine } from "./demoOffer";
 import { type EventId, eventOf } from "./demoEvents";
 import { delivery, deliveryText, fmtDay, visitorsLabel } from "./demoPackages";
+import { htmlToPdf } from "./pdf";
 import { loadFile } from "./store";
 
 export type QuoteDoc = {
@@ -83,21 +83,4 @@ ${q.lines.map((l) => `<tr><td><b style="font-weight:500">${esc(l.name)}</b></td>
 </div></body></html>`;
 }
 
-async function launch(): Promise<Browser> {
-  const { chromium } = await import("playwright-core");
-  const args = ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"];
-  const executablePath = process.env.CHROMIUM_PATH;
-  return executablePath ? chromium.launch({ executablePath, args }) : chromium.launch({ channel: "chrome", args });
-}
-
-export async function quotePdf(q: QuoteDoc): Promise<Buffer> {
-  const browser = await launch();
-  try {
-    const page = await browser.newPage();
-    await page.route("**/*", (r) => (r.request().url().startsWith("data:") ? r.continue() : r.abort()));
-    await page.setContent(await quoteHtml(q), { waitUntil: "load", timeout: 15_000 });
-    return Buffer.from(await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true }));
-  } finally {
-    await browser.close();
-  }
-}
+export const quotePdf = async (q: QuoteDoc) => htmlToPdf(await quoteHtml(q));

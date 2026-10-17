@@ -1,9 +1,14 @@
 import { z } from "zod";
 import { ART_URL, type Design } from "@/lib/newwave/marking";
 import { sellableProducts } from "@/lib/newwave/occasions";
-import { priceLine, SHOP_CATALOG, type QuoteStatus } from "@/lib/newwave/reseller";
+import { sendQuoteMail } from "@/lib/newwave/quoteMail";
+import { canEdit, isDemoEmail, priceLine, SHOP_CATALOG, type QuoteStatus } from "@/lib/newwave/reseller";
 import { CURRENT_RESELLER, createQuote, event, getResellerBySlug, updateShop } from "@/lib/newwave/shopState";
+import { workspaceId } from "@/lib/newwave/workspace";
 import { fileUrl } from "@/lib/schemas";
+
+/** Utskicket tar fram produktbilderna och PDF:en innan mejlet går. */
+export const maxDuration = 60;
 
 const asset = z.string().regex(ART_URL);
 const text = (max: number) => z.string().trim().max(max);
@@ -35,7 +40,7 @@ const Create = z.object({
 });
 
 const Patch = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("send"), id: z.string().max(20), reply: text(1000) }),
+  z.object({ action: z.literal("send"), id: z.string().max(20), reply: text(1000), to: z.email().max(120) }),
   z.object({ action: z.literal("accept"), token: z.string().max(40) }),
   z.object({ action: z.literal("decline"), token: z.string().max(40), reason: text(500).optional() }),
   z.object({ action: z.literal("produce"), id: z.string().max(20) }),
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
 
 /** Vem som får flytta en offert till nästa steg, och från vilket läge. */
 const MOVES: Record<Exclude<z.infer<typeof Patch>["action"], "design">, { from: QuoteStatus[]; to: QuoteStatus }> = {
-  send: { from: ["ny", "skickad"], to: "skickad" },
+  send: { from: ["ny", "skickad", "nekad"], to: "skickad" },
   accept: { from: ["skickad"], to: "godkänd" },
   decline: { from: ["skickad"], to: "nekad" },
   produce: { from: ["godkänd"], to: "produktion" },
@@ -69,13 +74,14 @@ export async function PATCH(req: Request) {
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   const d = parsed.data;
+  if (d.action === "send" && isDemoEmail(d.to)) return Response.json({ error: "Det är en påhittad demokund. Skriv in en riktig adress, till exempel er egen, så ser ni mejlet kunden får." }, { status: 400 });
 
   if (d.action === "design") {
     const result = await updateShop((s) => {
       const q = s.quotes.find((x) => x.id === d.id && x.resellerId === CURRENT_RESELLER);
       const line = q?.lines[d.index];
       if (!q || !line) return { error: "Offerten finns inte", status: 404 } as const;
-      if (q.status !== "ny" && q.status !== "skickad") return { error: "Offerten har redan godkänts", status: 409 } as const;
+      if (!canEdit(q.status)) return { error: "Offerten har redan godkänts", status: 409 } as const;
       const reseller = s.resellers.find((r) => r.id === q.resellerId)!;
       const priced = priceLine({ ...line, design: d.design, color: d.color, preview: d.preview, proofs: d.proofs }, reseller.markup);
       if (!priced) return { error: "Okänd produkt", status: 400 } as const;
@@ -99,15 +105,27 @@ export async function PATCH(req: Request) {
     q.status = move.to;
     if (d.action === "send") {
       q.reply = d.reply;
+      q.company.email = d.to.toLowerCase();
       q.validUntil = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-      q.events.push(event(reseller.name, "Skickade offerten till kunden."));
+      delete q.declined;
     }
+    if (d.action === "decline") q.declined = { at: new Date().toISOString(), ...(d.reason ? { reason: d.reason } : {}) };
     if (d.action === "accept") q.events.push(event(q.company.contact, "Godkände offerten. Ordern gick till New Wave."));
     if (d.action === "decline") q.events.push(event(q.company.contact, d.reason ? `Tackade nej: ${d.reason}` : "Tackade nej till offerten."));
     if (d.action === "produce") q.events.push(event("New Wave", "Tryckfilerna är klara och ordern ligger i produktion."));
     if (d.action === "deliver") q.events.push(event("New Wave", "Levererad till kunden."));
-    return { quote: q };
+    return { quote: q, reseller };
   });
   if ("error" in result) return Response.json({ error: result.error }, { status: result.status });
-  return Response.json(result);
+  if (d.action !== "send") return Response.json({ quote: result.quote });
+
+  const { quote, reseller } = result;
+  const mail = await sendQuoteMail(quote, reseller, await workspaceId());
+  const sent = await updateShop((s) => {
+    const q = s.quotes.find((x) => x.id === quote.id)!;
+    q.mailed = { to: q.company.email, at: new Date().toISOString(), ...(mail.sent ? {} : { error: mail.reason }) };
+    q.events.push(event(reseller.name, mail.sent ? `Mejlade offerten till ${q.company.email}.` : "Skickade offerten till kunden."));
+    return q;
+  });
+  return Response.json({ quote: sent, mail });
 }
