@@ -97,7 +97,7 @@ export default async function CraftInsights() {
                   <div className="bg-[#8E8E89]" style={{ flex: w.craft }} />
                   <div className="bg-[var(--nw-ink)]" style={{ flex: w.club }} />
                 </div>
-                <span className="text-[10.5px] text-[var(--nw-faint)]">{w.label}</span>
+                <span className="text-[11px] text-[var(--nw-faint)]">{w.label}</span>
               </div>
             ))}
           </div>

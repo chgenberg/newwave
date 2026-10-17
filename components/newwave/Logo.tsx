@@ -7,15 +7,3 @@ export function LogoMark({ size = 34 }: { size?: number }) {
     </svg>
   );
 }
-
-export function Logo({ size = 34 }: { size?: number }) {
-  return (
-    <span className="inline-flex items-center gap-3" aria-label="Next Wave Production">
-      <LogoMark size={size} />
-      <span className="flex flex-col leading-none">
-        <span className="text-[15px] font-semibold tracking-[0.2em] text-[var(--nw-ink)]">NEXT WAVE</span>
-        <span className="mt-[5px] text-[10px] font-medium uppercase tracking-[0.44em] text-[var(--nw-muted)]">Production</span>
-      </span>
-    </span>
-  );
-}

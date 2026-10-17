@@ -27,7 +27,7 @@ export function QuoteFlow({ status }: { status: QuoteStatus }) {
         <li key={s.id} className="min-w-0" aria-current={i === at ? "step" : undefined}>
           <span className={`block h-1.5 rounded-full ${i <= at ? (status === "nekad" && i === at ? "bg-[#C9C9CE]" : "bg-[#1D1D1F]") : "bg-[#E5E5EA]"}`} />
           <span className={`mt-1.5 block truncate text-[11.5px] ${i <= at ? "font-semibold text-[#1D1D1F]" : "text-[#8E8E93]"}`}>{s.label}</span>
-          <span className="block truncate text-[10.5px] text-[#8E8E93]">{s.who}</span>
+          <span className="block truncate text-[11px] text-[#8E8E93]">{s.who}</span>
         </li>
       ))}
     </ol>

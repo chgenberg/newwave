@@ -33,7 +33,7 @@ export function CampaignResults({ campaigns, clubs }: { campaigns: CampaignResul
               <span className="min-w-0">
                 <span className="flex items-center gap-2">
                   <span className="truncate text-[14.5px] font-semibold text-[var(--nw-ink)]">{c.title}</span>
-                  {c.scheduled ? <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium ${PILL.schemalagd.cls}`}>Schemalagd</span> : null}
+                  {c.scheduled ? <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${PILL.schemalagd.cls}`}>Schemalagd</span> : null}
                 </span>
                 <span className="block truncate text-[12.5px] text-[var(--nw-muted)]">
                   {c.occasion} · {c.scheduled ? `skickas ${fmtDate(c.sendAt!)}` : fmtDate(c.sendAt ?? c.createdAt)} · {n} klubbar
@@ -68,7 +68,7 @@ export function CampaignResults({ campaigns, clubs }: { campaigns: CampaignResul
                         {club ? <Crest name={club.name} logo={club.logo} colors={club.colors} size={22} /> : null}
                         <span className="min-w-0 flex-1 truncate text-[var(--nw-ink)]">{club?.name ?? x.clubId}</span>
                         {x.sold ? <span className="tabular-nums text-[var(--nw-muted)]">{x.sold} st</span> : null}
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium ${PILL[x.status].cls}`}>{PILL[x.status].label}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${PILL[x.status].cls}`}>{PILL[x.status].label}</span>
                       </li>
                     );
                   })}

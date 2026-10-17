@@ -153,9 +153,9 @@ function ClubDetail({ r, onDone }: { r: ClubRow; onDone: (msg: string) => void }
                   {m.occasion} · {fmtDate(m.createdAt)}
                 </span>
                 {m.gate === "granskas" ? (
-                  <span className="shrink-0 rounded-full bg-[var(--nw-ink)] px-2 py-0.5 text-[10.5px] font-medium text-white">Hos Craft</span>
+                  <span className="shrink-0 rounded-full bg-[var(--nw-ink)] px-2 py-0.5 text-[11px] font-medium text-white">Hos Craft</span>
                 ) : (
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium ${STATUS_PILL[m.status].cls}`}>{STATUS_PILL[m.status].label}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL[m.status].cls}`}>{STATUS_PILL[m.status].label}</span>
                 )}
               </p>
             </li>
@@ -329,12 +329,12 @@ export function ClubList({ rows, initialQuery = "" }: { rows: ClubRow[]; initial
                       <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 lg:flex-nowrap">
                         <span className="min-w-0 text-[15px] font-semibold text-[var(--nw-ink)] lg:truncate">{r.name}</span>
                         {r.settings.autopilot ? (
-                          <span title="Autopilot på" className="shrink-0 rounded-full bg-[var(--nw-soft)] px-1.5 py-0.5 text-[10.5px] font-medium text-[var(--nw-muted)]">
+                          <span title="Autopilot på" className="shrink-0 rounded-full bg-[var(--nw-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--nw-muted)]">
                             Autopilot
                           </span>
                         ) : null}
                         {setup ? (
-                          <span title="Uppstart pågår" className="shrink-0 rounded-full bg-[#EAF1FE] px-1.5 py-0.5 text-[10.5px] font-medium text-[#1D4ED8]">
+                          <span title="Uppstart pågår" className="shrink-0 rounded-full bg-[#EAF1FE] px-1.5 py-0.5 text-[11px] font-medium text-[#1D4ED8]">
                             {r.onboarding.done}/{ONBOARD_STEPS.length}
                           </span>
                         ) : null}

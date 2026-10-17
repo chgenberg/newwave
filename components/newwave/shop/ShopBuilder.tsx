@@ -69,7 +69,7 @@ export function ShopBuilder({ initial, initialStep }: Props) {
               <button type="button" onClick={() => go(s.id)} aria-current={on ? "step" : undefined} className="group w-full text-left">
                 <span className={`block h-1.5 rounded-full transition-colors ${on ? "bg-[var(--club)]" : done[s.id] ? "bg-[var(--club-accent)]" : "bg-[var(--nw-soft-2)]"}`} />
                 <span className={`mt-2 flex items-center gap-1.5 text-[12.5px] sm:text-[13.5px] ${on ? "font-semibold text-[var(--nw-ink)]" : "text-[var(--nw-muted)] group-hover:text-[var(--nw-ink)]"}`}>
-                  <span className={`hidden h-5 w-5 shrink-0 place-items-center rounded-full text-[10.5px] font-semibold sm:grid ${done[s.id] ? "bg-[var(--club)] text-white" : "bg-[var(--nw-soft-2)]"}`}>{done[s.id] ? "✓" : i + 1}</span>
+                  <span className={`hidden h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold sm:grid ${done[s.id] ? "bg-[var(--club)] text-white" : "bg-[var(--nw-soft-2)]"}`}>{done[s.id] ? "✓" : i + 1}</span>
                   <span className="truncate">{s.label}</span>
                 </span>
                 <span className="hidden truncate pl-[26px] text-[11.5px] text-[var(--nw-faint)] sm:block">{s.hint}</span>

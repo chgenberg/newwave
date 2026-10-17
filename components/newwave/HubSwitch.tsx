@@ -53,7 +53,7 @@ export function HubSwitch({ active, bar }: { active: Target; bar?: boolean }) {
         aria-label={bar ? `${current?.title ?? "Byt yta"} – byt till designmotorn eller en dashboard` : open ? "Dölj dashboards" : "Visa designmotorn och dashboards"}
         className={
           bar
-            ? "flex min-w-0 items-center gap-1 rounded-full py-1 pl-2 pr-1.5 text-[14px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]"
+            ? "flex min-h-9 min-w-0 items-center gap-1 rounded-full py-1 pl-2 pr-1.5 text-[14px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]"
             : "group grid w-5 place-items-center rounded-full text-[#A6A39B] transition hover:bg-[#F2F2EF] hover:text-[#111]"
         }
       >

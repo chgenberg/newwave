@@ -70,7 +70,7 @@ export function MaterialThumb({ image, kind, title, club }: { image?: string; ki
     return (
       <div className="flex h-full flex-col justify-end gap-2 p-3 sm:p-4" style={{ background: club?.colors[0] ?? "var(--nw-soft)", color: club?.colors[1] ?? "var(--nw-ink)" }}>
         <span className="nw-club-heading line-clamp-3 text-[15px] leading-[1.15] sm:text-[17px]">{title}</span>
-        <span className="truncate text-[10.5px] font-medium uppercase tracking-[0.1em] opacity-70">{kind}</span>
+        <span className="truncate text-[11px] font-medium uppercase tracking-[0.1em] opacity-70">{kind}</span>
       </div>
     );
   const product = BY_PHOTO.get(image);
