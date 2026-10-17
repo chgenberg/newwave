@@ -98,6 +98,25 @@ export type Quote = {
   /** Återförsäljarens hälsning när offerten skickas. */
   reply?: string;
   events: QuoteEvent[];
+  /** Beställd i en kundbutik till avtalat pris, utan offert. */
+  customerShopId?: string;
+};
+
+/** En stängd butik för en företagskund: kundens logga ligger redan på produkterna och priserna är avtalade. */
+export type CustomerShop = {
+  id: string;
+  /** Den hemliga länken till butiken. */
+  token: string;
+  resellerId: string;
+  company: { name: string; contact: string; email: string };
+  logo: string;
+  logoDark?: string;
+  color: string;
+  products: string[];
+  markup: number;
+  welcome: string;
+  open: boolean;
+  createdAt: string;
 };
 
 export const MIN_QTY = 10;
@@ -132,6 +151,43 @@ export function fromPrice(p: NwProduct, markup: number) {
   return line ? line.unit : exVat(p);
 }
 
+/** Vad återförsäljaren betalar New Wave per styck vid 100 st, samma räkning som i `priceLine`. */
+export function costPrice(p: NwProduct) {
+  const line = priceLine({ productId: p.id, sizes: { [p.sizes[0]]: 100 }, design: defaultDesign(p), color: p.garmentHex, logo: "" }, 0);
+  return line ? Math.round(exVat(p) * 0.55 + line.unitPrint * 0.7) : exVat(p);
+}
+
+/** Kundbutikens rad: avtalat styckpris som vid 100 st och tryckstarten ingår, oavsett hur många som beställs. */
+export function agreedLine(input: QuoteLineInput, markup: number): QuoteLine | null {
+  const p = nwProduct(input.productId);
+  const line = priceLine(input, markup);
+  if (!p || !line) return null;
+  const unit = fromPrice(p, markup);
+  return { ...line, unitProduct: unit - line.unitPrint, unit, setup: 0, total: unit * line.qty, cost: costPrice(p) * line.qty };
+}
+
+const kund = (slug: string) => ({ logo: `/newwave/resellers/kunder/${slug}.png`, logoDark: `/newwave/resellers/kunder/${slug}-vit.png` });
+
+/** Återförsäljarens befintliga kunder i demon, med loggor att visa produkterna med. */
+export const DEMO_CUSTOMERS = [
+  { name: "Hamnkrogen i Varberg", contact: "Sara Lind", email: "sara@hamnkrogen.se", color: "#14365E", ...kund("hamnkrogen") },
+  { name: "KB Bygg & Mark", contact: "Johan Ek", email: "johan@kbbygg.se", color: "#E07020", ...kund("kb-bygg") },
+  { name: "Solvikens förskola", contact: "Maria Holm", email: "maria@solviken.se", color: "#E0A800", ...kund("solviken") },
+  { name: "Brf Strandängen", contact: "Eva Nord", email: "styrelsen@strandangen.se", color: "#2E7D5B", ...kund("strandangen") },
+  { name: "Kaffebaren Lyktan", contact: "Leo Berg", email: "leo@lyktan.se", color: "#6E3F1F", ...kund("lyktan") },
+  { name: "TechVäst AB", contact: "Ali Reza", email: "ali@techvast.se", color: "#5B3FD0", ...kund("techvast") },
+];
+
+export type ShopPack = { id: string; name: string; text: string; products: string[]; markup: number };
+
+/** Färdiga sortiment att börja från, med ett påslag som brukar fungera för kundgruppen. */
+export const SHOP_PACKS: ShopPack[] = [
+  { id: "foretag", name: "Företagsprofil", text: "Kläder och kontor till personal och kunder", products: ["p001", "p002", "p003", "p004", "p005", "p006", "p011", "p021", "p024", "p026", "p031", "p015"], markup: 15 },
+  { id: "event", name: "Event och mässa", text: "Giveaways som delas ut i stora antal", products: ["p001", "p011", "p014", "p020", "p024", "p028", "p030", "p031", "p039", "p022"], markup: 10 },
+  { id: "arbete", name: "Arbetskläder", text: "Tåliga plagg till hantverk och bygg", products: ["p003", "p004", "p006", "p007", "p008", "p009", "p010", "p011", "p012", "p019"], markup: 20 },
+  { id: "forening", name: "Förening och lag", text: "Lagkläder, fans och kiosken", products: ["p001", "p004", "p008", "p011", "p012", "p013", "p016", "p019", "p020", "p030"], markup: 5 },
+];
+
 const TZ = "Europe/Stockholm";
 export const fmtDay = (iso: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", timeZone: TZ }).format(new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso));
 export const fmtWhen = (iso: string) => new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: TZ }).format(new Date(iso));
@@ -139,7 +195,9 @@ export const fmtWhen = (iso: string) => new Intl.DateTimeFormat("sv-SE", { day: 
 /** Ordrar är godkända offerter; de ligger hos New Wave. */
 export const isOrder = (q: Pick<Quote, "status">) => q.status === "godkänd" || q.status === "produktion" || q.status === "levererad";
 
-export const ordersSince = (quotes: Quote[], days: number, now = Date.now()) => quotes.filter((q) => isOrder(q) && now - Date.parse(q.createdAt) < days * 86_400_000);
+export const withinDays = (iso: string, days: number, now = Date.now()) => now - Date.parse(iso) < days * 86_400_000;
+
+export const ordersSince = (quotes: Quote[], days: number, now = Date.now()) => quotes.filter((q) => isOrder(q) && withinDays(q.createdAt, days, now));
 
 export const sek = (n: number) => `${Math.round(n).toLocaleString("sv-SE").replace(/\u00a0/g, " ")} kr`;
 
@@ -167,7 +225,7 @@ export const BUILDER_STEPS = [
   { id: "varumarke", label: "Varumärke", hint: "Logga och webbplats" },
   { id: "utseende", label: "Texter och färger", hint: "Finjustera allt" },
   { id: "sortiment", label: "Sortiment", hint: "Välj produkter" },
-  { id: "publicera", label: "Publicera", hint: "Granska och gå live" },
+  { id: "publicera", label: "Publicera och dela", hint: "Gå live och bjud in kunder" },
 ] as const;
 
 export type BuilderStep = (typeof BUILDER_STEPS)[number]["id"];

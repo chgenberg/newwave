@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CustomerDecision } from "@/components/newwave/shop/QuoteActions";
 import { QuoteFlow, QuoteLines } from "@/components/newwave/shop/QuoteParts";
+import { TesterBanner } from "@/components/newwave/shop/ShopClient";
 import { fmtDay } from "@/lib/newwave/reseller";
 import { quoteByToken } from "@/lib/newwave/shopState";
 
@@ -27,6 +28,8 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
             : { title: "Tack för ordern!", text: "Vi tar fram ett provtryck och börjar trycka. Ni ser här hur det går." };
 
   return (
+    <>
+    <TesterBanner slug={slug} quoteId={quote.id} />
     <div className="mx-auto max-w-[920px] px-5 py-10 sm:px-8 sm:py-14">
       <p className="text-[13px] opacity-60">
         {quote.id} · {quote.company.name}
@@ -57,5 +60,6 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
       ) : null}
       {quote.needBy ? <p className="mt-8 text-[13px] opacity-60">Önskat leveransdatum: {fmtDay(quote.needBy)}</p> : null}
     </div>
+    </>
   );
 }

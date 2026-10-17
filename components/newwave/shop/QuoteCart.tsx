@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { nwProduct } from "@/lib/newwave/catalog";
 import { colorName } from "@/lib/newwave/colors";
 import { designSummary } from "@/lib/newwave/marking";
@@ -26,6 +26,11 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const tester = cart.tester;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- korgen läses ur webbläsaren efter mount
+    if (tester) setCompany((c) => (c.name ? c : { name: tester.name, contact: tester.contact, email: tester.email, phone: "" }));
+  }, [tester]);
   const priced = cart.lines.map((l) => ({ line: l, price: priceLine(l, markup) }));
   const total = priced.reduce((s, x) => s + (x.price?.total ?? 0), 0);
 

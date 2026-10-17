@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isWorkspaceId, WS_COOKIE, WS_MAX_AGE } from "@/lib/newwave/workspaceId";
+import { DEMO_PARAM, isWorkspaceId, WS_COOKIE, WS_MAX_AGE } from "@/lib/newwave/workspaceId";
 
 function authorized(request: NextRequest) {
   const password = process.env.DEMO_PASSWORD;
@@ -18,10 +18,14 @@ export function proxy(request: NextRequest) {
       headers: { "WWW-Authenticate": 'Basic realm="Craft Klubbmerch demo", charset="UTF-8"' },
     });
   }
-  if (request.nextUrl.pathname.startsWith("/api/") || isWorkspaceId(request.cookies.get(WS_COOKIE)?.value)) return NextResponse.next();
+  const current = request.cookies.get(WS_COOKIE)?.value;
+  /** En delad länk eller QR-kod (`?demo=`) tar med sig avsändarens demomiljö, så att mobilen ser samma butik. */
+  const shared = request.nextUrl.searchParams.get(DEMO_PARAM) ?? undefined;
+  const join = !request.nextUrl.pathname.startsWith("/api/") && isWorkspaceId(shared) && shared !== current;
+  if (!join && (request.nextUrl.pathname.startsWith("/api/") || isWorkspaceId(current))) return NextResponse.next();
 
   /** Besökaren får en egen demomiljö vid första sidvisningen; API-anrop utan cookie (webhooks) använder grunddatan. */
-  const id = crypto.randomUUID().replace(/-/g, "");
+  const id = join ? shared! : crypto.randomUUID().replace(/-/g, "");
   request.cookies.set(WS_COOKIE, id);
   const res = NextResponse.next({ request: { headers: request.headers } });
   res.cookies.set(WS_COOKIE, id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: WS_MAX_AGE, path: "/" });

@@ -24,7 +24,7 @@ export default async function ResellerLayout({ children }: Readonly<{ children: 
   ]);
   const badges = { [`${BASE}/offerter`]: quotes.filter((q) => q.status === "ny").length };
   const live = reseller.status === "publicerad";
-  const cta = live ? { href: shopUrl(reseller), label: "Visa butiken", icon: "store" } : { href: `${BASE}/butiken`, label: "Bygg butiken", icon: "plus" };
+  const cta = live ? { href: shopUrl(reseller), label: "Visa butiken", icon: "store" } : { href: `${BASE}/butiken/ny`, label: "Bygg butiken", icon: "plus" };
   return (
     <div
       className="nw-club nw-club--plain"

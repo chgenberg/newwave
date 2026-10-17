@@ -5,7 +5,9 @@ import type { QuoteLineInput } from "@/lib/newwave/reseller";
 
 export type CustomerLogo = { light: string; dark: string; name: string };
 export type CartLine = QuoteLineInput & { key: string };
-export type Cart = { logo: CustomerLogo | null; lines: CartLine[] };
+/** Återförsäljaren som provar sin egen butik som en av sina kunder. */
+export type Tester = { name: string; contact: string; email: string };
+export type Cart = { logo: CustomerLogo | null; lines: CartLine[]; tester?: Tester };
 
 const EMPTY: Cart = { logo: null, lines: [] };
 const storageKey = (slug: string) => `nw-shop:${slug}`;
@@ -48,6 +50,12 @@ export function useCart(slug: string) {
     [slug],
   );
   return [cart, update] as const;
+}
+
+/** Startar ett test av butiken som en kund: kundens logga ligger redan på produkterna och uppgifterna är ifyllda. */
+export function startTest(slug: string, c: { name: string; contact: string; email: string; logo: string; logoDark: string }) {
+  localStorage.setItem(storageKey(slug), JSON.stringify({ logo: { light: c.logo, dark: c.logoDark, name: c.name }, lines: [], tester: { name: c.name, contact: c.contact, email: c.email } } satisfies Cart));
+  window.dispatchEvent(new Event("nw-cart"));
 }
 
 export const PLACEHOLDER = { light: "/newwave/resellers/kunder/din-logga.png", dark: "/newwave/resellers/kunder/din-logga-vit.png" };

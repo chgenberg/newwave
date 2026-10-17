@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { LogoResult } from "@/lib/logo";
-import { BUILDER_STEPS, SHOP_CATALOG, exVat, fromPrice, sek, shopUrl, stepsDone, type BuilderStep, type Reseller } from "@/lib/newwave/reseller";
+import { nwProduct } from "@/lib/newwave/catalog";
+import { BUILDER_STEPS, SHOP_CATALOG, SHOP_PACKS, costPrice, fromPrice, sek, stepsDone, type BuilderStep, type Reseller } from "@/lib/newwave/reseller";
 import { call, readDataUrl } from "./api";
-import { ShopFrame, ShopHome } from "./Storefront";
+import { ResellerShare } from "./ShareShop";
+import { ShopPreview } from "./ShopPreview";
 
-type Props = { initial: Reseller; initialStep: BuilderStep };
+type Props = { initial: Reseller; initialStep: BuilderStep; ws: string | null };
 
 const EDITABLE = ["name", "website", "logo", "logoDark", "theme", "texts", "products", "markup"] as const;
 const patchOf = (r: Reseller) => Object.fromEntries(EDITABLE.map((k) => [k, r[k]]).filter(([, v]) => v !== undefined));
 const same = (a: Reseller, b: Reseller) => JSON.stringify(patchOf(a)) === JSON.stringify(patchOf(b));
 
-export function ShopBuilder({ initial, initialStep }: Props) {
+/** Finjustering av en byggd butik. Flikarna går att öppna i vilken ordning som helst. */
+export function ShopBuilder({ initial, initialStep, ws }: Props) {
   const router = useRouter();
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial);
@@ -46,68 +49,71 @@ export function ShopBuilder({ initial, initialStep }: Props) {
   };
 
   const go = async (next: BuilderStep) => {
-    if (await save()) {
-      setStep(next);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    if (await save()) setStep(next);
   };
 
-  const index = BUILDER_STEPS.findIndex((s) => s.id === step);
-  const nextStep = BUILDER_STEPS[index + 1]?.id;
   const set = <K extends keyof Reseller>(k: K, v: Reseller[K]) => setDraft((d) => ({ ...d, [k]: v }));
 
   return (
     <div className="nw-page">
-      <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Butiken</h1>
-      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Bygg er webbshop steg för steg. Era företagskunder designar sin merch här och begär offert av er.</p>
+      <p className="text-[13px] text-[var(--nw-muted)]">
+        <Link href="/newwave/shop/butiken" className="hover:text-[var(--nw-ink)]">
+          ← Butiker
+        </Link>
+      </p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Redigera {saved.texts.shopName || saved.name}</h1>
+        <Link href="/newwave/shop/butiken/ny" className="nw-hit text-[13px] font-medium text-[var(--nw-ink)] underline underline-offset-4">
+          Bygg om från webbplatsen
+        </Link>
+      </div>
 
-      <ol className="mt-6 grid grid-cols-4 gap-1.5 sm:gap-2" aria-label="Steg">
-        {BUILDER_STEPS.map((s, i) => {
+      <div role="tablist" aria-label="Redigera butiken" className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--nw-line)]">
+        {BUILDER_STEPS.map((s) => {
           const on = s.id === step;
           return (
-            <li key={s.id} className="min-w-0">
-              <button type="button" onClick={() => go(s.id)} aria-current={on ? "step" : undefined} className="group w-full text-left">
-                <span className={`block h-1.5 rounded-full transition-colors ${on ? "bg-[var(--club)]" : done[s.id] ? "bg-[var(--club-accent)]" : "bg-[var(--nw-soft-2)]"}`} />
-                <span className={`mt-2 flex items-center gap-1.5 text-[12.5px] sm:text-[13.5px] ${on ? "font-semibold text-[var(--nw-ink)]" : "text-[var(--nw-muted)] group-hover:text-[var(--nw-ink)]"}`}>
-                  <span className={`hidden h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold sm:grid ${done[s.id] ? "bg-[var(--club)] text-white" : "bg-[var(--nw-soft-2)]"}`}>{done[s.id] ? "✓" : i + 1}</span>
-                  <span className="truncate">{s.label}</span>
-                </span>
-                <span className="hidden truncate pl-[26px] text-[11.5px] text-[var(--nw-faint)] sm:block">{s.hint}</span>
-              </button>
-            </li>
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => go(s.id)}
+              className={`-mb-px flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[13.5px] transition-colors ${on ? "border-[var(--club)] font-semibold text-[var(--nw-ink)]" : "border-transparent text-[var(--nw-muted)] hover:text-[var(--nw-ink)]"}`}
+            >
+              <span className={`grid h-4.5 w-4.5 place-items-center rounded-full text-[10px] font-bold ${done[s.id] ? "bg-[var(--club)] text-white" : "border border-[var(--nw-line)]"}`} aria-hidden>
+                {done[s.id] ? "✓" : ""}
+              </span>
+              {s.label}
+            </button>
           );
         })}
-      </ol>
+      </div>
 
-      <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="min-w-0">
-          {step === "varumarke" ? <BrandStep draft={draft} set={set} onImported={apply} /> : null}
+      <div className="mt-7 grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <div className="min-w-0" role="tabpanel">
+          {step === "varumarke" ? <BrandStep draft={draft} set={set} /> : null}
           {step === "utseende" ? <LookStep draft={draft} set={set} /> : null}
           {step === "sortiment" ? <RangeStep draft={draft} set={set} /> : null}
-          {step === "publicera" ? <PublishStep saved={saved} dirty={dirty} onSaved={apply} /> : null}
+          {step === "publicera" ? <PublishStep saved={saved} dirty={dirty} onSaved={apply} ws={ws} /> : null}
 
           {error ? <p className="mt-4 text-[13px] text-[#B42318]">{error}</p> : null}
-          <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-[var(--nw-line)] pt-5">
-            {nextStep ? (
-              <button type="button" disabled={busy} onClick={() => go(nextStep)} className="nw-btn nw-club-btn disabled:opacity-50">
-                {busy ? "Sparar…" : `Fortsätt till ${BUILDER_STEPS[index + 1].label.toLowerCase()}`}
+          {step !== "publicera" ? (
+            <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-[var(--nw-line)] pt-5">
+              <button type="button" disabled={busy || !dirty} onClick={save} className="nw-btn nw-club-btn disabled:opacity-50">
+                {busy ? "Sparar…" : dirty ? "Spara" : "Allt är sparat"}
               </button>
-            ) : null}
-            {dirty ? (
-              <>
-                <button type="button" disabled={busy} onClick={save} className="nw-btn nw-btn-ghost disabled:opacity-50">
-                  Spara
-                </button>
-                <button type="button" onClick={() => setDraft(saved)} className="text-[13px] text-[var(--nw-muted)] underline underline-offset-4">
+              {dirty ? (
+                <button type="button" onClick={() => setDraft(saved)} className="nw-hit text-[13px] text-[var(--nw-muted)] underline underline-offset-4">
                   Ångra
                 </button>
-              </>
-            ) : (
-              <span className="text-[12.5px] text-[var(--nw-faint)]">Allt är sparat</span>
-            )}
-          </div>
+              ) : null}
+              {saved.status === "publicerad" && dirty ? <span className="text-[12.5px] text-[var(--nw-faint)]">Butiken är live, så det ni sparar syns direkt.</span> : null}
+            </div>
+          ) : null}
         </div>
-        <Preview draft={draft} />
+        <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
+          <ShopPreview shop={draft} />
+        </div>
       </div>
     </div>
   );
@@ -125,42 +131,14 @@ function Section({ title, text, children }: { title: string; text?: string; chil
   );
 }
 
-const IMPORT_STEPS = ["Öppnar webbplatsen…", "Letar efter loggan…", "Läser av färgerna…", "Skriver butikens texter…", "Väljer produkter som passar…"];
-
-function BrandStep({ draft, set, onImported }: StepProps & { onImported: (r: Reseller) => void }) {
-  const router = useRouter();
-  const [site, setSite] = useState(draft.website ?? "");
-  const [busy, setBusy] = useState<"" | "import" | "upload" | "reset">("");
-  const [tick, setTick] = useState(0);
+function BrandStep({ draft, set }: StepProps) {
+  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const file = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (busy !== "import") return;
-    const t = setInterval(() => setTick((n) => Math.min(n + 1, IMPORT_STEPS.length - 1)), 4000);
-    return () => clearInterval(t);
-  }, [busy]);
-
-  const runImport = async () => {
-    setBusy("import");
-    setTick(0);
-    setError("");
-    setNote("");
-    try {
-      const r = await call<{ reseller: Reseller; found: { logo: boolean; texts: boolean; products: number; mode: string | null }; note: string }>("/api/v1/newwave/reseller", { action: "import", website: site });
-      onImported(r.reseller);
-      const parts = [r.found.logo && "loggan", r.found.texts && "texterna", r.found.products && `${r.found.products} produkter`].filter(Boolean);
-      setNote([parts.length ? `Klart – vi hämtade ${parts.join(", ")}. Justera fritt i nästa steg.` : "", r.note].filter(Boolean).join(" "));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Kunde inte hämta");
-    } finally {
-      setBusy("");
-    }
-  };
-
   const upload = async (f: File) => {
-    setBusy("upload");
+    setBusy(true);
     setError("");
     setNote("");
     try {
@@ -172,62 +150,13 @@ function BrandStep({ draft, set, onImported }: StepProps & { onImported: (r: Res
     } catch (e) {
       setError(e instanceof Error ? e.message : "Kunde inte läsa loggan");
     } finally {
-      setBusy("");
-    }
-  };
-
-  const reset = async () => {
-    if (!confirm("Börja om med en tom butik? Logga, texter och sortiment tas bort.")) return;
-    setBusy("reset");
-    try {
-      onImported((await call<{ reseller: Reseller }>("/api/v1/newwave/reseller", { action: "reset" })).reseller);
-      setSite("");
-      setNote("");
-      router.refresh();
-    } finally {
-      setBusy("");
+      setBusy(false);
     }
   };
 
   return (
     <div>
-      <Section title="Hämta från er webbplats" text="Vi läser er hemsida och hämtar logga, färger och texter. Ni kan ändra allt efteråt.">
-        <form
-          className="flex flex-col gap-2 sm:flex-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (site.trim().length > 3) runImport();
-          }}
-        >
-          <input value={site} onChange={(e) => setSite(e.target.value)} placeholder="foretaget.se" aria-label="Webbplats" className="nw-input min-w-0 sm:flex-1" disabled={Boolean(busy)} />
-          <button type="submit" disabled={Boolean(busy) || site.trim().length < 4} className="nw-btn nw-club-btn shrink-0 disabled:opacity-50">
-            {busy === "import" ? "Hämtar…" : "Hämta"}
-          </button>
-        </form>
-        {busy === "import" ? (
-          <p className="nw-fade mt-3 flex items-center gap-2 text-[13.5px] text-[var(--nw-muted)]" aria-live="polite">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--club)]" />
-            {IMPORT_STEPS[tick]}
-          </p>
-        ) : null}
-      </Section>
-
-      <Section title="Eller ladda upp loggan" text="PNG, JPG eller SVG. Vi tar bort bakgrunden och gör en ljus version till mörka produkter.">
-        <input ref={file} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} aria-label="Välj loggfil" />
-        <button
-          type="button"
-          onClick={() => file.current?.click()}
-          disabled={Boolean(busy)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--nw-radius)] border-2 border-dashed border-[var(--nw-line)] px-4 py-6 text-[14px] font-medium text-[var(--nw-ink)] transition-colors hover:border-[var(--club)] disabled:opacity-50"
-        >
-          {busy === "upload" ? "Laddar upp…" : "Välj fil"}
-        </button>
-      </Section>
-
-      {note ? <p className="mb-6 rounded-xl bg-[#DFF5E7] px-4 py-3 text-[13.5px] text-[#17703A]">{note}</p> : null}
-      {error ? <p className="mb-6 rounded-xl bg-[#FDECEC] px-4 py-3 text-[13.5px] text-[#B42318]">{error}</p> : null}
-
-      <Section title="Brand bucket" text="Så här ser er logga ut på ljusa och mörka produkter.">
+      <Section title="Logga" text="PNG, JPG eller SVG. Vi tar bort bakgrunden och gör en ljus version till mörka produkter.">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex h-28 items-center justify-center rounded-[var(--nw-radius)] border border-[var(--nw-line)] bg-white p-4">
             {draft.logo ? (
@@ -244,23 +173,26 @@ function BrandStep({ draft, set, onImported }: StepProps & { onImported: (r: Res
             ) : null}
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {(["primary", "accent", "background"] as const).map((k) => (
-            <span key={k} className="inline-flex items-center gap-2 rounded-full border border-[var(--nw-line)] py-1 pl-1 pr-3 text-[12.5px]">
-              <span className="h-5 w-5 rounded-full border border-black/10" style={{ background: draft.theme[k] }} />
-              {draft.theme[k]}
-            </span>
-          ))}
-        </div>
-        <label className="mt-4 block text-[13px] font-medium text-[var(--nw-ink)]">
-          Företagsnamn
-          <input value={draft.name} onChange={(e) => set("name", e.target.value)} className="nw-input mt-1.5 w-full" maxLength={60} />
-        </label>
+        <input ref={file} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} aria-label="Välj loggfil" />
+        <button type="button" onClick={() => file.current?.click()} disabled={busy} className="nw-btn nw-btn-ghost mt-3 disabled:opacity-50">
+          {busy ? "Laddar upp…" : draft.logo ? "Byt logga" : "Ladda upp loggan"}
+        </button>
+        {note ? <p className="mt-3 rounded-xl bg-[#DFF5E7] px-4 py-3 text-[13.5px] text-[#17703A]">{note}</p> : null}
+        {error ? <p className="mt-3 rounded-xl bg-[#FDECEC] px-4 py-3 text-[13.5px] text-[#B42318]">{error}</p> : null}
       </Section>
 
-      <button type="button" onClick={reset} disabled={Boolean(busy)} className="nw-hit text-[12.5px] text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
-        Börja om med en tom butik
-      </button>
+      <Section title="Företagsnamn">
+        <input value={draft.name} onChange={(e) => set("name", e.target.value)} className="nw-input w-full" maxLength={60} aria-label="Företagsnamn" />
+      </Section>
+
+      <Section title="Webbplats" text="Vill ni hämta allt på nytt från webbplatsen? Bygg om butiken på en minut.">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input value={draft.website ?? ""} onChange={(e) => set("website", e.target.value)} placeholder="foretaget.se" className="nw-input min-w-0 sm:flex-1" aria-label="Webbplats" />
+          <Link href="/newwave/shop/butiken/ny" className="nw-btn nw-btn-ghost shrink-0">
+            Bygg om
+          </Link>
+        </div>
+      </Section>
     </div>
   );
 }
@@ -320,41 +252,114 @@ function LookStep({ draft, set }: StepProps) {
   );
 }
 
-function RangeStep({ draft, set }: StepProps) {
-  const categories = [...new Set(SHOP_CATALOG.map((p) => p.category))];
-  const chosen = new Set(draft.products);
-  const toggle = (ids: string[], on: boolean) => set("products", on ? [...new Set([...draft.products, ...ids])] : draft.products.filter((id) => !ids.includes(id)));
-  const example = SHOP_CATALOG.find((p) => p.id === "p004") ?? SHOP_CATALOG[0];
-  const price = fromPrice(example, draft.markup);
-  const cost = Math.round(exVat(example) * 0.55 + 6 * 0.7);
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+
+/** Paketen, påslaget och prislistan: vad kunden betalar, vad New Wave tar och vad som blir kvar. */
+export function RangePicker({ products, markup, onChange, catalog = SHOP_CATALOG.map((p) => p.id) }: { products: string[]; markup: number; onChange: (v: { products?: string[]; markup?: number }) => void; catalog?: string[] }) {
+  const all = catalog.map(nwProduct).filter((p) => p !== undefined);
+  const categories = [...new Set(all.map((p) => p.category))];
+  const chosen = new Set(products);
+  const toggle = (ids: string[], on: boolean) => onChange({ products: on ? [...new Set([...products, ...ids])] : products.filter((id) => !ids.includes(id)) });
+  const rows = all.filter((p) => chosen.has(p.id));
+  const packs = SHOP_PACKS.map((p) => ({ ...p, products: p.products.filter((id) => catalog.includes(id)) })).filter((p) => p.products.length);
 
   return (
     <div>
+      <Section title="Börja från ett paket" text="Sortiment som brukar sälja till kundgruppen, med ett påslag som passar. Ändra fritt efteråt.">
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {packs.map((pk) => {
+            const on = sameSet(pk.products, products) && pk.markup === markup;
+            return (
+              <li key={pk.id}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => onChange({ products: pk.products, markup: pk.markup })}
+                  className={`flex w-full items-center gap-3 rounded-[var(--nw-radius)] border-2 p-3 text-left transition-colors ${on ? "border-[var(--club)] bg-[var(--club-soft)]" : "border-[var(--nw-line)] hover:border-[var(--nw-ink)]"}`}
+                >
+                  <span className="flex shrink-0 -space-x-4">
+                    {pk.products.slice(0, 2).map((id) => {
+                      const p = nwProduct(id);
+                      return p ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={id} src={p.photo} alt="" className="h-11 w-11 rounded-xl border-2 border-white bg-[#F4F4F2] object-contain" loading="lazy" />
+                      ) : null;
+                    })}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold leading-tight text-[var(--nw-ink)]">{pk.name}</span>
+                    <span className="mt-0.5 block text-[12.5px] leading-snug text-[var(--nw-muted)]">{pk.text}</span>
+                    <span className="mt-0.5 block text-[12px] font-medium text-[var(--nw-ink)]">
+                      {pk.products.length} produkter · +{pk.markup} %
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+
       <Section title="Ert påslag" text="Läggs på New Waves cirkapriser. Kunden ser bara ert pris.">
-        <div className="rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-4">
-          <div className="flex items-center gap-4">
-            <input type="range" min={-10} max={40} step={5} value={draft.markup} onChange={(e) => set("markup", Number(e.target.value))} className="min-w-0 flex-1 accent-[var(--club)]" aria-label="Påslag i procent" />
-            <span className="nw-club-heading w-16 shrink-0 text-right text-[22px] text-[var(--club)]">
-              {draft.markup > 0 ? "+" : ""}
-              {draft.markup} %
-            </span>
-          </div>
-          <p className="mt-2 text-[13px] text-[var(--nw-muted)]">
-            Exempel, {example.name.toLowerCase()} med tryck vid 100 st: kunden betalar {sek(price)}/st, New Wave tar cirka {sek(cost)}/st, ni tjänar cirka {sek(price - cost)}/st.
-          </p>
+        <div className="flex items-center gap-4 rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-4">
+          <input type="range" min={-10} max={40} step={1} value={markup} onChange={(e) => onChange({ markup: Number(e.target.value) })} className="min-w-0 flex-1 accent-[var(--club)]" aria-label="Påslag i procent" />
+          <span className="nw-club-heading w-16 shrink-0 text-right text-[22px] text-[var(--club)]">
+            {markup > 0 ? "+" : ""}
+            {markup} %
+          </span>
         </div>
       </Section>
-      <Section title={`Produkter (${draft.products.length} av ${SHOP_CATALOG.length})`} text="Välj vad era kunder ska kunna beställa.">
-        <div className="flex flex-col gap-6">
+
+      <Section title={`Prislista (${rows.length} produkter)`} text="Per styck vid 100 st med standardtryck, exkl. moms.">
+        {rows.length ? (
+          <div className="overflow-hidden rounded-[var(--nw-radius)] border border-[var(--nw-line)]">
+            <table className="w-full text-[13px]">
+              <thead className="bg-[var(--nw-soft)] text-left text-[12px] text-[var(--nw-muted)]">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Produkt</th>
+                  <th className="px-3 py-2 text-right font-medium">Kunden betalar</th>
+                  <th className="hidden px-3 py-2 text-right font-medium sm:table-cell">New Wave</th>
+                  <th className="px-3 py-2 text-right font-medium">Ni tjänar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--nw-line)]">
+                {rows.map((p) => {
+                  const price = fromPrice(p, markup);
+                  const cost = costPrice(p);
+                  return (
+                    <tr key={p.id}>
+                      <td className="truncate px-3 py-2 text-[var(--nw-ink)]">{p.name}</td>
+                      <td className="px-3 py-2 text-right font-medium text-[var(--nw-ink)]">{sek(price)}</td>
+                      <td className="hidden px-3 py-2 text-right text-[var(--nw-muted)] sm:table-cell">{sek(cost)}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${price - cost > 0 ? "text-[#17703A]" : "text-[#B42318]"}`}>{sek(price - cost)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-[13px] text-[var(--nw-muted)]">Välj ett paket eller produkter nedan.</p>
+        )}
+      </Section>
+
+      <details className="group mb-7 rounded-[var(--nw-radius)] border border-[var(--nw-line)]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[14px] font-semibold text-[var(--nw-ink)] [&::-webkit-details-marker]:hidden">
+          Välj produkter själv ({products.length} av {all.length})
+          <span aria-hidden className="text-[var(--nw-muted)] transition-transform group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <div className="flex flex-col gap-6 px-4 pb-4">
           {categories.map((c) => {
-            const items = SHOP_CATALOG.filter((p) => p.category === c);
-            const all = items.every((p) => chosen.has(p.id));
+            const items = all.filter((p) => p.category === c);
+            const every = items.every((p) => chosen.has(p.id));
             return (
               <div key={c}>
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[13.5px] font-semibold text-[var(--nw-ink)]">{c}</p>
-                  <button type="button" onClick={() => toggle(items.map((p) => p.id), !all)} className="nw-hit text-[12.5px] text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
-                    {all ? "Ta bort alla" : "Välj alla"}
+                  <button type="button" onClick={() => toggle(items.map((p) => p.id), !every)} className="nw-hit text-[12.5px] text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
+                    {every ? "Ta bort alla" : "Välj alla"}
                   </button>
                 </div>
                 <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -381,29 +386,43 @@ function RangeStep({ draft, set }: StepProps) {
             );
           })}
         </div>
-      </Section>
+      </details>
     </div>
   );
 }
 
-function PublishStep({ saved, dirty, onSaved }: { saved: Reseller; dirty: boolean; onSaved: (r: Reseller) => void }) {
+function RangeStep({ draft, set }: StepProps) {
+  return (
+    <RangePicker
+      products={draft.products}
+      markup={draft.markup}
+      onChange={(v) => {
+        if (v.products) set("products", v.products);
+        if (v.markup !== undefined) set("markup", v.markup);
+      }}
+    />
+  );
+}
+
+function PublishStep({ saved, dirty, onSaved, ws }: { saved: Reseller; dirty: boolean; onSaved: (r: Reseller) => void; ws: string | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const live = saved.status === "publicerad";
   const checks = [
-    { ok: Boolean(saved.logo), label: "Logga", step: "varumarke" },
-    { ok: Boolean(saved.texts.heroTitle), label: "Rubrik på startsidan", step: "utseende" },
-    { ok: Boolean(saved.texts.email || saved.texts.phone), label: "Kontaktuppgifter", step: "utseende" },
-    { ok: saved.products.length > 0, label: `Produkter (${saved.products.length})`, step: "sortiment" },
+    { ok: Boolean(saved.logo), label: "Logga" },
+    { ok: Boolean(saved.texts.heroTitle), label: "Rubrik på startsidan" },
+    { ok: Boolean(saved.texts.email || saved.texts.phone), label: "Kontaktuppgifter", optional: true },
+    { ok: saved.products.length > 0, label: `Produkter (${saved.products.length})` },
   ];
-  const ready = checks.filter((c) => c.label !== "Kontaktuppgifter").every((c) => c.ok);
+  const ready = checks.every((c) => c.ok || c.optional);
 
   const toggle = async () => {
     setBusy(true);
     setError("");
     try {
       onSaved((await call<{ reseller: Reseller }>("/api/v1/newwave/reseller", { action: live ? "unpublish" : "publish" })).reseller);
+      setConfirm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Kunde inte publicera");
     } finally {
@@ -411,7 +430,33 @@ function PublishStep({ saved, dirty, onSaved }: { saved: Reseller; dirty: boolea
     }
   };
 
-  const url = shopUrl(saved);
+  if (live)
+    return (
+      <div>
+        <Section title="Butiken är live" text="Dela den med kunderna. Varje förfrågan hamnar under Offerter.">
+          <ResellerShare shop={saved} ws={ws} />
+        </Section>
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--nw-line)] pt-5 text-[13px]">
+          {confirm ? (
+            <>
+              <span className="text-[var(--nw-ink)]">Kunderna kommer inte åt butiken förrän ni publicerar igen.</span>
+              <button type="button" onClick={toggle} disabled={busy} className="nw-btn nw-btn-ghost disabled:opacity-50">
+                {busy ? "Avpublicerar…" : "Ja, avpublicera"}
+              </button>
+              <button type="button" onClick={() => setConfirm(false)} className="nw-hit text-[var(--nw-muted)] underline underline-offset-4">
+                Avbryt
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => setConfirm(true)} className="nw-hit text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
+              Avpublicera butiken
+            </button>
+          )}
+        </div>
+        {error ? <p className="mt-2 text-[13px] text-[#B42318]">{error}</p> : null}
+      </div>
+    );
+
   return (
     <div>
       <Section title="Klart att publicera?" text="När butiken är publicerad kan era kunder designa och begära offert.">
@@ -420,104 +465,16 @@ function PublishStep({ saved, dirty, onSaved }: { saved: Reseller; dirty: boolea
             <li key={c.label} className="flex items-center gap-3 px-4 py-3 text-[14px]">
               <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${c.ok ? "bg-[var(--club)] text-white" : "border border-[var(--nw-line)]"}`}>{c.ok ? "✓" : ""}</span>
               <span className={c.ok ? "text-[var(--nw-ink)]" : "text-[var(--nw-muted)]"}>{c.label}</span>
-              {!c.ok ? <span className="ml-auto text-[12px] text-[var(--nw-faint)]">{c.label === "Kontaktuppgifter" ? "Valfritt" : "Saknas"}</span> : null}
+              {!c.ok ? <span className="ml-auto text-[12px] text-[var(--nw-faint)]">{c.optional ? "Valfritt" : "Saknas"}</span> : null}
             </li>
           ))}
         </ul>
       </Section>
-      {dirty ? <p className="mb-4 text-[13px] text-[var(--nw-muted)]">Ni har osparade ändringar – spara först.</p> : null}
-      <div className="rounded-[var(--nw-radius)] bg-[var(--club)] p-5 text-white">
-        <p className="text-[12px] text-white/60">{live ? "Butiken är live" : "Utkast"}</p>
-        <p className="mt-1 break-all text-[15px] font-semibold">{url}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {live ? (
-            <>
-              <Link href={url} className="inline-flex h-10 items-center rounded-full bg-[var(--club-accent)] px-4 text-[13.5px] font-semibold text-[var(--club-on-accent)]">
-                Öppna butiken
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(`${window.location.origin}${url}`);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                className="inline-flex h-10 items-center rounded-full border border-white/30 px-4 text-[13.5px] font-semibold"
-              >
-                {copied ? "Kopierad" : "Kopiera länken"}
-              </button>
-              <button type="button" onClick={toggle} disabled={busy} className="inline-flex h-10 items-center rounded-full px-3 text-[13px] text-white/70 underline underline-offset-4">
-                Avpublicera
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={toggle} disabled={busy || !ready || dirty} className="inline-flex h-11 items-center rounded-full bg-[var(--club-accent)] px-5 text-[14px] font-semibold text-[var(--club-on-accent)] disabled:opacity-40">
-              {busy ? "Publicerar…" : "Publicera butiken"}
-            </button>
-          )}
-        </div>
-        {error ? <p className="mt-2 text-[13px] text-[#FFB4AB]">{error}</p> : null}
-      </div>
-    </div>
-  );
-}
-
-const WIDTH = { dator: 1200, mobil: 390 } as const;
-
-/** Butiken i skala, uppdaterad medan man ändrar. */
-function Preview({ draft }: { draft: Reseller }) {
-  const [chosen, setMode] = useState<keyof typeof WIDTH | null>(null);
-  const box = useRef<HTMLDivElement>(null);
-  const inner = useRef<HTMLDivElement>(null);
-  const [boxWidth, setBoxWidth] = useState(800);
-  const [scale, setScale] = useState(0.5);
-  const [height, setHeight] = useState(800);
-  /** På smala skärmar blir datorvyn oläslig, så mobilvyn visas tills man väljer själv. */
-  const mode = chosen ?? (boxWidth < 560 ? "mobil" : "dator");
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      if (!box.current || !inner.current) return;
-      setBoxWidth(box.current.clientWidth);
-      setScale(Math.min(1, box.current.clientWidth / WIDTH[mode]));
-      setHeight(inner.current.scrollHeight);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (box.current) ro.observe(box.current);
-    if (inner.current) ro.observe(inner.current);
-    return () => ro.disconnect();
-  }, [mode]);
-
-  return (
-    <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-[12.5px] font-medium text-[var(--nw-muted)]">Förhandsvisning</p>
-        <div className="nw-segment">
-          {(Object.keys(WIDTH) as (keyof typeof WIDTH)[]).map((m) => (
-            <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
-              {m === "dator" ? "Dator" : "Mobil"}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="overflow-hidden rounded-[var(--nw-radius)] border border-[var(--nw-line)] bg-[var(--nw-soft)] shadow-[var(--nw-shadow)]">
-        <div className="flex h-8 items-center gap-1.5 border-b border-[var(--nw-line)] bg-white px-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-          <span className="ml-2 truncate text-[11px] text-[var(--nw-faint)]">{shopUrl(draft)}</span>
-        </div>
-        <div ref={box} className="h-[min(70vh,640px)] overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto" style={{ width: WIDTH[mode] * scale, height: height * scale }}>
-            <div ref={inner} style={{ width: WIDTH[mode], transform: `scale(${scale})`, transformOrigin: "top left" }} className="pointer-events-none select-none" aria-hidden>
-              <ShopFrame shop={draft} preview>
-                <ShopHome shop={draft} preview />
-              </ShopFrame>
-            </div>
-          </div>
-        </div>
-      </div>
+      {dirty ? <p className="mb-4 text-[13px] text-[var(--nw-muted)]">Ni har osparade ändringar – spara dem först.</p> : null}
+      <button type="button" onClick={toggle} disabled={busy || !ready || dirty} className="nw-btn nw-club-btn disabled:opacity-40">
+        {busy ? "Publicerar…" : "Publicera butiken"}
+      </button>
+      {error ? <p className="mt-2 text-[13px] text-[#B42318]">{error}</p> : null}
     </div>
   );
 }

@@ -82,7 +82,7 @@ export default async function ResellerHome() {
             </ol>
           )}
           <div className="mt-auto flex flex-wrap gap-2 pt-5">
-            <Link href="/newwave/shop/butiken" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-[13.5px] font-semibold text-[var(--club)]">
+            <Link href="/newwave/shop/butiken/redigera" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-[13.5px] font-semibold text-[var(--club)]">
               {live ? "Redigera butiken" : "Fortsätt bygga"}
             </Link>
             {live ? (

@@ -7,7 +7,7 @@ export function luminance(hex: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-const mix = (hex: string, into: string, amount: number) =>
+export const mix = (hex: string, into: string, amount: number) =>
   `#${rgb(hex)
     .map((c, i) => Math.round((c + (rgb(into)[i] - c) * amount) * 255).toString(16).padStart(2, "0"))
     .join("")}`.toUpperCase();
@@ -29,6 +29,9 @@ export function clubTheme(palette: Color[]) {
 }
 
 const on = (hex: string) => (luminance(hex) > 0.4 ? "#0D0C0C" : "#FFFFFF");
+
+/** En butik i en enda märkesfärg, till exempel en kundbutik i kundens färg. */
+export const brandTheme = (color: string) => ({ primary: color, accent: color, background: mix(color, "#FFFFFF", 0.93) });
 
 /** CSS-variabler för en återförsäljares webbshop. */
 export function shopVars(theme: { primary: string; accent: string; background: string }) {

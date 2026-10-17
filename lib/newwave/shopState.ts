@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { nwProduct } from "./catalog";
 import { defaultDesign, METHOD_INFO, type Method } from "./marking";
-import { priceQuote, type Quote, type QuoteEvent, type QuoteLineInput, type QuoteStatus, type Reseller } from "./reseller";
+import { agreedLine, type CustomerShop, priceQuote, type Quote, type QuoteEvent, type QuoteLine, type QuoteLineInput, type QuoteStatus, type Reseller } from "./reseller";
 import { readData, writeData } from "./workspace";
 
-/** Återförsäljarnas butiker och offerter. Demodata skapas första gången. */
+/** Återförsäljarnas butiker, kundbutiker och offerter. Demodata skapas första gången. */
 
-type State = { resellers: Reseller[]; quotes: Quote[] };
+type State = { resellers: Reseller[]; quotes: Quote[]; customerShops: CustomerShop[] };
 
 const FILE = "newwave/shop/state.json";
 
@@ -240,12 +240,17 @@ function seedQuotes(resellers: Reseller[]): Quote[] {
 let chain: Promise<unknown> = Promise.resolve();
 
 async function load(): Promise<State> {
+  let state: State | null = null;
   try {
     const raw = await readData(FILE);
-    if (raw) return JSON.parse(raw) as State;
+    if (raw) state = JSON.parse(raw) as State;
   } catch {}
-  const resellers = seedResellers();
-  const state = { resellers, quotes: seedQuotes(resellers) };
+  if (state?.customerShops) return state;
+  if (!state) {
+    const resellers = seedResellers();
+    state = { resellers, quotes: seedQuotes(resellers), customerShops: [] };
+  }
+  seedCustomerShops(state);
   await save(state);
   return state;
 }
@@ -294,9 +299,8 @@ export async function createQuote(resellerId: string, input: Pick<Quote, "compan
     if (!r) return null;
     const priced = priceQuote(input.lines, r.markup);
     if (!priced.lines.length) return null;
-    const max = Math.max(2040, ...s.quotes.map((q) => Number(q.id.slice(2)) || 0));
     const quote: Quote = {
-      id: `Q-${max + 1}`,
+      id: nextQuoteId(s),
       token: newToken(),
       resellerId,
       company: input.company,
@@ -312,20 +316,107 @@ export async function createQuote(resellerId: string, input: Pick<Quote, "compan
   });
 }
 
-/** Startläge för en återförsäljare som bygger sin butik från början. */
-export function blankReseller(r: Reseller): Reseller {
-  return {
-    ...r,
-    website: undefined,
-    logo: undefined,
-    logoDark: undefined,
-    importedFrom: undefined,
-    theme: { primary: "#1D1D1F", accent: "#0071E3", background: "#F5F5F7" },
-    texts: { shopName: r.name, tagline: "", heroTitle: "", heroText: "", about: "", email: "", phone: "" },
-    products: [],
-    markup: 0,
-    status: "utkast",
-    publishedAt: undefined,
-    updatedAt: new Date().toISOString(),
+// --- Kundbutiker -------------------------------------------------------------
+
+function seedCustomerShops(s: State) {
+  const r = s.resellers.find((x) => x.id === CURRENT_RESELLER)!;
+  const shop: CustomerShop = {
+    id: "ks-techvast",
+    token: newToken(),
+    resellerId: r.id,
+    company: { name: "TechVäst AB", contact: "Ali Reza", email: "ali@techvast.se" },
+    logo: K("techvast"),
+    logoDark: K("techvast-vit"),
+    color: "#5B3FD0",
+    products: ["p001", "p005", "p004", "p021", "p024", "p031"],
+    markup: r.markup,
+    welcome: "Här beställer ni TechVästs kläder och profilprodukter till avtalat pris. Loggan ligger redan på allt.",
+    open: true,
+    createdAt: iso(-8),
   };
+  s.customerShops = [shop];
+  s.quotes.unshift(
+    shopOrder(s, shop, { contact: "Lina Persson", email: "lina@techvast.se", message: "Till de nyanställda i december." }, [
+      { productId: "p005", sizes: { S: 3, M: 5, L: 4 } },
+      { productId: "p021", sizes: { "One size": 12 } },
+    ], iso(-2))!,
+  );
+}
+
+const nextQuoteId = (s: State) => `Q-${Math.max(2040, ...s.quotes.map((q) => Number(q.id.slice(2)) || 0)) + 1}`;
+
+type OrderBy = { contact: string; email: string; message?: string };
+
+function shopOrder(s: State, shop: CustomerShop, by: OrderBy, lines: { productId: string; sizes: Record<string, number> }[], at = new Date().toISOString()): Quote | null {
+  const priced = lines
+    .filter((l) => shop.products.includes(l.productId))
+    .map((l) => {
+      const p = nwProduct(l.productId);
+      return p ? agreedLine({ productId: p.id, sizes: l.sizes, design: defaultDesign(p), color: p.garmentHex, logo: shop.logo, logoDark: shop.logoDark }, shop.markup) : null;
+    })
+    .filter((l): l is QuoteLine => l !== null && l.qty > 0);
+  if (!priced.length) return null;
+  return {
+    id: nextQuoteId(s),
+    token: newToken(),
+    resellerId: shop.resellerId,
+    company: { name: shop.company.name, contact: by.contact, email: by.email },
+    message: by.message,
+    lines: priced,
+    totalSek: priced.reduce((sum, l) => sum + l.total, 0),
+    costSek: priced.reduce((sum, l) => sum + l.cost, 0),
+    status: "godkänd",
+    createdAt: at,
+    customerShopId: shop.id,
+    events: [{ at, who: by.contact, text: "Beställde i kundbutiken till avtalat pris. Ordern gick direkt till New Wave." }],
+  };
+}
+
+export async function customerShopsFor(resellerId: string) {
+  return (await load()).customerShops.filter((c) => c.resellerId === resellerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function customerShop(id: string) {
+  return (await load()).customerShops.find((c) => c.id === id) ?? null;
+}
+
+export async function customerShopByToken(token: string) {
+  const s = await load();
+  const shop = s.customerShops.find((c) => c.token === token);
+  if (!shop) return null;
+  return { shop, reseller: s.resellers.find((r) => r.id === shop.resellerId)! };
+}
+
+export type CustomerShopInput = Pick<CustomerShop, "company" | "logo" | "logoDark" | "color" | "products" | "markup" | "welcome">;
+
+export function createCustomerShop(resellerId: string, input: CustomerShopInput) {
+  return updateShop((s) => {
+    const base = `ks-${input.company.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 30) || "kund"}`;
+    let id = base;
+    for (let n = 2; s.customerShops.some((c) => c.id === id); n++) id = `${base}-${n}`;
+    const shop: CustomerShop = { ...input, id, token: newToken(), resellerId, open: true, createdAt: new Date().toISOString() };
+    s.customerShops.unshift(shop);
+    return shop;
+  });
+}
+
+export function changeCustomerShop(resellerId: string, id: string, fn: (c: CustomerShop, s: State) => boolean | void) {
+  return updateShop((s) => {
+    const shop = s.customerShops.find((c) => c.id === id && c.resellerId === resellerId);
+    if (!shop) return null;
+    if (fn(shop, s) === false) s.customerShops = s.customerShops.filter((c) => c !== shop);
+    return shop;
+  });
+}
+
+export function orderFromCustomerShop(token: string, by: OrderBy, lines: { productId: string; sizes: Record<string, number> }[]) {
+  return updateShop((s) => {
+    const shop = s.customerShops.find((c) => c.token === token);
+    if (!shop) return { error: "Butiken finns inte", status: 404 } as const;
+    if (!shop.open) return { error: "Butiken är stängd", status: 400 } as const;
+    const order = shopOrder(s, shop, by, lines);
+    if (!order) return { error: "Välj storlek och antal för minst en produkt.", status: 400 } as const;
+    s.quotes.unshift(order);
+    return { order };
+  });
 }

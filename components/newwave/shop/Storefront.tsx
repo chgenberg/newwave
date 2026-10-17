@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Reveal, SplitText } from "@/components/newwave/motion/Motion";
 import type { Reseller } from "@/lib/newwave/reseller";
 import { shopVars } from "@/lib/newwave/theme";
-import { CartLink, ShopGrid } from "./ShopClient";
+import { CartLink, ShopGrid, TesterBanner } from "./ShopClient";
 
 const TITLE = "mt-3 max-w-[760px] text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--shop)] @2xl:text-[60px]";
 
@@ -25,6 +25,7 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
   );
   return (
     <div data-studio-root style={shopVars(shop.theme)} className="@container flex min-h-full flex-col bg-white text-[#1D1D1F]">
+      {preview ? null : <TesterBanner slug={shop.slug} />}
       <header className={`${preview ? "" : "sticky top-0 z-30 backdrop-blur-md"} border-b border-[var(--shop-line)] bg-white/90`}>
         <div className="mx-auto flex h-16 max-w-[1180px] items-center gap-6 px-5 @2xl:px-8">
           {preview ? brand : <Link href={home}>{brand}</Link>}
@@ -69,7 +70,9 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
   );
 }
 
-export function ShopHome({ shop, preview }: { shop: Shop; preview?: boolean }) {
+/** I förhandsvisningen kan `only` visa bara produkterna, med `sample` som kundens logga. */
+export function ShopHome({ shop, preview, sample, only }: { shop: Shop; preview?: boolean; sample?: { light: string; dark: string }; only?: "produkter" }) {
+  if (only === "produkter") return <ShopProducts shop={shop} preview={preview} sample={sample} />;
   return (
     <>
       <section className="bg-[var(--shop-bg)]">
@@ -97,11 +100,17 @@ export function ShopHome({ shop, preview }: { shop: Shop; preview?: boolean }) {
           </ol>
         </div>
       </section>
-      <section id="produkter" className="mx-auto max-w-[1180px] scroll-mt-20 px-5 py-12 @2xl:px-8 @2xl:py-16">
-        <h2 className="text-[26px] font-bold tracking-tight @2xl:text-[32px]">Produkter</h2>
-        <p className="mb-6 mt-1 text-[14px] opacity-60">Alla priser exkl. moms, inklusive tryck. Lägre styckpris ju fler ni beställer.</p>
-        <ShopGrid slug={shop.slug} productIds={shop.products} markup={shop.markup} preview={preview} />
-      </section>
+      <ShopProducts shop={shop} preview={preview} sample={sample} />
     </>
+  );
+}
+
+function ShopProducts({ shop, preview, sample }: { shop: Shop; preview?: boolean; sample?: { light: string; dark: string } }) {
+  return (
+    <section id="produkter" className="mx-auto max-w-[1180px] scroll-mt-20 px-5 py-12 @2xl:px-8 @2xl:py-16">
+      <h2 className="text-[26px] font-bold tracking-tight @2xl:text-[32px]">Produkter</h2>
+      <p className="mb-6 mt-1 text-[14px] opacity-60">Alla priser exkl. moms, inklusive tryck. Lägre styckpris ju fler ni beställer.</p>
+      <ShopGrid slug={shop.slug} productIds={shop.products} markup={shop.markup} preview={preview} sample={sample} />
+    </section>
   );
 }

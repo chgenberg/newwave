@@ -17,7 +17,7 @@ export default async function Ordrar() {
   return (
     <div className="nw-page">
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Ordrar</h1>
-      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Godkända offerter går direkt till New Wave. Här ser ni var varje order är – ni behöver inte göra något.</p>
+      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Godkända offerter och beställningar i kundbutikerna går direkt till New Wave. Här ser ni var varje order är – ni behöver inte göra något.</p>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
         {[
@@ -39,7 +39,7 @@ export default async function Ordrar() {
               <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12px] text-[var(--nw-muted)]">
-                    {q.id} · {q.lines.reduce((s, l) => s + l.qty, 0)} st · {q.needBy ? `leverans ${fmtDay(q.needBy)}` : ""}
+                    {[q.id, `${q.lines.reduce((s, l) => s + l.qty, 0)} st`, q.customerShopId ? "från kundbutiken" : "", q.needBy ? `leverans ${fmtDay(q.needBy)}` : ""].filter(Boolean).join(" · ")}
                   </p>
                   <p className="truncate text-[15px] font-semibold text-[var(--nw-ink)]">{q.company.name}</p>
                 </div>
