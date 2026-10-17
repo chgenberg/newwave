@@ -1,0 +1,16 @@
+{
+  "club": "Åsa IF",
+  "tagline": "Åsa Idrottsförening sedan 1919",
+  "crest": {
+    "aspect": 1.144,
+    "variants": {
+      "farg": { "png": "skold-farg.png", "use": "Standard på vita och ljusa produkter samt i digitala kanaler" },
+      "svart": { "png": "skold-svart.png", "use": "Tryck i en färg på ljusa produkter" },
+      "vit": { "png": "skold-vit.png", "use": "Tryck i en färg på mörka produkter" }
+    },
+    "colors": { "svart": "#0D0C0C", "gul": "#FDEF04" }
+  },
+  "colors": { "primary": "#0D0C0C", "accent": "#FDEF04", "white": "#FFFFFF" },
+  "fonts": { "brand": "Oswald", "web": "Open Sans" },
+  "source": "https://www.asaif.com – logga och färger insamlade för lokal demo"
+}

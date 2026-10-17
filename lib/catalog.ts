@@ -1,3 +1,4 @@
+import { NW_CATALOG } from "./newwave/catalog";
 import type { CatalogProduct } from "./types";
 
 export const CATALOG: CatalogProduct[] = [
@@ -48,3 +49,11 @@ export const CATALOG: CatalogProduct[] = [
 ];
 
 export const productById = (id: string) => CATALOG.find((p) => p.id === id);
+
+/** Det som går att trycka på – IFK:s fyra produkter eller New Waves sortiment för klubbarna i navet. */
+export type Sellable = Omit<CatalogProduct, "kind"> & { kind: string; category?: string; seasons?: string[]; use?: string };
+
+const NW_CLUBS = new Set(["asa-if"]);
+
+/** `hub` när förfrågan kommer från navet, där alla klubbar trycker på New Waves sortiment. */
+export const catalogFor = (clubId: string, hub = false): Sellable[] => (hub || NW_CLUBS.has(clubId) ? NW_CATALOG : CATALOG);

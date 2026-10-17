@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CLUBS } from "@/lib/club";
+import { withBrand } from "@/lib/newwave/store";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
 import { reviewAsset, verdictFor } from "@/lib/reviewer";
 import { ConceptSchema, fileUrl } from "@/lib/schemas";
@@ -13,8 +14,9 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
   const { clubId, concept, imageUrl, kind } = parsed.data;
-  const club = CLUBS[clubId];
-  if (!club) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const listed = CLUBS[clubId];
+  if (!listed) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const club = await withBrand(listed);
 
   if (!hasOpenAIKey()) {
     const demo = { realism: 8, relevance: 8, brandFit: 9, sales: 8 };

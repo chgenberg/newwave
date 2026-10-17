@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import type { Customized } from "@/lib/newwave/marking";
 
 const DIR = path.join(process.cwd(), ".data", "intersport");
 
@@ -21,7 +22,8 @@ export const ProductSchema = z.object({
   personalization: z.unknown().optional(),
 });
 
-export type ShopProduct = z.infer<typeof ProductSchema> & { id: string; publishedAt: string; clubShopId: string };
+/** `custom` finns när någon anpassat produkten i designstudion. */
+export type ShopProduct = z.infer<typeof ProductSchema> & { id: string; publishedAt: string; clubShopId: string; custom?: Omit<Customized, "mockupUrl"> };
 
 const file = (shopId: string) => path.join(DIR, `${shopId.replace(/[^a-z0-9-]/g, "")}.json`);
 
@@ -33,7 +35,7 @@ export async function listProducts(shopId: string): Promise<ShopProduct[]> {
   }
 }
 
-export async function addProducts(shopId: string, products: z.infer<typeof ProductSchema>[]) {
+export async function addProducts(shopId: string, products: (z.infer<typeof ProductSchema> & Pick<ShopProduct, "custom">)[]) {
   await mkdir(DIR, { recursive: true });
   const existing = await listProducts(shopId);
   const now = new Date().toISOString();
@@ -42,4 +44,15 @@ export async function addProducts(shopId: string, products: z.infer<typeof Produ
   for (const p of added) bySku.set(p.sku, p);
   await writeFile(file(shopId), JSON.stringify([...bySku.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)), null, 2));
   return added;
+}
+
+/** Ny bild och design på en publicerad produkt, efter att den anpassats i designstudion. */
+export async function customizeProduct(shopId: string, id: string, c: Customized) {
+  const list = await listProducts(shopId);
+  const p = list.find((x) => x.id === id);
+  if (!p) return null;
+  p.images = [{ url: c.mockupUrl, alt: p.images[0]?.alt ?? p.title, kind: "mockup" }];
+  p.custom = { design: c.design, color: c.color };
+  await writeFile(file(shopId), JSON.stringify(list, null, 2));
+  return p;
 }

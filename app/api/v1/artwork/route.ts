@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { produceArtwork } from "@/lib/artwork";
 import { CLUBS } from "@/lib/club";
+import { withBrand } from "@/lib/newwave/store";
 import { errorMessage } from "@/lib/openai";
 import { checkConcept, passesAll } from "@/lib/rules";
 import { ConceptSchema } from "@/lib/schemas";
@@ -12,8 +13,9 @@ const Body = z.object({ clubId: z.string(), concept: ConceptSchema, feedback: z.
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-  const club = CLUBS[parsed.data.clubId];
-  if (!club) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const listed = CLUBS[parsed.data.clubId];
+  if (!listed) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const club = await withBrand(listed);
 
   const checks = checkConcept(club, parsed.data.concept);
   if (!passesAll(checks)) {

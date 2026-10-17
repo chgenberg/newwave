@@ -46,8 +46,18 @@ Any people are fictional and generic, not famous. No logos, no brands, no readab
   ];
 }
 
-export function scenes(club: Club, concept: Concept): Scene[] {
+/** `garment` styr om modellen bär ett vitt eller svart plagg, så att fotot visar samma färg som produkten i butiken. */
+export function scenes(club: Club, concept: Concept, garment: Garment = "light"): Scene[] {
   if (club.kind === "brand") return brandScenes(club, concept);
+  const list = clubScenes(club, concept);
+  if (garment === "light") return list;
+  const black = (text: string) => text.replace(/plain white ((?:crew-neck )?(?:cotton )?t-shirt)/g, "plain black $1");
+  return list.map((s) => (s.id === "filt" ? s : { ...s, print: "dark", fabric: s.fabric.replace("white", "black"), prompt: black(s.prompt) }));
+}
+
+export type Garment = "light" | "dark";
+
+function clubScenes(club: Club, concept: Concept): Scene[] {
   const season = seasonFor(new Date()).title.toLowerCase();
   const signal = concept.signal.toLowerCase();
   const people = /fars dag/.test(signal)
@@ -109,13 +119,14 @@ export async function productPhotos(
   concept: Concept,
   prints: { light: string; dark: string },
   sceneIds: readonly string[] = ["livsstil", "produkt"],
+  garment: Garment = "light",
 ): Promise<ReviewedPhoto[]> {
   if (!hasOpenAIKey()) return [];
   const id = (url: string) => url.split("/").pop()!;
   const [light, dark] = await Promise.all([loadFile(id(prints.light)), loadFile(id(prints.dark))]);
   if (!light || !dark) throw new Error("Tryckfilerna hittades inte");
 
-  const list = scenes(club, concept).filter((s) => sceneIds.includes(s.id));
+  const list = scenes(club, concept, garment).filter((s) => sceneIds.includes(s.id));
   const results = await Promise.allSettled(
     list.map(async (s) => {
       const print = s.print === "light" ? light.data : dark.data;

@@ -1,0 +1,96 @@
+"use client";
+
+import { motion } from "motion/react";
+import Link from "next/link";
+import { useState, ViewTransition } from "react";
+import { nwProduct, type NwProduct } from "@/lib/newwave/catalog";
+import { fromPrice, sek } from "@/lib/newwave/reseller";
+import { ProductMock } from "./ProductMock";
+import { PLACEHOLDER, useCart } from "./cart";
+
+export function CartLink({ slug, preview }: { slug: string; preview?: boolean }) {
+  const [cart] = useCart(slug);
+  const n = preview ? 0 : cart.lines.length;
+  const cls = "inline-flex h-10 items-center gap-2 rounded-full bg-[var(--shop)] px-4 text-[13.5px] font-semibold text-[var(--shop-on)]";
+  const body = (
+    <>
+      Offertkorg
+      {n ? (
+        <motion.span key={n} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.55, duration: 0.5 }} className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--shop-accent)] px-1.5 text-[11px] text-[var(--shop-on-accent)]">
+          {n}
+        </motion.span>
+      ) : null}
+    </>
+  );
+  return preview ? (
+    <span className={cls}>{body}</span>
+  ) : (
+    <Link href={`/newwave/s/${slug}/offert`} className={cls}>
+      {body}
+    </Link>
+  );
+}
+
+export function ShopGrid({ slug, productIds, markup, preview }: { slug: string; productIds: string[]; markup: number; preview?: boolean }) {
+  const [cart] = useCart(slug);
+  const products = productIds.map(nwProduct).filter((p): p is NwProduct => Boolean(p));
+  const categories = [...new Set(products.map((p) => p.category))];
+  const [cat, setCat] = useState<string | null>(null);
+  const logo = (!preview && cart.logo) || PLACEHOLDER;
+  const shown = cat ? products.filter((p) => p.category === cat) : products;
+
+  if (!products.length) return <p className="rounded-2xl border border-dashed border-[var(--shop-line)] p-8 text-center text-[14px] opacity-60">Inga produkter valda än.</p>;
+
+  return (
+    <div>
+      {categories.length > 1 ? (
+        <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">
+          {[null, ...categories].map((c) => (
+            <button
+              key={c ?? "alla"}
+              type="button"
+              onClick={() => setCat(c)}
+              aria-pressed={cat === c}
+              className={`h-9 shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors ${cat === c ? "border-[var(--shop)] bg-[var(--shop)] text-[var(--shop-on)]" : "border-[var(--shop-line)] bg-white hover:border-[var(--shop)]"}`}
+            >
+              {c ?? "Alla"}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <ul className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @2xl:gap-4 @5xl:grid-cols-4">
+        {shown.map((p) => {
+          const mock = <ProductMock product={p} logo={logo.light} logoDark={logo.dark} className="rounded-2xl transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]" />;
+          const info = (
+            <>
+              <p className="mt-2.5 truncate text-[14px] font-semibold">{p.name}</p>
+              <p className="text-[12.5px] opacity-60">från {sek(fromPrice(p, markup))}/st</p>
+            </>
+          );
+          return (
+            <li key={p.id} className="group min-w-0">
+              {preview ? (
+                <div>
+                  {mock}
+                  {info}
+                </div>
+              ) : (
+                <Link href={`/newwave/s/${slug}/p/${p.id}`} className="block">
+                  <span className="relative block overflow-hidden rounded-2xl">
+                    <ViewTransition name={`nw-product-${p.id}`} share="nw-morph">
+                      {mock}
+                    </ViewTransition>
+                    <span aria-hidden className="absolute bottom-2.5 right-2.5 translate-y-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold opacity-0 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.25)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-hover:opacity-100">
+                      Designa →
+                    </span>
+                  </span>
+                  {info}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}

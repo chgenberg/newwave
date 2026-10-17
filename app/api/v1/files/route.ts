@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { saveFile } from "@/lib/store";
 
-const Body = z.object({ dataUrl: z.string().regex(/^data:(image\/png|video\/mp4|video\/webm)[^,]*;base64,/) });
-const EXT = { "image/png": "png", "video/mp4": "mp4", "video/webm": "webm" } as const;
+const Body = z.object({ dataUrl: z.string().regex(/^data:(image\/png|image\/jpeg|video\/mp4|video\/webm)[^,]*;base64,/) });
+const EXT = { "image/png": "png", "image/jpeg": "jpg", "video/mp4": "mp4", "video/webm": "webm" } as const;
 
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));

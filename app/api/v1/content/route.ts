@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { createContentPack, demoContentPack } from "@/lib/agents";
-import { productById } from "@/lib/catalog";
+import { catalogFor } from "@/lib/catalog";
 import { CLUBS } from "@/lib/club";
+import { withBrand } from "@/lib/newwave/store";
 import { publicOrigin } from "@/lib/origin";
 import { trackedLinks } from "@/lib/links";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
@@ -21,6 +22,7 @@ const Body = z.object({
     .min(1)
     .max(6),
   printPixels: z.object({ width: z.number(), height: z.number() }),
+  hub: z.boolean().optional(),
 });
 
 const slug = (s: string) =>
@@ -29,9 +31,10 @@ const slug = (s: string) =>
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Ogiltig förfrågan" }, { status: 400 });
-  const { clubId, signals, items, printPixels } = parsed.data;
-  const club = CLUBS[clubId];
-  if (!club) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const { clubId, signals, items, printPixels, hub } = parsed.data;
+  const listed = CLUBS[clubId];
+  if (!listed) return Response.json({ error: "Okänd klubb" }, { status: 404 });
+  const club = await withBrand(listed);
   if (items.some((i) => !passesAll(checkConcept(club, i.concept)))) {
     return Response.json({ error: "Ett motiv bryter mot klubbens regelbok" }, { status: 422 });
   }
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
   try {
     const results = await Promise.all(
       items.map(async ({ concept, printFiles }) => {
-        const products = concept.products.map(productById).filter((p) => p !== undefined);
+        const products = concept.products.map((id) => catalogFor(club.id, hub).find((p) => p.id === id)).filter((p) => p !== undefined);
         const dropId = `${slug(club.shortName)}-${today}-${slug(concept.title)}`;
         const shopUrl = `${club.intersportShopUrl}?drop=${dropId}`;
         const links = trackedLinks(shopUrl, dropId, club.id);

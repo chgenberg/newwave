@@ -1,14 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { CATALOG } from "./catalog";
+import { CATALOG, type Sellable } from "./catalog";
 import { generateJson } from "./openai";
 import type { Club, Concept, ContentPack, Signal } from "./types";
 
 const SUGGESTIONS = 6;
 
+const PRODUCT_RULE = `2–4 produkt-id ur listan, valda efter tillfället – inte samma standardprodukter varje gång.
+  Säsongen avgörs av tillfällets datum (dec–feb vinter, mar–maj vår, jun–aug sommar, sep–nov höst) och måste stämma med produktens säsong: vinter ger t.ex. mössa, buff, fleece, hoodie, termos och termosmugg; sommar ger t.ex. keps, vattenflaska, kylväska, picknickfilt och badhandduk. Välj aldrig en produkt utanför sin säsong.
+  Produkten ska också passa aktiviteten: inomhus i hallen (t-shirt, funktions-t-shirt, vattenflaska, sportbag), kiosk och fika (förkläde, mugg), funktionärer (väst, nyckelband), jul och tack (presentask, chokladask, mössa), ledare och sponsorer (piké, softshell, anteckningsbok, metallpenna).`;
+
 const describeSignal = (s: Signal) =>
   `- [${s.kind}] ${s.title}${s.date ? ` (${s.date}${s.daysUntil !== undefined ? `, om ${s.daysUntil} dagar` : ""})` : ""}: ${s.detail}`;
 
-const conceptSchema = (club: Club, signals: Signal[]) => ({
+const conceptSchema = (club: Club, signals: Signal[], catalog: Sellable[]) => ({
   type: "object",
   additionalProperties: false,
   required: ["concepts"],
@@ -31,7 +35,7 @@ const conceptSchema = (club: Club, signals: Signal[]) => ({
             type: "array",
             items: { type: "string", enum: [...club.palette, ...club.agent.satire.extraColors].map((c) => c.hex) },
           },
-          products: { type: "array", items: { type: "string", enum: CATALOG.map((p) => p.id) } },
+          products: { type: "array", items: { type: "string", enum: catalog.map((p) => p.id) } },
         },
       },
     },
@@ -72,7 +76,8 @@ Fält:
 - palette: 2–3 färgkoder ur paletten.
 - products: 2–3 produkt-id som passar motivet och årstiden.`;
 
-export async function createConcepts(club: Club, signals: Signal[], count = SUGGESTIONS): Promise<Concept[]> {
+export async function createConcepts(club: Club, signals: Signal[], count = SUGGESTIONS, catalog: Sellable[] = CATALOG): Promise<Concept[]> {
+  const seasonal = catalog.some((p) => p.seasons);
   const system = club.kind === "brand" ? brandConceptSystem(club, signals, count) : `Du är kreativ AD i Crafts innehållsmaskin för klubbmerch som trycks på beställning och säljs i klubbens butik hos Intersport.
 Du tar fram motiv som känns unika för just ${club.name} och som går att trycka med digitaltryck (DTG).
 
@@ -94,7 +99,7 @@ ${club.agent.satire.rules.map((r) => `- ${r}`).join("\n")}
 Tänk bästsäljare, inte reklam: varje förslag ska ha EN stark idé som supportrarna direkt känner igen, ett stort och tydligt huvudmotiv, en slogan man vill säga högt och en känsla av stolthet eller humor. Undvik det generiska (diagram, abstrakta former, vaga stämningar).
 
 ${count === signals.length ? `Ta fram exakt ${count} förslag – ett per signal, i samma ordning som signalerna. Gör dem tydligt olika varandra i stil och idé.` : `Ta fram exakt ${count} förslag. Sprid dem över signalerna – varje signal ska få minst ett förslag om det finns plats, trender och högtider nära i tid prioriteras.`}
-Variera stilen: humor/göteborgsk ordvits, retro, typografiskt minimalistiskt, illustrativt.
+Variera stilen: humor/${club.city === "Göteborg" ? "göteborgsk" : "lokal"} ordvits, retro, typografiskt minimalistiskt, illustrativt.
 Så använder du signalerna efter typ:
 - [match]: nästa match eller färsk seger – skarpast i tid, prioritera högt. Mot en rival passar satirläget.
 - [podcast]: läktarens egna uttryck och skämt – bästa underlaget för satir och ordvitsar.
@@ -106,23 +111,23 @@ Fält:
 - signal: exakt titeln på signalen förslaget bygger på.
 - title: kort internt namn på motivet.
 - slogan: texten som trycks, max ${club.maxSloganLength} tecken, på svenska.
-- story: 1–2 meningar om varför motivet träffar supportrarna just nu.
+- story: 1–2 meningar om varför motivet träffar supportrarna just nu. Nämn inte regelboken, tryckkrav eller loggor.
 - style: stilbeskrivning på engelska, 3–6 ord.
 - artDirection: bildbeskrivning på engelska till en bildmodell. Beskriv ENDAST illustrationen (objekt, komposition, formspråk). Nämn inga färger utanför paletten, ingen text, ingen logga, inga personer.
 - palette: 2–3 färgkoder ur paletten.
-- products: 2–3 produkt-id som passar motivet och årstiden.`;
+- products: ${seasonal ? PRODUCT_RULE : "2–3 produkt-id som passar motivet och årstiden."}`;
 
   const user = `Signaler just nu:
 ${signals.map(describeSignal).join("\n")}
 
 Produkter som finns:
-${CATALOG.map((p) => `- ${p.id}: ${p.name} (${p.garmentColor})`).join("\n")}`;
+${catalog.map((p) => `- ${p.id}: ${p.name} (${p.garmentColor})${p.seasons ? ` · ${p.seasons.length === 4 ? "året runt" : p.seasons.join(", ")} · ${p.use}` : ""}`).join("\n")}`;
 
   const out = await generateJson<{ concepts: Omit<Concept, "id">[] }>({
     system,
     user,
     schemaName: "concepts",
-    schema: conceptSchema(club, signals),
+    schema: conceptSchema(club, signals, catalog),
   });
   return out.concepts.slice(0, count).map((c) => ({ ...c, id: randomUUID() }));
 }
@@ -196,6 +201,9 @@ export async function createContentPack(
   const system = club.kind === "brand" ? brandContentSystem(club, today) : `Du skriver marknadsföring för ${club.name} ("${club.tagline}") som klubbens kansli själv ska publicera. Tonalitet: ${club.tone}
 Skriv på svenska. Produkterna trycks på beställning och finns i klubbens butik hos Intersport; varje köp stöttar klubben.
 Hitta inte på priser, rabatter eller datum utöver det som anges. Använd länken exakt som den står. Nämn inga spelares namn.
+Klubbens regelbok gäller även texterna:
+${club.rules.map((r) => `- ${r}`).join("\n")}
+
 - instagram.caption: max 300 tecken, 1–2 emojis. Skriv "Länk i bio" – ingen URL i texten. hashtags: 5–8 st utan #.
 - tiktok.caption: skriv "Länk i bio" – ingen URL.
 - Om signalen kommer från en nyhet: bygg på det som hänt, men citera inte artikeln och nämn inte tidningen.

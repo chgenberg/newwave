@@ -174,4 +174,76 @@ export const CIRCLE_K: Club = {
   },
 };
 
-export const CLUBS: Record<string, Club> = { [IFK_GOTEBORG.id]: IFK_GOTEBORG, [CIRCLE_K.id]: CIRCLE_K };
+export const ASA_IF: Club = {
+  id: "asa-if",
+  unlisted: true,
+  copy: {
+    loaderLines: [
+      "Åsa Idrottsförening sedan 1919",
+      "Bollarna pumpas på Åsavallen…",
+      "Pingisborden fälls upp…",
+      "Innebandyklubborna tejpas…",
+      "Kaffet är på i klubbstugan…",
+      "Svart och gult åker fram…",
+      "Åsa Cupen-tröjorna viks…",
+      "Havsbrisen drar in från västkusten…",
+    ],
+    loaderDone: "Heja Åsa!",
+  },
+  name: "Åsa IF",
+  shortName: "Åsa IF",
+  nicknames: ["Åsa", "Åsa IF", "Gulsvart"],
+  city: "Åsa",
+  arena: "Åsavallen",
+  founded: 1919,
+  newsQuery: '"Åsa IF" OR "Åsa Idrottsförening"',
+  tagline: "Åsa Idrottsförening sedan 1919",
+  tone: "Varm, stolt och inkluderande byaförening – fotboll, pingis och innebandy för alla åldrar. Glimten i ögat, aldrig kaxig mot andra klubbar.",
+  palette: [
+    { name: "Åsa-svart", hex: "#0D0C0C" },
+    { name: "Åsa-gul", hex: "#FDEF04" },
+    { name: "Vit", hex: "#FFFFFF" },
+  ],
+  crestColors: ["#0D0C0C", "#FDEF04"],
+  brand: {
+    crest: { farg: "skold-farg.png", svart: "skold-svart.png", vit: "skold-vit.png" },
+    fonts: { brand: "Oswald", web: "Open Sans" },
+    source: "asaif.com",
+  },
+  forbiddenColors: [],
+  bannedWords: ["hata", "hat", "död", "jävla", "fitta", "kuk", "bög", "idiot"],
+  maxSloganLength: 32,
+  rules: [
+    "Endast klubbens färger: Åsa-svart #0D0C0C, Åsa-gul #FDEF04 och vit.",
+    "Endast det officiella klubbmärket – i fullfärg, eller svart/vit vid tryck i en färg. Det får aldrig ändras, beskäras eller färgläggas om. AI ritar aldrig märke eller logga.",
+    "Inga barns eller spelares namn, ansikten eller nummer.",
+    "Alla sektioner ska kunna känna sig hemma: fotboll, pingis och innebandy.",
+    "Emojis bara i klubbens färger: 💛 och 🖤 – aldrig andra färgade hjärtan.",
+    "Inga svordomar, hat eller personangrepp – och aldrig elakt mot andra klubbar.",
+    "Slogan max 32 tecken, på svenska.",
+    "Motiv ska fungera i digitaltryck (DTG): max tre färger, tydliga former, inga fotografier.",
+  ],
+  intersportShopUrl: "https://www.intersport.se/klubbshop/asa-if",
+  contactPerson: { role: "Klubbens kansli", channel: "e-post" },
+  sources: {
+    website: "https://www.asaif.com",
+    weather: { place: "Åsa", lat: 57.35, lon: 12.12 },
+  },
+  agent: {
+    name: "Åsa-agenten",
+    mission:
+      "Skapa material och merch som får hela byn att vilja bära Åsa IF – och lägga det i klubbens butik och kanaler när kansliet har godkänt.",
+    guidelines: [
+      "Följ Åsa IF:s svart-gula profil utan undantag.",
+      "Använd klubbens egna ikoner: Å:et, 1919, Åsavallen, havet och västkusten, Åsa Cupen och föreningslivet i byn.",
+      "Allt ska kännas som något föräldrar, ledare och spelare vill bära – inte som reklam.",
+      "Publicera bara det granskaren ger minst 8 av 10 i säljbarhet, realism och varumärkespassning.",
+      "Aldrig barns namn, ansikten eller nummer. Aldrig hat, svordomar eller personangrepp.",
+    ],
+    satire: { allowed: false, when: "", rules: [], extraColors: [], maxPerRun: 0 },
+    review: { minMotifSales: 7, minSales: 8, minRealism: 8, minBrandFit: 8, maxRetries: 1 },
+    autopilot: { maxProductsPerRun: 3, maxRunsPerWeek: 2, publish: "godkännande" },
+  },
+};
+
+export const CLUBS: Record<string, Club> = { [IFK_GOTEBORG.id]: IFK_GOTEBORG, [CIRCLE_K.id]: CIRCLE_K, [ASA_IF.id]: ASA_IF };

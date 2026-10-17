@@ -200,6 +200,8 @@ export async function composeCampaignImage(opts: {
   height: number;
   font: string;
   primary: string;
+  /** Rubrikens färg; vit om den saknas. */
+  accent?: string;
   qr?: { dataUrl: string; caption: string };
 }) {
   await fontsReady();
@@ -245,7 +247,7 @@ export async function composeCampaignImage(opts: {
 
     drawCrest(ctx, left + crestW / 2, y, crestW, opts.primary, "#FFFFFF", font, true);
     y += crestW * 1.18 + H * 0.05;
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = opts.accent ?? "#FFFFFF";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.font = brandFont(px, font);
@@ -254,6 +256,7 @@ export async function composeCampaignImage(opts: {
       y += px;
     });
     y += H * 0.03;
+    ctx.fillStyle = "#FFFFFF";
     shrinkToWidth(ctx, opts.subline, maxW, subPx, SANS);
     ctx.globalAlpha = 0.9;
     ctx.fillText(opts.subline, left, y);
@@ -280,7 +283,7 @@ export async function composeCampaignImage(opts: {
     const crestW = W * 0.09;
     drawCrest(ctx, W / 2, H * 0.045, crestW, opts.primary, "#FFFFFF", font, true);
     const { lines, px } = fitLines(ctx, headline, W * 0.88, Math.round(W * 0.13), Math.round(W * 0.075), font);
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = opts.accent ?? "#FFFFFF";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.font = brandFont(px, font);

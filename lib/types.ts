@@ -4,6 +4,8 @@ export type Club = {
   id: string;
   /** "brand" = företagsvarumärke (t.ex. Circle K) i stället för en idrottsklubb. */
   kind?: "brand";
+  /** Finns bara i Next Wave-navet och visas inte i klubbväljaren. */
+  unlisted?: boolean;
   copy?: Partial<BrandCopy>;
   competitors?: string[];
   name: string;

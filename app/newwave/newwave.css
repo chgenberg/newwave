@@ -1,0 +1,442 @@
+.nw {
+  --nw-ink: #2b2d31;
+  --nw-ink-2: #3d4046;
+  --nw-text: #1e1f22;
+  --nw-muted: #6e7076;
+  --nw-faint: #a3a5aa;
+  --nw-line: #e4e4e1;
+  --nw-soft: #f4f4f2;
+  --nw-soft-2: #ececea;
+  --nw-white: #ffffff;
+  --nw-radius: 20px;
+  --nw-radius-sm: 12px;
+  --nw-shadow:
+    0 1px 2px rgba(30, 31, 34, 0.04), 0 8px 28px rgba(30, 31, 34, 0.06);
+  --nw-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  min-height: 100vh;
+  background: var(--nw-white);
+  color: var(--nw-text);
+  font-family:
+    var(--font-nw),
+    -apple-system,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  letter-spacing: -0.006em;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.nw :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+.nw :where(p) {
+  text-wrap: pretty;
+}
+
+.nw :where(.tabular-nums, td, [data-num]) {
+  font-variant-numeric: tabular-nums;
+}
+
+.nw ::selection {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+
+@layer base {
+  .nw a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+.nw :focus-visible {
+  outline: 2px solid var(--nw-ink);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@layer components {
+  .nw-container {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: 24px;
+  }
+
+  @media (min-width: 768px) {
+    .nw-container {
+      padding-inline: 40px;
+    }
+  }
+
+  .nw-kicker {
+    font-family: var(--font-nw-mono), ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--nw-muted);
+  }
+
+  .nw-mono {
+    font-family: var(--font-nw-mono), ui-monospace, monospace;
+    letter-spacing: 0;
+  }
+
+  .nw-h1 {
+    font-size: clamp(34px, 5vw, 60px);
+    line-height: 1.02;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    color: var(--nw-ink);
+  }
+
+  .nw-h2 {
+    font-size: clamp(26px, 3vw, 38px);
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--nw-ink);
+  }
+
+  .nw-h3 {
+    font-size: 19px;
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--nw-ink);
+  }
+
+  .nw-lead {
+    font-size: clamp(16px, 1.4vw, 19px);
+    line-height: 1.55;
+    color: var(--nw-muted);
+  }
+
+  .nw-small {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--nw-muted);
+  }
+
+  .nw-card {
+    background: var(--nw-white);
+    border: 1px solid var(--nw-line);
+    border-radius: var(--nw-radius);
+  }
+
+  .nw-soft {
+    background: var(--nw-soft);
+  }
+
+  .nw-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--nw-ink);
+    color: var(--nw-white) !important;
+    transition:
+      background 0.2s var(--nw-ease),
+      transform 0.2s var(--nw-ease);
+  }
+
+  .nw-btn:hover {
+    background: var(--nw-ink-2);
+  }
+
+  .nw-btn-ghost {
+    background: transparent;
+    color: var(--nw-ink) !important;
+    border: 1px solid var(--nw-line);
+  }
+
+  .nw-btn-ghost:hover {
+    background: var(--nw-soft);
+  }
+
+  .nw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--nw-line);
+    background: var(--nw-white);
+    color: var(--nw-ink);
+  }
+
+  .nw-chip-dark {
+    background: var(--nw-ink);
+    border-color: var(--nw-ink);
+    color: var(--nw-white);
+  }
+
+  .nw-chip {
+    transition:
+      background 0.2s var(--nw-ease),
+      border-color 0.2s var(--nw-ease),
+      color 0.2s var(--nw-ease),
+      transform 0.2s var(--nw-ease);
+  }
+
+  .nw-btn:active,
+  .nw-chip:active,
+  .nw-club-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Små textlänkar får en tryckyta på minst 40 px utan att layouten flyttas. */
+  .nw-hit {
+    position: relative;
+  }
+
+  .nw-hit::after {
+    content: "";
+    position: absolute;
+    inset: -10px -8px;
+  }
+
+  @media (pointer: coarse) {
+    .nw-chip {
+      height: 34px;
+    }
+
+    .nw-segment button {
+      height: 36px;
+    }
+  }
+
+  .nw-segment {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--nw-soft);
+    border: 1px solid var(--nw-line);
+  }
+
+  .nw-segment button {
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--nw-muted);
+    transition:
+      background 0.2s var(--nw-ease),
+      color 0.2s var(--nw-ease);
+  }
+
+  .nw-segment button[aria-pressed="true"] {
+    background: var(--nw-white);
+    color: var(--nw-ink);
+    box-shadow: 0 1px 3px rgba(30, 31, 34, 0.1);
+  }
+
+  .nw-hairline {
+    height: 1px;
+    background: var(--nw-line);
+  }
+
+  @keyframes nw-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Sidans block kommer in ett i taget. Inget ligger kvar som transform efteråt, så fasta lager (studion, köpraden) fungerar. */
+  .nw-page > * {
+    animation: nw-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .nw-page > :nth-child(2) { animation-delay: 50ms; }
+  .nw-page > :nth-child(3) { animation-delay: 100ms; }
+  .nw-page > :nth-child(4) { animation-delay: 150ms; }
+  .nw-page > :nth-child(5) { animation-delay: 200ms; }
+  .nw-page > :nth-child(n + 6) { animation-delay: 250ms; }
+
+  /* Länk med understrykning som ritas in från vänster och lämnar åt höger. */
+  .nw-link {
+    background: linear-gradient(currentColor, currentColor) no-repeat right bottom / 0 1px;
+    padding-bottom: 2px;
+    transition:
+      background-size 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      color 0.2s;
+  }
+  .nw-link:hover,
+  .nw-link:focus-visible,
+  .nw-link[aria-current="page"] {
+    background-position: left bottom;
+    background-size: 100% 1px;
+  }
+
+  .nw-marquee {
+    display: flex;
+    width: max-content;
+    animation: nw-marquee var(--nw-marquee-duration, 48s) linear infinite;
+  }
+  .nw-marquee-wrap:hover .nw-marquee {
+    animation-play-state: paused;
+  }
+  @keyframes nw-marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+.nw-club {
+  --club: var(--nw-ink);
+  --club-accent: var(--nw-ink);
+  --club-on-accent: var(--nw-white);
+  --club-soft: var(--nw-soft);
+
+  --brand: var(--club);
+  --accent: var(--club-accent);
+  --stripe-a: var(--club);
+  --stripe-b: var(--club-accent);
+  --bar-a: #3a3836;
+  --bar-b: var(--club);
+  --bar-bg: var(--nw-soft-2);
+  --font-brand: var(--font-club);
+}
+
+/* Craft, New Wave och återförsäljaren har inget eget typsnitt: rubrikerna sätts i navets grotesk, i gemener. */
+.nw-club--plain {
+  --club-case: none;
+  --club-tracking: -0.035em;
+}
+
+  .nw-club-heading {
+    font-family: var(--font-club, var(--font-nw)), sans-serif;
+    text-transform: var(--club-case, uppercase);
+    letter-spacing: var(--club-tracking, 0.01em);
+    font-weight: 600;
+  }
+
+  .nw-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid var(--nw-line);
+    background: var(--nw-white);
+    color: var(--nw-ink);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s var(--nw-ease);
+  }
+
+  .nw-input:focus {
+    border-color: var(--nw-ink);
+  }
+
+  @media (min-width: 640px) {
+    .nw-input {
+      font-size: 14px;
+    }
+  }
+
+  .nw-club-btn {
+    background: var(--club-accent);
+    color: var(--club-on-accent) !important;
+  }
+
+  .nw-club-btn:hover {
+    background: var(--club-accent);
+    filter: brightness(0.95);
+  }
+
+  .nw-fade {
+    animation: nw-fade 0.2s ease-out both;
+  }
+
+  @keyframes nw-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .nw-pop {
+    animation: nw-pop 0.32s var(--nw-ease) both;
+  }
+
+  @keyframes nw-pop {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.98);
+    }
+  }
+
+  .nw-flow {
+    stroke-dasharray: 6 10;
+    animation: nw-flow 1.6s linear infinite;
+  }
+
+  @keyframes nw-flow {
+    to {
+      stroke-dashoffset: -32;
+    }
+  }
+
+  @keyframes nw-load {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
+
+  .nw-map-node {
+    transition: opacity 0.25s var(--nw-ease);
+  }
+
+}
+
+/* Produktbilden i webbshoppen flyger från rutnätet till produktsidan. */
+::view-transition-group(.nw-morph) {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .nw-page > *,
+  .nw-marquee,
+  .nw-fade,
+  .nw-pop,
+  .nw-flow {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .nw:has(.nw-club) > footer {
+    padding-bottom: 96px;
+  }
+}
