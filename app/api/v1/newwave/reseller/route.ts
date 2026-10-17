@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { LogoError } from "@/lib/logo";
-import { SHOP_CATALOG, type Reseller } from "@/lib/newwave/reseller";
+import { SHOP_CATALOG, answersTo, type Reseller } from "@/lib/newwave/reseller";
 import { importSite, isHost, siteHost } from "@/lib/newwave/resellerImport";
 import { CURRENT_RESELLER, getReseller, quotesFor, updateShop } from "@/lib/newwave/shopState";
 
@@ -17,7 +17,25 @@ const Patch = z
     logo: asset,
     logoDark: asset,
     theme: z.object({ primary: hex, accent: hex, background: hex }),
-    texts: z.object({ shopName: text(60).min(2), tagline: text(120), heroTitle: text(90), heroText: text(300), about: text(600), email: text(120), phone: text(40) }),
+    brandbook: z.object({
+      file: text(120),
+      colors: z.array(z.object({ name: text(40), hex })).max(6),
+      fonts: z.array(text(60)).max(6),
+      tone: text(300),
+      rules: z.array(text(200)).max(6),
+    }),
+    texts: z.object({
+      shopName: text(60).min(2),
+      tagline: text(120),
+      heroTitle: text(90),
+      heroText: text(300),
+      aboutTitle: text(80).optional(),
+      about: text(1500),
+      email: text(120),
+      phone: text(40),
+      address: text(160).optional(),
+      hours: text(120).optional(),
+    }),
     products: z.array(z.enum(SHOP_CATALOG.map((p) => p.id) as [string, ...string[]])).max(SHOP_CATALOG.length),
     markup: z.number().min(-20).max(60),
   })
@@ -36,11 +54,20 @@ export async function GET() {
   return Response.json({ reseller, quotes: await quotesFor(reseller.id) });
 }
 
-function update(fn: (r: Reseller) => void) {
+const slugOf = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+
+function update(fn: (r: Reseller, all: Reseller[]) => void) {
   return updateShop((s) => {
     const r = s.resellers.find((x) => x.id === CURRENT_RESELLER);
     if (!r) return null;
-    fn(r);
+    fn(r, s.resellers);
     r.updatedAt = new Date().toISOString();
     return r;
   });
@@ -83,16 +110,24 @@ export async function POST(req: Request) {
   const found = await importSite(host).catch((e) => (e instanceof LogoError ? e : new LogoError("Kunde inte hämta webbplatsen.")));
   if (found instanceof LogoError) return Response.json({ error: found.message }, { status: 422 });
 
-  const r = await update((r) => {
+  const r = await update((r, all) => {
     r.website = host;
     r.importedFrom = host;
     if (found.name) r.name = found.name.slice(0, 60);
-    if (found.city) r.city = found.city;
+    const base = slugOf(r.name) || r.id;
+    let slug = base;
+    for (let i = 2; all.some((x) => x !== r && answersTo(x, slug)); i++) slug = `${base}-${i}`;
+    if (slug !== r.slug) {
+      r.formerSlugs = [...new Set([r.slug, ...(r.formerSlugs ?? [])])].filter((s) => s !== slug).slice(0, 20);
+      r.slug = slug;
+    }
+    r.city = found.city ?? "";
     if (found.logo) {
       r.logo = found.logo;
       r.logoDark = found.logoDark;
     }
     if (found.theme) r.theme = found.theme;
+    delete r.brandbook;
     r.texts = { shopName: r.name, tagline: "", heroTitle: "", heroText: "", about: "", email: "", phone: "", ...found.texts };
     r.products = found.products;
     if (found.markup !== undefined) r.markup = found.markup;

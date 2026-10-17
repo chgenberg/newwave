@@ -57,11 +57,16 @@ export function ApprovalActions({
           {published ? `${published} produkter ligger nu i klubbens butik.` : "Materialet är skickat vidare till New Wave via API."}
           {weekly ? " Inläggen, bannern och nyhetsbrevet finns i zip-filen – lägg upp dem när det passar er." : ""}
         </p>
-        {shopCount ? (
-          <Link href="/newwave/klubb/butik" className="nw-btn nw-club-btn mt-4">
-            Se i butiken
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+          {shopCount ? (
+            <Link href="/newwave/klubb/butik" className="nw-btn nw-club-btn">
+              Se i butiken
+            </Link>
+          ) : null}
+          <Link href="/newwave/craft" className="text-[14px] font-medium text-white underline underline-offset-4">
+            Så ser Craft det →
           </Link>
-        ) : null}
+        </div>
       </div>
     );
   }

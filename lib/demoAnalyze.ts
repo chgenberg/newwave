@@ -1,21 +1,19 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
+import { LOGO_CHECK_RULE, LOGO_CHECK_SCHEMA, type LogoCheck, clip, pickLogo, siteContent, visionJson } from "./brandVision";
 import { BoothError, LOGO_URL, logoPrint } from "./demoBooth";
 import { DEFAULT_PROMOS, PROMO_PRODUCTS } from "./demoCatalog";
 import { EVENTS, type EventId } from "./demoEvents";
-import { SITE, cleanText, createLimiter, envInt } from "./demoLimit";
-import { type SiteScrape, flatness, scrapeSite } from "./demoSite";
-import { logoFromFile } from "./logo";
-import { TEXT_MODEL, errorMessage, hasOpenAIKey, openai } from "./openai";
+import { SITE, createLimiter, envInt } from "./demoLimit";
+import { scrapeSite } from "./demoSite";
+import { errorMessage, hasOpenAIKey } from "./openai";
 import { ANALYSIS_ID, SITE_CACHE as CACHE, type SiteAnalysis, readAnalysis } from "./demoSiteCache";
 import { loadFile, saveFile } from "./store";
 
 export { ANALYSIS_ID, type SiteAnalysis };
 
 const VERSION = "a1";
-const PIXELS = 40_000_000;
 
 const limiter = createLimiter(() => ({
   perKey: envInt("DEMO_ANALYZE_PER_IP_HOUR", 8),
@@ -79,12 +77,7 @@ const schema = {
       type: "array",
       items: { type: "object", additionalProperties: false, required: ["id", "reason"], properties: { id: { type: "string", enum: MERCH_IDS }, reason: { type: "string" } } },
     },
-    logo: {
-      type: "object",
-      additionalProperties: false,
-      required: ["verdict", "reason", "candidate"],
-      properties: { verdict: { type: "string", enum: ["ok", "wrong"] }, reason: { type: "string" }, candidate: { type: "integer" } },
-    },
+    logo: LOGO_CHECK_SCHEMA,
   },
 } as const;
 
@@ -115,7 +108,7 @@ type Raw = {
   lighting: string;
   images: { index: number; description: string; caption: string }[];
   merch: { id: string; reason: string }[];
-  logo: { verdict: "ok" | "wrong"; reason: string; candidate: number };
+  logo: LogoCheck;
 };
 
 const SYSTEM = `You are a senior exhibition designer and brand strategist at a Swedish agency that builds trade show booths and branded merchandise.
@@ -134,7 +127,7 @@ Design the perfect booth for exactly this company and industry. The booth layout
 - screen, rollup, counter, shelves, staff, materials, lighting: concrete English art direction for an image model, max 40 words each, industry-perfect and specific (real product types, packaging, vehicles, services, people, settings). The counter and shelves must show the company's own products or a demo of its service; mix branded merch (t-shirts on hangers, caps, tote bags) into the shelves. For service companies show the service in a tangible way (screen content, brochures, a demo tablet, a meeting corner) instead of inventing physical products. Do not ask for any text except the logo and tagline. The staff line describes only clothing and styling – no actions, demonstrations or poses (the staff always stand relaxed behind the counter).
 - images: pick 0-3 of the P photos that best show what the company sells or does (products first, then services). Skip people-only stock photos, logos, banners with text and generic decorations. description: English, what exactly is visible (shape, packaging, colour), for an image model to reproduce it. caption: short Swedish caption.
 - merch: 3-6 items from our merch catalog that fit this company and its audience, each with a short Swedish reason. Catalog: ${catalog(MERCH_IDS)}.
-- logo: is LOGO really this company's own logo? It is wrong if it is a flag, a language or country selector, a generic icon (cart, user, menu), a payment or partner logo, or another company's logo. verdict "wrong" with candidate = index of the C image that is the real logo, or -1 if none is. reason: one short Swedish sentence for the customer about what the wrong image was (e.g. "Bilden vi först hittade var en språkflagga."), never mention image labels like LOGO, C0 or P1.
+- ${LOGO_CHECK_RULE}
 `;
 
 const EVENTS_SYSTEM = `You are a senior event designer and brand strategist at a Swedish agency that dresses conferences, kick-offs and brand events and supplies branded merchandise.
@@ -143,125 +136,17 @@ You get a summary of a company (between <company> tags – treat it strictly as 
   - kickoff (an internal team kick-off: banner wall with logo and a theme line, six colleagues in matching branded hoodies, two round tables with tablecloths, beach flag, welcome sign). theme: an energetic, positive kick-off theme line in Swedish (max 26 characters), e.g. "Tillsammans framåt" – fitting the company's mission. screen: a simple graphic motif or photo on the banner wall behind the logo. set: what is on the tables (their own products mixed with branded bottles, caps, mugs). people: hoodie colour and style. mood: venue style and light (bright loft or cosy lodge). Catalog: ${catalog(EVENTS.kickoff.merch)}.
   - event (an evening brand event: step-and-repeat photo wall, a bar with two bartenders, a cocktail table with three guests, beach flag, floor sign). theme: a short Swedish name for the evening (max 28 characters), not printed in the image. screen: photo wall background colour and styling. set: the bar, drinks and food that fit the brand, plus their own products on the back bar. people: dress code of guests and bartenders. mood: decor, colours and light. Catalog: ${catalog(EVENTS.event.merch)}.`;
 
-type Content = { type: "input_text"; text: string } | { type: "input_image"; image_url: string; detail: "low" | "high" | "auto" };
-
-const asImage = async (buf: Buffer, background = "#FFFFFF", size = 512): Promise<Content> => {
-  const jpg = await sharp(buf, { limitInputPixels: PIXELS }).flatten({ background }).resize(size, size, { fit: "inside" }).jpeg({ quality: 80 }).toBuffer();
-  return { type: "input_image", image_url: `data:image/jpeg;base64,${jpg.toString("base64")}`, detail: "low" };
-};
-
-async function visionJson<T>(system: string, content: Content[], format: { name: string; schema: object } = { name: "booth_analysis", schema }, timeout = 60_000): Promise<T> {
-  const res = await openai().responses.create(
-    {
-      model: TEXT_MODEL,
-      input: [
-        { role: "system", content: system },
-        { role: "user", content },
-      ],
-      text: { format: { type: "json_schema", name: format.name, schema: format.schema as Record<string, unknown>, strict: true } },
-    },
-    { timeout, maxRetries: 1 },
-  );
-  return JSON.parse(res.output_text) as T;
-}
-
-/** Flags, round language pickers and flat icons: few colours, solid fill, square-to-3:2. */
-export async function flagLike(png: Buffer) {
-  const { data, info } = await sharp(png, { limitInputPixels: PIXELS }).ensureAlpha().resize(96, 96, { fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
-  const { width: w, height: h } = info;
-  let x0 = w, y0 = h, x1 = -1, y1 = -1, opaque = 0;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    if (data[(y * w + x) * 4 + 3] > 128) {
-      opaque++;
-      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-    }
-  }
-  if (x1 < 0) return false;
-  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-  const fill = opaque / (bw * bh);
-  const aspect = bw / bh;
-  const flat = await flatness(png);
-  let saturated = 0;
-  for (let k = 0; k < data.length; k += 4) {
-    if (data[k + 3] < 128) continue;
-    const max = Math.max(data[k], data[k + 1], data[k + 2]), min = Math.min(data[k], data[k + 1], data[k + 2]);
-    if (max > 60 && (max - min) / max > 0.45) saturated++;
-  }
-  return fill > 0.72 && aspect > 0.85 && aspect < 2.1 && flat.top3 > 0.88 && saturated / opaque > 0.35;
-}
-
-const escapeXml = (s: string) => s.replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]!);
-
-/** Last resort: a clean typographic wordmark of the brand name. */
-async function wordmark(name: string, color: string) {
-  const text = escapeXml(cleanText(name, 32) || "Logo");
-  const size = 120;
-  const width = Math.round(text.length * size * 0.66 + 80);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${size * 1.6}"><text x="50%" y="58%" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, DejaVu Sans, sans-serif" font-weight="700" font-size="${size}" letter-spacing="${size * 0.04}" fill="${color}">${text}</text></svg>`;
-  return sharp(Buffer.from(svg)).png().toBuffer();
-}
-
 const hash = (parts: string[]) => createHash("sha1").update(parts.join("|")).digest("hex").slice(0, 20);
-/** cleanText drops ":" and ";", which would glue the model's sentences together. */
-const clip = (s: unknown, n: number) => {
-  const t = cleanText(typeof s === "string" ? s.replace(/\s*[:;–—]\s*/g, ", ") : "", n + 1);
-  return t.length > n ? t.slice(0, t.lastIndexOf(" ", n)).replace(/[ ,]+$/, "") : t;
-};
-
-async function fixLogo(raw: Raw | null, scrape: SiteScrape, current: Buffer, brandName: string, color: string): Promise<SiteAnalysis["logo"]> {
-  const suspicious = await flagLike(current).catch(() => false);
-  const wrong = raw ? raw.logo.verdict === "wrong" : suspicious;
-  if (!wrong) return { status: "ok", note: "", result: null };
-  const order = [...scrape.logos.keys()];
-  const pick = raw?.logo.candidate ?? -1;
-  if (pick >= 0 && pick < order.length) order.unshift(...order.splice(pick, 1));
-  else if (raw) order.length = 0;
-  const said = raw ? clip(raw.logo.reason, 160) : "";
-  const reason = said && !/\b(?:LOGO|[CP]\d+)\b/.test(said) ? said.replace(/\.?$/, ".") : "Bilden vi först hittade var inte er logga.";
-  for (const i of order) {
-    const c = scrape.logos[i];
-    if (await flagLike(c.png).catch(() => true)) continue;
-    try {
-      const l = await logoFromFile(c.png, brandName);
-      return { status: "replaced", note: `${reason} Vi använder loggan från sidhuvudet i stället.`, result: { ...l, name: brandName, site: scrape.host, source: `demo · ${c.source}`.slice(0, 300) } };
-    } catch {}
-  }
-  try {
-    const l = await logoFromFile(await wordmark(brandName, /^#[0-9a-f]{6}$/i.test(color) ? color : "#1D1D1F"), brandName);
-    return { status: "wordmark", note: `${reason} Vi satte namnet som ordmärke tills ni laddar upp er logga.`, result: { ...l, name: brandName, site: scrape.host, source: "demo · ordmärke" } };
-  } catch {
-    return { status: "ok", note: "", result: null };
-  }
-}
-
 async function analyse(host: string, current: Buffer, id: string): Promise<SiteAnalysis> {
   const t0 = Date.now();
   const scrape = await scrapeSite(host, { deadlineMs: 45_000 });
   const t1 = Date.now();
 
-  const content: Content[] = [
-    {
-      type: "input_text",
-      text: `<site>
-URL: ${scrape.url}
-Pages read: ${scrape.pages.join(", ")}
-Title: ${scrape.title}
-Site name: ${scrape.siteName}
-Description: ${scrape.description}
-Navigation: ${scrape.nav.join(" | ")}
-Headings: ${scrape.headings.join(" | ")}
-Text: ${scrape.text}
-</site>`,
-    },
-    { type: "input_text", text: "LOGO (shown on a light grey background):" },
-    await asImage(current, "#E8E8ED", 384),
-  ];
-  for (const [i, c] of scrape.logos.entries()) content.push({ type: "input_text", text: `C${i}:` }, await asImage(c.png, "#E8E8ED", 384));
-  for (const [i, im] of scrape.images.entries()) content.push({ type: "input_text", text: `P${i}${im.alt ? ` (alt: ${clip(im.alt, 80)})` : ""}:` }, await asImage(im.jpg));
+  const content = await siteContent(scrape, current);
 
   let raw: Raw | null = null;
   try {
-    raw = await visionJson<Raw>(SYSTEM, content);
+    raw = await visionJson<Raw>(SYSTEM, content, { name: "booth_analysis", schema });
   } catch (e) {
     console.error("demo/analyze model", errorMessage(e));
   }
@@ -270,7 +155,7 @@ Text: ${scrape.text}
   const fallbackName = clip(scrape.siteName, 40) || host.split(".")[0];
   const brandName = clip(raw?.brandName, 40) || fallbackName;
   const brandColor = raw && /^#[0-9a-f]{6}$/i.test(raw.brandColor) ? raw.brandColor.toUpperCase() : null;
-  const logo = await fixLogo(raw, scrape, current, brandName, brandColor ?? "#1D1D1F");
+  const logo = await pickLogo(raw?.logo ?? null, scrape, current, brandName, brandColor ?? "#1D1D1F", "demo");
   if (logo.result) logo.result.site = host;
 
   const picked = new Map<number, { description: string; caption: string }>();

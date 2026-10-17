@@ -94,9 +94,9 @@ export default async function ResellerHome() {
         </div>
         <Link href="/newwave/shop/offerter" className="flex min-w-0 flex-col justify-center rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-5 transition-colors hover:border-[var(--nw-ink)]">
           <p className="text-[12px] text-[var(--nw-muted)]">Så funkar det</p>
-          <p className="nw-club-heading mt-0.5 text-[19px] leading-tight text-[var(--club)]">Kunden designar, ni skickar offerten</p>
+          <p className="nw-club-heading mt-0.5 text-[19px] leading-tight text-[var(--club)]">Kunden designar och beställer</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--nw-muted)]">
-            Företagskunden laddar upp sin logga i er butik och begär offert. Ni granskar och skickar. När kunden godkänner går ordern till New Wave, som trycker och levererar.
+            Företagskunden laddar upp sin logga i er butik och beställer direkt till ert pris – eller begär offert, som ni granskar och skickar. Ordern går till New Wave, som trycker och levererar i ert namn.
           </p>
         </Link>
       </div>
@@ -114,7 +114,7 @@ export default async function ResellerHome() {
                     <p className="truncate text-[14.5px] font-medium text-[var(--nw-ink)]">{q.company.name}</p>
                   </div>
                   <p className="hidden shrink-0 text-[13.5px] font-semibold text-[var(--nw-ink)] sm:block">{sek(q.totalSek)}</p>
-                  <StatusPill status={q.status} />
+                  <StatusPill status={q.status} direct={q.direct} />
                 </Link>
               </li>
             ))}

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { LogoResult } from "@/lib/logo";
-import { type BrandKit, type Brandbook, DEFAULT_KIT, MAX_COLORS, isHex } from "@/lib/newwave/brandKit";
+import { type BrandKit, type Brandbook, DEFAULT_KIT, MAX_COLORS, isHex, isOwnKit } from "@/lib/newwave/brandKit";
 import { PLACEHOLDER } from "../shop/cart";
 import { call, readDataUrl } from "../shop/api";
 
@@ -20,12 +20,18 @@ const picked = (e: React.ChangeEvent<HTMLInputElement>, then: (f: File) => void)
 const withColor = (colors: BrandKit["colors"], hex: string, name: string) =>
   colors.some((c) => c.hex === hex) ? colors : [{ name, hex }, ...colors].slice(0, MAX_COLORS);
 
-/** Varumärket: brandbook som AI:n läser, logga från fil eller webbplats, och egna färger. */
-export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: BrandKit) => void }) {
+/**
+ * Varumärket: brandbook som AI:n läser, logga från fil eller webbplats, och egna färger. `home` är profilen från servern
+ * (klubbens eller återförsäljarens); en ny logga eller brandbook ersätter den helt, och går att byta tillbaka.
+ */
+export function BrandTools({ kit, home, onChange }: { kit: BrandKit; home?: BrandKit; onChange: (next: BrandKit) => void }) {
   const [busy, setBusy] = useState<"" | "pdf" | "logo" | "url">("");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
-  const [url, setUrl] = useState(kit.site);
+  const own = isOwnKit(kit);
+  const [url, setUrl] = useState(own ? "" : kit.site);
+  const from = own ? DEFAULT_KIT : kit;
+  const edit = (next: BrandKit) => onChange(kit.source.kind === "profil" ? { ...next, source: { kind: "justerad", label: "Justerad här i studion" } } : next);
   const pdf = useRef<HTMLInputElement>(null);
   const logoFile = useRef<HTMLInputElement>(null);
 
@@ -45,12 +51,12 @@ export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: 
   const applyLogo = (logo: LogoResult, source: BrandKit["source"]) => {
     const hex = logo.color?.toUpperCase();
     onChange({
-      ...kit,
-      name: kit.source.kind === "standard" || kit.name === DEFAULT_KIT.name ? logo.name.split(/\s+[-–—|·:]\s+/)[0].trim() || kit.name : kit.name,
+      ...from,
+      name: from.source.kind === "standard" || from.name === DEFAULT_KIT.name ? logo.name.split(/\s+[-–—|·:]\s+/)[0].trim() || from.name : from.name,
       logo: logo.light,
       logoDark: logo.dark,
-      site: logo.site || kit.site,
-      colors: isHex(hex) && kit.source.kind !== "brandbook" ? withColor(kit.colors, hex, "Märkesfärg") : kit.colors,
+      site: logo.site || from.site,
+      colors: isHex(hex) && from.source.kind !== "brandbook" ? withColor(from.colors, hex, "Märkesfärg") : from.colors,
       source,
     });
   };
@@ -59,13 +65,15 @@ export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: 
     run("pdf", async () => {
       if (file.size > 20_000_000) throw new Error("PDF:en är större än 20 MB.");
       const book = await call<Brandbook>("/api/v1/newwave/brandbook", { dataUrl: await readDataUrl(file), name: file.name });
-      onChange({ ...kit, ...book, name: book.name || kit.name, source: { kind: "brandbook", label: file.name } });
-      return `Läste ${book.colors.length} färger${book.fonts.length ? `, ${book.fonts.length} typsnitt` : ""} och ${book.rules.length} regler ur profilen.${kit.logo ? "" : " Lägg till loggan nedan."}`;
+      onChange({ ...from, ...book, name: book.name || from.name, source: { kind: "brandbook", label: file.name } });
+      return `Läste ${book.colors.length} färger${book.fonts.length ? `, ${book.fonts.length} typsnitt` : ""} och ${book.rules.length} regler ur profilen.${from.logo ? "" : " Lägg till loggan nedan."}`;
     });
 
   const readLogo = (file: File) =>
     run("logo", async () => {
-      const logo = await call<LogoResult>("/api/v1/logo", { dataUrl: await readDataUrl(file), name: kit.name });
+      const named = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+      const name = own && named ? named[0].toUpperCase() + named.slice(1) : from.name;
+      const logo = await call<LogoResult>("/api/v1/logo", { dataUrl: await readDataUrl(file), name });
       applyLogo(logo, { kind: "logga", label: file.name });
       return "Bakgrunden är borttagen och loggan finns i ljust och mörkt utförande.";
     });
@@ -77,9 +85,9 @@ export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: 
       return `Hämtade loggan${isHex(logo.color) ? " och märkesfärgen" : ""} från ${logo.site || url.trim()}.`;
     });
 
-  const setColor = (i: number, hex: string) => onChange({ ...kit, colors: kit.colors.map((c, j) => (j === i ? { ...c, hex: hex.toUpperCase() } : c)) });
-  const removeColor = (i: number) => onChange({ ...kit, colors: kit.colors.filter((_, j) => j !== i) });
-  const addColor = () => onChange({ ...kit, colors: [...kit.colors, { name: `Färg ${kit.colors.length + 1}`, hex: "#3A6B4F" }] });
+  const setColor = (i: number, hex: string) => edit({ ...kit, colors: kit.colors.map((c, j) => (j === i ? { ...c, hex: hex.toUpperCase() } : c)) });
+  const removeColor = (i: number) => edit({ ...kit, colors: kit.colors.filter((_, j) => j !== i) });
+  const addColor = () => edit({ ...kit, colors: [...kit.colors, { name: `Färg ${kit.colors.length + 1}`, hex: "#3A6B4F" }] });
 
   return (
     <div className="grid gap-5">
@@ -91,7 +99,7 @@ export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: 
             <img src={kit.logo ?? PLACEHOLDER.light} alt="" className="max-h-full max-w-full object-contain" />
           </span>
           <span className="grid min-w-0 flex-1 gap-0.5">
-            <input value={kit.name} onChange={(e) => onChange({ ...kit, name: e.target.value.slice(0, 80) })} aria-label="Varumärkets namn" className="w-full min-w-0 bg-transparent text-[14px] font-semibold outline-none" />
+            <input value={kit.name} onChange={(e) => edit({ ...kit, name: e.target.value.slice(0, 80) })} aria-label="Varumärkets namn" className="w-full min-w-0 bg-transparent text-[14px] font-semibold outline-none" />
             <span className={`flex items-center gap-1.5 truncate ${HINT}`}>
               {kit.source.kind !== "standard" ? (
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-[#2F7D4F]" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
@@ -102,6 +110,11 @@ export function BrandTools({ kit, onChange }: { kit: BrandKit; onChange: (next: 
             </span>
           </span>
         </div>
+        {home && kit.source.kind !== "profil" ? (
+          <button type="button" onClick={() => onChange(home)} className={`mt-2 underline underline-offset-4 hover:text-[var(--ink)] ${HINT}`}>
+            Tillbaka till {home.name}
+          </button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-2">

@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { nwProduct } from "./catalog";
 import { defaultDesign, METHOD_INFO, type Method } from "./marking";
-import { agreedLine, type CustomerShop, priceQuote, type Quote, type QuoteEvent, type QuoteLine, type QuoteLineInput, type QuoteStatus, type Reseller } from "./reseller";
+import { answersTo, priceQuote, type Quote, type QuoteEvent, type QuoteLineInput, type QuoteStatus, type Reseller } from "./reseller";
 import { readData, writeData } from "./workspace";
 
-/** Återförsäljarnas butiker, kundbutiker och offerter. Demodata skapas första gången. */
+/** Återförsäljarnas butiker och offerter. Demodata skapas första gången. */
 
-type State = { resellers: Reseller[]; quotes: Quote[]; customerShops: CustomerShop[] };
+type State = { resellers: Reseller[]; quotes: Quote[] };
 
-const FILE = "newwave/shop/state.json";
+const FILE = "newwave/shop/butiker.json";
 
 /** Återförsäljaren som är inloggad i demon. */
 export const CURRENT_RESELLER = "vastkust-profil";
@@ -34,10 +34,13 @@ function seedResellers(): Reseller[] {
         shopName: "Västkust Profil",
         tagline: "Profilkläder och merch till företag i Halland",
         heroTitle: "Er logga på allt ni bär och delar ut",
-        heroText: "Ladda upp loggan, se den på produkten i 3D och få en offert direkt. Vi trycker i Sverige och levererar på två veckor.",
-        about: "Vi har klätt företag, föreningar och event på västkusten sedan 2009. Ni får en kontaktperson, ett provtryck innan vi kör och leverans till dörren.",
+        heroText: "Ladda upp loggan, se den på produkten i 3D och beställ direkt – eller be om en offert. Vi trycker i Sverige och levererar på två veckor.",
+        aboutTitle: "Profilkläder från västkusten sedan 2009",
+        about: "Vi har klätt företag, föreningar och event på västkusten sedan 2009. Ni får en kontaktperson, ett provtryck innan vi kör och leverans till dörren.\n\nVi är sex personer i Kungsbacka som hellre ringer än mejlar. Hör av er om ni vill ha hjälp att välja plagg, eller titta förbi i butiken och känn på materialen.",
         email: "order@vastkustprofil.se",
         phone: "0300-12 34 56",
+        address: "Storgatan 14, 434 30 Kungsbacka",
+        hours: "Vardagar 8–17",
       },
       products: ["p001", "p002", "p004", "p005", "p007", "p009", "p011", "p013", "p016", "p019", "p021", "p024", "p026", "p029", "p031", "p034", "p037"],
       markup: 10,
@@ -98,6 +101,7 @@ type SeedQuote = {
   ageDays: number;
   needBy: number;
   message?: string;
+  direct?: true;
   lines: { productId: string; method: Method; colors?: number; sizes: Record<string, number> }[];
 };
 
@@ -163,6 +167,7 @@ const SEED_QUOTES: SeedQuote[] = [
     status: "produktion",
     ageDays: 16,
     needBy: 5,
+    direct: true,
     lines: [{ productId: "p019", method: "gravyr", colors: 1, sizes: { "One size": 120 } }],
   },
   {
@@ -219,7 +224,10 @@ function seedQuotes(resellers: Reseller[]): Quote[] {
       }),
       r.markup,
     );
-    const events = EVENTS[s.status](s).map((e) => (e.who === "Västkust Profil" ? { ...e, who: r.name } : e));
+    const events = s.direct
+      ? [{ at: iso(-s.ageDays), who: s.company.contact, text: "Beställde direkt i webbshoppen. Ordern gick till New Wave." }, ...EVENTS[s.status](s).slice(3)]
+      : EVENTS[s.status](s).map((e) => (e.who === "Västkust Profil" ? { ...e, who: r.name } : e));
+    const quoted = s.status !== "ny" && !s.direct;
     return {
       id: `Q-${2041 + i}`,
       token: newToken(),
@@ -230,9 +238,10 @@ function seedQuotes(resellers: Reseller[]): Quote[] {
       ...priced,
       status: s.status,
       createdAt: iso(-s.ageDays),
-      validUntil: s.status === "ny" ? undefined : date(-s.ageDays + 31),
-      reply: s.status === "ny" ? undefined : `Hej ${s.company.contact.split(" ")[0]}! Här är offerten. Hör av er om ni vill ändra något.`,
+      validUntil: quoted ? date(-s.ageDays + 31) : undefined,
+      reply: quoted ? `Hej ${s.company.contact.split(" ")[0]}! Här är offerten. Hör av er om ni vill ändra något.` : undefined,
       events,
+      ...(s.direct ? { direct: true } : {}),
     };
   });
 }
@@ -245,12 +254,9 @@ async function load(): Promise<State> {
     const raw = await readData(FILE);
     if (raw) state = JSON.parse(raw) as State;
   } catch {}
-  if (state?.customerShops) return state;
-  if (!state) {
-    const resellers = seedResellers();
-    state = { resellers, quotes: seedQuotes(resellers), customerShops: [] };
-  }
-  seedCustomerShops(state);
+  if (state) return state;
+  const resellers = seedResellers();
+  state = { resellers, quotes: seedQuotes(resellers) };
   await save(state);
   return state;
 }
@@ -276,7 +282,8 @@ export async function getReseller(id: string) {
 }
 
 export async function getResellerBySlug(slug: string) {
-  return (await load()).resellers.find((r) => r.slug === slug) ?? null;
+  const { resellers } = await load();
+  return resellers.find((r) => r.slug === slug) ?? resellers.find((r) => answersTo(r, slug)) ?? null;
 }
 
 export async function quotesFor(resellerId: string) {
@@ -292,8 +299,11 @@ export async function quoteByToken(token: string) {
 
 export const event = (who: string, text: string): QuoteEvent => ({ at: new Date().toISOString(), who, text });
 
-/** `studio` när återförsäljaren själv gjort offerten i designstudion, annars kom förfrågan från webbshoppen. */
-export async function createQuote(resellerId: string, input: Pick<Quote, "company" | "needBy" | "message"> & { lines: QuoteLineInput[]; source?: "studio" }) {
+/**
+ * `studio` när återförsäljaren själv gjort offerten i designstudion, `order` när kunden beställde direkt i webbshoppen
+ * till butikens pris (då är det en order hos New Wave direkt), annars är det en offertförfrågan från webbshoppen.
+ */
+export async function createQuote(resellerId: string, input: Pick<Quote, "company" | "needBy" | "message"> & { lines: QuoteLineInput[]; source?: "studio" | "order" }) {
   return updateShop((s) => {
     const r = s.resellers.find((x) => x.id === resellerId);
     if (!r) return null;
@@ -307,116 +317,20 @@ export async function createQuote(resellerId: string, input: Pick<Quote, "compan
       needBy: input.needBy,
       message: input.message,
       ...priced,
-      status: "ny",
+      status: input.source === "order" ? "godkänd" : "ny",
       createdAt: new Date().toISOString(),
-      events: [input.source === "studio" ? event(r.name, `Gjorde offerten åt ${input.company.name} i designstudion.`) : event(input.company.contact, "Skickade en förfrågan från webbshoppen.")],
+      events: [
+        input.source === "studio"
+          ? event(r.name, `Gjorde offerten åt ${input.company.name} i designstudion.`)
+          : input.source === "order"
+            ? event(input.company.contact, "Beställde direkt i webbshoppen. Ordern gick till New Wave.")
+            : event(input.company.contact, "Skickade en förfrågan från webbshoppen."),
+      ],
+      ...(input.source === "order" ? { direct: true } : {}),
     };
     s.quotes.unshift(quote);
     return quote;
   });
 }
 
-// --- Kundbutiker -------------------------------------------------------------
-
-function seedCustomerShops(s: State) {
-  const r = s.resellers.find((x) => x.id === CURRENT_RESELLER)!;
-  const shop: CustomerShop = {
-    id: "ks-techvast",
-    token: newToken(),
-    resellerId: r.id,
-    company: { name: "TechVäst AB", contact: "Ali Reza", email: "ali@techvast.se" },
-    logo: K("techvast"),
-    logoDark: K("techvast-vit"),
-    color: "#5B3FD0",
-    products: ["p001", "p005", "p004", "p021", "p024", "p031"],
-    markup: r.markup,
-    welcome: "Här beställer ni TechVästs kläder och profilprodukter till avtalat pris. Loggan ligger redan på allt.",
-    open: true,
-    createdAt: iso(-8),
-  };
-  s.customerShops = [shop];
-  s.quotes.unshift(
-    shopOrder(s, shop, { contact: "Lina Persson", email: "lina@techvast.se", message: "Till de nyanställda i december." }, [
-      { productId: "p005", sizes: { S: 3, M: 5, L: 4 } },
-      { productId: "p021", sizes: { "One size": 12 } },
-    ], iso(-2))!,
-  );
-}
-
 const nextQuoteId = (s: State) => `Q-${Math.max(2040, ...s.quotes.map((q) => Number(q.id.slice(2)) || 0)) + 1}`;
-
-type OrderBy = { contact: string; email: string; message?: string };
-
-function shopOrder(s: State, shop: CustomerShop, by: OrderBy, lines: { productId: string; sizes: Record<string, number> }[], at = new Date().toISOString()): Quote | null {
-  const priced = lines
-    .filter((l) => shop.products.includes(l.productId))
-    .map((l) => {
-      const p = nwProduct(l.productId);
-      return p ? agreedLine({ productId: p.id, sizes: l.sizes, design: defaultDesign(p), color: p.garmentHex, logo: shop.logo, logoDark: shop.logoDark }, shop.markup) : null;
-    })
-    .filter((l): l is QuoteLine => l !== null && l.qty > 0);
-  if (!priced.length) return null;
-  return {
-    id: nextQuoteId(s),
-    token: newToken(),
-    resellerId: shop.resellerId,
-    company: { name: shop.company.name, contact: by.contact, email: by.email },
-    message: by.message,
-    lines: priced,
-    totalSek: priced.reduce((sum, l) => sum + l.total, 0),
-    costSek: priced.reduce((sum, l) => sum + l.cost, 0),
-    status: "godkänd",
-    createdAt: at,
-    customerShopId: shop.id,
-    events: [{ at, who: by.contact, text: "Beställde i kundbutiken till avtalat pris. Ordern gick direkt till New Wave." }],
-  };
-}
-
-export async function customerShopsFor(resellerId: string) {
-  return (await load()).customerShops.filter((c) => c.resellerId === resellerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function customerShop(id: string) {
-  return (await load()).customerShops.find((c) => c.id === id) ?? null;
-}
-
-export async function customerShopByToken(token: string) {
-  const s = await load();
-  const shop = s.customerShops.find((c) => c.token === token);
-  if (!shop) return null;
-  return { shop, reseller: s.resellers.find((r) => r.id === shop.resellerId)! };
-}
-
-export type CustomerShopInput = Pick<CustomerShop, "company" | "logo" | "logoDark" | "color" | "products" | "markup" | "welcome">;
-
-export function createCustomerShop(resellerId: string, input: CustomerShopInput) {
-  return updateShop((s) => {
-    const base = `ks-${input.company.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 30) || "kund"}`;
-    let id = base;
-    for (let n = 2; s.customerShops.some((c) => c.id === id); n++) id = `${base}-${n}`;
-    const shop: CustomerShop = { ...input, id, token: newToken(), resellerId, open: true, createdAt: new Date().toISOString() };
-    s.customerShops.unshift(shop);
-    return shop;
-  });
-}
-
-export function changeCustomerShop(resellerId: string, id: string, fn: (c: CustomerShop, s: State) => boolean | void) {
-  return updateShop((s) => {
-    const shop = s.customerShops.find((c) => c.id === id && c.resellerId === resellerId);
-    if (!shop) return null;
-    if (fn(shop, s) === false) s.customerShops = s.customerShops.filter((c) => c !== shop);
-    return shop;
-  });
-}
-
-export function orderFromCustomerShop(token: string, by: OrderBy, lines: { productId: string; sizes: Record<string, number> }[]) {
-  return updateShop((s) => {
-    const shop = s.customerShops.find((c) => c.token === token);
-    if (!shop) return { error: "Butiken finns inte", status: 404 } as const;
-    if (!shop.open) return { error: "Butiken är stängd", status: 400 } as const;
-    const order = shopOrder(s, shop, by, lines);
-    if (!order) return { error: "Välj storlek och antal för minst en produkt.", status: 400 } as const;
-    s.quotes.unshift(order);
-    return { order };
-  });
-}

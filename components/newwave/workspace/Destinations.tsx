@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { BrandKit } from "@/lib/newwave/brandKit";
+import { type BrandKit, isOwnKit } from "@/lib/newwave/brandKit";
 import { type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { designSummary, onChest } from "@/lib/newwave/marking";
 import { photoMockup } from "@/lib/newwave/photoMockup";
@@ -310,7 +310,7 @@ export function QuoteTab({ slug, markup, kit, items, onStart }: { slug: string; 
   const router = useRouter();
   const steps = useSteps();
   const [qty, setQty] = useState<Record<string, number>>({});
-  const [company, setCompany] = useState(kit.source.kind === "standard" ? "" : kit.name);
+  const [company, setCompany] = useState(kit.source.kind === "standard" || isOwnKit(kit) ? "" : kit.name);
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
   const [needBy, setNeedBy] = useState("");

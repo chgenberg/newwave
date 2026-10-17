@@ -42,6 +42,8 @@ export function CampaignForm({
   calendar,
   today,
   initial = {},
+  plan,
+  approveAt = {},
   autoBrief,
   suggestions = [],
 }: {
@@ -51,6 +53,10 @@ export function CampaignForm({
   calendar: CalendarMonth[];
   today: string;
   initial?: Draft;
+  /** Ett tillfälle att planera, t.ex. från agentens "Planera kampanj": fylls i som ett klick i kalendern. */
+  plan?: { occasion: string; date: string };
+  /** Godkännandesidan per klubb som har egen dashboard, t.ex. `{ "asa-if": "/newwave/klubb/godkann" }`. */
+  approveAt?: Record<string, string>;
   autoBrief?: string;
   suggestions?: Suggestion[];
 }) {
@@ -72,7 +78,7 @@ export function CampaignForm({
   const [reasoning, setReasoning] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<{ title: string; clubs: PickClub[]; sendAt?: string } | null>(null);
+  const [sent, setSent] = useState<{ title: string; clubs: PickClub[]; sendAt?: string; approvals: Record<string, string> } | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   const catalog = useMemo(() => NW_CATALOG.filter((p) => allowed.includes(p.id)), [allowed]);
@@ -133,12 +139,15 @@ export function CampaignForm({
 
   const ran = useRef(false);
   useEffect(() => {
-    if (autoBrief && !ran.current) {
-      ran.current = true;
-      void fill(autoBrief);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoBrief]);
+    if (ran.current) return;
+    ran.current = true;
+    /* eslint-disable react-hooks/set-state-in-effect -- utkastet i adressen fylls i efter mount, som ett klick i kalendern */
+    if (autoBrief) void fill(autoBrief);
+    else if (plan) fromCalendar(plan.occasion, plan.date);
+    else if (initial.title || initial.clubIds?.length) formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- körs en gång per förifyllt utkast; formuläret får ny key när adressen ändras
+  }, []);
 
   async function send() {
     setBusy(true);
@@ -162,7 +171,7 @@ export function CampaignForm({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Något gick fel");
-      setSent({ title, clubs: clubs.filter((c) => picked.includes(c.id)), sendAt: json.campaign.sendAt });
+      setSent({ title, clubs: clubs.filter((c) => picked.includes(c.id)), sendAt: json.campaign.sendAt, approvals: json.campaign.approvals ?? {} });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Något gick fel");
     } finally {
@@ -197,6 +206,12 @@ export function CampaignForm({
             Ny kampanj
           </Link>
         </div>
+        {Object.entries(sent.approvals).flatMap(([clubId, approvalId]) => (approveAt[clubId] ? [[clubId, `${approveAt[clubId]}/${approvalId}`] as const] : [])).slice(0, 1).map(([clubId, href]) => (
+          <Link key={clubId} href={href} className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-[14px] text-[var(--nw-ink)] transition hover:shadow-[0_8px_22px_-14px_rgba(17,17,17,0.45)]">
+            <span>Så här ser det ut hos {sent.clubs.find((c) => c.id === clubId)?.name ?? "klubben"} – de godkänner i sin dashboard</span>
+            <span className="shrink-0 font-semibold">Öppna →</span>
+          </Link>
+        ))}
       </div>
     );
 
@@ -276,7 +291,7 @@ export function CampaignForm({
         </div>
       </section>
 
-      <div ref={formRef} className="flex scroll-mt-6 flex-col gap-8">
+      <div ref={formRef} className="flex scroll-mt-24 flex-col gap-8">
         <Step n={1} title="Kampanjen">
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_170px]">
             <label className="min-w-0">

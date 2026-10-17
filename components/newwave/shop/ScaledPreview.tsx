@@ -1,11 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const WIDTH = { dator: 1200, mobil: 390 } as const;
 
-/** En sida i skala i ett webbläsarfönster, med val mellan dator och mobil. */
-export function ScaledPreview({ url, label = "Förhandsvisning", tools, height = "h-[min(70vh,640px)]", children }: { url: string; label?: string; tools?: React.ReactNode; height?: string; children: React.ReactNode }) {
+/** En sida i skala i ett webbläsarfönster, med val mellan dator och mobil. `focus` skrollar till elementet med samma `data-preview`. */
+export function ScaledPreview({ url, label = "Förhandsvisning", tools, height = "h-[min(70vh,640px)]", focus, children }: { url: string; label?: string; tools?: React.ReactNode; height?: string; focus?: string; children: React.ReactNode }) {
   const [chosen, setMode] = useState<keyof typeof WIDTH | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -28,6 +28,12 @@ export function ScaledPreview({ url, label = "Förhandsvisning", tools, height =
     if (inner.current) ro.observe(inner.current);
     return () => ro.disconnect();
   }, [mode]);
+
+  useEffect(() => {
+    const el = focus ? inner.current?.querySelector<HTMLElement>(`[data-preview="${focus}"]`) : null;
+    if (!el || !box.current || !inner.current) return;
+    box.current.scrollTo({ top: el.getBoundingClientRect().top - inner.current.getBoundingClientRect().top - 8, behavior: "smooth" });
+  }, [focus, mode, scale]);
 
   return (
     <div className="min-w-0">

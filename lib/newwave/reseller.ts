@@ -5,14 +5,21 @@ import { defaultDesign, type Design, markingPrice, sanitizeColor, sanitizeDesign
 
 export type ShopTheme = { primary: string; accent: string; background: string };
 
+export type ResellerBrandbook = { file: string; colors: { name: string; hex: string }[]; fonts: string[]; tone: string; rules: string[] };
+
 export type ShopTexts = {
   shopName: string;
   tagline: string;
   heroTitle: string;
   heroText: string;
+  /** Rubriken på Om oss; tom ger "Om oss". */
+  aboutTitle?: string;
+  /** Om oss, med stycken åtskilda av tomma rader. */
   about: string;
   email: string;
   phone: string;
+  address?: string;
+  hours?: string;
 };
 
 export type Reseller = {
@@ -25,6 +32,8 @@ export type Reseller = {
   /** Loggan i ljust utförande, till mörka ytor. */
   logoDark?: string;
   theme: ShopTheme;
+  /** Den grafiska profilen (PDF) som AI:n läst; följer med in i designstudion. */
+  brandbook?: ResellerBrandbook;
   texts: ShopTexts;
   products: string[];
   /** Påslag i procent på New Waves cirkapris. */
@@ -34,7 +43,11 @@ export type Reseller = {
   updatedAt: string;
   publishedAt?: string;
   importedFrom?: string;
+  /** Adresser butiken hade innan den byggdes om från en annan webbplats, så att utskickade länkar och QR-koder fortsätter att fungera. */
+  formerSlugs?: string[];
 };
+
+export const answersTo = (r: Pick<Reseller, "slug" | "formerSlugs">, slug: string) => r.slug === slug || Boolean(r.formerSlugs?.includes(slug));
 
 export type QuoteStatus = "ny" | "skickad" | "godkänd" | "produktion" | "levererad" | "nekad";
 
@@ -45,6 +58,8 @@ export const QUOTE_FLOW: { id: QuoteStatus; label: string; who: string }[] = [
   { id: "produktion", label: "I produktion", who: "New Wave" },
   { id: "levererad", label: "Levererad", who: "New Wave" },
 ];
+
+export const ORDER_FLOW: typeof QUOTE_FLOW = [{ id: "godkänd", label: "Beställd", who: "Kunden" }, ...QUOTE_FLOW.slice(3)];
 
 export const STATUS_LABEL: Record<QuoteStatus, string> = { ny: "Ny förfrågan", skickad: "Skickad", godkänd: "Godkänd", produktion: "I produktion", levererad: "Levererad", nekad: "Nekad" };
 
@@ -98,25 +113,8 @@ export type Quote = {
   /** Återförsäljarens hälsning när offerten skickas. */
   reply?: string;
   events: QuoteEvent[];
-  /** Beställd i en kundbutik till avtalat pris, utan offert. */
-  customerShopId?: string;
-};
-
-/** En stängd butik för en företagskund: kundens logga ligger redan på produkterna och priserna är avtalade. */
-export type CustomerShop = {
-  id: string;
-  /** Den hemliga länken till butiken. */
-  token: string;
-  resellerId: string;
-  company: { name: string; contact: string; email: string };
-  logo: string;
-  logoDark?: string;
-  color: string;
-  products: string[];
-  markup: number;
-  welcome: string;
-  open: boolean;
-  createdAt: string;
+  /** Beställd direkt i webbshoppen till butikens pris, utan offert. */
+  direct?: boolean;
 };
 
 export const MIN_QTY = 10;
@@ -156,16 +154,6 @@ export function costPrice(p: NwProduct) {
   const line = priceLine({ productId: p.id, sizes: { [p.sizes[0]]: 100 }, design: defaultDesign(p), color: p.garmentHex, logo: "" }, 0);
   return line ? Math.round(exVat(p) * 0.55 + line.unitPrint * 0.7) : exVat(p);
 }
-
-/** Kundbutikens rad: avtalat styckpris som vid 100 st och tryckstarten ingår, oavsett hur många som beställs. */
-export function agreedLine(input: QuoteLineInput, markup: number): QuoteLine | null {
-  const p = nwProduct(input.productId);
-  const line = priceLine(input, markup);
-  if (!p || !line) return null;
-  const unit = fromPrice(p, markup);
-  return { ...line, unitProduct: unit - line.unitPrint, unit, setup: 0, total: unit * line.qty, cost: costPrice(p) * line.qty };
-}
-
 const kund = (slug: string) => ({ logo: `/newwave/resellers/kunder/${slug}.png`, logoDark: `/newwave/resellers/kunder/${slug}-vit.png` });
 
 /** Återförsäljarens befintliga kunder i demon, med loggor att visa produkterna med. */
@@ -223,7 +211,7 @@ export const shopUrl = (r: Pick<Reseller, "slug">) => `/newwave/s/${r.slug}`;
 
 export const BUILDER_STEPS = [
   { id: "varumarke", label: "Varumärke", hint: "Logga och webbplats" },
-  { id: "utseende", label: "Texter och färger", hint: "Finjustera allt" },
+  { id: "hemsidan", label: "Hemsidan", hint: "Texter, Om oss och kontakt" },
   { id: "sortiment", label: "Sortiment", hint: "Välj produkter" },
   { id: "publicera", label: "Publicera och dela", hint: "Gå live och bjud in kunder" },
 ] as const;
@@ -233,7 +221,7 @@ export type BuilderStep = (typeof BUILDER_STEPS)[number]["id"];
 export function stepsDone(r: Reseller): Record<BuilderStep, boolean> {
   return {
     varumarke: Boolean(r.logo),
-    utseende: Boolean(r.texts.heroTitle && r.texts.shopName),
+    hemsidan: Boolean(r.texts.heroTitle && r.texts.shopName),
     sortiment: r.products.length > 0,
     publicera: r.status === "publicerad",
   };

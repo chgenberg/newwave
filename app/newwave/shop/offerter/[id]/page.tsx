@@ -22,8 +22,8 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
   return (
     <div className="nw-page">
       <p className="text-[13px] text-[var(--nw-muted)]">
-        <Link href="/newwave/shop/offerter" className="hover:text-[var(--nw-ink)]">
-          ← Offerter
+        <Link href={quote.direct ? "/newwave/shop/ordrar" : "/newwave/shop/offerter"} className="hover:text-[var(--nw-ink)]">
+          {quote.direct ? "← Ordrar" : "← Offerter"}
         </Link>
       </p>
       <div className="mt-3 flex flex-wrap items-start gap-4">
@@ -36,11 +36,11 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
             {quote.needBy ? ` · behövs ${fmtDay(quote.needBy)}` : ""}
           </p>
         </div>
-        <StatusPill status={quote.status} />
+        <StatusPill status={quote.status} direct={quote.direct} />
       </div>
 
       <div className="mt-6">
-        <QuoteFlow status={quote.status} />
+        <QuoteFlow status={quote.status} direct={quote.direct} />
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -67,6 +67,9 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
               <div className="rounded-[var(--nw-radius)] bg-[#DFF5E7] p-4 text-[14px] text-[#17703A] sm:p-5">
                 <p className="font-semibold">Ordern ligger hos New Wave</p>
                 <p className="mt-1 text-[13.5px]">Tryckfiler, storlekar och leveransadress gick över automatiskt. Ni ser var ordern är under Ordrar.</p>
+                <Link href="/newwave/new-wave/ordrar" className="mt-3 inline-block text-[13.5px] font-semibold underline underline-offset-4">
+                  Så ser New Wave ordern →
+                </Link>
               </div>
             ) : null}
           </div>
@@ -79,7 +82,7 @@ export default async function OffertDetalj({ params }: { params: Promise<{ id: s
             {quote.company.phone ? <p className="text-[var(--nw-muted)]">{quote.company.phone}</p> : null}
             {quote.status !== "ny" ? (
               <Link href={link} className="mt-3 inline-block text-[13px] font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4">
-                Kundens offertsida
+                {quote.direct ? "Kundens ordersida" : "Kundens offertsida"}
               </Link>
             ) : null}
           </div>

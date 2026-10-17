@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DashRail } from "@/components/newwave/DashNav";
 import { HubFooterSlim } from "@/components/newwave/HubFooter";
-import { HubSwitch } from "@/components/newwave/HubSwitch";
 import { PortalFilm } from "@/components/newwave/landing/PortalFilm";
 import { LogoMark } from "@/components/newwave/Logo";
-import { HUB_TARGETS, PORTALS } from "@/lib/newwave/hub";
+import { ShareDemo } from "@/components/newwave/ShareDemo";
+import { PORTALS } from "@/lib/newwave/hub";
 
 export const metadata: Metadata = { title: "Välj ingång · Next Wave" };
-
-const BASE = "/newwave/start";
-const RAIL = HUB_TARGETS.map((t) => ({ href: t.href, label: t.short, icon: t.icon }));
 
 /** Efter filmen: de fyra ingångarna i samma skal som designmotorn och dashboardsen. */
 export default function StartPage() {
@@ -22,17 +18,13 @@ export default function StartPage() {
             <LogoMark size={28} />
             <span className="hidden text-[13px] font-semibold tracking-[0.18em] sm:inline">NEXT WAVE</span>
           </Link>
-          <span className="min-[900px]:hidden">
-            <HubSwitch bar />
-          </span>
-          <span className="hidden text-[14px] text-[#6F6B63] min-[900px]:inline">Välj ingång</span>
+          <span className="text-[14px] text-[#6F6B63]">Välj ingång</span>
+          <div className="ml-auto">
+            <ShareDemo />
+          </div>
         </header>
 
-        <div className="flex flex-1 flex-col min-[900px]:flex-row">
-          <div className="sticky top-[65px] hidden h-fit shrink-0 gap-1 py-3 pl-1.5 min-[900px]:flex">
-            <HubSwitch />
-            <DashRail base={BASE} items={RAIL} label="Designmotorn och dashboards" />
-          </div>
+        <div className="flex flex-1 flex-col">
           <main className="min-w-0 flex-1 px-3 py-5 min-[900px]:px-10 min-[900px]:py-7">
             <div className="mx-auto max-w-[1180px] min-[900px]:max-w-[min(1180px,calc((100svh-270px)*1.6+20px))]">
               <p className="nw-mono text-[12px] uppercase tracking-[0.06em] text-[#6F6B63]">Fyra ingångar · samma motor</p>

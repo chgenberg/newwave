@@ -35,7 +35,7 @@ export default async function NwResellers() {
                 <div className="order-last min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
                   <p className="truncate text-[15.5px] font-semibold text-[var(--nw-ink)]">{r.name}</p>
                   <p className="truncate text-[12.5px] text-[var(--nw-muted)]">
-                    {r.city} · {r.products.length} produkter · påslag {r.markup} %{r.lastAt ? ` · senast aktiv ${fmtDay(r.lastAt)}` : ""}
+                    {r.city ? `${r.city} · ` : ""}{r.products.length} produkter · påslag {r.markup} %{r.lastAt ? ` · senast aktiv ${fmtDay(r.lastAt)}` : ""}
                   </p>
                 </div>
                 <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium sm:ml-0 ${live ? "bg-[#DFF5E7] text-[#17703A]" : "bg-[#FFF1CC] text-[#7A4F00]"}`}>{live ? "Butiken är live" : "Bygger butiken"}</span>

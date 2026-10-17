@@ -103,7 +103,7 @@ function Drawer({ m, club, onClose, onGate }: { m: CraftMaterial; club?: BoardCl
         </div>
 
         <div className="mt-4 aspect-[4/3] overflow-hidden rounded-2xl bg-[var(--nw-soft)]">
-          <MaterialThumb image={materialImage(m)} kind={m.kind} title={m.title} club={club} />
+          <MaterialThumb image={materialImage(m)} kind={m.kind} title={m.title} occasion={m.occasion} seed={m.id} club={club} />
         </div>
 
         <section className="mt-4 rounded-2xl border border-[var(--nw-line)] p-4">
@@ -309,7 +309,7 @@ export function MaterialBoard({
             <li key={m.id} className="min-w-0">
               <button type="button" onClick={() => setOpen(m.id)} className={`nw-fade w-full rounded-[22px] border p-2 text-left transition-colors ${t === "granskas" ? "border-[#E0A800]" : "border-[var(--nw-line)] hover:border-[#bdbdb8]"}`}>
                 <div className="relative aspect-square overflow-hidden rounded-2xl bg-[var(--nw-soft)]">
-                  <MaterialThumb image={materialImage(m)} kind={m.kind} title={m.title} club={c} />
+                  <MaterialThumb image={materialImage(m)} kind={m.kind} title={m.title} occasion={m.occasion} seed={m.id} club={c} />
                   <span className={`absolute left-2 top-2 z-[1] rounded-full px-2 py-0.5 text-[11px] font-medium ${t === "granskas" ? "bg-[var(--nw-ink)] text-white" : t === "stoppad" ? "bg-[#E5E5E1] text-[var(--nw-muted)]" : STATUS_PILL[m.status].cls}`}>
                     {t === "granskas" ? "Hos Craft" : t === "stoppad" ? "Stoppad" : m.auto ? "Autopilot" : STATUS_PILL[m.status].label}
                   </span>

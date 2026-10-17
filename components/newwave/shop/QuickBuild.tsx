@@ -25,12 +25,10 @@ function partial(target: Reseller, step: number): Reseller {
   };
 }
 
-type Example = { host: string; label: string };
-
 /** Hela butiken från en webbadress på under en minut, medan förhandsvisningen byggs upp framför en. */
-export function QuickBuild({ initial, examples, ws }: { initial: Reseller; examples: Example[]; ws: string | null }) {
+export function QuickBuild({ initial, ws }: { initial: Reseller; ws: string | null }) {
   const router = useRouter();
-  const [site, setSite] = useState(examples[0]?.host ?? "");
+  const [site, setSite] = useState("");
   const [target, setTarget] = useState<Reseller | null>(null);
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(0);
@@ -95,7 +93,7 @@ export function QuickBuild({ initial, examples, ws }: { initial: Reseller; examp
     <div className="nw-page">
       <p className="text-[13px] text-[var(--nw-muted)]">
         <Link href="/newwave/shop/butiken" className="hover:text-[var(--nw-ink)]">
-          ← Butiker
+          ← Butiken
         </Link>
       </p>
       <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -119,8 +117,8 @@ export function QuickBuild({ initial, examples, ws }: { initial: Reseller; examp
                 </div>
               ) : null}
               <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px]">
-                <Link href="/newwave/shop/butiken/redigera?flik=utseende" className="nw-hit font-medium text-[var(--nw-ink)] underline underline-offset-4">
-                  Finjustera texter och färger
+                <Link href="/newwave/shop/butiken/redigera?flik=hemsidan" className="nw-hit font-medium text-[var(--nw-ink)] underline underline-offset-4">
+                  Redigera hemsidan
                 </Link>
                 <Link href="/newwave/shop/butiken/redigera?flik=sortiment" className="nw-hit font-medium text-[var(--nw-ink)] underline underline-offset-4">
                   Sortiment och priser
@@ -146,14 +144,6 @@ export function QuickBuild({ initial, examples, ws }: { initial: Reseller; examp
                   {building ? "Bygger…" : "Bygg butiken"}
                 </button>
               </form>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-[12.5px] text-[var(--nw-muted)]">Prova med</span>
-                {examples.map((e) => (
-                  <button key={e.host} type="button" disabled={building} onClick={() => build(e.host)} className="h-9 rounded-full border border-[var(--nw-line)] bg-white px-3.5 text-[12.5px] font-medium text-[var(--nw-ink)] transition-colors hover:border-[var(--nw-ink)] disabled:opacity-50">
-                    {e.label}
-                  </button>
-                ))}
-              </div>
               {error ? <p className="mt-4 rounded-xl bg-[#FDECEC] px-4 py-3 text-[13.5px] text-[#B42318]">{error}</p> : null}
 
               <ol className="mt-8 flex flex-col gap-2.5" aria-live="polite">

@@ -28,8 +28,8 @@ export function TestAsCustomer({ slug, className = "nw-btn nw-btn-ghost" }: { sl
   );
 }
 
-/** Syns medan återförsäljaren provar butiken som kund. På sidan med den skickade förfrågan tar `quoteId` över. */
-export function TesterBanner({ slug, quoteId }: { slug: string; quoteId?: string }) {
+/** Syns medan återförsäljaren provar butiken som kund. På sidan med den skickade förfrågan eller ordern tar `quoteId` över. */
+export function TesterBanner({ slug, quoteId, order }: { slug: string; quoteId?: string; order?: boolean }) {
   const [cart, update] = useCart(slug);
   const onQuote = /\/offert\/[^/]+$/.test(usePathname());
   if (!cart.tester || (onQuote && !quoteId)) return null;
@@ -39,15 +39,19 @@ export function TesterBanner({ slug, quoteId }: { slug: string; quoteId?: string
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-[13px] @2xl:px-8">
         <p className="min-w-0 flex-1">
           {quoteId ? (
-            <>Klart! Förfrågan {quoteId} ligger nu under Offerter i er dashboard, precis som när en riktig kund skickar en.</>
+            order ? (
+              <>Klart! Ordern {quoteId} har gått till New Wave och syns under Ordrar i er dashboard, precis som när en riktig kund beställer.</>
+            ) : (
+              <>Klart! Förfrågan {quoteId} ligger nu under Offerter i er dashboard, precis som när en riktig kund skickar en.</>
+            )
           ) : (
             <>
-              Ni testar butiken som <strong>{cart.tester.name}</strong>. Välj en produkt och skicka en förfrågan, så hamnar den hos er.
+              Ni testar butiken som <strong>{cart.tester.name}</strong>. Designa en produkt och beställ eller begär offert, så hamnar det hos er.
             </>
           )}
         </p>
         <Link href={quoteId ? `/newwave/shop/offerter/${quoteId}` : "/newwave/shop/butiken"} onClick={quoteId ? stop : undefined} className="inline-flex h-9 items-center rounded-full bg-white px-4 font-semibold text-[#1D1D1F]">
-          {quoteId ? "Öppna förfrågan" : "Till dashboarden"}
+          {quoteId ? (order ? "Öppna ordern" : "Öppna förfrågan") : "Till dashboarden"}
         </Link>
         {quoteId ? null : (
           <button type="button" onClick={stop} className="nw-hit text-white/70 underline underline-offset-4 hover:text-white">
@@ -65,7 +69,7 @@ export function CartLink({ slug, preview }: { slug: string; preview?: boolean })
   const cls = "inline-flex h-10 items-center gap-2 rounded-full bg-[var(--shop)] px-4 text-[13.5px] font-semibold text-[var(--shop-on)]";
   const body = (
     <>
-      Offertkorg
+      Varukorg
       {n ? (
         <motion.span key={n} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.55, duration: 0.5 }} className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--shop-accent)] px-1.5 text-[11px] text-[var(--shop-on-accent)]">
           {n}

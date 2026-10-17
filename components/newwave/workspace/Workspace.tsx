@@ -26,8 +26,6 @@ const DESTINATION: Record<Role["kind"], { id: string; label: string; next: strin
 const ALSO = ["p004", "p012", "p009", "p020", "p001"];
 const START = "p001";
 
-const CUSTOMER_KIT: BrandKit = { ...DEFAULT_KIT, name: "Kundens varumärke", source: { kind: "standard", label: "Ladda upp kundens logga" } };
-
 function readItems(raw: unknown, allowed: (id: string) => boolean): Item[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((r) => {
@@ -108,7 +106,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   const products = allowed ? NW_CATALOG.filter((p) => allowed.has(p.id)) : NW_CATALOG;
   const can = (id: string) => !allowed || allowed.has(id);
   const start = can(START) ? START : products[0].id;
-  const base = role.kind === "klubb" ? role.kit : role.kind === "shop" ? CUSTOMER_KIT : DEFAULT_KIT;
+  const base = role.kind === "klubb" || role.kind === "shop" ? role.kit : DEFAULT_KIT;
   const dest = DESTINATION[role.kind];
   const tabs = [
     { id: "design", label: "Design" },
@@ -129,7 +127,8 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
     try {
       const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { kit?: unknown; items?: unknown; productId?: unknown; tab?: unknown; club?: unknown } | null;
       /* eslint-disable react-hooks/set-state-in-effect -- localStorage går bara att läsa efter mount */
-      setKit(readKit(saved?.kit, base));
+      const stored = readKit(saved?.kit, base);
+      setKit(base.source.kind === "profil" && (stored.source.kind === "profil" || stored.source.kind === "standard") ? base : stored);
       setItems(readItems(saved?.items, can));
       if (typeof saved?.productId === "string" && can(saved.productId) && nwProduct(saved.productId)) setProductId(saved.productId);
       if (typeof saved?.tab === "string" && tabs.some((t) => t.id === saved.tab)) setTab(saved.tab);
@@ -175,7 +174,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   };
   const markSent = (ids: string[]) => setItems((list) => list.map((i) => (ids.includes(i.id) ? { ...i, sent: true } : i)));
 
-  const brand = club && role.kind === "craft" ? <ClubPreview clubs={role.clubs} current={club.id} onPick={setPreviewClub} /> : <BrandTools kit={kit} onChange={setKit} />;
+  const brand = club && role.kind === "craft" ? <ClubPreview clubs={role.clubs} current={club.id} onPick={setPreviewClub} /> : <BrandTools kit={kit} home={base.source.kind === "profil" ? base : undefined} onChange={setKit} />;
 
   const panel =
     tab === "design" ? (

@@ -17,8 +17,11 @@ export type BrandKit = Brandbook & {
   logoDark: string | null;
   site: string;
   /** Var varumärket kom ifrån, för att visa rätt kvitto i panelen. */
-  source: { kind: "standard" | "profil" | "logga" | "webb" | "brandbook"; label: string };
+  source: { kind: "standard" | "profil" | "justerad" | "logga" | "webb" | "brandbook"; label: string };
 };
+
+/** Profilen från servern, orörd ("profil") eller med ändrade färger eller namn i studion ("justerad"). */
+export const isOwnKit = (kit: Pick<BrandKit, "source">) => kit.source.kind === "profil" || kit.source.kind === "justerad";
 
 export const MAX_COLORS = 6;
 

@@ -6,12 +6,13 @@ export type WorkspaceClub = { id: string; name: string; city: string; logo: stri
 /**
  * Vem som designar avgör varumärket studion startar med, vilka produkter som går att välja och vart kollektionen tar vägen:
  * klubben lägger ut den i sin butik, Craft skickar den till klubbarna och återförsäljaren gör en offert.
+ * Klubben och återförsäljaren får sin profil från servern (`source.kind` "profil"), så att en ny logga följer med in i studion.
  */
 export type Role =
   | { kind: "studio" }
   | { kind: "klubb"; clubId: string; kit: BrandKit }
   | { kind: "craft"; clubs: WorkspaceClub[]; products: string[] }
-  | { kind: "shop"; slug: string; reseller: string; markup: number; products: string[] };
+  | { kind: "shop"; slug: string; kit: BrandKit; markup: number; products: string[] };
 
 export const STORAGE_PREFIX = "nw.studio.";
 export const storageKey = (role: Role) => `${STORAGE_PREFIX}${role.kind === "studio" ? "home" : role.kind}`;

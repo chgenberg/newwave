@@ -53,7 +53,7 @@ export default async function Offerter({ searchParams }: { searchParams: Promise
                   <p className="text-[14px] font-semibold text-[var(--nw-ink)]">{sek(q.totalSek)}</p>
                   {q.needBy ? <p className="text-[12px] text-[var(--nw-muted)]">behövs {fmtDay(q.needBy)}</p> : null}
                 </div>
-                <StatusPill status={q.status} />
+                <StatusPill status={q.status} direct={q.direct} />
               </Link>
             </li>
           ))}

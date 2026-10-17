@@ -3,16 +3,16 @@ import { notFound } from "next/navigation";
 import { CustomerDecision } from "@/components/newwave/shop/QuoteActions";
 import { QuoteFlow, QuoteLines } from "@/components/newwave/shop/QuoteParts";
 import { TesterBanner } from "@/components/newwave/shop/ShopClient";
-import { fmtDay } from "@/lib/newwave/reseller";
+import { answersTo, fmtDay } from "@/lib/newwave/reseller";
 import { quoteByToken } from "@/lib/newwave/shopState";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Er offert", robots: { index: false } };
+export const metadata: Metadata = { title: "Er beställning", robots: { index: false } };
 
 export default async function KundOffert({ params }: { params: Promise<{ slug: string; token: string }> }) {
   const { slug, token } = await params;
   const found = await quoteByToken(token);
-  if (!found || found.reseller.slug !== slug) notFound();
+  if (!found || !answersTo(found.reseller, slug)) notFound();
   const { quote, reseller } = found;
   const shop = reseller.texts.shopName || reseller.name;
 
@@ -25,11 +25,11 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
           ? { title: "Ni tackade nej", text: `${shop} har fått besked och hör av sig om något kan ändras.` }
           : quote.status === "levererad"
             ? { title: "Levererad", text: "Tack för ordern! Hör av er när ni vill beställa igen." }
-            : { title: "Tack för ordern!", text: "Vi tar fram ett provtryck och börjar trycka. Ni ser här hur det går." };
+            : { title: "Tack för ordern!", text: `${quote.direct ? `${shop} har fått beställningen. ` : ""}Vi tar fram ett provtryck och börjar trycka. Ni ser här hur det går. Spara länken till den här sidan.` };
 
   return (
     <>
-    <TesterBanner slug={slug} quoteId={quote.id} />
+    <TesterBanner slug={slug} quoteId={quote.id} order={quote.direct} />
     <div className="mx-auto max-w-[920px] px-5 py-10 sm:px-8 sm:py-14">
       <p className="text-[13px] opacity-60">
         {quote.id} · {quote.company.name}
@@ -38,7 +38,7 @@ export default async function KundOffert({ params }: { params: Promise<{ slug: s
       {head.text ? <p className="mt-2 max-w-[620px] text-[15px] opacity-70">{head.text}</p> : null}
 
       <div className="mt-8">
-        <QuoteFlow status={quote.status} />
+        <QuoteFlow status={quote.status} direct={quote.direct} />
       </div>
 
       {quote.reply && quote.status === "skickad" ? (

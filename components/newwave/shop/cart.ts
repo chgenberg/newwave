@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { QuoteLineInput } from "@/lib/newwave/reseller";
 
-/** Kundens logga och offertkorg, sparade i webbläsaren per butik. */
+/** Kundens logga och varukorg, sparade i webbläsaren per butik. */
 
 export type CustomerLogo = { light: string; dark: string; name: string };
 export type CartLine = QuoteLineInput & { key: string };

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { LogoResult } from "@/lib/logo";
+import type { Brandbook } from "@/lib/newwave/brandKit";
 import { nwProduct } from "@/lib/newwave/catalog";
+import { luminance } from "@/lib/newwave/theme";
 import { BUILDER_STEPS, SHOP_CATALOG, SHOP_PACKS, costPrice, fromPrice, sek, stepsDone, type BuilderStep, type Reseller } from "@/lib/newwave/reseller";
 import { call, readDataUrl } from "./api";
 import { ResellerShare } from "./ShareShop";
@@ -12,7 +14,7 @@ import { ShopPreview } from "./ShopPreview";
 
 type Props = { initial: Reseller; initialStep: BuilderStep; ws: string | null };
 
-const EDITABLE = ["name", "website", "logo", "logoDark", "theme", "texts", "products", "markup"] as const;
+const EDITABLE = ["name", "website", "logo", "logoDark", "theme", "brandbook", "texts", "products", "markup"] as const;
 const patchOf = (r: Reseller) => Object.fromEntries(EDITABLE.map((k) => [k, r[k]]).filter(([, v]) => v !== undefined));
 const same = (a: Reseller, b: Reseller) => JSON.stringify(patchOf(a)) === JSON.stringify(patchOf(b));
 
@@ -22,6 +24,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [step, setStep] = useState<BuilderStep>(initialStep);
+  const [focus, setFocus] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const dirty = !same(draft, saved);
@@ -58,7 +61,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
     <div className="nw-page">
       <p className="text-[13px] text-[var(--nw-muted)]">
         <Link href="/newwave/shop/butiken" className="hover:text-[var(--nw-ink)]">
-          ← Butiker
+          ← Butiken
         </Link>
       </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
@@ -92,7 +95,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
       <div className="mt-7 grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="min-w-0" role="tabpanel">
           {step === "varumarke" ? <BrandStep draft={draft} set={set} /> : null}
-          {step === "utseende" ? <LookStep draft={draft} set={set} /> : null}
+          {step === "hemsidan" ? <PageStep draft={draft} set={set} onFocus={setFocus} /> : null}
           {step === "sortiment" ? <RangeStep draft={draft} set={set} /> : null}
           {step === "publicera" ? <PublishStep saved={saved} dirty={dirty} onSaved={apply} ws={ws} /> : null}
 
@@ -112,7 +115,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
           ) : null}
         </div>
         <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
-          <ShopPreview shop={draft} />
+          <ShopPreview shop={draft} focus={step === "hemsidan" ? focus : undefined} />
         </div>
       </div>
     </div>
@@ -136,6 +139,27 @@ function BrandStep({ draft, set }: StepProps) {
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const file = useRef<HTMLInputElement>(null);
+  const pdf = useRef<HTMLInputElement>(null);
+  const book = draft.brandbook;
+
+  const readBook = async (f: File) => {
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      if (f.size > 20_000_000) throw new Error("PDF:en är större än 20 MB.");
+      const b = await call<Brandbook>("/api/v1/newwave/brandbook", { dataUrl: await readDataUrl(f), name: f.name });
+      const colors = b.colors.slice(0, 6).map((c) => ({ name: c.name.slice(0, 40), hex: c.hex.toUpperCase() }));
+      set("brandbook", { file: f.name.slice(0, 120), colors, fonts: b.fonts.slice(0, 6).map((s) => s.slice(0, 60)), tone: b.tone.slice(0, 300), rules: b.rules.slice(0, 6).map((s) => s.slice(0, 200)) });
+      const primary = colors[0]?.hex;
+      if (primary) set("theme", { ...draft.theme, primary, accent: colors.find((c) => c.hex !== primary && luminance(c.hex) < 0.8)?.hex ?? primary });
+      setNote(`Läste ${colors.length} färger${b.fonts.length ? `, ${b.fonts.length} typsnitt` : ""} och ${b.rules.length} regler ur profilen. De följer med till butiken och designstudion när du sparar.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kunde inte läsa profilen");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const upload = async (f: File) => {
     setBusy(true);
@@ -181,6 +205,26 @@ function BrandStep({ draft, set }: StepProps) {
         {error ? <p className="mt-3 rounded-xl bg-[#FDECEC] px-4 py-3 text-[13.5px] text-[#B42318]">{error}</p> : null}
       </Section>
 
+      <Section title="Grafisk profil" text="Har ni en brandbook som PDF? AI:n läser färger, typsnitt och regler för tryck, och de följer med in i designstudion.">
+        {book ? (
+          <div className="mb-3 rounded-[var(--nw-radius)] border border-[var(--nw-line)] bg-white p-4">
+            <p className="truncate text-[13.5px] font-medium text-[var(--nw-ink)]">{book.file}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {book.colors.map((c, i) => (
+                <span key={i} title={`${c.name} ${c.hex}`} className="h-6 w-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]" style={{ background: c.hex }} />
+              ))}
+            </div>
+            <p className="mt-2 text-[12.5px] text-[var(--nw-muted)]">
+              {[book.fonts.join(", "), book.rules.length ? `${book.rules.length} regler för tryck` : ""].filter(Boolean).join(" · ") || "Inga typsnitt eller regler angivna"}
+            </p>
+          </div>
+        ) : null}
+        <input ref={pdf} type="file" accept="application/pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && readBook(e.target.files[0])} aria-label="Välj grafisk profil (PDF)" />
+        <button type="button" onClick={() => pdf.current?.click()} disabled={busy} className="nw-btn nw-btn-ghost disabled:opacity-50">
+          {busy ? "Läser…" : book ? "Byt grafisk profil" : "Ladda upp grafisk profil"}
+        </button>
+      </Section>
+
       <Section title="Företagsnamn">
         <input value={draft.name} onChange={(e) => set("name", e.target.value)} className="nw-input w-full" maxLength={60} aria-label="Företagsnamn" />
       </Section>
@@ -197,14 +241,41 @@ function BrandStep({ draft, set }: StepProps) {
   );
 }
 
-const TEXT_FIELDS: { key: keyof Reseller["texts"]; label: string; max: number; rows?: number }[] = [
-  { key: "shopName", label: "Butikens namn", max: 60 },
-  { key: "tagline", label: "Kort rad ovanför rubriken", max: 120 },
-  { key: "heroTitle", label: "Rubrik", max: 90 },
-  { key: "heroText", label: "Ingress", max: 300, rows: 3 },
-  { key: "about", label: "Om er", max: 600, rows: 4 },
-  { key: "email", label: "E-post", max: 120 },
-  { key: "phone", label: "Telefon", max: 40 },
+type TextField = { key: keyof Reseller["texts"]; label: string; max: number; rows?: number; placeholder?: string; type?: string; wide?: boolean };
+
+/** Hemsidans avsnitt i samma ordning som på sidan; `focus` är avsnittet förhandsvisningen visar. */
+const PAGE_SECTIONS: { focus: string; title: string; text: string; fields: TextField[] }[] = [
+  {
+    focus: "hem",
+    title: "Startsidan",
+    text: "Det kunderna ser först.",
+    fields: [
+      { key: "shopName", label: "Butikens namn", max: 60, wide: true },
+      { key: "tagline", label: "Kort rad ovanför rubriken", max: 120, wide: true },
+      { key: "heroTitle", label: "Rubrik", max: 90, wide: true },
+      { key: "heroText", label: "Ingress", max: 300, rows: 3, wide: true },
+    ],
+  },
+  {
+    focus: "om",
+    title: "Om oss",
+    text: "Berätta vilka ni är. En tom rad ger ett nytt stycke.",
+    fields: [
+      { key: "aboutTitle", label: "Rubrik", max: 80, placeholder: "Till exempel Profilkläder från västkusten sedan 2009", wide: true },
+      { key: "about", label: "Text", max: 1500, rows: 7, wide: true },
+    ],
+  },
+  {
+    focus: "kontakt",
+    title: "Kontakt",
+    text: "Visas i kontaktrutan och sidfoten.",
+    fields: [
+      { key: "email", label: "E-post", max: 120, type: "email" },
+      { key: "phone", label: "Telefon", max: 40, type: "tel" },
+      { key: "address", label: "Adress", max: 160, placeholder: "Gata 1, 123 45 Ort", wide: true },
+      { key: "hours", label: "Öppettider", max: 120, placeholder: "Vardagar 8–17", wide: true },
+    ],
+  },
 ];
 
 const COLORS: { key: keyof Reseller["theme"]; label: string }[] = [
@@ -213,42 +284,66 @@ const COLORS: { key: keyof Reseller["theme"]; label: string }[] = [
   { key: "background", label: "Bakgrund" },
 ];
 
-function LookStep({ draft, set }: StepProps) {
+function PageStep({ draft, set, onFocus }: StepProps & { onFocus: (section: string) => void }) {
   return (
     <div>
-      <Section title="Färger" text="Hämtade från loggan. Klicka på en färg för att ändra.">
-        <div className="grid grid-cols-3 gap-3">
-          {COLORS.map((c) => (
-            <label key={c.key} className="block min-w-0 rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-3">
-              <span className="relative block h-14 overflow-hidden rounded-xl border border-black/10" style={{ background: draft.theme[c.key] }}>
-                <input type="color" value={draft.theme[c.key]} onChange={(e) => set("theme", { ...draft.theme, [c.key]: e.target.value.toUpperCase() })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={c.label} />
-              </span>
-              <span className="mt-2 block truncate text-[12.5px] font-medium text-[var(--nw-ink)]">{c.label}</span>
-              <input
-                value={draft.theme[c.key]}
-                onChange={(e) => /^#[0-9A-Fa-f]{0,6}$/.test(e.target.value) && set("theme", { ...draft.theme, [c.key]: e.target.value.toUpperCase() })}
-                className="mt-0.5 w-full bg-transparent text-[12px] text-[var(--nw-muted)] outline-none"
-                aria-label={`${c.label}, hex`}
-              />
-            </label>
-          ))}
+      {PAGE_SECTIONS.map((s) => (
+        <div key={s.focus} onFocus={() => onFocus(s.focus)}>
+          <Section title={s.title} text={s.text}>
+            {s.focus === "om" && draft.brandbook?.tone ? <p className="mb-3 rounded-xl bg-[var(--nw-soft)] px-3.5 py-2.5 text-[12.5px] text-[var(--nw-muted)]">Tonen i er grafiska profil: {draft.brandbook.tone}</p> : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {s.fields.map((f) => {
+                const value = draft.texts[f.key] ?? "";
+                const change = (v: string) => set("texts", { ...draft.texts, [f.key]: v });
+                return (
+                  <label key={f.key} className={`block min-w-0 text-[13px] font-medium text-[var(--nw-ink)] ${f.wide ? "sm:col-span-2" : ""}`}>
+                    <span className="flex items-baseline justify-between gap-2">
+                      {f.label}
+                      {f.rows ? (
+                        <span className="text-[11.5px] font-normal text-[var(--nw-faint)]">
+                          {value.length}/{f.max}
+                        </span>
+                      ) : null}
+                    </span>
+                    {f.rows ? (
+                      <textarea value={value} rows={f.rows} maxLength={f.max} placeholder={f.placeholder} onChange={(e) => change(e.target.value)} className="nw-input mt-1.5 w-full resize-y" />
+                    ) : (
+                      <input type={f.type ?? "text"} value={value} maxLength={f.max} placeholder={f.placeholder} onChange={(e) => change(e.target.value)} className="nw-input mt-1.5 w-full" />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </Section>
         </div>
-      </Section>
-      <Section title="Texter" text="Allt syns direkt i förhandsvisningen.">
-        <div className="flex flex-col gap-3">
-          {TEXT_FIELDS.map((f) => (
-            <label key={f.key} className="block text-[13px] font-medium text-[var(--nw-ink)]">
-              {f.label}
-              {f.rows ? (
-                <textarea value={draft.texts[f.key]} rows={f.rows} maxLength={f.max} onChange={(e) => set("texts", { ...draft.texts, [f.key]: e.target.value })} className="nw-input mt-1.5 w-full resize-y" />
-              ) : (
-                <input value={draft.texts[f.key]} maxLength={f.max} onChange={(e) => set("texts", { ...draft.texts, [f.key]: e.target.value })} className="nw-input mt-1.5 w-full" />
-              )}
-            </label>
-          ))}
-        </div>
-      </Section>
+      ))}
+      <div onFocus={() => onFocus("hem")}>
+        <ColorSection draft={draft} set={set} />
+      </div>
     </div>
+  );
+}
+
+function ColorSection({ draft, set }: StepProps) {
+  return (
+    <Section title="Färger" text="Hämtade från loggan och den grafiska profilen. Klicka på en färg för att ändra.">
+      <div className="grid grid-cols-3 gap-3">
+        {COLORS.map((c) => (
+          <label key={c.key} className="block min-w-0 rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-3">
+            <span className="relative block h-14 overflow-hidden rounded-xl border border-black/10" style={{ background: draft.theme[c.key] }}>
+              <input type="color" value={draft.theme[c.key]} onChange={(e) => set("theme", { ...draft.theme, [c.key]: e.target.value.toUpperCase() })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={c.label} />
+            </span>
+            <span className="mt-2 block truncate text-[12.5px] font-medium text-[var(--nw-ink)]">{c.label}</span>
+            <input
+              value={draft.theme[c.key]}
+              onChange={(e) => /^#[0-9A-Fa-f]{0,6}$/.test(e.target.value) && set("theme", { ...draft.theme, [c.key]: e.target.value.toUpperCase() })}
+              className="mt-0.5 w-full bg-transparent text-[12px] text-[var(--nw-muted)] outline-none"
+              aria-label={`${c.label}, hex`}
+            />
+          </label>
+        ))}
+      </div>
+    </Section>
   );
 }
 

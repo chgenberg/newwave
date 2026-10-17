@@ -30,9 +30,6 @@ export function clubTheme(palette: Color[]) {
 
 const on = (hex: string) => (luminance(hex) > 0.4 ? "#0D0C0C" : "#FFFFFF");
 
-/** En butik i en enda märkesfärg, till exempel en kundbutik i kundens färg. */
-export const brandTheme = (color: string) => ({ primary: color, accent: color, background: mix(color, "#FFFFFF", 0.93) });
-
 /** CSS-variabler för en återförsäljares webbshop. */
 export function shopVars(theme: { primary: string; accent: string; background: string }) {
   return {

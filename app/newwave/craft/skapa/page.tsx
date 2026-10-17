@@ -6,7 +6,7 @@ import { CLUBS } from "@/lib/club";
 import { copyFor } from "@/lib/copy";
 import { CRAFT_CLUBS, craftData, similarClubs } from "@/lib/newwave/craft";
 import { createSuggestions } from "@/lib/newwave/craftAgent";
-import { TEMPLATES, craftCalendar, templateFor } from "@/lib/newwave/craftCalendar";
+import { TEMPLATES, craftCalendar } from "@/lib/newwave/craftCalendar";
 import { clubOccasions } from "@/lib/newwave/club";
 import { readBrand } from "@/lib/newwave/store";
 import { clubTheme } from "@/lib/newwave/theme";
@@ -49,10 +49,8 @@ export default async function CraftCreate({ searchParams }: { searchParams: Prom
   } else if (copy) {
     const others = data.rows.filter((r) => !copy.clubIds.includes(r.id)).map((r) => r.id);
     initial = { title: copy.title, occasion: copy.occasion, brief: copy.brief, products: copy.products, clubIds: others, note: `Skickar ”${copy.title}” till de ${others.length} klubbar som inte fick den förra gången.` };
-  } else if (p.mall) {
-    const t = templateFor(p.mall, p.datum, allowed);
-    initial = { ...t, date: p.datum };
   }
+  const plan = !source && !copy && p.mall && p.datum && /^\d{4}-\d{2}-\d{2}$/.test(p.datum) ? { occasion: p.mall.slice(0, 60), date: p.datum } : undefined;
   if (p.klubbar) initial.clubIds = p.klubbar.split(",").filter((id) => CRAFT_CLUBS.some((c) => c.id === id));
   else if (p.klubb && mode === "kampanj" && CRAFT_CLUBS.some((c) => c.id === p.klubb)) initial.clubIds = [p.klubb];
 
@@ -127,6 +125,8 @@ export default async function CraftCreate({ searchParams }: { searchParams: Prom
               calendar={months}
               today={now.toISOString().slice(0, 10)}
               initial={initial}
+              plan={plan}
+              approveAt={Object.fromEntries(CRAFT_CLUBS.flatMap((c) => (c.dashboard ? [[c.id, `${c.dashboard}/godkann`]] : [])))}
               autoBrief={p.brief}
               suggestions={createSuggestions(data, items, now.getTime())}
             />

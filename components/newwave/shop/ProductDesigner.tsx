@@ -238,7 +238,7 @@ export function ProductDesigner({ slug, productId, markup, shopName }: { slug: s
             {added ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link href={`/newwave/s/${slug}/offert`} className="inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)]">
-                  Till offertkorgen ({cart.lines.length})
+                  Till varukorgen ({cart.lines.length})
                 </Link>
                 <Link href={`/newwave/s/${slug}#produkter`} className="inline-flex h-12 items-center rounded-full border border-[var(--shop-line)] bg-white px-5 text-[14px] font-medium">
                   Fortsätt handla
@@ -251,10 +251,10 @@ export function ProductDesigner({ slug, productId, markup, shopName }: { slug: s
                 onClick={add}
                 className="mt-4 h-12 w-full rounded-full bg-[var(--shop-accent)] text-[15px] font-semibold text-[var(--shop-on-accent)] transition-transform hover:scale-[1.01] disabled:opacity-40"
               >
-                {!hasLogo ? "Ladda upp loggan först" : !qty ? "Välj antal" : "Lägg i offertkorgen"}
+                {!hasLogo ? "Ladda upp loggan först" : !qty ? "Välj antal" : "Lägg i varukorgen"}
               </button>
             )}
-            <p className="mt-3 text-[12px] opacity-55">Ni förbinder er inte till något. {shopName} skickar en offert som ni godkänner.</p>
+            <p className="mt-3 text-[12px] opacity-55">Beställ direkt i varukorgen, eller be {shopName} om en offert.</p>
           </div>
         </div>
       </div>

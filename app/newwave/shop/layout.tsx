@@ -30,7 +30,7 @@ export default async function ResellerLayout({ children }: Readonly<{ children: 
       className="nw-club nw-club--plain"
       style={{ "--club": theme.primary, "--club-accent": theme.accent, "--club-on-accent": theme.onAccent, "--club-soft": theme.soft } as React.CSSProperties}
     >
-      <DashShell portal="shop" base={BASE} items={ITEMS} label="Återförsäljarens dashboard" title={reseller.name} subtitle={`Återförsäljare · ${reseller.city}`} badges={badges} cta={cta} width={1040}>
+      <DashShell portal="shop" base={BASE} items={ITEMS} label="Återförsäljarens dashboard" title={reseller.name} subtitle={reseller.city ? `Återförsäljare · ${reseller.city}` : "Återförsäljare"} badges={badges} cta={cta} width={1040}>
         {children}
       </DashShell>
     </div>

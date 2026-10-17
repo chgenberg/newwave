@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { QuoteCart } from "@/components/newwave/shop/QuoteCart";
+import { ShopCart } from "@/components/newwave/shop/ShopCart";
 import { getResellerBySlug } from "@/lib/newwave/shopState";
 
-export const metadata: Metadata = { title: "Offertkorg" };
+export const metadata: Metadata = { title: "Varukorg" };
 
-export default async function Offertkorg({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Varukorg({ params }: { params: Promise<{ slug: string }> }) {
   const r = await getResellerBySlug((await params).slug);
-  return r ? <QuoteCart slug={r.slug} markup={r.markup} shopName={r.texts.shopName || r.name} /> : null;
+  return r ? <ShopCart slug={r.slug} markup={r.markup} shopName={r.texts.shopName || r.name} /> : null;
 }

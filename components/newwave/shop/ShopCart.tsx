@@ -18,13 +18,14 @@ const FIELDS = [
   { key: "phone", label: "Telefon", type: "tel", auto: "tel", required: false },
 ] as const;
 
-export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: number; shopName: string }) {
+/** Kunden beställer direkt till butikens pris, eller ber om en offert när något ska förhandlas. */
+export function ShopCart({ slug, markup, shopName }: { slug: string; markup: number; shopName: string }) {
   const router = useRouter();
   const [cart, update] = useCart(slug);
   const [company, setCompany] = useState({ name: "", contact: "", email: "", phone: "" });
   const [needBy, setNeedBy] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"" | "order" | "quote">("");
   const [error, setError] = useState("");
   const tester = cart.tester;
   useEffect(() => {
@@ -34,9 +35,10 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
   const priced = cart.lines.map((l) => ({ line: l, price: priceLine(l, markup) }));
   const total = priced.reduce((s, x) => s + (x.price?.total ?? 0), 0);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setBusy(true);
+    const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "quote" ? "quote" : "order";
+    setBusy(mode);
     setError("");
     try {
       const lines = cart.lines.map((l) => ({ productId: l.productId, sizes: l.sizes, design: l.design, color: l.color, logo: l.logo, logoDark: l.logoDark, preview: l.preview, proofs: l.proofs }));
@@ -46,19 +48,20 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
         needBy: needBy || undefined,
         message: message || undefined,
         lines,
+        source: mode === "order" ? "order" : undefined,
       });
       update((c) => ({ ...c, lines: [] }));
       router.push(`/newwave/s/${slug}/offert/${r.token}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunde inte skicka");
-      setBusy(false);
+      setBusy("");
     }
   };
 
   if (!cart.lines.length) {
     return (
       <div className="mx-auto max-w-[720px] px-5 py-20 text-center sm:px-8">
-        <h1 className="text-[30px] font-bold tracking-tight">Offertkorgen är tom</h1>
+        <h1 className="text-[30px] font-bold tracking-tight">Varukorgen är tom</h1>
         <p className="mt-2 text-[15px] opacity-65">Välj en produkt, ladda upp loggan och lägg den här.</p>
         <Link href={`/newwave/s/${slug}#produkter`} className="mt-6 inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)]">
           Se produkterna
@@ -69,8 +72,8 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
 
   return (
     <div className="mx-auto max-w-[1180px] px-5 py-8 sm:px-8 sm:py-12">
-      <h1 className="text-[30px] font-bold tracking-tight sm:text-[38px]">Offertkorg</h1>
-      <p className="mt-1 text-[14.5px] opacity-65">Kontrollera produkterna och skicka förfrågan. {shopName} återkommer med en offert.</p>
+      <h1 className="text-[30px] font-bold tracking-tight sm:text-[38px]">Varukorg</h1>
+      <p className="mt-1 text-[14.5px] opacity-65">Beställ direkt till priset nedan, eller be {shopName} om en offert om ni vill förhandla eller har särskilda önskemål.</p>
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="min-w-0">
           <ul className="divide-y divide-[var(--shop-line)] border-y border-[var(--shop-line)]">
@@ -100,7 +103,7 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
             })}
           </ul>
           <div className="mt-4 flex items-baseline justify-between">
-            <p className="text-[14px] opacity-65">Preliminärt totalt exkl. moms</p>
+            <p className="text-[14px] opacity-65">Totalt exkl. moms</p>
             <p className="text-[24px] font-bold tracking-tight">{sek(total)}</p>
           </div>
           <Link href={`/newwave/s/${slug}#produkter`} className="mt-3 inline-block text-[13.5px] font-medium underline underline-offset-4">
@@ -136,10 +139,14 @@ export function QuoteCart({ slug, markup, shopName }: { slug: string; markup: nu
             </label>
           </div>
           {error ? <p className="mt-3 text-[13px] text-[#B42318]">{error}</p> : null}
-          <button type="submit" disabled={busy} className="mt-5 h-12 w-full rounded-full bg-[var(--shop-accent)] text-[15px] font-semibold text-[var(--shop-on-accent)] transition-transform hover:scale-[1.01] disabled:opacity-50">
-            {busy ? "Skickar…" : "Skicka förfrågan"}
+          <button type="submit" value="order" disabled={Boolean(busy)} className="mt-5 h-12 w-full rounded-full bg-[var(--shop-accent)] text-[15px] font-semibold text-[var(--shop-on-accent)] transition-transform hover:scale-[1.01] disabled:opacity-50">
+            {busy === "order" ? "Beställer…" : `Beställ – ${sek(total)}`}
           </button>
-          <p className="mt-3 text-[12px] opacity-55">Gratis och utan förpliktelser. Ni får en länk där ni ser offerten och kan godkänna den.</p>
+          <p className="mt-2 text-center text-[12px] opacity-55">Ni får ett provtryck att godkänna innan något trycks.</p>
+          <button type="submit" value="quote" disabled={Boolean(busy)} className="mt-4 h-11 w-full rounded-full border border-[var(--shop)] text-[14px] font-semibold transition-colors hover:bg-white disabled:opacity-50">
+            {busy === "quote" ? "Skickar…" : "Begär offert i stället"}
+          </button>
+          <p className="mt-2 text-center text-[12px] opacity-55">Gratis och utan förpliktelser. {shopName} svarar med en offert som ni godkänner.</p>
         </form>
       </div>
     </div>

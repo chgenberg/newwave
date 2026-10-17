@@ -26,13 +26,6 @@ export function seasonProducts(season: Season, allowed: string[], limit = 4) {
   return [...ok.filter((p) => p.seasons.length < 4), ...ok.filter((p) => p.seasons.length === 4)].slice(0, limit).map((p) => p.id);
 }
 
-export function templateFor(occasion: string, date: string | undefined, allowed: string[]): Template {
-  const t = TEMPLATES.find((x) => x.occasion === occasion);
-  if (t) return { ...t, products: t.products.filter((id) => allowed.includes(id)) };
-  const season = SEASON_OF(date ? Number(date.slice(5, 7)) : new Date().getMonth() + 1);
-  return { occasion, title: occasion, brief: `Material till ${occasion.toLowerCase()} i varje klubbs färger och ton, med produkter som passar ${season}en.`, products: seasonProducts(season, allowed, 3) };
-}
-
 const SPORT: { occasion: string; month: number; day: number }[] = [
   { occasion: "Säsongsstart", month: 3, day: 15 },
   { occasion: "Avslutning", month: 6, day: 10 },

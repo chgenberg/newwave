@@ -1,7 +1,7 @@
 import { nwProduct } from "@/lib/newwave/catalog";
 import { colorName } from "@/lib/newwave/colors";
 import { designSummary } from "@/lib/newwave/marking";
-import { QUOTE_FLOW, STATUS_LABEL, fmtWhen, sek, type Quote, type QuoteStatus } from "@/lib/newwave/reseller";
+import { ORDER_FLOW, QUOTE_FLOW, STATUS_LABEL, fmtWhen, sek, type Quote, type QuoteStatus } from "@/lib/newwave/reseller";
 import { LineStudio } from "./QuoteActions";
 import { LineMock } from "./ProductMock";
 
@@ -14,16 +14,17 @@ const PILL: Record<QuoteStatus, string> = {
   nekad: "bg-[#EFEFEF] text-[#6E6E73]",
 };
 
-export function StatusPill({ status }: { status: QuoteStatus }) {
-  return <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${PILL[status]}`}>{STATUS_LABEL[status]}</span>;
+export function StatusPill({ status, direct }: { status: QuoteStatus; direct?: boolean }) {
+  return <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium ${PILL[status]}`}>{direct && status === "godkänd" ? "Beställd" : STATUS_LABEL[status]}</span>;
 }
 
-/** Var offerten är på väg: kund, återförsäljare och New Wave. */
-export function QuoteFlow({ status }: { status: QuoteStatus }) {
-  const at = status === "nekad" ? 1 : QUOTE_FLOW.findIndex((s) => s.id === status);
+/** Var offerten är på väg: kund, återförsäljare och New Wave. En direktbeställning hoppar över offertstegen. */
+export function QuoteFlow({ status, direct }: { status: QuoteStatus; direct?: boolean }) {
+  const flow = direct ? ORDER_FLOW : QUOTE_FLOW;
+  const at = status === "nekad" ? 1 : flow.findIndex((s) => s.id === status);
   return (
-    <ol className="grid grid-cols-5 gap-1.5" aria-label="Offertens steg">
-      {QUOTE_FLOW.map((s, i) => (
+    <ol className={`grid gap-1.5 ${direct ? "grid-cols-3" : "grid-cols-5"}`} aria-label={direct ? "Orderns steg" : "Offertens steg"}>
+      {flow.map((s, i) => (
         <li key={s.id} className="min-w-0" aria-current={i === at ? "step" : undefined}>
           <span className={`block h-1.5 rounded-full ${i <= at ? (status === "nekad" && i === at ? "bg-[#C9C9CE]" : "bg-[#1D1D1F]") : "bg-[#E5E5EA]"}`} />
           <span className={`mt-1.5 block truncate text-[11.5px] ${i <= at ? "font-semibold text-[#1D1D1F]" : "text-[#8E8E93]"}`}>{s.label}</span>

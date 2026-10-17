@@ -1,64 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { type CustomerShop, shopUrl, type Reseller } from "@/lib/newwave/reseller";
+import { shopUrl, type Reseller } from "@/lib/newwave/reseller";
 import { withDemo } from "@/lib/newwave/workspaceId";
 import { TestAsCustomer } from "./ShopClient";
 
-type Props = {
-  /** Sökvägen till butiken; den fullständiga adressen byggs i webbläsaren. */
-  path: string;
-  /** Besökarens demomiljö följer med i länken, så att en mobil som skannar QR-koden ser samma butik. */
-  ws: string | null;
-  name: string;
-  mail: { to?: string; subject: string; body: (url: string) => string };
-  test: React.ReactNode;
-};
-
-/** Delning av återförsäljarens egen webbshop. */
+/**
+ * Allt återförsäljaren behöver för att få ut butiken till sina företagskunder: länk, QR-kod, ett färdigt mejl och att
+ * prova själv. Besökarens demomiljö följer med i länken (`ws`), så att en mobil som skannar QR-koden ser samma butik.
+ */
 export function ResellerShare({ shop, ws }: { shop: Pick<Reseller, "slug" | "name" | "texts">; ws: string | null }) {
   const name = shop.texts.shopName || shop.name;
-  return (
-    <ShareShop
-      path={shopUrl(shop)}
-      ws={ws}
-      name={name}
-      mail={{
-        subject: `Designa era profilprodukter själva hos ${name}`,
-        body: (url) => `Hej!\n\nNu kan ni göra era profilprodukter själva i vår webbshop. Ladda upp loggan, se den på produkterna i 3D och få priset direkt:\n${url}\n\nVänliga hälsningar\n${name}`,
-      }}
-      test={<TestAsCustomer slug={shop.slug} />}
-    />
-  );
-}
-
-/** Delning av en kundbutik till kundens kontaktperson. */
-export function CustomerShopShare({ shop, reseller, ws }: { shop: Pick<CustomerShop, "token" | "company">; reseller: string; ws: string | null }) {
-  const path = `/newwave/k/${shop.token}`;
-  const first = shop.company.contact.split(" ")[0];
-  return (
-    <ShareShop
-      path={path}
-      ws={ws}
-      name={shop.company.name}
-      mail={{
-        to: shop.company.email,
-        subject: `Er egen profilbutik är klar`,
-        body: (url) => `Hej${first ? ` ${first}` : ""}!\n\nNu har ${shop.company.name} en egen profilbutik. Loggan ligger redan på produkterna och priserna är de vi har kommit överens om, så det är bara att välja storlekar och antal:\n${url}\n\nDela gärna länken med dem som beställer hos er.\n\nVänliga hälsningar\n${reseller}`,
-      }}
-      test={
-        <Link href={path} className="nw-btn nw-btn-ghost">
-          Öppna som kund
-        </Link>
-      }
-    />
-  );
-}
-
-/** Allt man behöver för att få ut en butik till kunderna: länk, QR-kod, ett färdigt mejl och att prova själv. */
-export function ShareShop({ path, ws, name, mail, test }: Props) {
+  const path = shopUrl(shop);
+  const mail = {
+    subject: `Designa era profilprodukter själva hos ${name}`,
+    body: (url: string) => `Hej!\n\nNu kan ni göra era profilprodukter själva i vår webbshop. Ladda upp loggan, se den på produkterna i 3D och beställ direkt:\n${url}\n\nVänliga hälsningar\n${name}`,
+  };
   const [shared, setShared] = useState(path);
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState<"" | "link" | "mail">("");
@@ -88,13 +46,13 @@ export function ShareShop({ path, ws, name, mail, test }: Props) {
           <button type="button" onClick={() => copy(shared, "link")} className="nw-btn nw-club-btn">
             {copied === "link" ? "Kopierad" : "Kopiera länken"}
           </button>
-          {test}
+          <TestAsCustomer slug={shop.slug} />
         </div>
         <div className="mt-4 border-t border-[var(--nw-line)] pt-4">
           <p className="text-[12.5px] text-[var(--nw-muted)]">Färdigt mejl till kunderna</p>
           <p className="mt-1 line-clamp-3 whitespace-pre-line text-[13px] leading-relaxed text-[var(--nw-ink)]">{body}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={`mailto:${mail.to ?? ""}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(body)}`} className="nw-btn nw-btn-ghost">
+            <a href={`mailto:?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(body)}`} className="nw-btn nw-btn-ghost">
               Öppna i mejlen
             </a>
             <button type="button" onClick={() => copy(body, "mail")} className="nw-btn nw-btn-ghost">

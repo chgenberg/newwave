@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { HUB_TARGETS, type HubTarget } from "@/lib/newwave/hub";
 import { Icon } from "./DashNav";
+import { reopenGuide } from "./DemoGuide";
+import { ShareDemo } from "./ShareDemo";
 import { STORAGE_PREFIX } from "./workspace/roles";
 
 /** Studions val av öppen panel är en inställning, inte demodata. */
@@ -25,7 +27,7 @@ function Restart() {
   };
 
   return (
-    <div className="mt-1 border-t border-[rgba(17,17,17,0.07)] px-2 pb-1 pt-2">
+    <div className="px-2 pb-1">
       {step === "idle" ? (
         <button type="button" onClick={() => setStep("confirm")} className="flex min-h-9 w-full items-center gap-2 rounded-full px-1 text-left text-[13px] text-[#6F6B63] transition hover:text-[#111]">
           <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -55,7 +57,7 @@ function Restart() {
  * Växlar mellan designmotorn och de fyra dashboardsen. På datorn en diskret pil längst till vänster om menyn,
  * i toppraden på mobil (`bar`), där namnet på den aktuella ytan blir knappen.
  */
-export function HubSwitch({ active, bar }: { active?: HubTarget; bar?: boolean }) {
+export function HubSwitch({ active, bar }: { active: HubTarget; bar?: boolean }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -93,7 +95,7 @@ export function HubSwitch({ active, bar }: { active?: HubTarget; bar?: boolean }
             : "group grid w-5 place-items-center rounded-full text-[#A6A39B] transition hover:bg-[#F2F2EF] hover:text-[#111]"
         }
       >
-        {bar ? <span className="truncate">{current?.short ?? "Välj"}</span> : null}
+        {bar ? <span className="truncate">{current?.short}</span> : null}
         <svg viewBox="0 0 24 24" aria-hidden className={`h-4 w-4 shrink-0 fill-none stroke-current transition-transform duration-300 ${open ? "rotate-180" : bar ? "" : "group-hover:translate-x-0.5"}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d={bar ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6"} />
         </svg>
@@ -124,6 +126,26 @@ export function HubSwitch({ active, bar }: { active?: HubTarget; bar?: boolean }
                 </Link>
               );
             })}
+            <div className="mt-1 border-t border-[rgba(17,17,17,0.07)] px-2 pt-2">
+              {active !== "studio" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    reopenGuide(active);
+                    setOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="flex min-h-9 w-full items-center gap-2 rounded-full px-1 text-left text-[13px] text-[#6F6B63] transition hover:text-[#111]"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01" />
+                  </svg>
+                  Visa guiden
+                </button>
+              ) : null}
+              <ShareDemo variant="menu" />
+            </div>
             <Restart />
           </motion.nav>
         ) : null}
