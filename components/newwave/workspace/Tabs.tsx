@@ -5,6 +5,7 @@ import { useState } from "react";
 import { type BrandKit, kitAccent } from "@/lib/newwave/brandKit";
 import { NW_CATALOG, nwProduct } from "@/lib/newwave/catalog";
 import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday, onChest } from "@/lib/newwave/marking";
+import { type OccasionId, occasion } from "@/lib/newwave/occasions";
 import { sek } from "@/lib/newwave/reseller";
 import { luminance } from "@/lib/newwave/theme";
 import { PLACEHOLDER } from "../shop/cart";
@@ -34,20 +35,25 @@ export function Empty({ onStart }: { onStart: () => void }) {
   );
 }
 
-export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next }: { kit: BrandKit; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void; next: { label: string; go: () => void } }) {
+/** Återförsäljarens tillfällen: samma kollektioner som kunderna sätter ihop i butikens eventverktyg. */
+type Occasions = { offered: OccasionId[]; current: OccasionId | null; onPick: (id: OccasionId) => void; slug: string };
+
+export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next, occasions }: { kit: BrandKit; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void; next: { label: string; go: () => void }; occasions?: Occasions }) {
   const total = items.reduce((sum, i) => sum + (nwProduct(i.id)?.priceSek ?? 0), 0);
+  const current = occasions?.current ? occasion(occasions.current) : undefined;
   return (
     <div className={PAGE}>
       <p className="nw-kicker text-[#6F6B63]">{kit.name}</p>
-      <h2 className={H}>Kollektion</h2>
+      <h2 className={H}>{current ? `Kollektion för ${current.name.toLowerCase()}` : "Kollektion"}</h2>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className={LEAD}>Allt ni har designat i samma varumärke. Öppna en produkt för att ändra trycket.</p>
+        <p className={LEAD}>{occasions && !items.length ? "Välj ett tillfälle så sätter vi ihop kollektionen med ert varumärke. Era kunder gör samma sak i butiken." : "Allt ni har designat i samma varumärke. Öppna en produkt för att ändra trycket."}</p>
         {items.length ? (
           <button type="button" onClick={next.go} className={SOLID}>
             {next.label} <span aria-hidden>→</span>
           </button>
         ) : null}
       </div>
+      {occasions && items.length ? <OccasionChips occasions={occasions} /> : null}
       {items.length ? (
         <>
           <ul className="mt-8 grid grid-cols-2 gap-3 min-[700px]:grid-cols-3 min-[1100px]:grid-cols-4">
@@ -80,10 +86,86 @@ export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next }: {
           <p className="mt-6 text-[13.5px] text-[#6F6B63]">
             {items.length} {items.length === 1 ? "produkt" : "produkter"} · från {sek(total)} för en av varje
           </p>
+          {occasions ? <InShop slug={occasions.slug} /> : null}
         </>
+      ) : occasions ? (
+        <OccasionStart occasions={occasions} onStart={onStart} />
       ) : (
         <Empty onStart={onStart} />
       )}
+    </div>
+  );
+}
+
+function OccasionStart({ occasions, onStart }: { occasions: Occasions; onStart: () => void }) {
+  return (
+    <>
+      <ul className="mt-8 grid grid-cols-2 gap-3 min-[1100px]:grid-cols-3">
+        {occasions.offered.map((id) => {
+          const o = occasion(id)!;
+          return (
+            <li key={id}>
+              <button type="button" onClick={() => occasions.onPick(id)} className="group block w-full overflow-hidden rounded-[20px] bg-white text-left shadow-[inset_0_0_0_1px_rgba(17,17,17,0.08)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.3),0_18px_40px_-28px_rgba(17,17,17,0.5)]">
+                <span className="block aspect-[3/2] overflow-hidden bg-[#F4F4F2]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={o.scene} alt="" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" loading="lazy" />
+                </span>
+                <span className="flex items-start justify-between gap-2 px-3.5 py-3">
+                  <span className="min-w-0">
+                    <span className="block text-[14.5px] font-semibold">{o.name}</span>
+                    <span className="block truncate text-[12px] text-[#6F6B63]">{o.hint}</span>
+                  </span>
+                  <span className="shrink-0 text-[12px] tabular-nums text-[#6F6B63]">{o.products.length} st</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={onStart} className="text-[13px] font-medium text-[#6F6B63] underline underline-offset-4 hover:text-[#111]">
+          Eller skapa en kollektion utan tillfälle
+        </button>
+        <InShop slug={occasions.slug} compact />
+      </div>
+    </>
+  );
+}
+
+function OccasionChips({ occasions }: { occasions: Occasions }) {
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-2" role="group" aria-label="Tillfälle">
+      <span className="text-[12.5px] text-[#6F6B63]">Tillfälle</span>
+      {occasions.offered.map((id) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={occasions.current === id}
+          onClick={() => occasions.onPick(id)}
+          className="h-8 rounded-full px-3 text-[12.5px] font-medium shadow-[inset_0_0_0_1px_rgba(17,17,17,0.14)] transition hover:shadow-[inset_0_0_0_1px_#111] aria-pressed:bg-[#111] aria-pressed:text-white"
+        >
+          {occasion(id)!.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Påminner om att kunderna har samma verktyg i återförsäljarens butik. */
+function InShop({ slug, compact }: { slug: string; compact?: boolean }) {
+  const href = `/newwave/s/${slug}/event`;
+  if (compact)
+    return (
+      <Link href={href} className="text-[13px] font-medium underline underline-offset-4">
+        Se hur kunderna gör det i butiken →
+      </Link>
+    );
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-[#F4F4F2] px-5 py-4">
+      <p className="max-w-[60ch] text-[13.5px] leading-snug">Era kunder kan göra samma sak i butiken: välja tillfälle, lägga in loggan och beställa hela kollektionen direkt.</p>
+      <Link href={href} className={GHOST}>
+        Öppna eventsidan →
+      </Link>
     </div>
   );
 }

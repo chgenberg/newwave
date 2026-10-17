@@ -1,5 +1,6 @@
 import { NW_CATALOG, nwProduct, type NwProduct } from "./catalog";
 import { defaultDesign, type Design, markingPrice, sanitizeColor, sanitizeDesign } from "./marking";
+import type { OccasionId } from "./occasions";
 
 /** Återförsäljarens webbshop och offerter. Ren modul: används både i webbläsaren och på servern. */
 
@@ -36,6 +37,8 @@ export type Reseller = {
   brandbook?: ResellerBrandbook;
   texts: ShopTexts;
   products: string[];
+  /** Tillfällena kunderna kan planera i butiken; saknas listan erbjuds alla. */
+  occasions?: OccasionId[];
   /** Påslag i procent på New Waves cirkapris. */
   markup: number;
   status: "utkast" | "publicerad";
@@ -143,6 +146,17 @@ export function priceQuote(lines: QuoteLineInput[], markup: number) {
   return { lines: priced, totalSek: priced.reduce((s, l) => s + l.total, 0), costSek: priced.reduce((s, l) => s + l.cost, 0) };
 }
 
+const SIZE_CURVE: Record<string, number> = { XS: 0.05, S: 0.15, M: 0.3, L: 0.3, XL: 0.15, XXL: 0.05 };
+
+/** Antalet fördelat på vuxenstorlekarna som en vanlig beställning, innan kunden valt själv. Produkter utan storlek får allt på första. */
+export function splitSizes(p: NwProduct, qty: number): Record<string, number> {
+  const adult = p.sizes.filter((s) => s in SIZE_CURVE);
+  if (!adult.includes("M")) return { [p.sizes[0]]: qty };
+  const out = Object.fromEntries(adult.map((s) => [s, Math.floor(qty * SIZE_CURVE[s])]));
+  out.M += qty - Object.values(out).reduce((a, b) => a + b, 0);
+  return Object.fromEntries(Object.entries(out).filter(([, n]) => n > 0));
+}
+
 /** "Från"-pris per styck: 100 st med produktens standardtryck. */
 export function fromPrice(p: NwProduct, markup: number) {
   const line = priceLine({ productId: p.id, sizes: { [p.sizes[0]]: 100 }, design: defaultDesign(p), color: p.garmentHex, logo: "" }, markup);
@@ -212,7 +226,7 @@ export const shopUrl = (r: Pick<Reseller, "slug">) => `/newwave/s/${r.slug}`;
 export const BUILDER_STEPS = [
   { id: "varumarke", label: "Varumärke", hint: "Logga och webbplats" },
   { id: "hemsidan", label: "Hemsidan", hint: "Texter, Om oss och kontakt" },
-  { id: "sortiment", label: "Sortiment", hint: "Välj produkter" },
+  { id: "sortiment", label: "Sortiment", hint: "Produkter, pris och event" },
   { id: "publicera", label: "Publicera och dela", hint: "Gå live och bjud in kunder" },
 ] as const;
 

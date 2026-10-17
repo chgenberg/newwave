@@ -57,15 +57,16 @@ export function contrastRatio(a: RGB, b: RGB) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** The colour covering most of the printed artwork – what the eye sees against the product. */
-export function dominantInk(art: LogoArt): RGB | null {
+/** The colours covering at least a fifth of the printed artwork – what the eye reads against the product. */
+function mainInks(art: LogoArt): RGB[] {
   const src = art.flat ?? art.canvas;
   const ctx = src.getContext("2d");
-  if (!ctx) return null;
+  if (!ctx) return [];
   const { width, height } = src;
   const data = ctx.getImageData(0, 0, width, height).data;
   const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
   const stride = Math.max(4, Math.floor((width * height) / 6000)) * 4;
+  let total = 0;
   for (let i = 0; i < data.length; i += stride) {
     if (data[i + 3] < 160) continue;
     const key = ((data[i] >> 5) << 6) | ((data[i + 1] >> 5) << 3) | (data[i + 2] >> 5);
@@ -75,23 +76,67 @@ export function dominantInk(art: LogoArt): RGB | null {
     b.g += data[i + 1];
     b.b += data[i + 2];
     buckets.set(key, b);
+    total++;
   }
-  const top = [...buckets.values()].sort((x, y) => y.n - x.n)[0];
-  return top ? [top.r / top.n, top.g / top.n, top.b / top.n] : null;
+  const sorted = [...buckets.values()].sort((x, y) => y.n - x.n);
+  return sorted.filter((b, i) => i === 0 || b.n / total >= 0.2).map((b) => [b.r / b.n, b.g / b.n, b.b / b.n]);
 }
 
-/** How well the artwork stands out on a product colour. */
+/** How well the artwork stands out on a product colour: a red crest with a white field still reads on white. */
 export const inkContrast = (art: LogoArt, productHex: string) => {
-  const ink = dominantInk(art);
-  return ink ? contrastRatio(ink, rgbOf(productHex)) : 21;
+  const inks = mainInks(art);
+  return inks.length ? Math.max(...inks.map((ink) => contrastRatio(ink, rgbOf(productHex)))) : 21;
 };
 
-/** Keep the N most common colours of the logo and snap every pixel to the nearest one. */
-function reduceColors(data: Uint8ClampedArray, n: number, ink: [number, number, number]) {
-  if (n <= 1) {
-    for (let i = 0; i < data.length; i += 4) [data[i], data[i + 1], data[i + 2]] = ink;
-    return;
+const lumOf = (data: Uint8ClampedArray, i: number) => 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+/**
+ * One-colour separation. A logo with both light and dark parts (a white shield with red lettering) keeps the parts
+ * in the ink's own tone and lets the product show through the rest, so the details survive instead of the whole
+ * mark becoming one solid patch. A logo in a single tone is printed whole.
+ */
+function oneTone(data: Uint8ClampedArray, ink: RGB, alpha = 1) {
+  const hist = new Array<number>(256).fill(0);
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    hist[Math.round(lumOf(data, i))]++;
+    total++;
   }
+  // Otsu: the threshold that best separates the logo's light and dark parts.
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let best = { t: -1, score: 0, m0: 0, m1: 0, w0: 0 };
+  let n0 = 0;
+  let s0 = 0;
+  for (let t = 0; t < 255; t++) {
+    n0 += hist[t];
+    s0 += t * hist[t];
+    const n1 = total - n0;
+    if (!n0 || !n1) continue;
+    const m0 = s0 / n0;
+    const m1 = (sum - s0) / n1;
+    const score = n0 * n1 * (m1 - m0) ** 2;
+    if (score > best.score) best = { t, score, m0, m1, w0: n0 / total };
+  }
+  const two = best.t >= 0 && best.m1 - best.m0 >= 70 && Math.min(best.w0, 1 - best.w0) >= 0.04;
+  // The ink prints the parts in its own tone; if that is only a sliver of the logo, it prints the rest instead.
+  let light = 0.299 * ink[0] + 0.587 * ink[1] + 0.114 * ink[2] > 128;
+  if (two && (light ? 1 - best.w0 : best.w0) < 0.08) light = !light;
+  for (let i = 0; i < data.length; i += 4) {
+    let keep = 1;
+    if (two) {
+      const s = Math.min(1, Math.max(0, (light ? lumOf(data, i) - best.m0 : best.m1 - lumOf(data, i)) / (best.m1 - best.m0)));
+      keep = s <= 0.3 ? 0 : s >= 0.7 ? 1 : (s - 0.3) / 0.4;
+    }
+    [data[i], data[i + 1], data[i + 2]] = ink;
+    data[i + 3] = data[i + 3] * keep * alpha;
+  }
+}
+
+/** Keep the N most common colours of the logo and snap every pixel to the nearest one. */
+function reduceColors(data: Uint8ClampedArray, n: number, ink: RGB) {
+  if (n <= 1) return oneTone(data, ink);
   const counts = new Map<number, { n: number; r: number; g: number; b: number }>();
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 128) continue;
@@ -140,6 +185,36 @@ function dropWhiteBackground(data: Uint8ClampedArray) {
   // A logo that already has transparency is a white logo, not a white background.
   if (!total || clear / (data.length / 4) > 0.05 || white / total < 0.35) return;
   for (let i = 0; i < data.length; i += 4) if (data[i] > 236 && data[i + 1] > 236 && data[i + 2] > 236) data[i + 3] = 0;
+}
+
+/** How many clearly different colours the logo has, 1–4: what a print needs to look like the logo. */
+export async function logoColors(src: string): Promise<number> {
+  const img = await loadImage(src).catch(() => null);
+  if (!img?.naturalWidth) return 1;
+  const scale = 240 / Math.max(img.naturalWidth, img.naturalHeight);
+  const c = canvasOf(Math.max(1, Math.round(img.naturalWidth * scale)), Math.max(1, Math.round(img.naturalHeight * scale)));
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const data = ctx.getImageData(0, 0, c.width, c.height).data;
+  dropWhiteBackground(data);
+  const buckets = new Map<number, { n: number; rgb: RGB }>();
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 160) continue;
+    const key = ((data[i] >> 5) << 6) | ((data[i + 1] >> 5) << 3) | (data[i + 2] >> 5);
+    const b = buckets.get(key) ?? { n: 0, rgb: [data[i], data[i + 1], data[i + 2]] };
+    b.n++;
+    buckets.set(key, b);
+    total++;
+  }
+  // Neighbouring shades (anti-aliasing, gradients) fold into the nearest bigger colour.
+  const clusters: { n: number; rgb: RGB }[] = [];
+  for (const b of [...buckets.values()].sort((x, y) => y.n - x.n)) {
+    const near = clusters.find((c) => (c.rgb[0] - b.rgb[0]) ** 2 + (c.rgb[1] - b.rgb[1]) ** 2 + (c.rgb[2] - b.rgb[2]) ** 2 < 75 ** 2);
+    if (near) near.n += b.n;
+    else clusters.push({ ...b });
+  }
+  return Math.min(4, Math.max(1, clusters.filter((c) => c.n / total >= 0.05).length));
 }
 
 /**
@@ -333,14 +408,10 @@ export async function buildLogoArt(src: string | null, d: Pick<Design, "method" 
   const img = mctx.getImageData(0, 0, mark.width, mark.height);
   dropWhiteBackground(img.data);
   const badge = d.shape !== "original";
-  const ink: [number, number, number] = badge ? (darkProduct ? [17, 17, 17] : [255, 255, 255]) : darkProduct ? [255, 255, 255] : [17, 17, 17];
+  const ink: RGB = badge ? (darkProduct ? [17, 17, 17] : [255, 255, 255]) : darkProduct ? [255, 255, 255] : [17, 17, 17];
   if (look === "gravyr") {
     // Engraving reveals the material: a single tone, lighter on dark goods and darker on light goods.
-    const tone: [number, number, number] = darkProduct ? [186, 186, 182] : [92, 92, 90];
-    for (let i = 0; i < img.data.length; i += 4) {
-      [img.data[i], img.data[i + 1], img.data[i + 2]] = tone;
-      img.data[i + 3] = img.data[i + 3] * 0.9;
-    }
+    oneTone(img.data, darkProduct ? [186, 186, 182] : [92, 92, 90], 0.9);
   } else if (look !== "digitaltryck") {
     reduceColors(img.data, colorsOf(d), ink);
   }

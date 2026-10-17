@@ -53,52 +53,43 @@ export default async function ResellerHome() {
         ))}
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col rounded-[var(--nw-radius)] bg-[var(--club)] p-5 text-white">
-          <div className="flex items-center gap-3">
-            {reseller.logoDark ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={reseller.logoDark} alt="" className="h-7 w-auto max-w-[180px] object-contain object-left" />
-            ) : (
-              <p className="nw-club-heading text-[18px]">{reseller.texts.shopName || reseller.name}</p>
-            )}
-            <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${live ? "bg-[var(--club-accent)] text-[var(--club-on-accent)]" : "bg-white/15"}`}>{live ? "Live" : "Utkast"}</span>
-          </div>
-          {live ? (
-            <>
-              <p className="nw-club-heading mt-5 line-clamp-2 text-[20px] leading-tight">{reseller.texts.heroTitle}</p>
-              <p className="mt-1.5 text-[13px] text-white/65">
-                {reseller.products.length} produkter · påslag {reseller.markup} % · uppdaterad {fmtDay(reseller.updatedAt)}
-              </p>
-            </>
+      <div className="mt-3 flex min-w-0 flex-col rounded-[var(--nw-radius)] bg-[var(--club)] p-5 text-white">
+        <div className="flex items-center gap-3">
+          {reseller.logoDark ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={reseller.logoDark} alt="" className="h-7 w-auto max-w-[180px] object-contain object-left" />
           ) : (
-            <ol className="mt-5 grid grid-cols-4 gap-1.5" aria-label="Butiksbyggaren">
-              {BUILDER_STEPS.map((s) => (
-                <li key={s.id} className="min-w-0">
-                  <span className={`block h-1.5 rounded-full ${done[s.id] ? "bg-[var(--club-accent)]" : "bg-white/20"}`} />
-                  <span className="mt-1.5 block truncate text-[11.5px] text-white/70">{s.label}</span>
-                </li>
-              ))}
-            </ol>
+            <p className="nw-club-heading text-[18px]">{reseller.texts.shopName || reseller.name}</p>
           )}
-          <div className="mt-auto flex flex-wrap gap-2 pt-5">
-            <Link href="/newwave/shop/butiken/redigera" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-[13.5px] font-semibold text-[var(--club)]">
-              {live ? "Redigera butiken" : "Fortsätt bygga"}
-            </Link>
-            {live ? (
-              <Link href={shopUrl(reseller)} className="inline-flex h-10 items-center rounded-full border border-white/30 px-4 text-[13.5px] font-semibold">
-                Öppna butiken
-              </Link>
-            ) : null}
-          </div>
+          <span className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${live ? "bg-[var(--club-accent)] text-[var(--club-on-accent)]" : "bg-white/15"}`}>{live ? "Live" : "Utkast"}</span>
         </div>
-        <Link href="/newwave/shop/offerter" className="flex min-w-0 flex-col justify-center rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-5 transition-colors hover:border-[var(--nw-ink)]">
-          <p className="text-[12px] text-[var(--nw-muted)]">Så funkar det</p>
-          <p className="nw-club-heading mt-0.5 text-[19px] leading-tight text-[var(--club)]">Kunden designar och beställer</p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--nw-muted)]">
-            Företagskunden laddar upp sin logga i er butik och beställer direkt till ert pris – eller begär offert, som ni granskar och skickar. Ordern går till New Wave, som trycker och levererar i ert namn.
-          </p>
-        </Link>
+        {live ? (
+          <>
+            <p className="nw-club-heading mt-5 line-clamp-2 text-[20px] leading-tight">{reseller.texts.heroTitle}</p>
+            <p className="mt-1.5 text-[13px] text-white/65">
+              {reseller.products.length} produkter · påslag {reseller.markup} % · uppdaterad {fmtDay(reseller.updatedAt)}
+            </p>
+          </>
+        ) : (
+          <ol className="mt-5 grid grid-cols-4 gap-1.5" aria-label="Butiksbyggaren">
+            {BUILDER_STEPS.map((s) => (
+              <li key={s.id} className="min-w-0">
+                <span className={`block h-1.5 rounded-full ${done[s.id] ? "bg-[var(--club-accent)]" : "bg-white/20"}`} />
+                <span className="mt-1.5 block truncate text-[11.5px] text-white/70">{s.label}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <div className="mt-auto flex flex-wrap gap-2 pt-5">
+          <Link href="/newwave/shop/butiken/redigera" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-[13.5px] font-semibold text-[var(--club)]">
+            {live ? "Redigera butiken" : "Fortsätt bygga"}
+          </Link>
+          {live ? (
+            <Link href={shopUrl(reseller)} className="inline-flex h-10 items-center rounded-full border border-white/30 px-4 text-[13.5px] font-semibold">
+              Öppna butiken
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-8 border-t border-[var(--nw-line)]">

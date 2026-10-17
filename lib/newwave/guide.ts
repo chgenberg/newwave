@@ -44,3 +44,30 @@ export const GUIDES: Record<PortalId, { role: string; steps: GuideStep[]; next: 
     next: { text: "Beställningar och godkända offerter blir ordrar hos New Wave.", label: "Öppna New Wave", href: "/newwave/new-wave/ordrar" },
   },
 };
+
+export type PageHelp = { path: string; title: string; text?: string; steps?: { title: string; text: string }[] };
+
+/** Förklaringar som hör till en viss sida och visas i hjälpen när man står där. */
+export const PAGE_HELP: PageHelp[] = [
+  {
+    path: "/newwave/shop",
+    title: "Kunden designar och beställer",
+    text: "Företagskunden laddar upp sin logga i er butik och beställer direkt till ert pris, eller begär offert som ni granskar och skickar. Ordern går till New Wave, som trycker och levererar i ert namn.",
+  },
+  {
+    path: "/newwave/shop/butiken",
+    title: "Så handlar ett företag i butiken",
+    text: "Allt ser ut som er butik. Plattformen syns inte för kunden.",
+    steps: [
+      { title: "Väljer produkt eller event", text: "En enskild produkt, eller ett tillfälle som mässa, kick-off eller julklapp där hela kollektionen sätts ihop åt kunden." },
+      { title: "Lägger in sin logga", text: "Laddar upp filen, hämtar den från sin webbplats eller laddar upp sin grafiska profil. Den syns direkt på allt." },
+      { title: "Designar i 3D och ser priset", text: "Samma designmotor som ni har. Ert påslag och mängdrabatten räknas in medan kunden väljer antal." },
+      { title: "Beställer eller begär offert", text: "Direkt till ert pris, eller som offert ni svarar på. Ordern går till New Wave, som trycker och skickar i ert namn." },
+    ],
+  },
+  {
+    path: "/newwave/klubb/butik",
+    title: "Så väljs produkterna",
+    text: "Agenten väljer produkter efter tillfällets säsong och aktivitet: mössa och termos till vintern, keps och picknickfilt till sommaren. Vill ni göra en egen? Tryck Designa på en produkt, så lägger ni den i butiken direkt.",
+  },
+];

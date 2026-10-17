@@ -103,7 +103,6 @@ export default async function ShopPage() {
             </svg>
           </span>
         </summary>
-        <p className="pb-5 text-[13.5px] text-[var(--nw-muted)]">Agenten väljer produkter efter tillfällets säsong och aktivitet – mössa och termos till vintern, keps och picknickfilt till sommaren. Vill ni göra en egen? Tryck Designa på en produkt, så lägger ni den i butiken direkt.</p>
         <div className="space-y-7 pb-6">
           {CATEGORIES.map((cat) => (
             <section key={cat}>

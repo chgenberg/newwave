@@ -26,7 +26,7 @@ import {
   zonesFor,
 } from "@/lib/newwave/marking";
 import { sek } from "@/lib/newwave/reseller";
-import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt } from "./logoArt";
+import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt, logoColors } from "./logoArt";
 import { type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
 import { readLogoFile } from "./readLogoFile";
 
@@ -377,6 +377,25 @@ export function DesignStudio({
     };
   }, [logo, specKey, darkProduct]);
   const art = arts.main ?? null;
+
+  // En ny design trycks i loggans egna färger tills kunden väljer antal själv, så att den ser ut som loggan.
+  const colorsChosen = useRef(Boolean(initial.extra || initial.names || initial.colors !== 1));
+  useEffect(() => {
+    if (!logo || colorsChosen.current) return;
+    let live = true;
+    logoColors(logo).then((n) => {
+      if (!live || colorsChosen.current) return;
+      const d = latest.current;
+      const max = METHOD_INFO[d.method];
+      const colors = max.fixedColors ?? Math.min(n, max.maxColors);
+      if (colors === d.colors) return;
+      latest.current = { ...d, colors };
+      setDesignNow(latest.current);
+    });
+    return () => {
+      live = false;
+    };
+  }, [logo]);
   const curArt = onNames ? null : ((extraIndex >= 0 ? arts[`x${extraIndex}`] : art) ?? null);
   // Under ~1,8 försvinner trycket i tyget – en mörk logga på marinblått eller grön på grönt.
   const lowContrast = useMemo(() => {
@@ -945,7 +964,11 @@ export function DesignStudio({
                     </p>
                     <div className="seg">
                       {[1, 2, 3, 4].map((n) => (
-                        <button key={n} type="button" aria-pressed={colorsOf(cur) === n} disabled={Boolean(info.fixedColors) || n > info.maxColors} onClick={() => setCur({ colors: n })}>
+                        <button key={n} type="button" aria-pressed={colorsOf(cur) === n} disabled={Boolean(info.fixedColors) || n > info.maxColors} onClick={() => {
+                            colorsChosen.current = true;
+                            setCur({ colors: n });
+                          }}
+                        >
                           {n}
                         </button>
                       ))}

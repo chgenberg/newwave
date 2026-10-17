@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LogoError } from "@/lib/logo";
+import { OCCASION_IDS } from "@/lib/newwave/occasions";
 import { SHOP_CATALOG, answersTo, type Reseller } from "@/lib/newwave/reseller";
 import { importSite, isHost, siteHost } from "@/lib/newwave/resellerImport";
 import { CURRENT_RESELLER, getReseller, quotesFor, updateShop } from "@/lib/newwave/shopState";
@@ -37,6 +38,7 @@ const Patch = z
       hours: text(120).optional(),
     }),
     products: z.array(z.enum(SHOP_CATALOG.map((p) => p.id) as [string, ...string[]])).max(SHOP_CATALOG.length),
+    occasions: z.array(z.enum(OCCASION_IDS)).max(OCCASION_IDS.length),
     markup: z.number().min(-20).max(60),
   })
   .partial();

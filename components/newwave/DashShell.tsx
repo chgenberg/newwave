@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PORTALS, type PortalId } from "@/lib/newwave/hub";
 import { DashBottomBar, DashCrumb, DashMain, DashRail, Icon, type NavItem } from "./DashNav";
-import { DemoGuide } from "./DemoGuide";
+import { HelpButton } from "./Help";
 import { HubSwitch } from "./HubSwitch";
 import { HubFooterSlim } from "./HubFooter";
 import { LogoMark } from "./Logo";
@@ -71,15 +71,13 @@ export function DashShell({ portal, base, items, label, title, subtitle, logo, o
               <HubSwitch active={portal} />
               <DashRail {...nav} />
             </div>
-            <DashMain width={width}>
-              <DemoGuide portal={portal} />
-              {children}
-            </DashMain>
+            <DashMain width={width}>{children}</DashMain>
           </div>
         </div>
         <HubFooterSlim />
       </div>
       <DashBottomBar {...nav} />
+      <HelpButton portal={portal} />
     </>
   );
 }

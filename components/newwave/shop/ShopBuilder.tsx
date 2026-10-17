@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import type { LogoResult } from "@/lib/logo";
 import type { Brandbook } from "@/lib/newwave/brandKit";
 import { nwProduct } from "@/lib/newwave/catalog";
+import { OCCASIONS, type OccasionId, offeredOccasions } from "@/lib/newwave/occasions";
 import { luminance } from "@/lib/newwave/theme";
 import { BUILDER_STEPS, SHOP_CATALOG, SHOP_PACKS, costPrice, fromPrice, sek, stepsDone, type BuilderStep, type Reseller } from "@/lib/newwave/reseller";
 import { call, readDataUrl } from "./api";
@@ -14,7 +15,7 @@ import { ShopPreview } from "./ShopPreview";
 
 type Props = { initial: Reseller; initialStep: BuilderStep; ws: string | null };
 
-const EDITABLE = ["name", "website", "logo", "logoDark", "theme", "brandbook", "texts", "products", "markup"] as const;
+const EDITABLE = ["name", "website", "logo", "logoDark", "theme", "brandbook", "texts", "products", "occasions", "markup"] as const;
 const patchOf = (r: Reseller) => Object.fromEntries(EDITABLE.map((k) => [k, r[k]]).filter(([, v]) => v !== undefined));
 const same = (a: Reseller, b: Reseller) => JSON.stringify(patchOf(a)) === JSON.stringify(patchOf(b));
 
@@ -52,7 +53,9 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
   };
 
   const go = async (next: BuilderStep) => {
-    if (await save()) setStep(next);
+    if (!(await save())) return;
+    setStep(next);
+    setFocus(undefined);
   };
 
   const set = <K extends keyof Reseller>(k: K, v: Reseller[K]) => setDraft((d) => ({ ...d, [k]: v }));
@@ -96,7 +99,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
         <div className="min-w-0" role="tabpanel">
           {step === "varumarke" ? <BrandStep draft={draft} set={set} /> : null}
           {step === "hemsidan" ? <PageStep draft={draft} set={set} onFocus={setFocus} /> : null}
-          {step === "sortiment" ? <RangeStep draft={draft} set={set} /> : null}
+          {step === "sortiment" ? <RangeStep draft={draft} set={set} onFocus={setFocus} /> : null}
           {step === "publicera" ? <PublishStep saved={saved} dirty={dirty} onSaved={apply} ws={ws} /> : null}
 
           {error ? <p className="mt-4 text-[13px] text-[#B42318]">{error}</p> : null}
@@ -115,7 +118,7 @@ export function ShopBuilder({ initial, initialStep, ws }: Props) {
           ) : null}
         </div>
         <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
-          <ShopPreview shop={draft} focus={step === "hemsidan" ? focus : undefined} />
+          <ShopPreview shop={draft} focus={step === "hemsidan" || step === "sortiment" ? focus : undefined} />
         </div>
       </div>
     </div>
@@ -486,16 +489,62 @@ export function RangePicker({ products, markup, onChange, catalog = SHOP_CATALOG
   );
 }
 
-function RangeStep({ draft, set }: StepProps) {
+function RangeStep({ draft, set, onFocus }: StepProps & { onFocus: (section: string | undefined) => void }) {
   return (
-    <RangePicker
-      products={draft.products}
-      markup={draft.markup}
-      onChange={(v) => {
-        if (v.products) set("products", v.products);
-        if (v.markup !== undefined) set("markup", v.markup);
-      }}
-    />
+    <>
+      <div onFocusCapture={() => onFocus(undefined)} onPointerDownCapture={() => onFocus(undefined)}>
+        <RangePicker
+          products={draft.products}
+          markup={draft.markup}
+          onChange={(v) => {
+            if (v.products) set("products", v.products);
+            if (v.markup !== undefined) set("markup", v.markup);
+          }}
+        />
+      </div>
+      <div onFocusCapture={() => onFocus("event")} onPointerDownCapture={() => onFocus("event")}>
+        <OccasionSection draft={draft} set={set} />
+      </div>
+    </>
+  );
+}
+
+/** Tillfällena kunderna kan planera i butiken. Varje tillfälle tar med sina produkter, även de som inte ligger i sortimentet. */
+function OccasionSection({ draft, set }: StepProps) {
+  const on = new Set(offeredOccasions(draft).map((o) => o.id));
+  const toggle = (id: OccasionId) => set("occasions", OCCASIONS.filter((o) => (o.id === id ? !on.has(id) : on.has(o.id))).map((o) => o.id));
+  return (
+    <Section title="Event i butiken" text="Kunderna väljer tillfälle, lägger till sin logga och får en hel kollektion att designa och beställa. Produkterna följer med tillfället.">
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {OCCASIONS.map((o) => {
+          const active = on.has(o.id);
+          const outside = o.products.filter((p) => !draft.products.includes(p.id)).length;
+          return (
+            <li key={o.id}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggle(o.id)}
+                className={`flex w-full items-center gap-3 rounded-2xl border p-2 text-left transition-colors ${active ? "border-[var(--club)] bg-white" : "border-[var(--nw-line)] bg-[var(--nw-soft)] opacity-70 hover:opacity-100"}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={o.scene} alt="" className="h-12 w-[72px] shrink-0 rounded-xl object-cover" loading="lazy" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-[var(--nw-ink)]">{o.name}</span>
+                  <span className="block truncate text-[12px] text-[var(--nw-muted)]" title={outside ? `${outside} av produkterna ligger inte i sortimentet men kan beställas för tillfället` : undefined}>
+                    {o.products.length} produkter{outside ? ` · ${outside} nya` : ""}
+                  </span>
+                </span>
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${active ? "bg-[var(--club)] text-white" : "border border-[var(--nw-line)]"}`} aria-hidden>
+                  {active ? "✓" : ""}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {on.size ? null : <p className="mt-2 text-[12.5px] text-[var(--nw-muted)]">Inga tillfällen valda. Event-delen syns inte i butiken.</p>}
+    </Section>
   );
 }
 

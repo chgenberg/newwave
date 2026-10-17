@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ART_URL, type Design } from "@/lib/newwave/marking";
+import { sellableProducts } from "@/lib/newwave/occasions";
 import { priceLine, SHOP_CATALOG, type QuoteStatus } from "@/lib/newwave/reseller";
 import { CURRENT_RESELLER, createQuote, event, getResellerBySlug, updateShop } from "@/lib/newwave/shopState";
 import { fileUrl } from "@/lib/schemas";
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
   const { slug, ...input } = parsed.data;
   const r = await getResellerBySlug(slug);
   if (!r || r.status !== "publicerad") return Response.json({ error: "Butiken finns inte" }, { status: 404 });
-  const lines = input.lines.filter((l) => r.products.includes(l.productId));
+  const sellable = sellableProducts(r);
+  const lines = input.lines.filter((l) => sellable.has(l.productId));
   const quote = await createQuote(r.id, { ...input, lines });
   if (!quote) return Response.json({ error: "Välj storlekar och antal för minst en produkt." }, { status: 400 });
   return Response.json({ id: quote.id, token: quote.token });

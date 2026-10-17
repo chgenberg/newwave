@@ -1,4 +1,5 @@
 import type { BrandKit } from "@/lib/newwave/brandKit";
+import type { OccasionId } from "@/lib/newwave/occasions";
 
 /** En klubb som Craft kan skicka kollektionen till; loggan visas på produkterna i förhandsvisningen. */
 export type WorkspaceClub = { id: string; name: string; city: string; logo: string; logoDark?: string; colors: string[]; live: boolean };
@@ -12,7 +13,7 @@ export type Role =
   | { kind: "studio" }
   | { kind: "klubb"; clubId: string; kit: BrandKit }
   | { kind: "craft"; clubs: WorkspaceClub[]; products: string[] }
-  | { kind: "shop"; slug: string; kit: BrandKit; markup: number; products: string[] };
+  | { kind: "shop"; slug: string; kit: BrandKit; markup: number; products: string[]; occasions: OccasionId[] };
 
 export const STORAGE_PREFIX = "nw.studio.";
 export const storageKey = (role: Role) => `${STORAGE_PREFIX}${role.kind === "studio" ? "home" : role.kind}`;

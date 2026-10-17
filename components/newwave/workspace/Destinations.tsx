@@ -7,7 +7,7 @@ import { type BrandKit, isOwnKit } from "@/lib/newwave/brandKit";
 import { type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { designSummary, onChest } from "@/lib/newwave/marking";
 import { photoMockup } from "@/lib/newwave/photoMockup";
-import { logoFor, priceLine, type QuoteLineInput, sek } from "@/lib/newwave/reseller";
+import { logoFor, priceLine, type QuoteLineInput, sek, splitSizes } from "@/lib/newwave/reseller";
 import { call, upload } from "../shop/api";
 import { PLACEHOLDER } from "../shop/cart";
 import { ProductMock } from "../shop/ProductMock";
@@ -293,17 +293,6 @@ export function ClubsTab({ clubs, items, onStart, onSent }: { clubs: WorkspaceCl
 }
 
 // --- Återförsäljaren -----------------------------------------------------------------------------
-
-const SPLIT = [0.15, 0.35, 0.35, 0.15];
-
-/** Antalet fördelat på de vanligaste storlekarna, så att offerten blir rimlig innan kunden valt själv. */
-function splitSizes(p: NwProduct, qty: number): Record<string, number> {
-  const core = ["S", "M", "L", "XL"].filter((s) => p.sizes.includes(s));
-  if (core.length !== 4) return { [p.sizes[0]]: qty };
-  const out = Object.fromEntries(core.map((s, i) => [s, Math.floor(qty * SPLIT[i])]));
-  out.M += qty - Object.values(out).reduce((a, b) => a + b, 0);
-  return out;
-}
 
 /** Återförsäljaren gör en offert på kollektionen åt sin kund och fortsätter i offertflödet. */
 export function QuoteTab({ slug, markup, kit, items, onStart }: { slug: string; markup: number; kit: BrandKit; items: Item[]; onStart: () => void }) {

@@ -24,7 +24,7 @@ export function LogoPicker({ slug, compact }: { slug: string; compact?: boolean 
   const [fetching, setFetching] = useState(false);
   const file = useRef<HTMLInputElement>(null);
 
-  const choose = (l: LogoResult) => update((c) => ({ ...c, logo: { light: l.light, dark: l.dark, name: l.name } satisfies CustomerLogo }));
+  const choose = (l: LogoResult) => update((c) => ({ ...c, logo: { light: l.light, dark: l.dark, name: l.name, color: l.color } satisfies CustomerLogo }));
 
   const run = async (body: Record<string, string>) => {
     setBusy(true);

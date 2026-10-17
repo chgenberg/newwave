@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { HUB_TARGETS, type HubTarget } from "@/lib/newwave/hub";
 import { Icon } from "./DashNav";
-import { reopenGuide } from "./DemoGuide";
+import { openHelp } from "./Help";
 import { ShareDemo } from "./ShareDemo";
 import { STORAGE_PREFIX } from "./workspace/roles";
 
@@ -131,9 +131,8 @@ export function HubSwitch({ active, bar }: { active: HubTarget; bar?: boolean })
                 <button
                   type="button"
                   onClick={() => {
-                    reopenGuide(active);
                     setOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    openHelp();
                   }}
                   className="flex min-h-9 w-full items-center gap-2 rounded-full px-1 text-left text-[13px] text-[#6F6B63] transition hover:text-[#111]"
                 >

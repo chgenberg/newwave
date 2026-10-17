@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Reveal, SplitText } from "@/components/newwave/motion/Motion";
+import { offeredOccasions } from "@/lib/newwave/occasions";
 import type { Reseller } from "@/lib/newwave/reseller";
 import { shopVars } from "@/lib/newwave/theme";
 import { CartLink, ShopGrid, TesterBanner } from "./ShopClient";
 
 const TITLE = "mt-3 max-w-[760px] text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--shop)] @2xl:text-[60px]";
 
-type Shop = Pick<Reseller, "slug" | "name" | "logo" | "theme" | "texts" | "products" | "markup">;
+type Shop = Pick<Reseller, "slug" | "name" | "logo" | "theme" | "texts" | "products" | "markup" | "occasions">;
 
 const STEPS = [
   { title: "Ladda upp loggan", text: "Eller hämta den från er webbplats. Vi lägger den på alla produkter direkt." },
@@ -17,6 +18,7 @@ const STEPS = [
 /** Butikens sidhuvud och sidfot, i återförsäljarens färger. */
 export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: boolean; children: React.ReactNode }) {
   const home = `/newwave/s/${shop.slug}`;
+  const events = offeredOccasions(shop).length > 0;
   const brand = shop.logo ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={shop.logo} alt={shop.texts.shopName || shop.name} className="h-11 w-auto max-w-[200px] object-contain object-left" />
@@ -33,6 +35,7 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
             {preview ? (
               <>
                 <span>Produkter</span>
+                {events ? <span>Event</span> : null}
                 <span>Om oss</span>
                 <span>Kontakt</span>
               </>
@@ -41,6 +44,11 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
                 <Link href={`${home}#produkter`} className="py-2.5 hover:opacity-100">
                   Produkter
                 </Link>
+                {events ? (
+                  <Link href={`${home}/event`} className="py-2.5 hover:opacity-100">
+                    Event
+                  </Link>
+                ) : null}
                 <Link href={`${home}#om`} className="py-2.5 hover:opacity-100">
                   Om oss
                 </Link>
@@ -72,6 +80,7 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
 /** I förhandsvisningen kan `only` visa bara produkterna, med `sample` som kundens logga. */
 export function ShopHome({ shop, preview, sample, only }: { shop: Shop; preview?: boolean; sample?: { light: string; dark: string }; only?: "produkter" }) {
   if (only === "produkter") return <ShopProducts shop={shop} preview={preview} sample={sample} />;
+  const events = offeredOccasions(shop).length > 0;
   return (
     <>
       <section data-preview="hem" className="bg-[var(--shop-bg)]">
@@ -81,11 +90,21 @@ export function ShopHome({ shop, preview, sample, only }: { shop: Shop; preview?
           {shop.texts.heroText ? <p className="mt-5 max-w-[560px] text-[16px] leading-relaxed opacity-75 @2xl:text-[18px]">{shop.texts.heroText}</p> : null}
           <div className="mt-8 flex flex-wrap gap-3">
             {preview ? (
-              <span className="inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)]">Se produkterna</span>
+              <>
+                <span className="inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)]">Se produkterna</span>
+                {events ? <span className="inline-flex h-12 items-center rounded-full border border-[var(--shop)] bg-white px-6 text-[15px] font-semibold">Planera ett event</span> : null}
+              </>
             ) : (
-              <Link href="#produkter" className="inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)] transition-transform hover:scale-[1.03] active:scale-[0.97]">
-                Se produkterna
-              </Link>
+              <>
+                <Link href="#produkter" className="inline-flex h-12 items-center rounded-full bg-[var(--shop-accent)] px-6 text-[15px] font-semibold text-[var(--shop-on-accent)] transition-transform hover:scale-[1.03] active:scale-[0.97]">
+                  Se produkterna
+                </Link>
+                {events ? (
+                  <Link href={`/newwave/s/${shop.slug}/event`} className="inline-flex h-12 items-center rounded-full border border-[var(--shop)] bg-white px-6 text-[15px] font-semibold transition-transform hover:scale-[1.03] active:scale-[0.97]">
+                    Planera ett event
+                  </Link>
+                ) : null}
+              </>
             )}
           </div>
           <ol className="mt-12 grid gap-3 @2xl:grid-cols-3">
@@ -99,9 +118,42 @@ export function ShopHome({ shop, preview, sample, only }: { shop: Shop; preview?
           </ol>
         </div>
       </section>
+      <ShopEvents shop={shop} preview={preview} />
       <ShopProducts shop={shop} preview={preview} sample={sample} />
       <ShopAbout texts={shop.texts} name={shop.name} preview={preview} />
     </>
+  );
+}
+
+/** Tillfällena kunden kan planera; varje ruta öppnar eventverktyget med tillfället valt. */
+function ShopEvents({ shop, preview }: { shop: Shop; preview?: boolean }) {
+  const occasions = offeredOccasions(shop);
+  if (!occasions.length) return null;
+  const href = (id: string) => `/newwave/s/${shop.slug}/event?tillfalle=${id}`;
+  return (
+    <section id="event" data-preview="event" className="mx-auto max-w-[1180px] scroll-mt-20 px-5 pt-12 @2xl:px-8 @2xl:pt-16">
+      <h2 className="text-[26px] font-bold tracking-tight @2xl:text-[32px]">Planerar ni ett event?</h2>
+      <p className="mt-1 max-w-[560px] text-[14px] opacity-60">Välj tillfälle och lägg till er logga, så sätter vi ihop en hel kollektion och visar hur det blir. Designa allt i 3D och beställ direkt.</p>
+      <ul className="mt-6 grid grid-cols-2 gap-3 @2xl:grid-cols-3 @2xl:gap-4">
+        {occasions.map((o, i) => {
+          const tile = (
+            <>
+              <span className="block aspect-[3/2] overflow-hidden rounded-2xl bg-[#F4F4F2]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={o.scene} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]" />
+              </span>
+              <span className="mt-2.5 block text-[15px] font-semibold">{o.name}</span>
+              <span className="block text-[12.5px] opacity-60">{o.hint}</span>
+            </>
+          );
+          return (
+            <Reveal as="li" key={o.id} delay={i * 0.05} y={16} className="group min-w-0">
+              {preview ? <div>{tile}</div> : <Link href={href(o.id)} className="block">{tile}</Link>}
+            </Reveal>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

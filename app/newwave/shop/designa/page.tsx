@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Workspace } from "@/components/newwave/workspace/Workspace";
 import type { BrandKit } from "@/lib/newwave/brandKit";
+import { offeredOccasions, sellableProducts } from "@/lib/newwave/occasions";
 import { CURRENT_RESELLER, getReseller } from "@/lib/newwave/shopState";
 
 export const dynamic = "force-dynamic";
@@ -26,5 +27,5 @@ export default async function ResellerDesign() {
     site: r.website ?? "",
     source: { kind: "profil", label: !r.logo ? "Ladda upp loggan under Butiken" : book ? "Er logga och grafiska profil från butiken" : "Er logga och era färger från butiken" },
   };
-  return <Workspace role={{ kind: "shop", slug: r.slug, kit, markup: r.markup, products: r.products }} embedded />;
+  return <Workspace role={{ kind: "shop", slug: r.slug, kit, markup: r.markup, products: [...sellableProducts(r)], occasions: offeredOccasions(r).map((o) => o.id) }} embedded />;
 }

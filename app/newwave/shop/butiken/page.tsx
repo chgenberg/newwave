@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TestAsCustomer } from "@/components/newwave/shop/ShopClient";
+import { offeredOccasions } from "@/lib/newwave/occasions";
 import { BUILDER_STEPS, fmtDay, shopUrl, stepsDone, withinDays } from "@/lib/newwave/reseller";
 import { CURRENT_RESELLER, getReseller, quotesFor } from "@/lib/newwave/shopState";
 import { shopVars } from "@/lib/newwave/theme";
@@ -8,23 +9,17 @@ import { shopVars } from "@/lib/newwave/theme";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Butiken · Återförsäljarens dashboard" };
 
-const CUSTOMER = [
-  { title: "Lägger in sin logga", text: "Laddar upp filen eller hämtar den från sin egen webbplats. Den syns direkt på alla produkter." },
-  { title: "Designar i 3D", text: "Samma designmotor som ni har: placering, storlek, färg och tryckmetod, med korrektur." },
-  { title: "Ser priset direkt", text: "Ert påslag och mängdrabatten räknas in medan kunden väljer storlekar och antal." },
-  { title: "Beställer eller begär offert", text: "Direkt till ert pris, eller som offert ni svarar på. Ordern går till New Wave, som trycker och skickar i ert namn." },
-];
-
 export default async function Butiken() {
   const [reseller, quotes] = await Promise.all([getReseller(CURRENT_RESELLER), quotesFor(CURRENT_RESELLER)]);
   if (!reseller) return null;
   const live = reseller.status === "publicerad";
   const recent = quotes.filter((q) => withinDays(q.createdAt, 30));
   const done = stepsDone(reseller);
+  const events = offeredOccasions(reseller);
   const summary: Record<(typeof BUILDER_STEPS)[number]["id"], string> = {
     varumarke: reseller.brandbook ? "Logga och grafisk profil" : reseller.logo ? "Logga klar" : "Ingen logga än",
     hemsidan: [reseller.texts.heroTitle ? "Startsida" : "", reseller.texts.about ? "Om oss" : "", reseller.texts.email || reseller.texts.phone ? "kontakt" : ""].filter(Boolean).join(", ") || "Texterna saknas",
-    sortiment: `${reseller.products.length} produkter · påslag ${reseller.markup} %`,
+    sortiment: `${reseller.products.length} produkter · påslag ${reseller.markup} % · ${events.length ? `event: ${events.map((o) => o.name.toLowerCase()).join(", ")}` : "inga event"}`,
     publicera: live ? "Live – länk, QR-kod och mejl" : "Inte publicerad än",
   };
 
@@ -98,24 +93,6 @@ export default async function Butiken() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="mt-9 rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <p className="text-[15px] font-semibold text-[var(--nw-ink)]">Så handlar ett företag i butiken</p>
-          <p className="text-[12.5px] text-[var(--nw-muted)]">Allt ser ut som er butik. Plattformen syns inte för kunden.</p>
-        </div>
-        <ol className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CUSTOMER.map((h, i) => (
-            <li key={h.title} className="flex gap-3">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--club)] text-[11.5px] font-bold text-white">{i + 1}</span>
-              <span className="min-w-0">
-                <span className="block text-[13.5px] font-medium text-[var(--nw-ink)]">{h.title}</span>
-                <span className="block text-[12.5px] leading-snug text-[var(--nw-muted)]">{h.text}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
       </section>
     </div>
   );

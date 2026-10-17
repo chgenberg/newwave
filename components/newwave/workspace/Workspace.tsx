@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { type BrandKit, DEFAULT_KIT, kitAccent, readKit } from "@/lib/newwave/brandKit";
 import { CATEGORIES, NW_CATALOG, type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { defaultDesign, sanitizeDesign } from "@/lib/newwave/marking";
+import { type OccasionId, isOccasion, occasion as occasionOf } from "@/lib/newwave/occasions";
 import { HubSwitch } from "../HubSwitch";
 import { LogoMark } from "../Logo";
 import { PLACEHOLDER } from "../shop/cart";
@@ -121,11 +122,13 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   const [items, setItems] = useState<Item[]>([]);
   const [productId, setProductId] = useState(start);
   const [tab, setTab] = useState("design");
+  const [occasion, setOccasion] = useState<OccasionId | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const occasions = role.kind === "shop" ? role.occasions : [];
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { kit?: unknown; items?: unknown; productId?: unknown; tab?: unknown; club?: unknown } | null;
+      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { kit?: unknown; items?: unknown; productId?: unknown; tab?: unknown; club?: unknown; occasion?: unknown } | null;
       /* eslint-disable react-hooks/set-state-in-effect -- localStorage går bara att läsa efter mount */
       const stored = readKit(saved?.kit, base);
       setKit(base.source.kind === "profil" && (stored.source.kind === "profil" || stored.source.kind === "standard") ? base : stored);
@@ -133,6 +136,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
       if (typeof saved?.productId === "string" && can(saved.productId) && nwProduct(saved.productId)) setProductId(saved.productId);
       if (typeof saved?.tab === "string" && tabs.some((t) => t.id === saved.tab)) setTab(saved.tab);
       if (role.kind === "craft" && typeof saved?.club === "string" && role.clubs.some((c) => c.id === saved.club)) setPreviewClub(saved.club);
+      if (isOccasion(saved?.occasion) && occasions.includes(saved.occasion)) setOccasion(saved.occasion);
     } catch {}
     setLoaded(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -142,9 +146,9 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem(key, JSON.stringify({ kit, items: items.map(({ id, color, design, sent }) => ({ id, color, design, sent })), productId, tab, club: previewClub }));
+      localStorage.setItem(key, JSON.stringify({ kit, items: items.map(({ id, color, design, sent }) => ({ id, color, design, sent })), productId, tab, club: previewClub, occasion }));
     } catch {}
-  }, [loaded, key, kit, items, productId, tab, previewClub]);
+  }, [loaded, key, kit, items, productId, tab, previewClub, occasion]);
 
   const club = role.kind === "craft" ? (role.clubs.find((c) => c.id === previewClub) ?? role.clubs[0]) : undefined;
   const design = club ? clubKit(club) : kit;
@@ -170,8 +174,21 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
           return p ? [{ id, color: p.garmentHex, design: defaultDesign(p) }] : [];
         }),
     ]);
+    setOccasion(null);
     setTab("kollektion");
   };
+  /** Återförsäljaren bygger kollektionen för ett tillfälle, som kunderna gör i butikens eventverktyg. */
+  const fromOccasion = (id: OccasionId) => {
+    setItems((list) =>
+      occasionOf(id)!.products.flatMap(({ id: pid }) => {
+        const p = can(pid) ? nwProduct(pid) : undefined;
+        return p ? [list.find((i) => i.id === pid) ?? { id: pid, color: p.garmentHex, design: defaultDesign(p) }] : [];
+      }),
+    );
+    setOccasion(id);
+    setTab("kollektion");
+  };
+  const begin = occasions.length ? () => setTab("kollektion") : collect;
   const markSent = (ids: string[]) => setItems((list) => list.map((i) => (ids.includes(i.id) ? { ...i, sent: true } : i)));
 
   const brand = club && role.kind === "craft" ? <ClubPreview clubs={role.clubs} current={club.id} onPick={setPreviewClub} /> : <BrandTools kit={kit} home={base.source.kind === "profil" ? base : undefined} onChange={setKit} />;
@@ -189,23 +206,31 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
         onSave={save}
         picker={<Picker products={products} current={product.id} onPick={pick} />}
         brand={brand}
-        aside={<Also kit={design} also={also} items={items} collectLabel="Skapa kollektion" onPick={pick} onCollect={collect} />}
+        aside={<Also kit={design} also={also} items={items} collectLabel={occasions.length ? "Skapa kollektion för ett event" : "Skapa kollektion"} onPick={pick} onCollect={begin} />}
         fill
       />
     ) : (
       <div className="min-[900px]:h-full min-[900px]:overflow-y-auto">
         {tab === "kollektion" ? (
-          <CollectionTab kit={design} items={items} onEdit={pick} onRemove={(id) => setItems((list) => list.filter((i) => i.id !== id))} onStart={collect} next={{ label: dest.next, go: () => setTab(dest.id) }} />
+          <CollectionTab
+            kit={design}
+            items={items}
+            onEdit={pick}
+            onRemove={(id) => setItems((list) => list.filter((i) => i.id !== id))}
+            onStart={collect}
+            next={{ label: dest.next, go: () => setTab(dest.id) }}
+            occasions={role.kind === "shop" && occasions.length ? { offered: occasions, current: occasion, onPick: fromOccasion, slug: role.slug } : undefined}
+          />
         ) : tab === "produktion" ? (
-          <ProductionTab items={items} onStart={collect} />
+          <ProductionTab items={items} onStart={begin} />
         ) : role.kind === "klubb" ? (
-          <PublishTab clubId={role.clubId} kit={kit} items={items} onStart={collect} onSent={markSent} />
+          <PublishTab clubId={role.clubId} kit={kit} items={items} onStart={begin} onSent={markSent} />
         ) : role.kind === "craft" ? (
-          <ClubsTab clubs={role.clubs} items={items} onStart={collect} onSent={markSent} />
+          <ClubsTab clubs={role.clubs} items={items} onStart={begin} onSent={markSent} />
         ) : role.kind === "shop" ? (
-          <QuoteTab slug={role.slug} markup={role.markup} kit={kit} items={items} onStart={collect} />
+          <QuoteTab slug={role.slug} markup={role.markup} kit={kit} items={items} onStart={begin} />
         ) : (
-          <ShopTab kit={kit} items={items} onStart={collect} />
+          <ShopTab kit={kit} items={items} onStart={begin} />
         )}
       </div>
     );
