@@ -140,12 +140,6 @@ export default async function ResellerHome() {
           </ul>
         </Panel>
       </div>
-
-      <p className="mt-10 text-[13px] text-[var(--nw-muted)]">
-        <Link href="/newwave" className="underline decoration-[var(--nw-line)] underline-offset-4 hover:decoration-[var(--nw-ink)]">
-          ← Tillbaka till navet
-        </Link>
-      </p>
     </div>
   );
 }

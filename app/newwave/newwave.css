@@ -285,19 +285,6 @@
     background-size: 100% 1px;
   }
 
-  .nw-marquee {
-    display: flex;
-    width: max-content;
-    animation: nw-marquee var(--nw-marquee-duration, 48s) linear infinite;
-  }
-  .nw-marquee-wrap:hover .nw-marquee {
-    animation-play-state: paused;
-  }
-  @keyframes nw-marquee {
-    to {
-      transform: translateX(-50%);
-    }
-  }
 
 .nw-club {
   --club: var(--nw-ink);
@@ -427,7 +414,6 @@
   }
 
   .nw-page > *,
-  .nw-marquee,
   .nw-fade,
   .nw-pop,
   .nw-flow {

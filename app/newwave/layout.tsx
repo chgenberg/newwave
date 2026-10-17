@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
 import { Fragment_Mono, Schibsted_Grotesk } from "next/font/google";
-import { HubChrome } from "@/components/newwave/HubChrome";
-import { HubFooter, HubFooterSlim } from "@/components/newwave/HubFooter";
-import { HubHeader } from "@/components/newwave/HubHeader";
 import { MotionRoot } from "@/components/newwave/motion/Motion";
 import { ScrollToTop } from "@/components/newwave/ScrollToTop";
 import "./newwave.css";
@@ -20,13 +17,7 @@ export default function NewWaveLayout({ children }: Readonly<{ children: React.R
     <div className={`nw ${sans.variable} ${mono.variable} flex min-h-screen flex-col`}>
       <MotionRoot>
         <ScrollToTop />
-        <HubChrome>
-          <HubHeader />
-        </HubChrome>
-        <main className="flex-1">{children}</main>
-        <HubChrome home={<HubFooter />}>
-          <HubFooterSlim />
-        </HubChrome>
+        {children}
       </MotionRoot>
     </div>
   );

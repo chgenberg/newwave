@@ -17,7 +17,7 @@ export function HubFooter() {
             <p className="mt-6 max-w-sm text-[clamp(24px,2.6vw,32px)] font-semibold leading-[1.1] tracking-[-0.035em]">Klubbar, Craft, New Wave och återförsäljare i samma hub.</p>
           </div>
           <FooterList title="Ingångar" links={PORTALS.map((p) => ({ href: p.href, label: p.title }))} />
-          <FooterList title="Webbshoppar" links={[...SHOPS, { href: "/newwave#navet", label: "Navkartan" }]} />
+          <FooterList title="Webbshoppar" links={SHOPS} />
         </div>
         <div className="nw-mono mt-16 flex flex-col gap-2 border-t border-white/12 pt-6 text-[12px] uppercase tracking-[0.06em] text-white/45 sm:flex-row sm:justify-between">
           <span>© 2026 Next Wave Production</span>
@@ -47,8 +47,8 @@ function FooterList({ title, links }: { title: string; links: { href: string; la
 
 export function HubFooterSlim() {
   return (
-    <footer className="border-t border-[var(--nw-line)]">
-      <div className="nw-container nw-mono flex flex-col gap-2 py-6 text-[12px] uppercase tracking-[0.06em] text-[var(--nw-muted)] sm:flex-row sm:items-center sm:justify-between">
+    <footer>
+      <div className="nw-mono mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-3 py-6 text-[12px] uppercase tracking-[0.06em] text-[var(--nw-muted)] sm:flex-row sm:items-center sm:justify-between">
         <Link href="/newwave" className="nw-link nw-hit">
           Next Wave Production
         </Link>

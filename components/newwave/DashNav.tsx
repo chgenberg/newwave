@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TIP } from "./tip";
 
 const ICONS: Record<string, React.ReactNode> = {
   home: <path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" />,
@@ -42,106 +42,67 @@ type Props = {
   base: string;
   items: NavItem[];
   label: string;
-  title: string;
-  subtitle: string;
-  logo?: { src: string; width: number; height: number };
   /** Undersidor som räknas till översikten, t.ex. "godkann". */
   overview?: string[];
   badge?: number;
   /** Siffror per menyval, nyckel = href. */
   badges?: Record<string, number>;
-  cta: { href: string; label: string; icon?: string };
 };
 
 const SLIDE = { type: "spring", bounce: 0.16, duration: 0.55 } as const;
 
 const countFor = (item: NavItem, base: string, badge?: number, badges?: Record<string, number>) => badges?.[item.href] ?? (item.href === base ? badge : undefined);
 
-export function DashSidebar({ base, items, label, title, subtitle, logo, overview = [], badge, badges, cta }: Props) {
+/** Portalens infällda meny med symboler, samma form som designstudions verktygsmeny. */
+export function DashRail({ base, items, label, overview = [], badge, badges }: Props) {
   const active = useActive(base, overview);
   return (
-    <aside className="sticky top-24 hidden h-[calc(100dvh-8rem)] max-h-[680px] flex-col rounded-[28px] bg-[var(--club)] p-3 text-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.45)] md:flex xl:p-4">
-      <Link href={base} className="flex items-center gap-3 rounded-2xl p-1.5 xl:p-2" aria-label={`${title} – översikt`}>
-        {logo ? (
-          <Image src={logo.src} alt="" width={logo.width} height={logo.height} priority className="h-9 w-auto shrink-0" />
-        ) : (
-          <span className="nw-club-heading grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[13px] text-[var(--club)]">{title.slice(0, 1)}</span>
-        )}
-        <span className="hidden min-w-0 xl:block">
-          <span className="nw-club-heading block truncate text-[19px] leading-none">{title}</span>
-          <span className="mt-1 block truncate text-[11.5px] text-white/50">{subtitle}</span>
-        </span>
-      </Link>
-
-      <nav aria-label={label} className="mt-6 flex flex-col gap-1">
-        {items.map((item) => {
-          const on = active(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={on ? "page" : undefined}
-              title={item.label}
-              className={`group relative flex h-11 items-center justify-center gap-3 rounded-2xl text-[14px] font-medium transition-colors duration-300 xl:justify-start xl:px-3 ${on ? "text-white" : "text-white/55 hover:bg-white/[0.06] hover:text-white"}`}
-            >
-              {on ? (
-                <motion.span layoutId={`${base}-side`} transition={SLIDE} aria-hidden className="absolute inset-0 rounded-2xl bg-white/[0.12]">
-                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--club-accent)]" />
-                </motion.span>
-              ) : null}
-              <Icon name={item.icon} className="relative h-[19px] w-[19px] shrink-0 transition-transform duration-300 group-hover:scale-110" />
-              <span className="relative hidden xl:inline">{item.label}</span>
-              {countFor(item, base, badge, badges) ? (
-                <span className="absolute right-1.5 top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--club-accent)] px-1 text-[10.5px] font-semibold text-[var(--club-on-accent)] xl:static xl:ml-auto">
-                  {countFor(item, base, badge, badges)}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <Link
-        href={cta.href}
-        title={cta.label}
-        className="mt-auto flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--club-accent)] text-[14px] font-semibold text-[var(--club-on-accent)] transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
-      >
-        <Icon name={cta.icon ?? "plus"} className="h-[18px] w-[18px]" />
-        <span className="hidden xl:inline">{cta.label}</span>
-      </Link>
-    </aside>
+    <nav aria-label={label} className="flex flex-col items-center gap-1 rounded-[22px] bg-[#F1F1EE] p-1.5 py-2.5 shadow-[inset_0_1px_3px_rgba(17,17,17,0.07),inset_0_0_0_1px_rgba(17,17,17,0.04)]">
+      {items.map((item) => {
+        const on = active(item.href);
+        const count = countFor(item, base, badge, badges);
+        return (
+          <Link key={item.href} href={item.href} aria-current={on ? "page" : undefined} aria-label={count ? `${item.label} (${count})` : item.label} className={`group relative grid h-11 w-11 place-items-center rounded-[14px] transition-colors duration-300 active:scale-95 ${on ? "text-[var(--club)]" : "text-[#55524B] hover:bg-white/70 hover:text-[#111]"}`}>
+            {on ? <motion.span layoutId={`${base}-rail`} transition={SLIDE} aria-hidden className="absolute inset-0 rounded-[14px] bg-white shadow-[0_1px_2px_rgba(17,17,17,0.08),0_6px_14px_-8px_rgba(17,17,17,0.35)]" /> : null}
+            <Icon name={item.icon} className="relative h-[19px] w-[19px]" />
+            {count ? <span className="absolute right-0.5 top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-[var(--club)] px-1 text-[11px] font-semibold text-white">{count}</span> : null}
+            <span className={TIP}>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
-export function DashBottomBar({ base, items, label, overview = [], badge, badges }: Pick<Props, "base" | "items" | "label" | "overview" | "badge" | "badges">) {
+/** Var i portalen man är, till toppraden. */
+export function DashCrumb({ base, items, overview = [] }: Pick<Props, "base" | "items" | "overview">) {
+  const active = useActive(base, overview);
+  const item = items.find((i) => active(i.href));
+  return item ? <span className="truncate text-[14px] font-medium text-[#111]">{item.label}</span> : null;
+}
+
+export function DashBottomBar({ base, items, label, overview = [], badge, badges }: Props) {
   const active = useActive(base, overview);
   return (
     <nav
       aria-label={label}
-      className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-40 grid gap-1 rounded-[24px] bg-[var(--club)] p-1.5 shadow-[0_18px_40px_-14px_rgba(0,0,0,0.5)] md:hidden"
+      className="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-40 grid gap-1 rounded-[24px] bg-white/90 p-1.5 shadow-[0_0_0_1px_rgba(17,17,17,0.06),0_18px_40px_-14px_rgba(17,17,17,0.45)] backdrop-blur-xl min-[900px]:hidden"
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((item) => {
         const on = active(item.href);
+        const count = countFor(item, base, badge, badges);
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={on ? "page" : undefined}
-            className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] transition-colors active:scale-[0.96] [transition-property:color,transform] ${on ? "text-white" : "text-white/55"}`}
+            className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] transition-colors active:scale-[0.96] [transition-property:color,transform] ${on ? "text-white" : "text-[#55524B]"}`}
           >
-            {on ? (
-              <motion.span layoutId={`${base}-bar`} transition={SLIDE} aria-hidden className="absolute inset-0 rounded-[18px] bg-white/[0.12]">
-                <span className="absolute left-1/2 top-1 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--club-accent)]" />
-              </motion.span>
-            ) : null}
+            {on ? <motion.span layoutId={`${base}-bar`} transition={SLIDE} aria-hidden className="absolute inset-0 rounded-[18px] bg-[var(--club)]" /> : null}
             <Icon name={item.icon} className="relative h-5 w-5" />
-            <span className="relative max-w-full truncate px-0.5 text-[10.5px] font-medium">{item.label}</span>
-            {countFor(item, base, badge, badges) ? (
-              <span className="absolute right-2 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--club-accent)] px-1 text-[9.5px] font-semibold text-[var(--club-on-accent)]">
-                {countFor(item, base, badge, badges)}
-              </span>
-            ) : null}
+            <span className="relative max-w-full truncate px-0.5 text-[12px] font-medium">{item.label}</span>
+            {count ? <span className={`absolute right-2 top-1.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[11px] font-semibold ${on ? "bg-white text-[var(--club)]" : "bg-[var(--club)] text-white"}`}>{count}</span> : null}
           </Link>
         );
       })}

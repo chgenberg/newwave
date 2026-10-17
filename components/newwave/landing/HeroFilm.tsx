@@ -1,13 +1,12 @@
 "use client";
 
-import { motion, useMotionValue, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 type Video = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
-/** Filmen under hero: spelar tyst i loop, växer ut till full bredd när den scrollas fram och kan ses i helskärm med ljud. */
-export function HeroFilm({ src, poster, title }: { src: string; poster: string; title: string }) {
-  const frame = useRef<HTMLDivElement>(null);
+/** Filmen överst på förstasidan i full storlek: spelar tyst i loop och kan ses i helskärm med ljud. `next` är dit pilen ner leder. */
+export function HeroFilm({ src, poster, title, next }: { src: string; poster: string; title: string; next: string }) {
   const video = useRef<Video>(null);
   const reduce = useReducedMotion();
   const [playing, setPlaying] = useState(false);
@@ -15,9 +14,6 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
   const progress = useMotionValue(0);
   const userPaused = useRef(false);
 
-  const { scrollYProgress } = useScroll({ target: frame, offset: ["start end", "start 0.2"] });
-  const scale = useTransform(scrollYProgress, [0, 1], [0.86, 1]);
-  const borderRadius = useTransform(scrollYProgress, [0, 1], [32, 0]);
   const width = useTransform(progress, (p) => `${p * 100}%`);
 
   useEffect(() => {
@@ -57,8 +53,7 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
   };
 
   return (
-    <section aria-label="Filmen om navet" className="relative">
-      <motion.div ref={frame} style={{ scale, borderRadius }} className="relative mx-auto motion-reduce:[border-radius:0!important] motion-reduce:[transform:none!important] aspect-[16/10] max-h-[92svh] w-full origin-top overflow-hidden bg-[#141416] shadow-[0_0_0_1px_rgba(20,20,22,0.08),0_40px_80px_-40px_rgba(20,20,22,0.35)] sm:aspect-[1726/1080]">
+    <section aria-label="Filmen om Next Wave" className="relative h-[100svh] min-h-[520px] w-full overflow-hidden bg-[#141416] text-white">
         <video
           ref={video}
           className="absolute inset-0 h-full w-full object-cover"
@@ -93,7 +88,12 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
               <span className="nw-mono text-[12px] uppercase tracking-[0.06em]">{muted ? "Ljud av" : "Ljud på"}</span>
             </FilmButton>
           </div>
-          <button type="button" onClick={watch} className="group inline-flex h-11 items-center gap-3 rounded-full bg-white pl-5 pr-1.5 text-[14px] font-medium text-[#141416] transition-transform duration-300 active:scale-[0.97]">
+          <div className="flex items-center gap-2">
+            <a href={next} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 text-[14px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
+              Till studion
+              <span aria-hidden className="inline-block transition-transform duration-500 group-hover:translate-y-0.5">↓</span>
+            </a>
+            <button type="button" onClick={watch} className="group inline-flex h-11 items-center gap-3 rounded-full bg-white pl-5 pr-1.5 text-[14px] font-medium text-[#141416] transition-transform duration-300 active:scale-[0.97]">
             Se hela filmen
             <span className="grid h-8 w-8 place-items-center rounded-full bg-[#141416] text-white transition-transform duration-500 group-hover:rotate-90">
               <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -101,12 +101,12 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
               </svg>
             </span>
           </button>
+          </div>
         </div>
 
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] bg-white/15">
           <motion.div className="h-full bg-white" style={{ width }} />
         </div>
-      </motion.div>
     </section>
   );
 }

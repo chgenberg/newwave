@@ -11,28 +11,37 @@
   font-weight: 400;
   text-align: left;
 }
-:where(.cz-wrap) button,
-:where(.cz-wrap) input,
-:where(.cz-wrap) textarea {
-  font: inherit;
-  color: inherit;
-}
-:where(.cz-wrap) h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* I base-lagret, så att Tailwind-klasser i insticken (varumärke, produktval, högerkolumn) går före. */
+@layer base {
+  :where(.cz-wrap) button,
+  :where(.cz-wrap) input,
+  :where(.cz-wrap) textarea {
+    font: inherit;
+    color: inherit;
+  }
+  :where(.cz-wrap) h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
 }
 :where(.cz-wrap) .kicker { margin: 0 0 14px; color: var(--mute); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
 .cz-wrap { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; }
-:where(.cz-wrap) .cz { position: relative; display: grid; grid-template-columns: 384px minmax(0, 1fr); grid-template-areas: "panel stage"; width: min(1480px, 100%); height: min(940px, calc(100dvh - 32px)); transition: grid-template-columns 0.42s var(--ease); border-radius: 24px; overflow: hidden; background: #fff; box-shadow: 0 40px 120px rgba(17, 17, 17, 0.35); animation: cz-reveal 300ms var(--ease) both; }
-:where(.cz-wrap) .cz.is-rail { grid-template-columns: 68px minmax(0, 1fr); }
-:where(.cz-wrap) .cz-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; background: #f4f4f6; cursor: grab; }
+:where(.cz-wrap) .cz { position: relative; display: grid; grid-template-columns: 76px 336px minmax(0, 1fr); grid-template-areas: "rail panel stage"; width: min(1480px, 100%); height: min(940px, calc(100dvh - 32px)); transition: grid-template-columns 0.42s var(--ease); border-radius: 24px; overflow: hidden; background: #fff; box-shadow: 0 40px 120px rgba(17, 17, 17, 0.35); animation: cz-reveal 300ms var(--ease) both; }
+:where(.cz-wrap) .cz.has-aside { grid-template-columns: 76px 336px minmax(0, 1fr) 272px; grid-template-areas: "rail panel stage aside"; }
+:where(.cz-wrap) .cz.is-collapsed { grid-template-columns: 76px 0 minmax(0, 1fr); }
+:where(.cz-wrap) .cz.has-aside.is-collapsed { grid-template-columns: 76px 0 minmax(0, 1fr) 272px; }
+:where(.cz-wrap) .cz.is-collapsed .cz-panel { visibility: hidden; overflow: hidden; }
+:where(.cz-wrap) .cz-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; background: radial-gradient(ellipse 70% 60% at 50% 44%, #fbfbfa 0%, #efefec 62%, #e6e6e2 100%); cursor: grab; }
+:where(.cz-wrap) .cz-views { position: absolute; left: 50%; bottom: 18px; z-index: 3; display: flex; gap: 6px; transform: translateX(-50%); }
+:where(.cz-wrap) .cz-views button { height: 34px; padding: 0 16px; border: 0; border-radius: 99px; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 6px 16px -10px rgba(17, 17, 17, 0.4); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s var(--ease), color 0.2s var(--ease), transform 0.15s var(--ease); }
+:where(.cz-wrap) .cz-views button:hover { background: #f6f6f4; }
+:where(.cz-wrap) .cz-views button:active { transform: scale(0.95); }
+:where(.cz-wrap) .cz-views button[aria-pressed="true"] { background: var(--ink); color: #fff; box-shadow: none; }
+:where(.cz-wrap) .cz-aside { grid-area: aside; min-height: 0; overflow-y: auto; padding: 22px 20px; border-left: 1px solid var(--line); background: #fff; }
 :where(.cz-wrap) .cz-stage:active { cursor: grabbing; }
 :where(.cz-wrap) .cz-stage canvas { display: block; }
-:where(.cz-wrap) .cz-hint { position: absolute; left: 50%; bottom: 16px; display: flex; align-items: center; gap: 14px; transform: translateX(-50%); margin: 0; padding: 7px 8px 7px 16px; border-radius: 99px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 8px 24px -16px rgba(17, 17, 17, 0.5); color: var(--mute); font-size: 12px; white-space: nowrap; }
-:where(.cz-wrap) .cz-hint span { display: inline-flex; align-items: center; gap: 4px; }
-:where(.cz-wrap) .cz-hint button { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px 0 6px; border: 0; border-radius: 99px; background: #f1efea; color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 :where(.cz-wrap) .cz kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 1px var(--line), 0 1px 0 rgba(17, 17, 17, 0.12); color: var(--ink); font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1; }
 :where(.cz-wrap) .cz-tools { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 16px; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 0 0 1px var(--line), 0 14px 32px -20px rgba(17, 17, 17, 0.45); animation: cz-fade-up 0.35s var(--ease); }
 :where(.cz-wrap) .cz-tools-name { padding: 0 10px 0 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
@@ -66,38 +75,30 @@
 :where(.cz-wrap) .cz-toast { position: absolute; left: 50%; bottom: 64px; z-index: 4; display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 18px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 14px; white-space: nowrap; transform: translateX(-50%); box-shadow: 0 18px 40px -20px rgba(17, 17, 17, 0.7); animation: cz-toast-in 0.35s var(--ease); }
 :where(.cz-wrap) .cz-toast button { height: 30px; padding: 0 14px; border: 0; border-radius: 99px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 @media (max-width: 860px) {
-  :where(.cz-wrap) .cz-hint { display: none; }
   :where(.cz-wrap) .cz-tools { top: 10px; left: 10px; right: 10px; overflow-x: auto; }
   :where(.cz-wrap) .cz-tools-name { display: none; }
   :where(.cz-wrap) .cz-toast { bottom: 16px; }
 }
 :where(.cz-wrap) .cz-panel { grid-area: panel; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; border-right: 1px solid var(--line); background: #fff; }
+:where(.cz-wrap) .cz-rail { grid-area: rail; position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 12px 0 12px 12px; padding: 10px 0; border-radius: 22px; background: #f1f1ee; box-shadow: inset 0 1px 3px rgba(17, 17, 17, 0.07), inset 0 0 0 1px rgba(17, 17, 17, 0.04); }
+:where(.cz-wrap) .cz-rail-btn[aria-current="true"] { background: #fff; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.08), 0 6px 14px -8px rgba(17, 17, 17, 0.35); }
+:where(.cz-wrap) .cz-rail-foot { display: grid; gap: 6px; margin-top: auto; }
 :where(.cz-wrap) .cz-panel > * { animation: cz-panel-in 0.38s var(--ease) both; }
 :where(.cz-wrap) .cz-head { align-items: flex-start; }
-:where(.cz-wrap) .cz-head-actions { display: flex; align-items: center; gap: 4px; }
-:where(.cz-wrap) .cz-collapse { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 99px; background: #fff; color: var(--ink); cursor: pointer; transition: background 0.2s var(--ease), transform 0.2s var(--ease); }
-:where(.cz-wrap) .cz-collapse:hover { background: #f1efea; transform: translateX(-2px); }
-:where(.cz-wrap) .cz-collapse svg,
 :where(.cz-wrap) .cz-rail-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 :where(.cz-wrap) .cz-sec.is-flash,
 :where(.cz-wrap) .cz-price.is-flash { animation: cz-flash 1.1s var(--ease); }
 :where(.cz-wrap) .cz-sec,
 :where(.cz-wrap) .cz-price { scroll-margin-top: 12px; border-radius: 14px; }
-:where(.cz-wrap) .cz-rail { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; padding: 14px 0; }
 :where(.cz-wrap) .cz-rail-btn { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 14px; background: transparent; color: var(--ink); cursor: pointer; transition: background 0.18s var(--ease), transform 0.18s var(--ease); }
-:where(.cz-wrap) .cz-rail-btn:hover:not(:disabled) { background: #f1efea; }
+:where(.cz-wrap) .cz-rail-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); }
 :where(.cz-wrap) .cz-rail-btn:active:not(:disabled) { transform: scale(0.92); }
 :where(.cz-wrap) .cz-rail-btn:disabled { opacity: 0.35; cursor: default; }
-:where(.cz-wrap) .cz-rail-open { border: 1px solid var(--line); border-radius: 99px; }
-:where(.cz-wrap) .cz-rail-open:hover { transform: translateX(2px); }
 :where(.cz-wrap) .cz-rail-btn.is-save { background: var(--cz-accent); color: var(--cz-on-accent); }
 :where(.cz-wrap) .cz-rail-btn.is-save:hover:not(:disabled) { filter: brightness(1.15); }
-:where(.cz-wrap) .cz-rail-sep { width: 28px; height: 1px; margin: 6px 0; background: var(--line); }
 :where(.cz-wrap) .cz-rail-swatch { position: relative; width: 26px; height: 26px; margin-top: 8px; border-radius: 99px; box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.15), 0 0 0 3px #fff, 0 0 0 4px var(--line); }
-:where(.cz-wrap) .cz-rail-foot { display: grid; gap: 6px; margin-top: auto; }
 :where(.cz-wrap) .cz-rail [data-tip]::after { content: attr(data-tip); position: absolute; left: calc(100% + 12px); top: 50%; z-index: 10; padding: 6px 10px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; opacity: 0; transform: translate(-4px, -50%); pointer-events: none; transition: opacity 0.15s var(--ease), transform 0.15s var(--ease); }
 :where(.cz-wrap) .cz-rail [data-tip]:hover::after { opacity: 1; transform: translate(0, -50%); }
-:where(.cz-wrap) .cz.is-rail .cz-panel { overflow: visible; }
 :where(.cz-wrap) .cz-head .kicker { margin: 0; }
 :where(.cz-wrap) .cz-sec { margin: 18px 24px 0; }
 :where(.cz-wrap) .cz-sec .drawer-label span { margin-left: 6px; font-weight: 400; color: var(--mute); }
@@ -146,13 +147,17 @@
 :where(.cz-wrap) .cz-foot .drawer-save { width: 100%; }
 @media (max-width: 900px) {
   :where(.cz-wrap) .cz,
-:where(.cz-wrap) .cz.is-rail { grid-template-columns: 1fr; grid-template-rows: 46% 1fr; grid-template-areas: "stage" "panel"; height: calc(100dvh - 24px); }
-  :where(.cz-wrap) .cz-panel { border-right: 0; border-top: 1px solid var(--line); }
-  :where(.cz-wrap) .cz-collapse { display: none; }
-  :where(.cz-wrap) .cz.is-rail .cz-panel { overflow-y: auto; }
-  :where(.cz-wrap) .cz-rail { flex-direction: row; flex-wrap: wrap; justify-content: center; height: auto; }
-  :where(.cz-wrap) .cz-rail-foot { display: flex; margin: 0; }
+:where(.cz-wrap) .cz.is-collapsed,
+:where(.cz-wrap) .cz.has-aside,
+:where(.cz-wrap) .cz.has-aside.is-collapsed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(280px, 44%) auto minmax(0, 1fr) auto; grid-template-areas: "stage" "rail" "panel" "aside"; height: calc(100dvh - 24px); }
+  :where(.cz-wrap) .cz-rail { flex-direction: row; justify-content: flex-start; gap: 2px; margin: 8px 10px 0; padding: 4px; overflow-x: auto; scrollbar-width: none; }
+  :where(.cz-wrap) .cz-rail-btn { flex: none; }
+  :where(.cz-wrap) .cz-rail-foot { display: flex; margin: 0 0 0 auto; }
+  :where(.cz-wrap) .cz-rail-swatch { display: none; }
   :where(.cz-wrap) .cz-rail [data-tip]::after { display: none; }
+  :where(.cz-wrap) .cz.is-collapsed .cz-panel { display: none; }
+  :where(.cz-wrap) .cz-aside { border-left: 0; border-top: 1px solid var(--line); max-height: 40dvh; }
+  :where(.cz-wrap) .cz-panel { border-right: 0; border-top: 1px solid var(--line); }
 }
 :where(.cz-wrap) .seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 99px; background: #ececef; }
 :where(.cz-wrap) .seg button { padding: 7px 14px; border: 0; border-radius: 99px; background: transparent; font: inherit; font-size: 13px; cursor: pointer; }
@@ -163,6 +168,8 @@
 :where(.cz-wrap) .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .cz-wrap.is-embedded { position: relative; inset: auto; z-index: auto; display: block; padding: 0; }
 .cz-wrap.is-embedded .cz { width: 100%; height: max(560px, calc(100dvh - 24px)); border-radius: 18px; box-shadow: none; animation: none; }
+.cz-wrap.is-fill { height: 100%; }
+.cz-wrap.is-fill .cz { height: 100%; border-radius: 0; }
 :where(.cz-wrap) .insp-range { display: grid; gap: 4px; font-size: 12px; color: var(--mute); }
 :where(.cz-wrap) .insp-range input { width: 100%; accent-color: #111; }
 :where(.cz-wrap) .cz-export { width: 100%; height: 44px; margin-top: 8px; border: 1px solid var(--line); border-radius: 99px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
@@ -199,7 +206,6 @@
   :where(.cz-wrap) .cz-tools-name,
 :where(.cz-wrap) .cz-tools-sep { display: none; }
   :where(.cz-wrap) .cz-tools button { flex: none; }
-  :where(.cz-wrap) .cz-hint { display: none; }
 }
 @keyframes cz-toast-in {
   from {
@@ -242,6 +248,20 @@
   }
 }
 @media (pointer: coarse) {
-  :where(.cz-wrap) .cz-hint .cz-keys { display: none; }
-  :where(.cz-wrap) .cz-hint { padding-right: 16px; }
+}
+
+/* Mellanbredd: högerkolumnen blir en remsa under produkten så att scenen och panelen behåller sin plats. */
+@media (min-width: 901px) and (max-width: 1400px) {
+  :where(.cz-wrap) .cz.has-aside { grid-template-columns: 76px 320px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "rail panel stage" "rail panel aside"; }
+  :where(.cz-wrap) .cz.has-aside.is-collapsed { grid-template-columns: 76px 0 minmax(0, 1fr); }
+  :where(.cz-wrap) .cz-aside { padding: 12px 18px 14px; border-left: 0; border-top: 1px solid var(--line); }
+  :where(.cz-wrap) .cz-tools { right: 16px; width: max-content; max-width: calc(100% - 32px); overflow-x: auto; scrollbar-width: none; }
+}
+
+/* I en sida på mobil växer studion på höjden och scrollar med sidan, med verktygsmenyn kvar överst. */
+@media (max-width: 900px) {
+  .cz-wrap.is-fill .cz { height: auto; grid-template-rows: min(62svh, 520px) auto auto auto; overflow: visible; }
+  .cz-wrap.is-fill .cz-rail { position: sticky; top: 8px; }
+  .cz-wrap.is-fill .cz-panel { overflow: visible; }
+  .cz-wrap.is-fill .cz-aside { max-height: none; overflow: visible; }
 }

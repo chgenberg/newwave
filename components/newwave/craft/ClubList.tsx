@@ -384,7 +384,7 @@ export function ClubList({ rows, initialQuery = "" }: { rows: ClubRow[]; initial
       </p>
 
       {picked.length ? (
-        <div className="nw-fade sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mt-4 flex flex-wrap items-center gap-2 rounded-[22px] bg-[var(--nw-ink)] p-2 pl-4 text-white shadow-[0_18px_40px_-14px_rgba(0,0,0,0.5)] md:bottom-4">
+        <div className="nw-fade sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mt-4 flex flex-wrap items-center gap-2 rounded-[22px] bg-[var(--nw-ink)] p-2 pl-4 text-white shadow-[0_18px_40px_-14px_rgba(0,0,0,0.5)] min-[900px]:bottom-4">
           <span className="mr-auto text-[13.5px] font-medium">{picked.length} valda</span>
           <Link href={`/newwave/craft/skapa?klubbar=${picked.join(",")}`} className="inline-flex h-9 items-center rounded-full bg-white px-4 text-[13px] font-semibold text-[var(--nw-ink)]">
             Skicka kampanj

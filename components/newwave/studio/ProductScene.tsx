@@ -22,6 +22,10 @@ const FINISH: Record<Look, { roughness: number; metalness: number; clearcoat: nu
 };
 
 export type Placement = { point: THREE.Vector3; normal: THREE.Vector3 };
+export type View = "fram" | "bak" | "3d";
+
+const VIEW_DIR: Record<View, [number, number, number]> = { fram: [0, 0.12, 1], bak: [0, 0.12, -1], "3d": [0.62, 0.3, 0.78] };
+
 export type SceneApi = {
   capture: () => string;
   /** One shot per print, each facing the camera – used as proof images in the quote. */
@@ -30,6 +34,8 @@ export type SceneApi = {
   nudge: (key: string, dx: number, dy: number) => void;
   /** Turn the camera back to the selected print. */
   frame: (key: string) => void;
+  /** Turn the camera to the front, the back or a three-quarter view of the product. */
+  view: (side: View) => void;
   /** One slow turn around the product, recorded as a video clip; null when the browser cannot record. */
   recordSpin: (seconds?: number) => Promise<{ blob: Blob; ext: string } | null>;
 };
@@ -188,12 +194,12 @@ function Product(props: Props & { object: THREE.Object3D }) {
   const mainKey = layers[0]?.key ?? "";
   const layerKeys = useMemo(() => layers.map((l) => l.key), [layers]);
 
-  const turnTo = useCallback((key: string) => {
-    const n = normals.current[key];
-    if (!n) return () => {};
+  const turning = useRef<() => void>(() => {});
+  const turnToward = useCallback((dir: THREE.Vector3) => {
+    turning.current();
     const { camera: cam, controls } = get();
     const from = cam.position.clone();
-    const to = new THREE.Vector3(n.x, Math.max(n.y, 0.15), n.z).normalize().multiplyScalar(from.length());
+    const to = dir.clone().normalize().multiplyScalar(from.length());
     const start = performance.now();
     let raf = 0;
     const step = (t: number) => {
@@ -203,8 +209,17 @@ function Product(props: Props & { object: THREE.Object3D }) {
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    turning.current = () => cancelAnimationFrame(raf);
+    return turning.current;
   }, [get]);
+
+  const turnTo = useCallback(
+    (key: string) => {
+      const n = normals.current[key];
+      return n ? turnToward(new THREE.Vector3(n.x, Math.max(n.y, 0.15), n.z)) : () => {};
+    },
+    [turnToward],
+  );
 
   useEffect(() => {
     onReady({
@@ -226,6 +241,9 @@ function Product(props: Props & { object: THREE.Object3D }) {
       },
       frame: (key) => {
         turnTo(key);
+      },
+      view: (side) => {
+        turnToward(new THREE.Vector3(...VIEW_DIR[side]));
       },
       recordSpin: (seconds = 4) => {
         const canvas = gl.domElement as HTMLCanvasElement & { captureStream?: (fps: number) => MediaStream };
@@ -333,7 +351,7 @@ function Product(props: Props & { object: THREE.Object3D }) {
         return shot;
       },
     });
-  }, [onReady, camera, gl, scene, radius, mainKey, get, meshes, onPlace, turnTo, layerKeys]);
+  }, [onReady, camera, gl, scene, radius, mainKey, get, meshes, onPlace, turnTo, turnToward, layerKeys]);
 
   // Selecting another print turns the product so that print faces the camera.
   const shownKey = useRef(active);
@@ -700,7 +718,6 @@ export function ProductScene(props: Props) {
   const [touched, setTouched] = useState(false);
   return (
     <Canvas gl={{ preserveDrawingBuffer: true, antialias: true }} dpr={[1, 2]} camera={{ position: [0, 0.25, 2.3], fov: 35, near: 0.01, far: 50 }} onPointerDown={() => setTouched(true)}>
-      <color attach="background" args={["#f4f4f6"]} />
       <Studio />
       <Suspense fallback={null}>
         <Loaded {...props} />

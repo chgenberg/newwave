@@ -27,7 +27,7 @@ import {
 } from "@/lib/newwave/marking";
 import { sek } from "@/lib/newwave/reseller";
 import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt } from "./logoArt";
-import { type Layer, ProductScene, type SceneApi } from "./ProductScene";
+import { type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
 import { readLogoFile } from "./readLogoFile";
 
 export type Proof = { label: string; image: string };
@@ -67,10 +67,12 @@ const shortcuts = (MOD: string): [string[], string][] => [
 
 type Toast = { id: number; text: string; undo?: boolean };
 
-const RAIL_KEY = "nw.studio.rail";
+const PANEL_KEY = "nw.studio.rail";
 
-/** Ikonlisten när panelen är minimerad; varje ikon öppnar panelen vid sin sektion. */
-const RAIL: { sec: string; label: string; icon: string; names?: boolean }[] = [
+type Tool = { sec: string; label: string; icon: string; names?: boolean };
+
+/** Verktygsmenyn till vänster; varje symbol leder till sin sektion i panelen. */
+const RAIL: Tool[] = [
   { sec: "positions", label: "Tryckpositioner", icon: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 18l9 5 9-5", names: true },
   { sec: "logo", label: "Motiv", icon: "M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5a1.5 1.5 0 1 0 0-.01" },
   { sec: "shape", label: "Form", icon: "M4 4h7v7H4zM17.5 4a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7zM4 20l3.5-6 3.5 6zM14 14h7v6h-7z" },
@@ -82,7 +84,14 @@ const RAIL: { sec: string; label: string; icon: string; names?: boolean }[] = [
   { sec: "price", label: "Pris och leverans", icon: "M3 12V4h8l10 10-8 8zM7.5 7.5h.01", names: true },
 ];
 
-const PICK_RAIL = { sec: "pick", label: "Byt produkt", icon: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10", names: true };
+const PICK_RAIL: Tool = { sec: "pick", label: "Produkt", icon: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10", names: true };
+const BRAND_RAIL: Tool = { sec: "brand", label: "Varumärke", icon: "M5 3.5h5v17H5zM10 7.5l4.5-1.8 5 13.5-4.6 1.8M7.5 16.5h.01", names: true };
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: "fram", label: "Fram" },
+  { id: "bak", label: "Bak" },
+  { id: "3d", label: "3D" },
+];
 
 function fallbackKind(p: NwProduct): "box" | "cylinder" | "shirt" {
   if (p.kind === "drink" || p.kind === "pen") return "cylinder";
@@ -127,6 +136,9 @@ export function DesignStudio({
   onSave,
   onClose,
   picker,
+  brand,
+  aside,
+  fill,
   saveLabel = "Spara design",
 }: {
   product: NwProduct;
@@ -143,6 +155,12 @@ export function DesignStudio({
   /** Utan den bäddas studion in i sidan i stället för att öppnas som dialog. */
   onClose?: () => void;
   picker?: ReactNode;
+  /** Varumärkesverktyget (brandbook, webbadress, färger och logga) när studion används fristående. */
+  brand?: ReactNode;
+  /** Högerkolumn bredvid produkten, t.ex. fler produkter i samma design. */
+  aside?: ReactNode;
+  /** Fyll föräldern i stället för fönsterhöjden. */
+  fill?: boolean;
   saveLabel?: string;
 }) {
   const embedded = !onClose;
@@ -170,23 +188,38 @@ export function DesignStudio({
     return () => clearTimeout(t);
   }, [toast]);
   const [help, setHelp] = useState(false);
-  const [rail, setRailNow] = useState(false);
+  const [collapsed, setCollapsedNow] = useState(false);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage går bara att läsa efter mount
-    setRailNow(localStorage.getItem(RAIL_KEY) === "1");
+    setCollapsedNow(localStorage.getItem(PANEL_KEY) === "1");
   }, []);
-  const setRail = (v: boolean) => {
-    setRailNow(v);
-    localStorage.setItem(RAIL_KEY, v ? "1" : "0");
+  const setCollapsed = (v: boolean) => {
+    setCollapsedNow(v);
+    localStorage.setItem(PANEL_KEY, v ? "1" : "0");
   };
   const panel = useRef<HTMLElement>(null);
-  const openAt = (sec: string) => {
-    setRail(false);
+  const [sec, setSec] = useState("");
+  /** Markerar den sektion i panelen som ligger överst. */
+  const spy = () => {
+    const el = panel.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + 48;
+    let current = "";
+    el.querySelectorAll<HTMLElement>("[data-sec]").forEach((s) => {
+      if (s.getBoundingClientRect().top <= top) current = s.dataset.sec ?? "";
+    });
+    setSec(current || (el.querySelector<HTMLElement>("[data-sec]")?.dataset.sec ?? ""));
+  };
+  const openAt = (to: string) => {
+    setCollapsed(false);
+    setSec(to);
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        const el = panel.current?.querySelector<HTMLElement>(`[data-sec="${sec}"]`);
-        if (!el) return;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const el = panel.current?.querySelector<HTMLElement>(`[data-sec="${to}"]`);
+        const box = panel.current;
+        if (!el || !box) return;
+        if (box.scrollHeight > box.clientHeight + 1) box.scrollTo({ top: box.scrollTop + el.getBoundingClientRect().top - box.getBoundingClientRect().top - 12, behavior: "smooth" });
+        else el.scrollIntoView({ behavior: "smooth", block: "start" });
         el.classList.remove("is-flash");
         void el.offsetWidth;
         el.classList.add("is-flash");
@@ -424,8 +457,12 @@ export function DesignStudio({
 
   const layerKeys = layers.map((l) => l.key);
   const keyHandler = useRef<(e: KeyboardEvent) => void>(() => {});
+  const wrap = useRef<HTMLDivElement>(null);
+  /** Inbäddad tar studion bara kortkommandon när man senast klickade eller fokuserade i den. */
+  const engaged = useRef(false);
   useEffect(() => {
     keyHandler.current = (e: KeyboardEvent) => {
+      if (embedded && !engaged.current) return;
       const el = e.target as HTMLElement | null;
       const typing = el?.closest("input, textarea, select, [contenteditable='true']");
       if (e.key === "Escape") {
@@ -467,19 +504,33 @@ export function DesignStudio({
       if (k === "m") return run(cycleMethod);
       if (k === "f") return run(cycleShape);
       if (k === "r") return run(() => api.current?.frame(active));
-      if (k === "p") return run(() => setRail(!rail));
+      if (k === "p") return run(() => setCollapsed(!collapsed));
       if (k === "v") return run(() => void recordSpin());
     };
   });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => keyHandler.current(e);
+    const track = (e: Event) => {
+      engaged.current = Boolean(wrap.current?.contains(e.target as Node));
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", track);
+    document.addEventListener("focusin", track);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", track);
+      document.removeEventListener("focusin", track);
+    };
   }, []);
 
   const onReady = useCallback((a: SceneApi) => {
     api.current = a;
   }, []);
+  const [view, setView] = useState<View | null>(null);
+  const turn = (v: View) => {
+    setView(v);
+    api.current?.view(v);
+  };
 
   const [dropping, setDropping] = useState<"panel" | "stage" | null>(null);
   const [uploadError, setUploadError] = useState("");
@@ -533,14 +584,53 @@ export function DesignStudio({
         [`Märkning för ${units} st`, sek(marking.perUnit * units + marking.setup)],
       ];
 
+  const hasPicker = Boolean(picker);
+  const hasBrand = Boolean(brand);
+  useEffect(() => {
+    const id = requestAnimationFrame(spy);
+    return () => cancelAnimationFrame(id);
+  }, [onNames, hasPicker, hasBrand, collapsed]);
+  const tools = [...(picker ? [PICK_RAIL] : []), ...(brand ? [BRAND_RAIL] : []), ...RAIL].filter((r) => !onNames || r.names);
+
   return (
     <div
-      className={`cz-wrap${embedded ? " is-embedded" : ""}`}
+      ref={wrap}
+      className={`cz-wrap${embedded ? " is-embedded" : ""}${fill ? " is-fill" : ""}`}
       {...(embedded ? { "aria-label": `Designstudio för ${product.name}` } : { role: "dialog", "aria-modal": true, "aria-label": `Designstudio: ${product.name}` })}
     >
       {embedded ? null : <button type="button" className="drawer-veil" aria-label="Stäng" onClick={onClose} />}
-      <div className={`cz${rail ? " is-rail" : ""}`}>
-        <div className={`cz-stage${dropping === "stage" ? " is-dropping" : ""}`} {...dropTarget("stage")}>
+      <div className={`cz${collapsed ? " is-collapsed" : ""}${aside ? " has-aside" : ""}`}>
+        <nav className="cz-rail" aria-label="Designverktyg">
+          {tools.map((r) => (
+            <button key={r.sec} type="button" className="cz-rail-btn" aria-current={!collapsed && sec === r.sec ? "true" : undefined} onClick={() => openAt(r.sec)} aria-label={r.label} data-tip={r.label}>
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d={r.icon} />
+              </svg>
+            </button>
+          ))}
+          <span className="cz-rail-swatch" style={{ background: color }} data-tip={colorName(color)} aria-hidden />
+          <div className="cz-rail-foot">
+            <button type="button" className="cz-rail-btn" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Visa panelen (P)" : "Dölj panelen (P)"} aria-expanded={!collapsed} data-tip={`${collapsed ? "Visa" : "Dölj"} panelen · P`}>
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d={collapsed ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} />
+              </svg>
+            </button>
+            <button type="button" className="cz-rail-btn is-save" onClick={() => void save()} disabled={!art || saving} aria-label={saveLabel} data-tip={`${saveLabel} · ${MOD}S`}>
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+            </button>
+            {onClose && collapsed ? (
+              <button type="button" className="cz-rail-btn" onClick={onClose} aria-label="Stäng" data-tip="Stäng · Esc">
+                <svg viewBox="0 0 24 24" aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
+        </nav>
+
+        <div className={`cz-stage${dropping === "stage" ? " is-dropping" : ""}`} onPointerDown={() => setView(null)} {...dropTarget("stage")}>
           {dropping === "stage" ? <div className="cz-drop-veil">Släpp för att lägga loggan på produkten</div> : null}
           {modelUrl === undefined ? null : (
             <ProductScene
@@ -651,83 +741,37 @@ export function DesignStudio({
             </div>
           ) : null}
 
-          <p className="cz-hint">
-            <span>Dra trycket för att flytta</span>
-            <span className="cz-keys">
-              <kbd>⌫</kbd> ta bort
-            </span>
-            <span className="cz-keys">
-              <kbd>{MOD}</kbd>
-              <kbd>Z</kbd> ångra
-            </span>
-            <span className="cz-keys">
-              <kbd>←</kbd>
-              <kbd>→</kbd> flytta
-            </span>
-            <button type="button" className="cz-keys" onClick={() => setHelp(true)}>
-              <kbd>?</kbd> alla
-            </button>
-          </p>
+          <div className="cz-views" role="group" aria-label="Vy">
+            {VIEWS.map((v) => (
+              <button key={v.id} type="button" aria-pressed={view === v.id} onPointerDown={(e) => e.stopPropagation()} onClick={() => turn(v.id)}>
+                {v.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <aside ref={panel} className="cz-panel" aria-label="Inställningar">
-          {rail ? (
-            <nav className="cz-rail" aria-label="Inställningar, minimerad">
-              <button type="button" className="cz-rail-btn cz-rail-open" onClick={() => setRail(false)} aria-label="Visa panelen (P)" data-tip="Visa panelen · P">
-                <svg viewBox="0 0 24 24" aria-hidden>
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </button>
-              <span className="cz-rail-sep" aria-hidden />
-              {(picker ? [PICK_RAIL, ...RAIL] : RAIL)
-                .filter((r) => !onNames || r.names)
-                .map((r) => (
-                  <button key={r.sec} type="button" className="cz-rail-btn" onClick={() => openAt(r.sec)} aria-label={r.label} data-tip={r.label}>
-                    <svg viewBox="0 0 24 24" aria-hidden>
-                      <path d={r.icon} />
-                    </svg>
-                  </button>
-                ))}
-              <span className="cz-rail-swatch" style={{ background: color }} data-tip={colorName(color)} aria-hidden />
-              <div className="cz-rail-foot">
-                <button type="button" className="cz-rail-btn is-save" onClick={() => void save()} disabled={!art || saving} aria-label={saveLabel} data-tip={`${saveLabel} · ${MOD}S`}>
-                  <svg viewBox="0 0 24 24" aria-hidden>
-                    <path d="M5 12.5l4.5 4.5L19 7.5" />
-                  </svg>
-                </button>
-                {onClose ? (
-                  <button type="button" className="cz-rail-btn" onClick={onClose} aria-label="Stäng" data-tip="Stäng · Esc">
-                    <svg viewBox="0 0 24 24" aria-hidden>
-                      <path d="M6 6l12 12M18 6L6 18" />
-                    </svg>
-                  </button>
-                ) : null}
-              </div>
-            </nav>
-          ) : (
-            <>
+        <aside ref={panel} className="cz-panel" aria-label="Inställningar" onScroll={spy} inert={collapsed || undefined}>
               <div className="drawer-head cz-head">
                 <div>
                   <p className="kicker">Designstudio</p>
                   <h2>{product.name}</h2>
                 </div>
-                <div className="cz-head-actions">
-                  <button type="button" className="cz-collapse" onClick={() => setRail(true)} aria-label="Minimera panelen (P)" title="Minimera panelen · P">
-                    <svg viewBox="0 0 24 24" aria-hidden>
-                      <path d="M15 6l-6 6 6 6" />
-                    </svg>
+                {onClose ? (
+                  <button type="button" className="drawer-x" onClick={onClose} aria-label="Stäng">
+                    ×
                   </button>
-                  {onClose ? (
-                    <button type="button" className="drawer-x" onClick={onClose} aria-label="Stäng">
-                      ×
-                    </button>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
 
               {picker ? (
                 <section className="cz-sec" data-sec={PICK_RAIL.sec}>
                   {picker}
+                </section>
+              ) : null}
+
+              {brand ? (
+                <section className="cz-sec" data-sec={BRAND_RAIL.sec}>
+                  {brand}
                 </section>
               ) : null}
 
@@ -981,9 +1025,9 @@ export function DesignStudio({
                   Ladda ner bild
                 </button>
               </div>
-            </>
-          )}
         </aside>
+
+        {aside ? <aside className="cz-aside">{aside}</aside> : null}
       </div>
     </div>
   );

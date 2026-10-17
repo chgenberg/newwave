@@ -1,6 +1,6 @@
-import { DashBottomBar, DashSidebar, type NavItem } from "@/components/newwave/DashNav";
+import type { NavItem } from "@/components/newwave/DashNav";
+import { DashShell } from "@/components/newwave/DashShell";
 import { readShop } from "@/lib/newwave/shopState";
-
 
 const BASE = "/newwave/new-wave";
 const ITEMS: NavItem[] = [
@@ -17,17 +17,9 @@ export default async function NewWaveDashLayout({ children }: Readonly<{ childre
   const badges = { [`${BASE}/ordrar`]: quotes.filter((q) => q.status === "godkänd").length };
   return (
     <div className="nw-club nw-club--plain" style={{ "--club": "#0F1B2D", "--club-accent": "#5CC8FF", "--club-on-accent": "#0D0C0C", "--club-soft": "#E6F6FF" } as React.CSSProperties}>
-      <div className="nw-container grid gap-8 pb-28 pt-6 md:grid-cols-[76px_minmax(0,1fr)] md:pb-12 xl:grid-cols-[232px_minmax(0,1fr)] lg:gap-12 lg:pt-10">
-        <DashSidebar base={BASE} items={ITEMS} label="New Waves dashboard" title="New Wave" subtitle="Profile hub · produktion" badges={badges} cta={{ href: "/newwave", label: "Navkartan", icon: "spark" }} />
-        <div className="min-w-0">
-          <div className="mb-6 flex items-center gap-3 md:hidden">
-            <span className="nw-club-heading grid h-9 w-9 place-items-center rounded-xl bg-[var(--club)] text-[13px] text-white">N</span>
-            <p className="nw-club-heading text-[20px] leading-none text-[var(--club)]">New Wave</p>
-          </div>
-          <div className="max-w-[1080px]">{children}</div>
-        </div>
-      </div>
-      <DashBottomBar base={BASE} items={ITEMS} label="New Waves dashboard" badges={badges} />
+      <DashShell portal="new-wave" base={BASE} items={ITEMS} label="New Waves dashboard" title="New Wave" subtitle="Profile hub · produktion" badges={badges} cta={{ href: "/newwave#studio", label: "Designstudion", icon: "drop" }} width={1080}>
+        {children}
+      </DashShell>
     </div>
   );
 }

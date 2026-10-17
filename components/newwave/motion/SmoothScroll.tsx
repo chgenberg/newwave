@@ -5,7 +5,7 @@ import { cancelFrame, frame } from "motion/react";
 import { useEffect, useRef } from "react";
 
 /** Designstudion och menyn scrollar själva. */
-const prevent = (node: HTMLElement) => node.classList?.contains("cz-wrap") || node.id === "nw-menu";
+const prevent = (node: HTMLElement) => node.classList?.contains("cz-wrap");
 
 /** Mjuk scroll för de redaktionella sidorna (startsidan och webbshoppen). Används aldrig i dashboards. */
 export function SmoothScroll() {

@@ -444,7 +444,7 @@ export function CampaignForm({
         </Step>
       </div>
 
-      <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--nw-line)] bg-white/90 p-2 pl-4 shadow-[var(--nw-shadow)] backdrop-blur sm:p-3 sm:pl-5 md:bottom-4">
+      <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-3 rounded-[24px] border border-[var(--nw-line)] bg-white/90 p-2 pl-4 shadow-[var(--nw-shadow)] backdrop-blur sm:p-3 sm:pl-5 min-[900px]:bottom-4">
         <p className="min-w-0 flex-1 truncate text-[13px] text-[var(--nw-muted)] sm:text-[13.5px]">
           {error ? (
             <span className="text-[#9B1C1C]">{error}</span>

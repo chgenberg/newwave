@@ -193,7 +193,7 @@ export function RulesEditor({ initial, clubs }: { initial: CraftRules; clubs: nu
       </button>
 
       {dirty || error ? (
-        <div className="nw-fade sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[var(--nw-line)] bg-white/90 p-3 pl-5 shadow-[var(--nw-shadow)] backdrop-blur md:bottom-4">
+        <div className="nw-fade sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[var(--nw-line)] bg-white/90 p-3 pl-5 shadow-[var(--nw-shadow)] backdrop-blur min-[900px]:bottom-4">
           <p className="min-w-0 text-[13.5px] text-[var(--nw-muted)]">{error ? <span className="text-[#9B1C1C]">{error}</span> : "Osparade ändringar"}</p>
           <div className="flex flex-wrap gap-2">
             {dirty ? (
