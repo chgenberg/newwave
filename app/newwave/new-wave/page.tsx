@@ -49,7 +49,7 @@ export default async function NewWaveHome() {
             <h2 className="nw-club-heading text-[19px] text-[var(--club)]">De sju benen</h2>
             <p className="mt-0.5 text-[13.5px] text-[var(--nw-muted)]">Det som händer i navet, live från klubbar, Craft och återförsäljare.</p>
           </div>
-          <Link href="/newwave#studio" className="nw-hit hidden shrink-0 text-[13px] font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4 sm:inline">
+          <Link href="/newwave/studio" className="nw-hit hidden shrink-0 text-[13px] font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4 sm:inline">
             Designstudion
           </Link>
         </div>

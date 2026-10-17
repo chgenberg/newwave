@@ -114,8 +114,12 @@ export type Portal = {
   short: string;
   who: string;
   description: string;
-  /** mp4 eller YouTube-id läggs in när filmerna finns. */
-  video?: string;
+  /** Dit valet på startsidan leder. */
+  start: string;
+  /** Visas i valet tills filmen finns. */
+  poster: string;
+  /** mp4 som spelas i valet, läggs in när filmen finns. */
+  film?: string;
 };
 
 export const PORTALS: Portal[] = [
@@ -126,6 +130,8 @@ export const PORTALS: Portal[] = [
     title: "Klubbens dashboard",
     who: "För klubben",
     description: "Brandbook, kalender, färdigt material att godkänna och klubbens egen butik.",
+    start: "/newwave/klubb",
+    poster: "/newwave/portals/klubb.jpg",
   },
   {
     id: "craft",
@@ -134,6 +140,8 @@ export const PORTALS: Portal[] = [
     title: "Crafts dashboard",
     who: "För Craft",
     description: "Alla klubbar och allt material på ett ställe – med insikter och export till New Wave.",
+    start: "/newwave/craft",
+    poster: "/newwave/portals/craft.jpg",
   },
   {
     id: "new-wave",
@@ -142,6 +150,8 @@ export const PORTALS: Portal[] = [
     title: "New Waves dashboard",
     who: "För New Wave",
     description: "Navet live: ordrar att trycka, återförsäljarnas webbshoppar och klubbarnas försäljning.",
+    start: "/newwave/new-wave",
+    poster: "/newwave/portals/new-wave.jpg",
   },
   {
     id: "shop",
@@ -149,9 +159,21 @@ export const PORTALS: Portal[] = [
     href: "/newwave/shop",
     title: "Återförsäljarens shop",
     who: "För återförsäljaren",
-    description: "Egen webbshop på några minuter. Kunden laddar upp loggan, ser den i 3D och får offert direkt.",
+    description: "Bygg er egen webbshop från er webbplats på en minut. Kunderna ser loggan på produkterna och beställer direkt.",
+    start: "/newwave/shop/butiken/ny",
+    poster: "/newwave/portals/shop.jpg",
   },
 ];
 
-/** Filmen överst på förstasidan. */
+export type HubTarget = PortalId | "studio";
+
+const PORTAL_ICON: Record<PortalId, string> = { klubb: "users", craft: "spark", "new-wave": "truck", shop: "store" };
+
+/** Designmotorn och de fyra dashboardsen, i menyn som går att fälla ut till vänster. */
+export const HUB_TARGETS: { id: HubTarget; href: string; title: string; short: string; who: string; icon: string }[] = [
+  { id: "studio", href: "/newwave/studio", title: "Designmotorn", short: "Studio", who: "Designa med ert varumärke", icon: "drop" },
+  ...PORTALS.map((p) => ({ id: p.id, href: p.href, title: p.title, short: p.short, who: p.who, icon: PORTAL_ICON[p.id] })),
+];
+
+/** Filmen som möter besökaren på förstasidan. */
 export const HERO_VIDEO = { src: "/newwave/hero.mp4", poster: "/newwave/hero-poster.jpg" };

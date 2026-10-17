@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 type Video = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
-/** Filmen överst på förstasidan i full storlek: spelar tyst i loop och kan ses i helskärm med ljud. `next` är dit pilen ner leder. */
-export function HeroFilm({ src, poster, title, next }: { src: string; poster: string; title: string; next: string }) {
+/** Filmen på förstasidan, i hela bredden ovanför startknappen: spelar tyst i loop och kan ses i helskärm med ljud. */
+export function HeroFilm({ src, poster, title }: { src: string; poster: string; title: string }) {
   const video = useRef<Video>(null);
   const reduce = useReducedMotion();
   const [playing, setPlaying] = useState(false);
@@ -53,7 +53,7 @@ export function HeroFilm({ src, poster, title, next }: { src: string; poster: st
   };
 
   return (
-    <section aria-label="Filmen om Next Wave" className="relative h-[100svh] min-h-[520px] w-full overflow-hidden bg-[#141416] text-white">
+    <section aria-label="Filmen om Next Wave" className="relative min-h-[420px] w-full flex-1 overflow-hidden bg-[#141416] text-white">
         <video
           ref={video}
           className="absolute inset-0 h-full w-full object-cover"
@@ -88,12 +88,7 @@ export function HeroFilm({ src, poster, title, next }: { src: string; poster: st
               <span className="nw-mono text-[12px] uppercase tracking-[0.06em]">{muted ? "Ljud av" : "Ljud på"}</span>
             </FilmButton>
           </div>
-          <div className="flex items-center gap-2">
-            <a href={next} className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 text-[14px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/50">
-              Till studion
-              <span aria-hidden className="inline-block transition-transform duration-500 group-hover:translate-y-0.5">↓</span>
-            </a>
-            <button type="button" onClick={watch} className="group inline-flex h-11 items-center gap-3 rounded-full bg-white pl-5 pr-1.5 text-[14px] font-medium text-[#141416] transition-transform duration-300 active:scale-[0.97]">
+          <button type="button" onClick={watch} className="group inline-flex h-11 items-center gap-3 rounded-full bg-white pl-5 pr-1.5 text-[14px] font-medium text-[#141416] transition-transform duration-300 active:scale-[0.97]">
             Se hela filmen
             <span className="grid h-8 w-8 place-items-center rounded-full bg-[#141416] text-white transition-transform duration-500 group-hover:rotate-90">
               <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -101,7 +96,6 @@ export function HeroFilm({ src, poster, title, next }: { src: string; poster: st
               </svg>
             </span>
           </button>
-          </div>
         </div>
 
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] bg-white/15">

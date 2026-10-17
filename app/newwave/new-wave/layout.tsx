@@ -17,7 +17,7 @@ export default async function NewWaveDashLayout({ children }: Readonly<{ childre
   const badges = { [`${BASE}/ordrar`]: quotes.filter((q) => q.status === "godkänd").length };
   return (
     <div className="nw-club nw-club--plain" style={{ "--club": "#0F1B2D", "--club-accent": "#5CC8FF", "--club-on-accent": "#0D0C0C", "--club-soft": "#E6F6FF" } as React.CSSProperties}>
-      <DashShell portal="new-wave" base={BASE} items={ITEMS} label="New Waves dashboard" title="New Wave" subtitle="Profile hub · produktion" badges={badges} cta={{ href: "/newwave#studio", label: "Designstudion", icon: "drop" }} width={1080}>
+      <DashShell portal="new-wave" base={BASE} items={ITEMS} label="New Waves dashboard" title="New Wave" subtitle="Profile hub · produktion" badges={badges} cta={{ href: "/newwave/studio", label: "Designstudion", icon: "drop" }} width={1080}>
         {children}
       </DashShell>
     </div>

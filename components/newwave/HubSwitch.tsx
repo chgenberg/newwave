@@ -4,21 +4,12 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { PORTALS, type PortalId } from "@/lib/newwave/hub";
+import { HUB_TARGETS, type HubTarget } from "@/lib/newwave/hub";
 import { Icon } from "./DashNav";
 import { STORAGE_PREFIX } from "./workspace/roles";
 
 /** Studions val av öppen panel är en inställning, inte demodata. */
 const RAIL_KEY = "nw.studio.rail";
-
-type Target = PortalId | "studio";
-
-const ICON: Record<PortalId, string> = { klubb: "users", craft: "spark", "new-wave": "truck", shop: "store" };
-
-const TARGETS: { id: Target; href: string; title: string; who: string; icon: string }[] = [
-  { id: "studio", href: "/newwave#studio", title: "Designmotorn", who: "Designa med ert varumärke", icon: "drop" },
-  ...PORTALS.map((p) => ({ id: p.id, href: p.href, title: p.title, who: p.who, icon: ICON[p.id] })),
-];
 
 /** Rensar besökarens egen demomiljö på servern och det studion sparat i webbläsaren. */
 function Restart() {
@@ -64,12 +55,12 @@ function Restart() {
  * Växlar mellan designmotorn och de fyra dashboardsen. På datorn en diskret pil längst till vänster om menyn,
  * i toppraden på mobil (`bar`), där namnet på den aktuella ytan blir knappen.
  */
-export function HubSwitch({ active, bar }: { active: Target; bar?: boolean }) {
+export function HubSwitch({ active, bar }: { active?: HubTarget; bar?: boolean }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
-  const current = TARGETS.find((t) => t.id === active);
+  const current = HUB_TARGETS.find((t) => t.id === active);
 
   useEffect(() => {
     if (!open) return;
@@ -102,7 +93,7 @@ export function HubSwitch({ active, bar }: { active: Target; bar?: boolean }) {
             : "group grid w-5 place-items-center rounded-full text-[#A6A39B] transition hover:bg-[#F2F2EF] hover:text-[#111]"
         }
       >
-        {bar ? <span className="truncate">{current?.id === "studio" ? "Studio" : (PORTALS.find((p) => p.id === active)?.short ?? "")}</span> : null}
+        {bar ? <span className="truncate">{current?.short ?? "Välj"}</span> : null}
         <svg viewBox="0 0 24 24" aria-hidden className={`h-4 w-4 shrink-0 fill-none stroke-current transition-transform duration-300 ${open ? "rotate-180" : bar ? "" : "group-hover:translate-x-0.5"}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d={bar ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6"} />
         </svg>
@@ -119,7 +110,7 @@ export function HubSwitch({ active, bar }: { active: Target; bar?: boolean }) {
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className={`absolute z-[100] grid w-[260px] gap-0.5 rounded-[22px] bg-white p-2 shadow-[0_0_0_1px_rgba(17,17,17,0.06),0_24px_60px_-20px_rgba(17,17,17,0.45)] ${bar ? "left-0 top-[calc(100%+8px)] origin-top-left" : "left-[calc(100%+6px)] top-0 origin-left"}`}
           >
-            {TARGETS.map((t) => {
+            {HUB_TARGETS.map((t) => {
               const on = t.id === active;
               return (
                 <Link key={t.id} href={t.href} onClick={() => setOpen(false)} aria-current={on ? "page" : undefined} className={`flex items-center gap-3 rounded-[16px] p-2 transition ${on ? "bg-[#F1F1EE]" : "hover:bg-[#F6F6F3]"}`}>
