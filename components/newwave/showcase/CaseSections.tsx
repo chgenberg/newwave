@@ -256,14 +256,14 @@ export function ShopSection({ club, logo, slogan, week, products }: { club: stri
           </span>
           <span className="min-w-0 flex-1 truncate rounded-full bg-white px-3 py-1 text-center text-[12px] text-[var(--nw-muted)]">intersport.se/klubbshop/asa-if</span>
         </div>
-        <div className="flex items-center gap-5 bg-[#003A8C] px-4 py-3 text-white sm:px-6">
-          <span className="text-[17px] font-black italic tracking-[-0.02em]">INTERSPORT</span>
-          <nav aria-hidden className="hidden gap-4 text-[12.5px] text-white/80 sm:flex">
+        <div className="flex items-center gap-6 border-b border-[var(--nw-line)] bg-white px-4 py-3.5 sm:px-6">
+          <img src="/intersport-logo.svg" alt="Intersport" className="h-[15px] w-auto sm:h-[17px]" />
+          <nav aria-hidden className="hidden gap-4 text-[12.5px] text-[#3A3A3C] sm:flex">
             <span>Herr</span>
             <span>Dam</span>
             <span>Barn</span>
             <span>Sport</span>
-            <span className="font-semibold text-white">Klubbshop</span>
+            <span className="font-semibold text-[#164196]">Klubbshop</span>
           </nav>
         </div>
         <div className="px-4 py-5 sm:px-6">
