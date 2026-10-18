@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { ACCESS_COOKIE, accessToken, isOpen, LOGIN_PATH } from "@/lib/access";
 import { DEMO_PARAM, isWorkspaceId, WS_COOKIE, WS_MAX_AGE } from "@/lib/newwave/workspaceId";
 
-function authorized(request: NextRequest) {
+async function authorized(request: NextRequest) {
   const password = process.env.DEMO_PASSWORD;
-  if (!password) return true;
-  const header = request.headers.get("authorization") ?? "";
-  if (!header.startsWith("Basic ")) return false;
-  const [, pass] = atob(header.slice(6)).split(":");
-  return pass === password;
+  if (!password || isOpen(request.nextUrl.pathname)) return true;
+  return request.cookies.get(ACCESS_COOKIE)?.value === (await accessToken(password));
 }
 
-export function proxy(request: NextRequest) {
-  if (!authorized(request)) {
-    return new NextResponse("Inloggning krävs", {
-      status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Craft Klubbmerch demo", charset="UTF-8"' },
-    });
+export async function proxy(request: NextRequest) {
+  if (!(await authorized(request))) {
+    if (request.nextUrl.pathname.startsWith("/api/")) return NextResponse.json({ error: "Logga in med lösenordet först." }, { status: 401 });
+    const login = new URL(LOGIN_PATH, request.url);
+    const next = request.nextUrl.pathname + request.nextUrl.search;
+    if (next !== "/" && next !== "/newwave") login.searchParams.set("till", next);
+    return NextResponse.redirect(login);
   }
   const current = request.cookies.get(WS_COOKIE)?.value;
   /** En delad länk eller QR-kod (`?demo=`) tar med sig avsändarens demomiljö, så att mobilen ser samma butik. */
