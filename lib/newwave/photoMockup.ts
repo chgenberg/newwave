@@ -1,32 +1,24 @@
 import { loadImage } from "@/lib/compose";
-import type { NwProduct } from "./catalog";
-import { printFit, warpPrint } from "./printSurface";
+import { isSoft, type NwProduct, printOf } from "./catalog";
+import { printFit, printOnPhoto } from "./printSurface";
 
-/** Trycket på det riktiga produktfotot, lagt på tryckytan: multiply på ljust tyg så vävstrukturen syns, vanlig tryckfärg på mörkt. */
-export async function photoMockup(visual: Pick<NwProduct, "photo" | "print">, printUrl: string, dark: boolean, size = 1000) {
-  const [photo, print] = await Promise.all([loadImage(visual.photo), loadImage(printUrl)]);
+const pixels = (img: CanvasImageSource, width: number, height: number) => {
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(photo, 0, 0, size, size);
+  ctx.drawImage(img, 0, 0, width, height);
+  return { canvas, ctx, image: ctx.getImageData(0, 0, width, height) };
+};
 
-  const fit = printFit(visual.print, (print.width || 3) / (print.height || 4), size);
-  const logo = document.createElement("canvas");
-  logo.width = Math.max(1, Math.round(fit.w * 2));
-  logo.height = Math.max(1, Math.round(fit.h * 2));
-  const lctx = logo.getContext("2d")!;
-  lctx.drawImage(print, 0, 0, logo.width, logo.height);
-  const layer = warpPrint(visual.print, lctx.getImageData(0, 0, logo.width, logo.height), size);
-
-  const overlay = document.createElement("canvas");
-  overlay.width = size;
-  overlay.height = size;
-  overlay.getContext("2d")!.putImageData(new ImageData(layer, size, size), 0, 0);
-  ctx.globalCompositeOperation = dark ? "source-over" : "multiply";
-  ctx.globalAlpha = dark ? 0.94 : 1;
-  ctx.drawImage(overlay, 0, 0);
-  ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = 1;
-  return canvas.toDataURL("image/jpeg", 0.88);
+/** Trycket på det riktiga produktfotot i webbläsaren, för tryckfiler som bara finns här; samma bild som servern ritar. */
+export async function photoMockup(visual: Pick<NwProduct, "photo" | "print" | "chest" | "kind">, printUrl: string, dark: boolean, size = 1000) {
+  const [photoImg, printImg] = await Promise.all([loadImage(visual.photo), loadImage(printUrl)]);
+  const s = printOf(visual);
+  const fit = printFit(s, (printImg.width || 3) / (printImg.height || 4), size);
+  const photo = pixels(photoImg, size, size);
+  const logo = pixels(printImg, Math.max(1, Math.round(fit.w * 2)), Math.max(1, Math.round(fit.h * 2))).image;
+  const out = printOnPhoto(s, photo.image, logo, { dark, soft: isSoft(visual) });
+  photo.ctx.putImageData(new ImageData(out, size, size), 0, 0);
+  return photo.canvas.toDataURL("image/jpeg", 0.88);
 }

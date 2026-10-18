@@ -1,6 +1,6 @@
 import { type NwProduct, nwProduct, printOf } from "@/lib/newwave/catalog";
 import { onChest } from "@/lib/newwave/marking";
-import { surfaceLayer } from "@/lib/newwave/printSurface";
+import { MOCKUP_VERSION } from "@/lib/newwave/printSurface";
 import { logoFor, type QuoteLineInput } from "@/lib/newwave/reseller";
 
 type Props = {
@@ -12,25 +12,27 @@ type Props = {
   className?: string;
 };
 
-/** Produktfotot med loggan lagd på tryckytan i 3D: rätt vinkel, perspektiv och böjd runt runda produkter. */
+/** Ändras när tryckytan eller renderingen ändras, så att webbläsaren inte visar en gammal bild. */
+function version(p: NwProduct, chest: boolean) {
+  const s = JSON.stringify([MOCKUP_VERSION, p.photo, printOf(p, chest)]);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (h * 33) ^ s.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+const mockupSrc = (p: NwProduct, logo: string, chest: boolean) =>
+  `/api/v1/newwave/mockup?${new URLSearchParams({ p: p.id, l: logo, s: "800", ...(chest ? { c: "1" } : {}), v: version(p, chest) })}`;
+
+/** Produktfotot med loggan tryckt på ytan: rätt vinkel, böjd runt runda produkter och med fotots ljus och veck. */
 export function ProductMock({ product, logo, logoDark, chest = false, className = "" }: Props) {
   const src = logoFor(product, { logo, logoDark });
-  const layer = surfaceLayer(printOf(product, chest));
   return (
-    <div className={`relative aspect-square overflow-hidden bg-[#F4F4F2] [container-type:inline-size] ${className}`}>
+    <div className={`relative aspect-square overflow-hidden bg-[#F4F4F2] ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={product.photo} alt={product.name} className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
       {src ? (
-        <div aria-hidden className={`pointer-events-none absolute h-0 w-0 ${product.dark ? "opacity-[0.94]" : "mix-blend-multiply"}`} style={layer.holder}>
-          <div className="absolute [transform-style:preserve-3d]" style={layer.plane}>
-            {layer.strips.map(({ strip, image }, i) => (
-              <div key={i} className="absolute inset-y-0 overflow-hidden" style={strip}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="absolute inset-y-0 h-full max-w-none object-contain" style={image} />
-              </div>
-            ))}
-          </div>
-        </div>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={mockupSrc(product, src, chest)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
       ) : null}
     </div>
   );

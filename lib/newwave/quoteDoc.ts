@@ -1,11 +1,11 @@
-import sharp, { type OverlayOptions } from "sharp";
+import sharp from "sharp";
 import { htmlToPdf } from "@/lib/pdf";
 import { readAsset } from "./asset";
-import { nwProduct, printOf } from "./catalog";
+import { nwProduct } from "./catalog";
 import { colorName } from "./colors";
 import { designSummary, onChest } from "./marking";
 import { logoFor, type Quote, type QuoteLine, type Reseller, sek, shopUrl } from "./reseller";
-import { printLayer } from "./serverMockup";
+import { mockupJpeg } from "./serverMockup";
 import { SITE } from "./site";
 import { withDemo } from "./workspaceId";
 
@@ -17,16 +17,13 @@ const BG = "#F4F4F2";
 async function lineImage(line: QuoteLine, size = 480): Promise<Buffer> {
   const preview = line.preview ? await readAsset(line.preview) : null;
   if (preview) return sharp(preview).flatten({ background: BG }).resize(size, size, { fit: "cover" }).jpeg({ quality: 84 }).toBuffer();
-  const layers: OverlayOptions[] = [];
   const p = nwProduct(line.productId);
-  const photo = p && (await readAsset(p.photo));
-  if (p && photo) {
-    layers.push({ input: await sharp(photo).resize(size, size, { fit: "contain", background: BG }).toBuffer() });
-    const src = logoFor(p, { logo: line.design.logo ?? line.logo, logoDark: line.design.logo ? line.design.logoDark : line.logoDark });
-    const logo = src ? await readAsset(src) : null;
-    if (logo) layers.push(await printLayer(printOf(p, onChest(line.design)), logo, size, p.dark));
-  }
-  return sharp({ create: { width: size, height: size, channels: 3, background: BG } }).composite(layers).jpeg({ quality: 84 }).toBuffer();
+  if (!p) return sharp({ create: { width: size, height: size, channels: 3, background: BG } }).jpeg({ quality: 84 }).toBuffer();
+  const src = logoFor(p, { logo: line.design.logo ?? line.logo, logoDark: line.design.logo ? line.design.logoDark : line.logoDark });
+  const mock = src ? await mockupJpeg(p, src, size, onChest(line.design)) : null;
+  if (mock) return mock;
+  const photo = await readAsset(p.photo);
+  return (photo ? sharp(photo).resize(size, size, { fit: "fill" }) : sharp({ create: { width: size, height: size, channels: 3, background: BG } })).jpeg({ quality: 84 }).toBuffer();
 }
 
 export type QuoteArt = { logo: Buffer | null; lines: Buffer[] };

@@ -103,13 +103,17 @@ function garment([x, y, w, h]: [number, number, number, number], leftChest = fal
   return { print, chest: { cx: x + w * 0.66, cy: y + h * 0.06 + h * 0.15, w: w * 0.3, h: h * 0.3, bend: 18, top: true } };
 }
 
-export const printOf = (p: NwProduct, chest = false) => (chest && p.chest) || p.print;
+export const printOf = (p: Pick<NwProduct, "print" | "chest">, chest = false) => (chest && p.chest) || p.print;
+
+const SOFT: ReadonlySet<Kind> = new Set(["top", "beanie", "bag", "textile"]);
+/** Tyg som veckar sig, där trycket följer vecken. */
+export const isSoft = (p: Pick<NwProduct, "kind">) => SOFT.has(p.kind);
 
 export const NW_CATALOG: NwProduct[] = [
   row("P001", "T-shirt", "Kläder", "top", "Vit", "#F4F3EF", 249, ["vinter", "vår", "sommar", "höst"], "match, träning, cup och sommarläger", garment([0.347, 0.228, 0.308, 0.355])),
   row("P002", "T-shirt Premium", "Kläder", "top", "Svart", "#111111", 349, ["vinter", "vår", "sommar", "höst"], "supportrar och present", garment([0.319, 0.196, 0.352, 0.383])),
   row("P003", "Piké", "Kläder", "top", "Svart", "#111111", 449, ["vår", "sommar"], "ledare, funktionärer och avslutning", garment([0.339, 0.196, 0.32, 0.382])),
-  row("P004", "Hoodie", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter", "vår"], "kalla kvällar på läktaren och träning", garment([0.356, 0.218, 0.29, 0.353])),
+  row("P004", "Hoodie", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter", "vår"], "kalla kvällar på läktaren och träning", garment([0.356, 0.385, 0.29, 0.26])),
   row("P005", "Sweatshirt", "Kläder", "top", "Gråmelerad", "#9A9CA1", 499, ["höst", "vinter", "vår"], "vardag och hemmamatch inomhus", garment([0.334, 0.206, 0.33, 0.375])),
   row("P006", "Softshelljacka", "Kläder", "top", "Svart", "#111111", 899, ["höst", "vår"], "ledare och blåsiga utomhusmatcher", garment([0.545, 0.224, 0.121, 0.157], true)),
   row("P007", "Fleece", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter"], "kyla, läger och utomhusträning", garment([0.546, 0.229, 0.124, 0.162], true)),
