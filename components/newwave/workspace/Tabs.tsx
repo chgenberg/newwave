@@ -153,7 +153,7 @@ function OccasionChips({ occasions }: { occasions: Occasions }) {
 
 /** Påminner om att kunderna har samma verktyg i återförsäljarens butik. */
 function InShop({ slug, compact }: { slug: string; compact?: boolean }) {
-  const href = `/newwave/s/${slug}/event`;
+  const href = `/newwave/s/${slug}#event`;
   if (compact)
     return (
       <Link href={href} className="text-[13px] font-medium underline underline-offset-4">

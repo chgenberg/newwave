@@ -181,8 +181,8 @@ export const PORTALS: Portal[] = [
     href: "/newwave/shop",
     title: "Återförsäljarens shop",
     who: "För återförsäljaren",
-    description: "Bygg er egen webbshop från er webbplats på en minut. Kunderna ser loggan på produkterna och beställer direkt.",
-    start: "/newwave/shop/butiken/ny",
+    description: "En återförsäljares webbshop som kunden ser den: välj event, agenterna lägger företagets logga på miljön och produkterna, och beställ direkt. Dashboarden bygger och redigerar butiken.",
+    start: "/newwave/s/vastkust-profil",
     poster: "/newwave/portals/shop.jpg",
   },
 ];

@@ -1,15 +1,8 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { EventPlanner } from "@/components/newwave/shop/EventPlanner";
-import { isOccasion, offeredOccasions } from "@/lib/newwave/occasions";
-import { getResellerBySlug } from "@/lib/newwave/shopState";
+import { redirect } from "next/navigation";
+import { isOccasion } from "@/lib/newwave/occasions";
 
-export const metadata: Metadata = { title: "Planera ert event" };
-
+/** Gamla länkar till eventverktyget går till tillfällets sida, eller till eventen på startsidan. */
 export default async function ShopEvent({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ tillfalle?: string }> }) {
   const [{ slug }, { tillfalle }] = await Promise.all([params, searchParams]);
-  const r = await getResellerBySlug(slug);
-  const offered = r ? offeredOccasions(r).map((o) => o.id) : [];
-  if (!r || !offered.length) notFound();
-  return <EventPlanner slug={r.slug} markup={r.markup} shopName={r.texts.shopName || r.name} offered={offered} initial={isOccasion(tillfalle) ? tillfalle : undefined} />;
+  redirect(isOccasion(tillfalle) ? `/newwave/s/${slug}/event/${tillfalle}` : `/newwave/s/${slug}#event`);
 }

@@ -46,8 +46,8 @@ export const GUIDES: Record<PortalId, { role: string; steps: GuideStep[]; next: 
   shop: {
     role: "Ni är återförsäljare av profilprodukter",
     steps: [
-      { label: "Bygg butiken från er webbadress", href: "/newwave/shop/butiken/ny" },
-      { label: "Designa åt en kund", href: "/newwave/shop/designa" },
+      { label: "Handla som företag i butiken", href: "/newwave/s/vastkust-profil" },
+      { label: "Redigera butiken", href: "/newwave/shop/butiken" },
       { label: "Svara på en offert", href: "/newwave/shop/offerter" },
     ],
     next: { text: "Beställningar och godkända offerter blir ordrar hos New Wave.", label: "Öppna New Wave", href: "/newwave/new-wave/ordrar" },

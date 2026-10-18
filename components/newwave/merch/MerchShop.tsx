@@ -104,27 +104,49 @@ function Story({ club }: { club: MerchClub }) {
 }
 
 type Cell = { kind: "item"; item: MerchItem } | { kind: "story"; club: MerchClub };
+type Facet = "klubb" | "stad" | "land";
+type Option = { value: string; label: string; note: string; crest?: string };
 
-const chip = (on: boolean) => `inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition ${on ? "bg-[#111] text-white" : "bg-[#F2F2EF] text-[#111] hover:bg-[#E8E7E2]"}`;
-const textChip = (on: boolean) => `h-9 shrink-0 rounded-full px-3 text-[13px] transition ${on ? "font-semibold text-[#111] underline decoration-2 underline-offset-[6px]" : "text-[#6F6B63] hover:text-[#111]"}`;
+const FACETS: { id: Facet; label: string }[] = [
+  { id: "klubb", label: "Klubb" },
+  { id: "stad", label: "Stad" },
+  { id: "land", label: "Land" },
+];
+const NONE: Record<Facet, string | null> = { klubb: null, stad: null, land: null };
+const FIELD: Record<Facet, (c: MerchClub) => string> = { klubb: (c) => c.id, stad: (c) => c.city, land: (c) => c.country };
+const clubsNote = (n: number) => `${n} ${n === 1 ? "klubb" : "klubbar"}`;
+
+function tally(clubs: MerchClub[], key: (c: MerchClub) => string): Option[] {
+  const n = new Map<string, number>();
+  for (const c of clubs) n.set(key(c), (n.get(key(c)) ?? 0) + 1);
+  return [...n].sort((a, b) => a[0].localeCompare(b[0], "sv")).map(([value, count]) => ({ value, label: value, note: clubsNote(count) }));
+}
+
+const chip = (on: boolean) => `inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium transition ${on ? "bg-[#111] text-white" : "bg-white text-[#111] shadow-[0_1px_2px_rgba(17,17,17,0.06)] hover:bg-[#ECEBE6]"}`;
 
 /**
- * Sök och filter överst och produkterna i ett levande rutnät under, med detaljerna i en panel till höger.
- * På en klubbs undersida (`club`) filtreras bara på produkt.
+ * En sökruta överst, tre hopfällda filter under och produkterna i ett levande rutnät, med detaljerna i en panel till höger.
+ * På en klubbs undersida (`club`) finns bara sökrutan.
  */
 export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]; clubs: MerchClub[]; club?: MerchClub }) {
   const [q, setQ] = useState("");
-  const [club, setClub] = useState<string | null>(null);
-  const [sport, setSport] = useState<string | null>(null);
-  const [cat, setCat] = useState<string | null>(null);
+  const [pick, setPick] = useState(NONE);
+  const [panel, setPanel] = useState<Facet | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const search = useRef<HTMLInputElement>(null);
   const clubOf = useMemo(() => new Map(clubs.map((c) => [c.id, c])), [clubs]);
-  const categories = useMemo(() => [...new Set(items.map((i) => i.category))], [items]);
-  const sports = useMemo(() => [...new Set(clubs.flatMap((c) => c.sports))].sort((a, b) => a.localeCompare(b, "sv")), [clubs]);
+  const options = useMemo<Record<Facet, Option[]>>(
+    () => ({
+      klubb: [...clubs].sort((a, b) => a.name.localeCompare(b.name, "sv")).map((c) => ({ value: c.id, label: c.name, note: c.city, crest: c.crest })),
+      stad: tally(clubs, FIELD.stad),
+      land: tally(clubs, FIELD.land),
+    }),
+    [clubs],
+  );
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPanel(null);
       if (e.key !== "/" || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       e.preventDefault();
       search.current?.focus();
@@ -136,27 +158,33 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
   const words = fold(q).split(/\s+/).filter(Boolean);
   const shown = items.filter((i) => {
     const c = clubOf.get(i.clubId);
-    return (!club || i.clubId === club) && (!sport || c?.sports.includes(sport)) && (!cat || i.category === cat) && words.every((w) => fold(`${i.club} ${i.city} ${c?.region ?? ""} ${c?.sports.join(" ") ?? ""} ${i.motif} ${i.name} ${i.category}`).includes(w));
+    if (!c || FACETS.some((f) => pick[f.id] && FIELD[f.id](c) !== pick[f.id])) return false;
+    return words.every((w) => fold(`${c.name} ${c.city} ${c.region} ${c.country} ${c.sports.join(" ")} ${i.motif} ${i.name} ${i.category}`).includes(w));
   });
 
+  const narrowed = Boolean(pick.klubb || pick.stad || pick.land);
   const cells: Cell[] = [];
   const told = new Set<string>();
   const featured = new Set(shown.filter((i) => i.featured).map((i) => i.clubId));
   for (const item of shown) {
     const c = clubOf.get(item.clubId);
-    if (!fixed && c && !told.has(c.id) && (featured.has(c.id) || club)) {
+    if (!fixed && c && !told.has(c.id) && (featured.has(c.id) || narrowed)) {
       told.add(c.id);
       cells.push({ kind: "story", club: c });
     }
     cells.push({ kind: "item", item });
   }
 
-  const filtered = Boolean(q || club || sport || cat);
+  const label = (f: Facet) => options[f].find((o) => o.value === pick[f])?.label;
+  const choose = (f: Facet, value: string) => {
+    setPick((p) => ({ ...p, [f]: p[f] === value ? null : value }));
+    setPanel(null);
+  };
+  const filtered = Boolean(q || narrowed);
   const reset = () => {
     setQ("");
-    setClub(null);
-    setSport(null);
-    setCat(null);
+    setPick(NONE);
+    setPanel(null);
   };
   const current = items.find((i) => i.id === open) ?? null;
   const close = useCallback(() => setOpen(null), []);
@@ -174,9 +202,9 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={fixed ? `Sök i ${fixed.owner} merch` : "Sök klubb, ort, sport eller produkt"}
+            placeholder={fixed ? `Sök i ${fixed.owner} merch` : "Skriv klubb, stad eller produkt"}
             aria-label="Sök merch"
-            className="h-14 w-full rounded-full border border-[rgba(17,17,17,0.1)] bg-white pl-13 pr-24 text-[16px] shadow-[0_18px_40px_-28px_rgba(17,17,17,0.45)] outline-none transition placeholder:text-[#9A968D] focus:border-[#111] [&::-webkit-search-cancel-button]:hidden"
+            className={`h-14 w-full rounded-full border border-[rgba(17,17,17,0.1)] bg-white pl-13 ${q ? "pr-24" : "pr-5 sm:pr-14"} text-[16px] shadow-[0_18px_40px_-28px_rgba(17,17,17,0.45)] outline-none transition placeholder:text-[#9A968D] focus:border-[#111] [&::-webkit-search-cancel-button]:hidden`}
           />
           {q ? (
             <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 h-9 -translate-y-1/2 rounded-full bg-[#F2F2EF] px-3.5 text-[13px] font-medium text-[#111] transition hover:bg-[#E8E7E2]">
@@ -188,50 +216,59 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
         </form>
 
         {fixed ? null : (
-          <>
-            <div className="-mx-4 mt-6 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:overflow-visible sm:px-0">
-              <div className="flex w-max gap-2 sm:w-auto sm:flex-wrap sm:justify-center" role="group" aria-label="Välj klubb">
-                <button type="button" aria-pressed={!club} onClick={() => setClub(null)} className={chip(!club)}>
-                  Alla klubbar
-                </button>
-                {clubs.map((c) => (
-                  <button key={c.id} type="button" aria-pressed={club === c.id} onClick={() => setClub(club === c.id ? null : c.id)} className={`${chip(club === c.id)} pl-1.5`}>
-                    <img src={c.crest} alt="" className="h-7 w-7 rounded-full bg-white object-contain p-0.5" />
-                    {c.name}
-                  </button>
-                ))}
-              </div>
+          <div className="mx-auto max-w-[760px]">
+            <div className="mt-5 flex flex-wrap justify-center gap-2" role="group" aria-label="Filtrera">
+              {FACETS.map((f) => {
+                const on = panel === f.id;
+                const value = label(f.id);
+                return (
+                  <div key={f.id} className={`flex h-11 items-center rounded-full border transition ${value ? "border-[#111] bg-[#111] text-white" : on ? "border-[#111] bg-white" : "border-[rgba(17,17,17,0.12)] bg-white hover:border-[rgba(17,17,17,0.3)]"}`}>
+                    <button type="button" aria-expanded={on} aria-controls="merch-filter" onClick={() => setPanel(on ? null : f.id)} className={`flex h-full items-center gap-2 text-[14px] font-medium ${value ? "pl-4 pr-1.5" : "px-4"}`}>
+                      {f.label}
+                      {value ? <span className="max-w-[150px] truncate font-normal text-white/75">{value}</span> : null}
+                      <svg viewBox="0 0 24 24" aria-hidden className={`h-4 w-4 fill-none stroke-current transition-transform duration-300 ${on ? "rotate-180" : ""}`} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+                    {value ? (
+                      <button type="button" aria-label={`Ta bort filtret ${f.label.toLowerCase()}`} onClick={() => setPick((p) => ({ ...p, [f.id]: null }))} className="mr-1 grid h-8 w-8 place-items-center rounded-full text-white/75 transition hover:bg-white/15 hover:text-white">
+                        <svg viewBox="0 0 24 24" aria-hidden className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6 6 18" />
+                        </svg>
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
-            <div className="-mx-4 mt-3 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-              <div className="flex w-max items-center gap-x-1 sm:mx-auto" role="group" aria-label="Välj sport">
-                <span className="nw-mono mr-1 text-[11px] uppercase tracking-[0.08em] text-[#9A968D]">Sport</span>
-                {[null, ...sports].map((s) => (
-                  <button key={s ?? "alla"} type="button" aria-pressed={sport === s} onClick={() => setSport(sport === s ? null : s)} className={textChip(sport === s)}>
-                    {s ?? "Alla"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-        <div className={`-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 ${fixed ? "mt-5" : "mt-1"}`}>
-          <div className="flex w-max items-center gap-x-1 sm:mx-auto" role="group" aria-label="Välj produkt">
-            <span className="nw-mono mr-1 text-[11px] uppercase tracking-[0.08em] text-[#9A968D]">Produkt</span>
-            {[null, ...categories].map((c) => (
-              <button key={c ?? "alla"} type="button" aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)} className={textChip(cat === c)}>
-                {c ?? "Allt"}
-              </button>
-            ))}
+            <AnimatePresence initial={false}>
+              {panel ? (
+                <motion.div key="panel" id="merch-filter" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: EASE }} className="overflow-hidden">
+                  <div className="mt-3 flex flex-wrap justify-center gap-2 rounded-[24px] bg-[#F4F4F1] p-3" role="group" aria-label={`Välj ${FACETS.find((f) => f.id === panel)?.label.toLowerCase()}`}>
+                    {options[panel].map((o) => {
+                      const on = pick[panel] === o.value;
+                      return (
+                        <button key={o.value} type="button" aria-pressed={on} onClick={() => choose(panel, o.value)} className={`${chip(on)} ${o.crest ? "pl-1.5" : ""}`}>
+                          {o.crest ? <img src={o.crest} alt="" className="h-7 w-7 rounded-full bg-white object-contain p-0.5" /> : null}
+                          {o.label}
+                          <span className={`text-[12px] font-normal ${on ? "text-white/65" : "text-[#9A968D]"}`}>{o.note}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </div>
-        </div>
+        )}
       </div>
 
-      <main className="mx-auto mt-8 max-w-[1440px] px-3 pb-24 sm:px-8">
+      <main className="mx-auto mt-6 max-w-[1440px] px-3 pb-24 sm:px-8">
         <div className="mb-4 flex items-center justify-between gap-3 px-1 text-[13px] text-[#6F6B63]">
           <p aria-live="polite">
             {shown.length} {shown.length === 1 ? "produkt" : "produkter"}
-            {club ? ` från ${clubOf.get(club)?.name}` : ""}
-            {sport ? ` · ${sport.toLowerCase()}` : ""}
+            {pick.klubb ? ` från ${label("klubb")}` : ""}
+            {pick.stad ? ` i ${pick.stad}` : pick.land ? ` i ${pick.land}` : ""}
             {q ? ` för ”${q}”` : ""}
           </p>
           {filtered ? (
@@ -261,7 +298,7 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
         ) : (
           <div className="rounded-[24px] bg-[#F6F6F3] px-6 py-16 text-center">
             <p className="text-[18px] font-semibold">Inget matchar{q ? ` ”${q}”` : ""}.</p>
-            <p className="mt-1 text-[14px] text-[#6F6B63]">Prova en annan klubb, sport eller ett annat ord, t.ex. keps eller hoodie.</p>
+            <p className="mt-1 text-[14px] text-[#6F6B63]">Prova en annan klubb, stad eller ett annat ord, t.ex. keps eller hoodie.</p>
           </div>
         )}
       </main>
@@ -276,12 +313,11 @@ export function MerchShop({ items, clubs }: { items: MerchItem[]; clubs: MerchCl
   return (
     <div className="min-h-screen bg-white text-[#111]">
       <MerchHeader />
-      <section className="mx-auto max-w-[980px] px-4 pb-8 pt-12 text-center sm:px-8 sm:pt-16">
-        <p className="nw-mono text-[12px] uppercase tracking-[0.08em] text-[#6F6B63]">
+      <section className="mx-auto max-w-[980px] px-4 pb-4 pt-5 text-center sm:px-8 sm:pt-6">
+        <h1 className="text-[20px] font-semibold tracking-[-0.03em] sm:text-[22px]">All klubbmerch. En lista.</h1>
+        <p className="nw-mono mt-1 text-[11px] uppercase tracking-[0.08em] text-[#6F6B63]">
           {clubs.length} klubbar · {items.length} produkter · säljs hos Intersport
         </p>
-        <h1 className="mx-auto mt-3 max-w-[16ch] text-[clamp(34px,5.2vw,64px)] font-semibold leading-[0.98] tracking-[-0.05em]">All klubbmerch. En lista.</h1>
-        <p className="mx-auto mt-4 max-w-[54ch] text-[15.5px] leading-relaxed text-[#6F6B63]">Hitta din klubb och se allt den har. Köp i klubbens butik hos Intersport – varje köp stöttar föreningen.</p>
       </section>
       <MerchBrowser items={items} clubs={clubs} />
     </div>

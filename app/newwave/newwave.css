@@ -391,6 +391,141 @@
     transition: opacity 0.25s var(--nw-ease);
   }
 
+  /* Produkterna i eventscenen: en pulserande punkt med namn och pris när man pekar på den. */
+  .nw-spot {
+    position: absolute;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    margin: -13px 0 0 -13px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: rgba(17, 17, 17, 0.85);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    animation: nw-spot 2.4s var(--nw-ease) infinite;
+    transition: transform 0.2s var(--nw-ease);
+  }
+
+  .nw-spot::after {
+    content: "+";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .nw-spot[data-in] {
+    background: #1e8e3e;
+  }
+
+  .nw-spot[data-in]::after {
+    content: "✓";
+    font-size: 12px;
+  }
+
+  .nw-spot-label {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    display: grid;
+    gap: 1px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #fff;
+    color: #111;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: left;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translate(-50%, 4px);
+    pointer-events: none;
+    transition: opacity 0.18s var(--nw-ease), transform 0.18s var(--nw-ease);
+  }
+
+  .nw-spot-label small {
+    color: #6e6e73;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .nw-spot[data-high] .nw-spot-label {
+    top: calc(100% + 10px);
+    bottom: auto;
+  }
+
+  .nw-spot[data-side="right"] .nw-spot-label {
+    left: auto;
+    right: -8px;
+    transform: translate(0, 4px);
+  }
+
+  .nw-spot[data-side="left"] .nw-spot-label {
+    left: -8px;
+    transform: translate(0, 4px);
+  }
+
+  .nw-spot:hover,
+  .nw-spot:focus-visible {
+    animation: none;
+    transform: scale(1.12);
+  }
+
+  .nw-spot:hover .nw-spot-label,
+  .nw-spot:focus-visible .nw-spot-label {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  .nw-spot[data-side]:hover .nw-spot-label,
+  .nw-spot[data-side]:focus-visible .nw-spot-label {
+    transform: translate(0, 0);
+  }
+
+  @keyframes nw-spot {
+    0%,
+    100% {
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 255, 255, 0.55);
+    }
+    50% {
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+  }
+
+  /* Reglaget i Bygg ert kit, fyllt fram till värdet. */
+  .nw-range {
+    width: 100%;
+    height: 6px;
+    appearance: none;
+    border-radius: 99px;
+    background: linear-gradient(to right, var(--shop) var(--fill), rgba(0, 0, 0, 0.1) var(--fill));
+    cursor: pointer;
+  }
+
+  .nw-range::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+    appearance: none;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--shop);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .nw-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: var(--shop);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
 }
 
 /* Produktbilden i webbshoppen flyger från rutnätet till produktsidan. */

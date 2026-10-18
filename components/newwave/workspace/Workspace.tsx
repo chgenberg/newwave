@@ -180,7 +180,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   /** Återförsäljaren bygger kollektionen för ett tillfälle, som kunderna gör i butikens eventverktyg. */
   const fromOccasion = (id: OccasionId) => {
     setItems((list) =>
-      occasionOf(id)!.products.flatMap(({ id: pid }) => {
+      occasionOf(id)!.products.flatMap((pid) => {
         const p = can(pid) ? nwProduct(pid) : undefined;
         return p ? [list.find((i) => i.id === pid) ?? { id: pid, color: p.garmentHex, design: defaultDesign(p) }] : [];
       }),

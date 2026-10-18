@@ -254,9 +254,9 @@ const PAGE_SECTIONS: { focus: string; title: string; text: string; fields: TextF
     text: "Det kunderna ser först.",
     fields: [
       { key: "shopName", label: "Butikens namn", max: 60, wide: true },
-      { key: "tagline", label: "Kort rad ovanför rubriken", max: 120, wide: true },
-      { key: "heroTitle", label: "Rubrik", max: 90, wide: true },
-      { key: "heroText", label: "Ingress", max: 300, rows: 3, wide: true },
+      { key: "tagline", label: "Kort rad överst", max: 120, wide: true },
+      { key: "heroTitle", label: "Rubrik där kunden lägger in sin logga", max: 90, wide: true },
+      { key: "heroText", label: "Text där kunden lägger in sin logga", max: 300, rows: 3, wide: true },
     ],
   },
   {
@@ -518,7 +518,7 @@ function OccasionSection({ draft, set }: StepProps) {
       <ul className="grid gap-2 sm:grid-cols-2">
         {OCCASIONS.map((o) => {
           const active = on.has(o.id);
-          const outside = o.products.filter((p) => !draft.products.includes(p.id)).length;
+          const outside = o.products.filter((id) => !draft.products.includes(id)).length;
           return (
             <li key={o.id}>
               <button

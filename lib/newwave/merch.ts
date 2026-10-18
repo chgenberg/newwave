@@ -96,6 +96,7 @@ export type MerchClub = {
   color: string;
   city: string;
   region: string;
+  country: string;
   sports: string[];
   count: number;
   motifs: string[];
@@ -128,6 +129,7 @@ export const MERCH_CLUBS: MerchClub[] = CRAFT_CLUBS.flatMap((c) => {
       color: items[0].clubColor,
       city: c.city,
       region: c.region,
+      country: "Sverige",
       sports: c.sports,
       count: items.length,
       motifs,

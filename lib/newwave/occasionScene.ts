@@ -87,10 +87,10 @@ async function readCache(key: string) {
   }
 }
 
-function prompt(id: OccasionId, company: string, color: string) {
+function prompt(id: OccasionId, company: string, color: string, about: string) {
   const d = DIRECTION[id];
   return `Photorealistic photo of ${d.subject} for "${company}", shot on a full-frame camera, eye level, straight on, landscape. It must look like it was produced specifically for this company by a top agency.
-The first reference image shows the exact layout, camera angle, framing, lighting, people and object positions: keep all of them the same, only restyle and brand the scene for this company.
+${about ? `About the company: ${about}. Let small details (screen content, props, styling) quietly suit this business without adding any text.\n` : ""}The first reference image shows the exact layout, camera angle, framing, lighting, people and object positions: keep all of them the same, only restyle and brand the scene for this company.
 The second reference image is the company's logo. Replace every "DIN LOGO" placeholder with this exact logo – identical shapes, letters and proportions, no invented or distorted characters. On dark surfaces print the logo in white, on light surfaces in its own colours.
 ${color ? `Brand colour: ${color}. Use it as the dominant colour of ${d.colours}, combined with white and natural materials.` : `Use the logo's own colours on ${d.colours}, combined with white and natural materials.`} Premium, clean Scandinavian design.
 Realism requirements (most important):
@@ -101,7 +101,7 @@ Realism requirements (most important):
 
 const running = new Map<string, Promise<string>>();
 
-export type SceneRequest = { occasion: OccasionId; logo: string; name: string; color: string };
+export type SceneRequest = { occasion: OccasionId; logo: string; name: string; color: string; about?: string };
 
 /** Scenen med kundens logga. `cachedOnly` svarar bara om den redan är gjord, utan att rita en ny. */
 export async function brandedScene(req: SceneRequest, opts: { cachedOnly?: boolean; allow?: () => boolean } = {}): Promise<string | null> {
@@ -127,7 +127,7 @@ export async function brandedScene(req: SceneRequest, opts: { cachedOnly?: boole
     const res = await openai().images.edit({
       model: IMAGE_MODEL,
       image: [await toFile(scene, "scene.jpg", { type: "image/jpeg" }), await toFile(logoRef, "logo.png", { type: "image/png" })],
-      prompt: prompt(o.id, cleanText(req.name, 40) || "the company", color),
+      prompt: prompt(o.id, cleanText(req.name, 40) || "the company", color, cleanText(req.about ?? "", 180)),
       size: "1536x1024",
       quality: IMAGE_QUALITY,
       output_format: "jpeg",

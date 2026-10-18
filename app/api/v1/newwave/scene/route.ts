@@ -17,6 +17,7 @@ const Body = z.object({
   logo: z.string().max(200).regex(LOGO_SRC),
   name: z.string().max(80),
   color: z.string().max(9),
+  about: z.string().max(200).optional(),
   cachedOnly: z.boolean().optional(),
 });
 

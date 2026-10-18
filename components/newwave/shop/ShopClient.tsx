@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, ViewTransition } from "react";
+import { useEffect, useState, ViewTransition } from "react";
 import { nwProduct, type NwProduct } from "@/lib/newwave/catalog";
 import { DEMO_CUSTOMERS, fromPrice, sek } from "@/lib/newwave/reseller";
 import { ProductMock } from "./ProductMock";
@@ -36,7 +36,7 @@ export function TesterBanner({ slug, quoteId, order }: { slug: string; quoteId?:
   const stop = () => update((c) => ({ logo: null, lines: c.lines }));
   return (
     <div className="bg-[#1D1D1F] text-white">
-      <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-[13px] @2xl:px-8">
+      <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 text-[13px] @2xl:px-8">
         <p className="min-w-0 flex-1">
           {quoteId ? (
             order ? (
@@ -66,10 +66,14 @@ export function TesterBanner({ slug, quoteId, order }: { slug: string; quoteId?:
 export function CartLink({ slug, preview }: { slug: string; preview?: boolean }) {
   const [cart] = useCart(slug);
   const n = preview ? 0 : cart.lines.length;
-  const cls = "inline-flex h-10 items-center gap-2 rounded-full bg-[var(--shop)] px-4 text-[13.5px] font-semibold text-[var(--shop-on)]";
+  const cls = "inline-flex h-10 items-center gap-2 rounded-full bg-[var(--shop)] px-3.5 text-[13.5px] font-semibold text-[var(--shop-on)] @2xl:px-4";
   const body = (
     <>
-      Varukorg
+      <svg viewBox="0 0 24 24" aria-hidden className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z" />
+        <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+      </svg>
+      <span className="sr-only @2xl:not-sr-only">Varukorg</span>
       {n ? (
         <motion.span key={n} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.55, duration: 0.5 }} className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--shop-accent)] px-1.5 text-[11px] text-[var(--shop-on-accent)]">
           {n}
@@ -88,6 +92,9 @@ export function CartLink({ slug, preview }: { slug: string; preview?: boolean })
 
 type Art = { light: string; dark: string };
 
+/** Sortimentets kategorirutor skickar kategorin hit, så att produktlistan visar den. */
+export const CATEGORY_EVENT = "nw-category";
+
 /** `sample` är loggan som förhandsvisningen visar produkterna med. */
 export function ShopGrid({ slug, productIds, markup, preview, sample }: { slug: string; productIds: string[]; markup: number; preview?: boolean; sample?: Art }) {
   const [cart] = useCart(slug);
@@ -96,6 +103,12 @@ export function ShopGrid({ slug, productIds, markup, preview, sample }: { slug: 
   const [cat, setCat] = useState<string | null>(null);
   const logo = preview ? (sample ?? PLACEHOLDER) : (cart.logo ?? PLACEHOLDER);
   const shown = cat ? products.filter((p) => p.category === cat) : products;
+
+  useEffect(() => {
+    const pick = (e: Event) => setCat((e as CustomEvent<string>).detail);
+    window.addEventListener(CATEGORY_EVENT, pick);
+    return () => window.removeEventListener(CATEGORY_EVENT, pick);
+  }, []);
 
   if (!products.length) return <p className="rounded-2xl border border-dashed border-[var(--shop-line)] p-8 text-center text-[14px] opacity-60">Inga produkter valda än.</p>;
 
