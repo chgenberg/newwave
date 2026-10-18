@@ -52,7 +52,7 @@ function Node({ pick, current, onPick, label, children }: { pick: Sel; current: 
       tabIndex={0}
       aria-label={label}
       aria-pressed={same(current, pick)}
-      className="cursor-pointer outline-none [&:focus-visible>*:first-child]:stroke-[#111]"
+      className="cursor-pointer outline-none [&:focus-visible>*:first-child]:stroke-[#111] [&:hover_.nw-map-node]:opacity-100"
       onClick={() => onPick(pick)}
       onKeyDown={(e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
@@ -67,7 +67,7 @@ function Node({ pick, current, onPick, label, children }: { pick: Sel; current: 
 
 function Diagram({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) => void }) {
   const on = related(pick);
-  const fade = (lit: boolean) => ({ className: "nw-map-node", opacity: lit ? 1 : 0.22 });
+  const fade = (lit: boolean) => ({ className: "nw-map-node", opacity: lit ? 1 : 0.4 });
   const flowing = (lit: boolean) => `nw-map-node${lit && pick ? " nw-flow" : ""}`;
   const choose = (p: Sel) => onPick(same(pick, p) ? null : p);
   const selected = (p: Sel) => same(pick, p);
@@ -161,12 +161,14 @@ function Diagram({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
       {PAYLOADS.map((p, i) => {
         const y = payloadY(i);
         const pk: Sel = { kind: "payload", id: p.id };
-        const lit = on.payloads.has(p.id);
+        /** Paketen ligger halvt på den blå stapeln, så de tonas inte ned: de som inte hör till valet får dämpad text, de som hör till får blå kant. */
+        const dim = !on.payloads.has(p.id);
+        const lit = Boolean(pick) && !dim && !selected(pk);
         return (
           <Node key={p.id} pick={pk} current={pick} onPick={choose} label={`Paket: ${p.label}`}>
-            <g {...fade(lit)}>
-              <rect x={API_X - 74} y={y - 15} width="148" height="30" rx="15" fill={selected(pk) ? "#111" : "#FFFFFF"} stroke={selected(pk) ? "#111" : "#C7D2FE"} />
-              <text x={API_X} y={y + 4.5} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={selected(pk) ? "#fff" : BLUE}>
+            <g className={dim ? "[&:hover>rect]:stroke-[#1D4ED8] [&:hover>text]:fill-[#1D4ED8]" : undefined}>
+              <rect x={API_X - 74} y={y - 15} width="148" height="30" rx="15" fill={selected(pk) ? "#111" : "#FFFFFF"} stroke={selected(pk) ? "#111" : lit ? BLUE : dim ? "#DCE3F5" : "#C7D2FE"} strokeWidth={lit ? 2 : 1} />
+              <text x={API_X} y={y + 4.5} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={selected(pk) ? "#fff" : dim ? "#8E9BBF" : BLUE}>
                 {p.label}
               </text>
             </g>

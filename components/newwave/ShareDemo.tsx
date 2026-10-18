@@ -3,13 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 
 const SUBJECT = "Testa Next Wave – klubbar, Craft, New Wave och återförsäljare";
+/** Demot är lösenordsskyddat; lösenordet skickas av avsändaren och står inte i koden. */
+const PASSWORD_NOTE = "Lösenordet får du av mig.";
 const body = (link: string) => `Hej!
 
 Här är demon av Next Wave. Börja med filmen och välj sedan den ingång som passar dig: Klubb, Craft, New Wave eller Återförsäljare. Varje ingång har en kort guide med tre saker att prova.
 
 ${link}
 
-Du får en egen demo, så testa fritt – inget du gör syns för någon annan.`;
+${PASSWORD_NOTE} Du får en egen demo, så testa fritt – inget du gör syns för någon annan.`;
+const whatsapp = (link: string) => `Hej! Här är demon av *Next Wave* – en motor för klubbar, Craft, New Wave och återförsäljare.
+
+Börja med filmen och välj sedan din ingång. Du får en egen demo, så testa fritt.
+
+${link}
+
+${PASSWORD_NOTE}`;
 
 const ShareIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,6 +66,17 @@ export function ShareDemo({ variant = "button" }: { variant?: "menu" | "button" 
     <div className="grid gap-2">
       <p className="px-1 text-[12.5px] leading-snug text-[#6F6B63]">Var och en som öppnar länken får en egen demo. Inget du har gjort syns för dem.</p>
       <p className="truncate rounded-xl bg-[#F2F2EF] px-3 py-2 text-[12.5px] font-medium text-[#111]">{link.replace(/^https?:\/\//, "")}</p>
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(whatsapp(link))}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#25D366] px-3 text-[13.5px] font-semibold text-[#0B3B1E] transition hover:brightness-95"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20l1.1-3.8A8.5 8.5 0 1 1 20 11.5Z" />
+        </svg>
+        Skicka i WhatsApp
+      </a>
       <div className="flex gap-1.5">
         <button type="button" onClick={copy} className="min-h-9 flex-1 rounded-full bg-[#111] px-3 text-[13px] font-semibold text-white transition hover:opacity-90">
           {copied ? "Kopierad" : "Kopiera länken"}

@@ -1,3 +1,4 @@
+import { ProductMock } from "@/components/newwave/shop/ProductMock";
 import { NW_CATALOG, type NwProduct } from "@/lib/newwave/catalog";
 import type { ApprovalStatus } from "@/lib/newwave/store";
 
@@ -62,8 +63,8 @@ export const materialImage = (m: { image?: string; designs?: Record<string, { mo
   return (p && m.designs?.[p.id]?.mockupUrl) || m.image;
 };
 
-/** Klubbmärket som tryck: centrerat i produktens tryckyta, lite mindre än hela ytan. */
-const printBox = (b: NwProduct["box"]) => ({ left: `${(b.x + b.w * 0.15) * 100}%`, top: `${(b.y + b.h * 0.04) * 100}%`, width: `${b.w * 0.7 * 100}%`, height: `${b.h * 0.7 * 100}%` });
+/** Platshållarmärket mitt i tryckytan, för klubbar utan logga. */
+const printBox = ({ print: s }: NwProduct) => ({ left: `${(s.cx - s.w / 2) * 100}%`, top: `${(s.cy - s.h / 2) * 100}%`, width: `${s.w * 100}%`, height: `${s.h * 100}%` });
 
 type ThumbClub = { name: string; logo?: string; logoDark?: string; colors: [string, string] };
 
@@ -74,16 +75,19 @@ export function MaterialThumb({ image, kind, title, occasion, seed, club }: { im
   if (!src)
     return <div className="h-full w-full [container-type:size]">{/nyhetsbrev/i.test(kind) ? <NewsletterArt title={title} occasion={occasion} club={club} /> : <PostArt title={title} occasion={occasion ?? kind} seed={seed ?? title} club={club} />}</div>;
   const product = BY_PHOTO.get(src);
+  if (product && club?.logo)
+    return (
+      <div className="relative h-full">
+        <ProductMock product={product} logo={club.logo} logoDark={club.logoDark} className="mx-auto h-full max-w-full" />
+      </div>
+    );
   return (
     <div className="relative h-full">
       <div className="relative mx-auto aspect-square h-full max-w-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="" loading="lazy" className="h-full w-full object-contain" />
-        {product && club?.logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={(product.dark && club.logoDark) || club.logo} alt="" aria-hidden loading="lazy" className={`absolute object-contain object-top ${product.dark ? "" : "mix-blend-multiply"}`} style={printBox(product.box)} />
-        ) : product && club ? (
-          <span className="absolute grid place-items-start justify-center" style={printBox(product.box)}>
+        {product && club ? (
+          <span className="absolute grid place-items-center" style={printBox(product)}>
             <Crest name={club.name} colors={club.colors} size={30} />
           </span>
         ) : null}

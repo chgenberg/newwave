@@ -216,19 +216,6 @@ export const sek = (n: number) => `${Math.round(n).toLocaleString("sv-SE").repla
 /** Produkterna som en återförsäljare kan sälja: allt tryckbart utom mässdisken. */
 export const SHOP_CATALOG = NW_CATALOG.filter((p) => p.kind !== "booth");
 
-const pct = (x: number, y: number, w: number, h: number) => ({ left: `${x * 100}%`, top: `${y * 100}%`, width: `${w * 100}%`, height: `${h * 100}%` });
-
-/** Var loggan hamnar på produktfotot, som CSS: stor mitt på eller liten på vänster bröst. */
-export function markBox(p: NwProduct, chest = false) {
-  const b = p.box;
-  if (chest && p.kind === "top" && p.zone.offset[0] === 0) {
-    const w = b.w * 0.3;
-    return pct(b.x + b.w * 0.66 - w / 2, b.y + b.h * 0.06, w, b.h * 0.3);
-  }
-  const w = b.w * 0.7;
-  return pct(b.x + (b.w - w) / 2, b.y + b.h * 0.04, w, b.h * 0.7);
-}
-
 export const logoFor = (p: NwProduct, line: { logo?: string; logoDark?: string }) => (p.dark && line.logoDark) || line.logo;
 
 export const shopUrl = (r: Pick<Reseller, "slug">) => `/newwave/s/${r.slug}`;

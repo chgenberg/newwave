@@ -1,10 +1,11 @@
 import sharp, { type OverlayOptions } from "sharp";
 import { htmlToPdf } from "@/lib/pdf";
 import { readAsset } from "./asset";
-import { nwProduct } from "./catalog";
+import { nwProduct, printOf } from "./catalog";
 import { colorName } from "./colors";
 import { designSummary, onChest } from "./marking";
-import { logoFor, markBox, type Quote, type QuoteLine, type Reseller, sek, shopUrl } from "./reseller";
+import { logoFor, type Quote, type QuoteLine, type Reseller, sek, shopUrl } from "./reseller";
+import { printLayer } from "./serverMockup";
 import { SITE } from "./site";
 import { withDemo } from "./workspaceId";
 
@@ -23,13 +24,7 @@ async function lineImage(line: QuoteLine, size = 480): Promise<Buffer> {
     layers.push({ input: await sharp(photo).resize(size, size, { fit: "contain", background: BG }).toBuffer() });
     const src = logoFor(p, { logo: line.design.logo ?? line.logo, logoDark: line.design.logo ? line.design.logoDark : line.logoDark });
     const logo = src ? await readAsset(src) : null;
-    if (logo) {
-      const box = markBox(p, onChest(line.design));
-      const px = (v: string) => Math.round((parseFloat(v) / 100) * size);
-      const [w, h] = [px(box.width), px(box.height)];
-      const mark = await sharp(logo).resize(w, h, { fit: "inside" }).png().toBuffer({ resolveWithObject: true });
-      layers.push({ input: mark.data, left: px(box.left) + Math.round((w - mark.info.width) / 2), top: px(box.top), blend: p.dark ? "over" : "multiply" });
-    }
+    if (logo) layers.push(await printLayer(printOf(p, onChest(line.design)), logo, size, p.dark));
   }
   return sharp({ create: { width: size, height: size, channels: 3, background: BG } }).composite(layers).jpeg({ quality: 84 }).toBuffer();
 }
