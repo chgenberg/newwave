@@ -85,7 +85,7 @@ export type CampaignResult = Campaign & {
 };
 
 const ROSTER: CraftClub[] = [
-  { id: "asa-if", name: "Åsa IF", city: "Åsa", region: "Halland", sports: ["Fotboll", "Pingis", "Innebandy"], colors: [ASA_IF.brand.primary, ASA_IF.brand.accent], logo: ASA_IF.logo, joined: "2026-09-01", live: true, dashboard: "/newwave/klubb" },
+  { id: "asa-if", name: "Åsa IF", city: "Åsa", region: "Halland", sports: ["Fotboll", "Pingis", "Innebandy"], colors: [ASA_IF.brand.primary, ASA_IF.brand.accent], logo: ASA_IF.logo, joined: "2026-09-01", live: true, dashboard: "/newwave/klubb/oversikt" },
   { id: "ifk-goteborg", name: "IFK Göteborg", city: "Göteborg", region: "Göteborg", sports: ["Fotboll"], colors: ["#234B9A", "#FFFFFF"], logo: "/api/v1/brand/ifk-goteborg/skold-farg.png", joined: "2026-05-12", live: true },
   { id: "kungsbacka-if", name: "Kungsbacka IF", city: "Kungsbacka", region: "Halland", sports: ["Fotboll"], colors: ["#181830", "#FFFFFF"], logo: "/newwave/clubs/kungsbacka-if/logo.png", joined: "2026-03-04", live: false },
   { id: "onsala-bk", name: "Onsala BK", city: "Onsala", region: "Halland", sports: ["Fotboll"], colors: ["#0060A8", "#F0C000"], logo: "/newwave/clubs/onsala-bk/logo.png", joined: "2026-04-18", live: false },

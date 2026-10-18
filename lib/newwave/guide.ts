@@ -23,7 +23,16 @@ export const GUIDES: Record<PortalId, { role: string; steps: GuideStep[]; next: 
       { label: "Planera en kampanj", href: "/newwave/craft/skapa" },
       { label: "Se vad som säljer", href: "/newwave/craft/insikter" },
     ],
-    next: { text: "Kampanjen hamnar hos Åsa IF att godkänna.", label: "Öppna Åsa IF", href: "/newwave/klubb" },
+    next: { text: "Kampanjen hamnar hos Åsa IF att godkänna.", label: "Öppna Åsa IF", href: "/newwave/klubb/oversikt" },
+  },
+  merch: {
+    role: "Ni är supporter och vill ha klubbens merch",
+    steps: [
+      { label: "Hitta din klubb och en produkt", href: "/newwave/merch" },
+      { label: "Öppna en klubbs egen sida", href: "/newwave/merch/asa-if" },
+      { label: "Se hur klubben skapar motiven", href: "/newwave/klubb" },
+    ],
+    next: { text: "Motiven kommer från klubbarnas veckomaterial.", label: "Öppna Åsa IF", href: "/newwave/klubb" },
   },
   "new-wave": {
     role: "Ni producerar och levererar",

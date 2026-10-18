@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { HUB_TARGETS, type HubTarget } from "@/lib/newwave/hub";
+import { HUB_TARGETS, type HubTarget, targetShort } from "@/lib/newwave/hub";
 import { Icon } from "./DashNav";
 import { openHelp } from "./Help";
 import { ShareDemo } from "./ShareDemo";
@@ -95,7 +95,7 @@ export function HubSwitch({ active, bar }: { active: HubTarget; bar?: boolean })
             : "group grid w-5 place-items-center rounded-full text-[#A6A39B] transition hover:bg-[#F2F2EF] hover:text-[#111]"
         }
       >
-        {bar ? <span className="truncate">{current?.short}</span> : null}
+        {bar ? <span className="truncate">{targetShort(active)}</span> : null}
         <svg viewBox="0 0 24 24" aria-hidden className={`h-4 w-4 shrink-0 fill-none stroke-current transition-transform duration-300 ${open ? "rotate-180" : bar ? "" : "group-hover:translate-x-0.5"}`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d={bar ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6"} />
         </svg>

@@ -356,6 +356,17 @@
     }
   }
 
+  .nw-step-fill {
+    width: 0;
+    animation: nw-step-fill linear forwards;
+  }
+
+  @keyframes nw-step-fill {
+    to {
+      width: 100%;
+    }
+  }
+
   .nw-flow {
     stroke-dasharray: 6 10;
     animation: nw-flow 1.6s linear infinite;
@@ -405,6 +416,11 @@
   .nw-pop,
   .nw-flow {
     animation: none;
+  }
+
+  .nw-step-fill {
+    animation: none;
+    width: 100%;
   }
 }
 

@@ -41,7 +41,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="nw-page">
-      <Link href={a.weekly ? "/newwave/klubb/material/veckan" : "/newwave/klubb"} className="text-[13px] text-[var(--nw-muted)] hover:text-[var(--nw-ink)]">
+      <Link href={a.weekly ? "/newwave/klubb/material/veckan" : "/newwave/klubb/oversikt"} className="text-[13px] text-[var(--nw-muted)] hover:text-[var(--nw-ink)]">
         {a.weekly ? "← Varje vecka" : "← Översikt"}
       </Link>
       <p className="mt-4 text-[12.5px] text-[var(--nw-muted)]">

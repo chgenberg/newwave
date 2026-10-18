@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { PORTALS, type PortalId } from "@/lib/newwave/hub";
+import { type PortalId, targetShort } from "@/lib/newwave/hub";
 import { DashBottomBar, DashCrumb, DashMain, DashRail, Icon, type NavItem } from "./DashNav";
 import { HelpButton } from "./Help";
 import { HubSwitch } from "./HubSwitch";
@@ -10,6 +10,8 @@ import { LogoMark } from "./Logo";
 type Props = {
   portal: PortalId;
   base: string;
+  /** Översiktens adress, om den inte är `base`. */
+  home?: string;
   items: NavItem[];
   label: string;
   title: string;
@@ -26,8 +28,8 @@ type Props = {
 };
 
 /** Dashboardens skal, samma som designstudion: kort på grå botten, toppraden och två infällda menyer till vänster. */
-export function DashShell({ portal, base, items, label, title, subtitle, logo, overview, badge, badges, cta, width, children }: Props) {
-  const nav = { base, items, label, overview, badge, badges };
+export function DashShell({ portal, base, home = base, items, label, title, subtitle, logo, overview, badge, badges, cta, width, children }: Props) {
+  const nav = { base, home, items, label, overview, badge, badges };
   return (
     <>
       <div className="flex min-h-screen flex-col bg-[#E9E9E5] p-2 pb-28 min-[900px]:p-6 min-[900px]:pb-0">
@@ -41,16 +43,16 @@ export function DashShell({ portal, base, items, label, title, subtitle, logo, o
               <span className="min-[900px]:hidden">
                 <HubSwitch active={portal} bar />
               </span>
-              <span className="hidden shrink-0 min-[900px]:inline">{PORTALS.find((p) => p.id === portal)?.short}</span>
+              <span className="hidden shrink-0 min-[900px]:inline">{targetShort(portal)}</span>
               <span aria-hidden className="text-[#C9C7C0]">/</span>
-              <DashCrumb base={base} items={items} overview={overview} />
+              <DashCrumb base={base} home={home} items={items} overview={overview} />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2">
               <Link href={cta.href} className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--club)] px-3.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 active:scale-[0.97] sm:px-4" aria-label={cta.label}>
                 <Icon name={cta.icon ?? "plus"} className="h-[17px] w-[17px]" />
                 <span className="hidden sm:inline">{cta.label}</span>
               </Link>
-              <Link href={base} className="flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-1 shadow-[inset_0_0_0_1px_rgba(17,17,17,0.1)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.3)] lg:pr-3.5" aria-label={`${title} – översikt`}>
+              <Link href={home} className="flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-1 shadow-[inset_0_0_0_1px_rgba(17,17,17,0.1)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.3)] lg:pr-3.5" aria-label={`${title} – översikt`}>
                 {logo ? (
                   <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#F2F2EF] p-1">
                     <Image src={logo.src} alt="" width={logo.width} height={logo.height} priority className="max-h-full w-auto object-contain" />

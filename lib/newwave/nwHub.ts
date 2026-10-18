@@ -107,7 +107,7 @@ export async function hubLive(now = Date.now()) {
       })),
     ),
     ...craft.log.map((l) => ({ at: l.at, source: "Craft" as const, who: "Craft", text: l.text, href: "/newwave/craft" })),
-    ...asaFeed.map((f) => ({ at: stockholm(f.at), source: "Klubb" as const, who: `${ASA_IF.name} · ${f.who}`, text: f.text, href: "/newwave/klubb" })),
+    ...asaFeed.map((f) => ({ at: stockholm(f.at), source: "Klubb" as const, who: `${ASA_IF.name} · ${f.who}`, text: f.text, href: "/newwave/klubb/oversikt" })),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 14);

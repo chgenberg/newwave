@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Fragment } from "react";
 import { HubFooterSlim } from "@/components/newwave/HubFooter";
+import { HubMapButton } from "@/components/newwave/landing/HubMap";
 import { PortalFilm } from "@/components/newwave/landing/PortalFilm";
 import { LogoMark } from "@/components/newwave/Logo";
 import { ShareDemo } from "@/components/newwave/ShareDemo";
 import { PORTALS } from "@/lib/newwave/hub";
 
 export const metadata: Metadata = { title: "Välj ingång · Next Wave" };
+
+/** På bred skärm står kartan i mitten och ingångarna två och två på var sida. */
+const PLACE = ["xl:col-start-1 xl:row-start-1", "xl:col-start-3 xl:row-start-1", "xl:col-start-1 xl:row-start-2", "xl:col-start-3 xl:row-start-2"];
 
 /** Efter filmen: de fyra ingångarna i samma skal som designmotorn och dashboardsen. */
 export default function StartPage() {
@@ -26,14 +31,21 @@ export default function StartPage() {
 
         <div className="flex flex-1 flex-col">
           <main className="min-w-0 flex-1 px-3 py-5 min-[900px]:px-10 min-[900px]:py-7">
-            <div className="mx-auto max-w-[1180px] min-[900px]:max-w-[min(1180px,calc((100svh-270px)*1.6+20px))]">
+            <div className="mx-auto max-w-[1180px] xl:max-w-[min(1280px,calc((100svh-290px)*1.6+330px))]">
               <p className="nw-mono text-[12px] uppercase tracking-[0.06em] text-[#6F6B63]">Fyra ingångar · samma motor</p>
               <h1 className="mt-2 text-[clamp(30px,3.6vw,46px)] font-semibold leading-[1.02] tracking-[-0.045em] text-[#111]">Vem är du?</h1>
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2 min-[900px]:mt-6 min-[900px]:gap-5">
+              <ul className="mt-6 grid gap-5 sm:grid-cols-2 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(250px,0.62fr)_minmax(0,1fr)] xl:gap-x-10 xl:gap-y-9">
                 {PORTALS.map((p, i) => (
-                  <li key={p.id}>
-                    <PortalFilm portal={p} n={i + 1} />
-                  </li>
+                  <Fragment key={p.id}>
+                    {i === 2 ? (
+                      <li className="grid place-items-center sm:col-span-2 xl:col-span-1 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+                        <HubMapButton className="w-full max-w-[420px]" />
+                      </li>
+                    ) : null}
+                    <li className={PLACE[i]}>
+                      <PortalFilm portal={p} n={i + 1} />
+                    </li>
+                  </Fragment>
                 ))}
               </ul>
             </div>

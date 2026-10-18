@@ -1,30 +1,18 @@
 import localFont from "next/font/local";
-import type { NavItem } from "@/components/newwave/DashNav";
-import { DashShell } from "@/components/newwave/DashShell";
-import { ASA_IF } from "@/lib/newwave/club";
 import { ASA_IF as CLUB } from "@/lib/club";
-import { listApprovals, readBrand } from "@/lib/newwave/store";
+import { ASA_IF } from "@/lib/newwave/club";
+import { readBrand } from "@/lib/newwave/store";
 import { clubTheme } from "@/lib/newwave/theme";
-
-const BASE = "/newwave/klubb";
-const ITEMS: NavItem[] = [
-  { href: BASE, label: "Översikt", icon: "home" },
-  { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
-  { href: `${BASE}/material`, label: "Material", icon: "spark" },
-  { href: `${BASE}/butik`, label: "Butik", icon: "bag" },
-  { href: `${BASE}/varumarke`, label: "Varumärke", icon: "drop" },
-  { href: `${BASE}/support`, label: "Support", icon: "chat" },
-];
 
 const oswald = localFont({ src: "../../fonts/oswald.woff2", weight: "500 700", variable: "--font-club" });
 
+/** Klubbens färger och typsnitt, för både visningen och dashboarden. */
 export default async function ClubLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [approvals, saved] = await Promise.all([listApprovals(ASA_IF.id), readBrand(ASA_IF.id)]);
-  const pending = approvals.filter((a) => a.status === "väntar").length;
+  const saved = await readBrand(ASA_IF.id);
   const theme = clubTheme(saved.palette ?? CLUB.palette);
   return (
     <div
-      className={`nw-club ${oswald.variable}`}
+      className={`nw-club ${oswald.variable} flex flex-1 flex-col`}
       style={
         {
           "--club": theme.primary,
@@ -34,21 +22,7 @@ export default async function ClubLayout({ children }: Readonly<{ children: Reac
         } as React.CSSProperties
       }
     >
-      <DashShell
-        portal="klubb"
-        base={BASE}
-        items={ITEMS}
-        label="Klubbens dashboard"
-        title={ASA_IF.name}
-        subtitle={`Sedan ${ASA_IF.founded}`}
-        logo={{ src: ASA_IF.logo, width: 480, height: 419 }}
-        overview={["godkann"]}
-        badge={pending}
-        cta={{ href: `${BASE}/material`, label: "Skapa" }}
-        width={860}
-      >
-        {children}
-      </DashShell>
+      {children}
     </div>
   );
 }

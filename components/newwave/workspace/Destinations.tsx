@@ -260,7 +260,7 @@ export function ClubsTab({ clubs, items, onStart, onSent }: { clubs: WorkspaceCl
 
       {sent ? (
         <Done title={`Skickad till ${sent.clubs} ${sent.clubs === 1 ? "klubb" : "klubbar"}`} text={`${sent.live ? `${sent.live} av dem ser kollektionen direkt under Att godkänna i sin dashboard. ` : ""}När en klubb godkänner läggs produkterna ut i klubbens butik hos Intersport.`}>
-          <Link href="/newwave/klubb" className={SOLID}>
+          <Link href="/newwave/klubb/oversikt" className={SOLID}>
             Se den hos Åsa IF →
           </Link>
           <Link href="/newwave/craft/insikter" className={GHOST}>

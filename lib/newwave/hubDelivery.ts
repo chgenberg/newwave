@@ -5,6 +5,7 @@ import { CLUBS } from "@/lib/club";
 import { clubScarfPalette, nearestPantone } from "@/lib/scarf";
 import { readAsset } from "./asset";
 import { nwProduct } from "./catalog";
+import { CLUB_CASE } from "./clubCase";
 import { colorName } from "./colors";
 import { knitScarf } from "./knitFile";
 import { defaultDesign, type Design, type Placement } from "./marking";
@@ -205,7 +206,7 @@ async function build(clubId: string, src: Source): Promise<HubDelivery | null> {
 const CREST = "/api/v1/brand/asa-if/skold-farg.png";
 const screen1 = (zone: string, sizeCm: number): Design => ({ method: "screentryck", colors: 1, shape: "original", zone, sizeCm });
 
-/** Det Åsa IF godkände förra veckan, så att New Wave har något att titta på innan nästa godkännande. */
+/** Det Åsa IF godkände tidigare i höst, så att New Wave har något att titta på innan nästa godkännande. */
 const HISTORY: Source = {
   id: "jul26",
   title: "Julklappar i svart och gult",
@@ -222,7 +223,19 @@ const HISTORY: Source = {
   knit: { front: "ÅSA IF", back: "SEDAN 1919", priceSek: 199 },
 };
 
-const history = () => build("asa-if", HISTORY).then((d) => (d ? [d] : []));
+/** Veckopaketet som klubbens visning spelar upp. */
+const CASE: Source = {
+  id: CLUB_CASE.id,
+  title: CLUB_CASE.title,
+  occasion: CLUB_CASE.occasion,
+  approvedAt: CLUB_CASE.approvedAt,
+  printFiles: CLUB_CASE.printFiles,
+  products: CLUB_CASE.products,
+};
+
+export const caseDelivery = () => build("asa-if", CASE);
+
+const seeds = async () => (await Promise.all([CASE, HISTORY].map((s) => build("asa-if", s)))).filter((d): d is HubDelivery => d !== null);
 
 export async function listDeliveries(): Promise<HubDelivery[]> {
   const raw = await readData(LIST).catch(() => null);
@@ -231,21 +244,23 @@ export async function listDeliveries(): Promise<HubDelivery[]> {
       return JSON.parse(raw) as HubDelivery[];
     } catch {}
   }
-  return history();
+  return seeds();
 }
 
 export const getDelivery = async (id: string) => (await listDeliveries()).find((d) => d.id === id) ?? null;
 export const deliveryFor = async (clubId: string, approvalId: string) => (await listDeliveries()).find((d) => d.clubId === clubId && d.approvalId === approvalId) ?? null;
 
-/** Kallas när klubben godkänt: gör filerna och lägger leveransen överst hos New Wave. */
-export async function deliverApproval(clubId: string, a: Approval): Promise<HubDelivery | null> {
-  const d = await build(clubId, { ...a, approvedAt: a.decidedAt ?? new Date().toISOString() });
-  if (!d) return null;
+async function save(d: HubDelivery) {
   const list = await listDeliveries();
   await writeData(LIST, JSON.stringify([d, ...list.filter((x) => x.id !== d.id)], null, 2));
   return d;
 }
 
+/** Kallas när klubben godkänt: gör filerna och lägger leveransen överst hos New Wave. */
+export async function deliverApproval(clubId: string, a: Approval): Promise<HubDelivery | null> {
+  const d = await build(clubId, { ...a, approvedAt: a.decidedAt ?? new Date().toISOString() });
+  return d ? save(d) : null;
+}
 export const deliveryStats = (d: HubDelivery) => ({
   products: new Set(d.jobs.map((j) => j.productId)).size,
   files: d.jobs.reduce((s, j) => s + j.files.length, 0),

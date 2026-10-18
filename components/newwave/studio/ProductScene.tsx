@@ -7,10 +7,18 @@ import * as THREE from "three";
 import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { LogoArt } from "./logoArt";
+import type { NwProduct } from "@/lib/newwave/catalog";
 import { BASE_COLOR } from "@/lib/newwave/colors";
 import { type Look, lookOf, type Method, type Zone } from "@/lib/newwave/marking";
 
 const WHITE = new THREE.Color("#ffffff");
+
+/** The plain shape shown when a product has no 3D model. */
+export function fallbackKind(p: NwProduct): "box" | "cylinder" | "shirt" {
+  if (p.kind === "drink" || p.kind === "pen") return "cylinder";
+  if (p.kind === "top") return "shirt";
+  return "box";
+}
 
 /** How each marking method catches the light: thread sheen, matte ink, glossy film or bare metal. */
 const FINISH: Record<Look, { roughness: number; metalness: number; clearcoat: number; sheen: number; bump: number }> = {
@@ -62,6 +70,8 @@ type Props = {
   onPlace: (key: string, p: Placement) => void;
   onSelect: (key: string) => void;
   onReady: (api: SceneApi) => void;
+  /** Only to look at: no selection frame, prints can't be dragged, and it keeps turning until touched. */
+  preview?: boolean;
 };
 
 function Studio() {
@@ -156,7 +166,7 @@ function useFallbackObject(kind: Props["fallback"]) {
 }
 
 function Product(props: Props & { object: THREE.Object3D }) {
-  const { color, layers, active, zones, sizeCm, onPlace, onSelect, onReady } = props;
+  const { color, layers, active, zones, sizeCm, onPlace, onSelect, onReady, preview } = props;
   const root = useNormalised(props.object);
   const { gl, scene, camera } = useThree();
   const get = useThree((s) => s.get);
@@ -406,12 +416,12 @@ function Product(props: Props & { object: THREE.Object3D }) {
           zones={zones}
           sizeCm={sizeCm}
           dim={layers.length > 1 && l.key !== active}
-          selected={l.key === active}
+          selected={!preview && l.key === active}
           onPose={(p, n) => {
             points.current[l.key] = p;
             normals.current[l.key] = n;
           }}
-          onGrab={() => startDrag(l.key)}
+          onGrab={() => !preview && startDrag(l.key)}
           isDragging={() => Boolean(dragging.current)}
         />
       ))}
@@ -722,7 +732,7 @@ export function ProductScene(props: Props) {
       <Suspense fallback={null}>
         <Loaded {...props} />
       </Suspense>
-      <OrbitControls makeDefault enablePan={false} autoRotate={!touched && props.active === "main" && props.layers.length === 1} autoRotateSpeed={1.4} enableDamping />
+      <OrbitControls makeDefault enablePan={false} autoRotate={!touched && (props.preview || (props.active === "main" && props.layers.length === 1))} autoRotateSpeed={1.4} enableDamping />
     </Canvas>
   );
 }

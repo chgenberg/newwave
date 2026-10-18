@@ -35,13 +35,15 @@ export function Icon({ name, className = "h-[19px] w-[19px]" }: { name: string; 
   );
 }
 
-function useActive(base: string, overview: string[]) {
+function useActive(base: string, overview: string[], home = base) {
   const pathname = usePathname();
-  return (href: string) => (href === base ? pathname === base || overview.some((p) => pathname.startsWith(`${base}/${p}`)) : pathname.startsWith(href));
+  return (href: string) => (href === home ? pathname === home || overview.some((p) => pathname.startsWith(`${base}/${p}`)) : pathname.startsWith(href));
 }
 
 type Props = {
   base: string;
+  /** Översiktens adress, om den inte är `base`. */
+  home?: string;
   items: NavItem[];
   label: string;
   /** Undersidor som räknas till översikten, t.ex. "godkann". */
@@ -53,16 +55,16 @@ type Props = {
 
 const SLIDE = { type: "spring", bounce: 0.16, duration: 0.55 } as const;
 
-const countFor = (item: NavItem, base: string, badge?: number, badges?: Record<string, number>) => badges?.[item.href] ?? (item.href === base ? badge : undefined);
+const countFor = (item: NavItem, home: string, badge?: number, badges?: Record<string, number>) => badges?.[item.href] ?? (item.href === home ? badge : undefined);
 
 /** Portalens infällda meny med symboler, samma form som designstudions verktygsmeny. */
-export function DashRail({ base, items, label, overview = [], badge, badges }: Props) {
-  const active = useActive(base, overview);
+export function DashRail({ base, home = base, items, label, overview = [], badge, badges }: Props) {
+  const active = useActive(base, overview, home);
   return (
     <nav aria-label={label} className="flex flex-col items-center gap-1 rounded-[22px] bg-[#F1F1EE] p-1.5 py-2.5 shadow-[inset_0_1px_3px_rgba(17,17,17,0.07),inset_0_0_0_1px_rgba(17,17,17,0.04)]">
       {items.map((item) => {
         const on = active(item.href);
-        const count = countFor(item, base, badge, badges);
+        const count = countFor(item, home, badge, badges);
         return (
           <Link key={item.href} href={item.href} aria-current={on ? "page" : undefined} aria-label={count ? `${item.label} (${count})` : item.label} className={`group relative grid h-11 w-11 place-items-center rounded-[14px] transition-colors duration-300 active:scale-95 ${on ? "text-[var(--club)]" : "text-[#55524B] hover:bg-white/70 hover:text-[#111]"}`}>
             {on ? <motion.span layoutId={`${base}-rail`} transition={SLIDE} aria-hidden className="absolute inset-0 rounded-[14px] bg-white shadow-[0_1px_2px_rgba(17,17,17,0.08),0_6px_14px_-8px_rgba(17,17,17,0.35)]" /> : null}
@@ -77,14 +79,14 @@ export function DashRail({ base, items, label, overview = [], badge, badges }: P
 }
 
 /** Var i portalen man är, till toppraden. */
-export function DashCrumb({ base, items, overview = [] }: Pick<Props, "base" | "items" | "overview">) {
-  const active = useActive(base, overview);
+export function DashCrumb({ base, home, items, overview = [] }: Pick<Props, "base" | "home" | "items" | "overview">) {
+  const active = useActive(base, overview, home);
   const item = items.find((i) => active(i.href));
   return item ? <span className="truncate text-[14px] font-medium text-[#111]">{item.label}</span> : null;
 }
 
-export function DashBottomBar({ base, items, label, overview = [], badge, badges }: Props) {
-  const active = useActive(base, overview);
+export function DashBottomBar({ base, home = base, items, label, overview = [], badge, badges }: Props) {
+  const active = useActive(base, overview, home);
   return (
     <nav
       aria-label={label}
@@ -93,7 +95,7 @@ export function DashBottomBar({ base, items, label, overview = [], badge, badges
     >
       {items.map((item) => {
         const on = active(item.href);
-        const count = countFor(item, base, badge, badges);
+        const count = countFor(item, home, badge, badges);
         return (
           <Link
             key={item.href}

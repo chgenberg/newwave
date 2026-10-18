@@ -27,7 +27,7 @@ import {
 } from "@/lib/newwave/marking";
 import { sek } from "@/lib/newwave/reseller";
 import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt, logoColors } from "./logoArt";
-import { type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
+import { fallbackKind, type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
 import { readLogoFile } from "./readLogoFile";
 
 export type Proof = { label: string; image: string };
@@ -92,12 +92,6 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "bak", label: "Bak" },
   { id: "3d", label: "3D" },
 ];
-
-function fallbackKind(p: NwProduct): "box" | "cylinder" | "shirt" {
-  if (p.kind === "drink" || p.kind === "pen") return "cylinder";
-  if (p.kind === "top") return "shirt";
-  return "box";
-}
 
 function DeliveryNote({ product, design, needBy }: { product: NwProduct; design: Design; needBy?: string }) {
   const [today] = useState(() => new Date());
