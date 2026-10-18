@@ -1,8 +1,13 @@
 /**
- * Var trycket sitter på produktfotot, som en yta i 3D: mitt och storlek i andelar av fotots bredd, lutning i grader och
- * böjning för runda produkter (muggar, flaskor, kepsar). `printOnPhoto` lägger loggan på ytan och låter fotots eget ljus,
- * skuggor och veck synas i trycket; samma funktion körs på servern och i webbläsaren.
+ * Var trycket sitter på produktfotot. Platta ytor anges med sina fyra hörn uppmätta på fotot (`quad`), så att loggan
+ * följer produktens kanter i perspektiv. Runda och mjuka produkter (muggar, flaskor, kepsar, plagg) anges som en yta i 3D:
+ * mitt och storlek i andelar av fotots bredd, lutning i grader och böjning. `printOnPhoto` lägger loggan på ytan och låter
+ * fotots eget ljus, skuggor och veck synas i trycket; samma funktion körs på servern och i webbläsaren.
  */
+type Pt = [number, number];
+/** Övre vänstra, övre högra, nedre högra och nedre vänstra hörnet, sett som loggan ska läsas. */
+type Quad = [Pt, Pt, Pt, Pt];
+
 export type Surface = {
   cx: number;
   cy: number;
@@ -18,18 +23,68 @@ export type Surface = {
   bend: number;
   /** Loggan överst i ytan i stället för i mitten, som på bröstet. */
   top: boolean;
+  /** Den platta ytans hörn; loggan läggs i mitten och täcker `fill` av ytan. */
+  quad?: Quad;
+  /** Rund produkt med lodrät axel genom `cx`: radien på fotot och hur mycket uppifrån kameran ser den, i grader. */
+  round?: { r: number; e: number };
+  fill: number;
 };
 
-export type SurfaceInput = Pick<Surface, "cx" | "cy" | "w" | "h"> & Partial<Omit<Surface, "cx" | "cy" | "w" | "h">>;
-export const surface = (s: SurfaceInput): Surface => ({ rx: 0, ry: 0, rz: 0, bend: 0, top: false, ...s });
+export type SurfaceInput =
+  | (Pick<Surface, "cx" | "cy" | "w" | "h"> & Partial<Pick<Surface, "rx" | "ry" | "rz" | "bend" | "top" | "round">>)
+  /** `aspect` är ytans verkliga bredd genom höjd, när den syns förkortad på fotot. */
+  | { quad: Quad; fill?: number; aspect?: number };
+
+const dist = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+
+export function surface(s: SurfaceInput): Surface {
+  const flat = { rx: 0, ry: 0, rz: 0, bend: 0, top: false, fill: 1 };
+  if (!("quad" in s)) return { ...flat, ...s };
+  const q = s.quad;
+  const across = (dist(q[0], q[1]) + dist(q[3], q[2])) / 2;
+  const fill = s.fill ?? 1;
+  const w = across * fill;
+  const aspect = s.aspect ?? across / ((dist(q[0], q[3]) + dist(q[1], q[2])) / 2);
+  return { ...flat, cx: q.reduce((a, p) => a + p[0], 0) / 4, cy: q.reduce((a, p) => a + p[1], 0) / 4, w, h: w / aspect, quad: q, fill };
+}
 
 /** Höjs när renderingen ändras, så att sparade bilder ritas om. */
-export const MOCKUP_VERSION = 4;
+export const MOCKUP_VERSION = 6;
 /** Kamerans avstånd i fotobredder. */
 const PERSPECTIVE = 3;
 const rad = (d: number) => (d * Math.PI) / 180;
 
+/** Perspektivavbildningen från enhetskvadraten till fyrhörningen. */
+function homography([[x0, y0], [x1, y1], [x2, y2], [x3, y3]]: Quad) {
+  const [dx1, dx2, dx3] = [x1 - x2, x3 - x2, x0 - x1 + x2 - x3];
+  const [dy1, dy2, dy3] = [y1 - y2, y3 - y2, y0 - y1 + y2 - y3];
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = den ? (dx3 * dy2 - dx2 * dy3) / den : 0;
+  const h = den ? (dx1 * dy3 - dx3 * dy1) / den : 0;
+  const [a, b, d, e] = [x1 - x0 + g * x1, x3 - x0 + h * x3, y1 - y0 + g * y1, y3 - y0 + h * y3];
+  return (u: number, v: number) => {
+    const w = g * u + h * v + 1;
+    return { x: (a * u + b * v + x0) / w, y: (d * u + e * v + y0) / w };
+  };
+}
+
 /** En punkt i tryckytan (u, v från 0 till 1) till fotot, i andelar av fotots bredd. */
+function projector(s: Surface) {
+  if (s.quad) {
+    const map = homography(s.quad);
+    return (u: number, v: number) => map(0.5 + (u - 0.5) * s.fill, 0.5 + (v - 0.5) * s.fill);
+  }
+  if (s.round) {
+    const { r, e } = s.round;
+    const lift = r * Math.sin(rad(e));
+    return (u: number, v: number) => {
+      const t = Math.max(-1.45, Math.min(1.45, ((u - 0.5) * s.w) / r));
+      return { x: s.cx + r * Math.sin(t), y: s.cy + (v - 0.5) * s.h * Math.cos(rad(e)) - lift * (1 - Math.cos(t)) };
+    };
+  }
+  return (u: number, v: number) => project(s, u, v);
+}
+
 function project(s: Surface, u: number, v: number) {
   const x0 = (u - 0.5) * s.w;
   let y = (v - 0.5) * s.h;
@@ -86,10 +141,11 @@ function warp(s: Surface, logo: Rgba, size: number) {
   const oy = s.top ? 0 : (H - fit.h) / 2;
   const layer = new Float32Array(size * size * 4);
   const hits = new Float32Array(size * size);
+  const place = projector(s);
   for (let j = 0; j < logo.height; j++) {
     for (let i = 0; i < logo.width; i++) {
       const k = (j * logo.width + i) * 4;
-      const p = project(s, (ox + ((i + 0.5) / logo.width) * fit.w) / W, (oy + ((j + 0.5) / logo.height) * fit.h) / H);
+      const p = place((ox + ((i + 0.5) / logo.width) * fit.w) / W, (oy + ((j + 0.5) / logo.height) * fit.h) / H);
       const px = Math.floor(p.x * size);
       const py = Math.floor(p.y * size);
       if (px < 0 || py < 0 || px >= size || py >= size) continue;
