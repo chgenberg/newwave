@@ -9,10 +9,13 @@ export const ACCESS_MAX_AGE = 60 * 60 * 24 * 30;
 export const LOGIN_PATH = "/newwave/las";
 export const STATS_PATH = "/newwave/besok";
 
-/** Öppna utan lösenord: inloggningen, delningsbilden, besöksloggen och adresser som andra system hämtar från. */
-const OPEN = [LOGIN_PATH, "/newwave/og.jpg", "/newwave/hero-poster.jpg", "/api/v1/besok", "/api/mock-intersport", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
+/** Öppna utan lösenord: inloggningen, besöksloggen och adresser som andra system hämtar från. */
+const OPEN = [LOGIN_PATH, "/api/v1/besok", "/api/mock-intersport", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
 
-export const isOpen = (path: string) => OPEN.some((p) => path === p || (p.endsWith("/") && path.startsWith(p)));
+/** Bilderna i public: bildoptimeringen hämtar dem internt utan besökarens cookie, och delningsbilden ska synas i chattar. Filmerna kräver lösenordet. */
+const PUBLIC_IMAGE = /^\/(?!api\/)[^?#]+\.(?:jpe?g|png|webp|avif|gif|svg|ico)$/i;
+
+export const isOpen = (path: string) => PUBLIC_IMAGE.test(path) || OPEN.some((p) => path === p || (p.endsWith("/") && path.startsWith(p)));
 
 export type AccessScope = "access" | "admin";
 
