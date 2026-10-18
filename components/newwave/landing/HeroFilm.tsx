@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { trackVisit } from "@/components/VisitTracker";
 
 type Video = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
@@ -12,6 +13,7 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const progress = useMotionValue(0);
+  const reached = useRef(-1);
 
   const width = useTransform(progress, (p) => `${p * 100}%`);
 
@@ -71,7 +73,15 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
         onPause={() => setPlaying(false)}
         onEnded={() => setStarted(false)}
         onVolumeChange={(e) => setMuted(e.currentTarget.muted)}
-        onTimeUpdate={(e) => progress.set(e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0)}
+        onTimeUpdate={(e) => {
+          const p = e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0;
+          progress.set(p);
+          const step = Math.min(100, Math.floor(p * 4 + 0.02) * 25);
+          if (step > reached.current) {
+            reached.current = step;
+            trackVisit({ type: "film", pct: step });
+          }
+        }}
       />
 
       <AnimatePresence initial={false}>

@@ -3,12 +3,13 @@
 import { useActionState, useState } from "react";
 import { login } from "@/app/newwave/las/actions";
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, scope }: { next: string; scope?: "admin" }) {
   const [state, action, pending] = useActionState(login, null);
   const [show, setShow] = useState(false);
   return (
     <form action={action} className="mt-7">
       <input type="hidden" name="till" value={next} />
+      {scope ? <input type="hidden" name="scope" value={scope} /> : null}
       <label htmlFor="nw-password" className="text-[13px] font-semibold text-[#6F6B63]">
         Lösenord
       </label>
