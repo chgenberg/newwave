@@ -49,7 +49,7 @@ export function surface(s: SurfaceInput): Surface {
 }
 
 /** Höjs när renderingen ändras, så att sparade bilder ritas om. */
-export const MOCKUP_VERSION = 6;
+export const MOCKUP_VERSION = 7;
 /** Kamerans avstånd i fotobredder. */
 const PERSPECTIVE = 3;
 const rad = (d: number) => (d * Math.PI) / 180;
