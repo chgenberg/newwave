@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
+import { LogoMark } from "@/components/newwave/Logo";
 import { loadImage } from "@/lib/compose";
 import { copyFor } from "@/lib/copy";
 import { sek } from "@/lib/demoCatalog";
@@ -15,7 +16,7 @@ type ClubListItem = { id: string; name: string; city: string; nicknames: string[
 type Fonts = { block: string; tall: string; script: string };
 type View = "knit" | "file";
 
-const DEFAULT_CLUB = "ifk-goteborg";
+const DEFAULT_CLUB = "asa-if";
 const SAMPLE_PORTRAIT = "/demo/portrait.jpg";
 
 function linesFor(t: Template, club: Club, slogan: string): Pick<SideSpec, "line1" | "line2" | "number" | "roster" | "strokes" | "crest"> {
@@ -82,7 +83,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    fetch("/api/v1/clubs")
+    fetch("/api/v1/clubs?hub=1")
       .then((r) => r.json())
       .then((d: { clubs: ClubListItem[] }) => {
         setClubs(d.clubs);
@@ -257,8 +258,12 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
   return (
     <main className="flex min-h-screen flex-col bg-white">
       <header className="flex h-14 items-center justify-between gap-3 px-4 md:h-16 md:px-8">
-        <Link href="/" className="text-[15px] font-semibold tracking-tight">
-          Klubbagenterna <span className="font-normal text-[#86868B]">Halsduk</span>
+        <Link href="/newwave/start" className="flex min-h-9 items-center gap-2.5 text-[15px] font-semibold tracking-tight" aria-label="Next Wave – till ingångarna">
+          <LogoMark size={28} />
+          <span>
+            <span className="hidden text-[13px] tracking-[0.18em] sm:inline">NEXT WAVE </span>
+            <span className="font-normal text-[#86868B]">Halsduk</span>
+          </span>
         </Link>
         {clubs.length > 1 && (
           <select

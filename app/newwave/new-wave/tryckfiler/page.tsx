@@ -88,10 +88,7 @@ export default async function HubFilesPage() {
                     </p>
                     <p className="nw-club-heading mt-0.5 text-[18px] leading-tight text-[var(--club)] [overflow-wrap:anywhere]">{d.title}</p>
                   </div>
-                  <p className="nw-mono shrink-0 text-[12px] text-[var(--nw-muted)]">
-                    <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#1F9D55]" aria-hidden />
-                    201 Created · {d.ms} ms
-                  </p>
+                  <p className="nw-mono shrink-0 text-[12px] text-[var(--nw-muted)]">Byggt av demot · skickas i produktion</p>
                 </div>
                 <div className="mt-4 flex gap-2 overflow-hidden">
                   {d.jobs.map((j) => (

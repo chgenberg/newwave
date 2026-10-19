@@ -245,11 +245,11 @@ function Tile({ o, href, logo, big }: { o: Occasion; href: string; logo: Custome
       <img src={branded ?? o.scene} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]" loading="lazy" />
       <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(17,16,14,0.72))]" />
       {branded ? <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-0.5 text-[11.5px] font-semibold text-[#1D1D1F]">Med er logga</span> : null}
-      <span className={`absolute right-16 grid gap-1 ${big ? "bottom-6 left-6 @4xl:bottom-8 @4xl:left-8" : "bottom-5 left-5"}`}>
+      <span className={`absolute grid gap-1 ${big ? "bottom-6 left-6 right-16 @4xl:bottom-8 @4xl:left-8" : "bottom-5 left-5 right-5 @2xl:right-16"}`}>
         <span className={`font-bold leading-[1.05] tracking-[-0.03em] ${big ? "text-[26px] @4xl:text-[44px]" : "text-[20px] @4xl:text-[26px]"}`}>{o.name}</span>
         <small className="truncate text-[13.5px] opacity-85">{o.hint}</small>
       </span>
-      <span aria-hidden className="absolute bottom-5 right-5 grid h-10 w-10 place-items-center rounded-full bg-white text-[#1D1D1F] transition-transform group-hover:translate-x-0.5">
+      <span aria-hidden className={`absolute bottom-5 right-5 h-10 w-10 place-items-center rounded-full bg-white text-[#1D1D1F] transition-transform group-hover:translate-x-0.5 ${big ? "grid" : "hidden @2xl:grid"}`}>
         →
       </span>
     </Link>
@@ -267,7 +267,7 @@ export function EventMosaic({ slug, offered, preview }: { slug: string; offered:
       <p className="mt-1 text-[14px] opacity-60">{logo ? `Agenterna bygger miljön med ${genitive(logo.name)} logga och väljer produkterna som passar.` : "Varje tillfälle har en färdig miljö, produkter som passar och paket i tre nivåer."}</p>
       <ul className="mt-5 grid auto-rows-[168px] grid-cols-2 gap-3 @2xl:auto-rows-[minmax(168px,19cqw)] @2xl:grid-cols-6">
         {offered.map((id, n) => (
-          <li key={id} className={SPANS[n] ?? "@2xl:col-span-2"}>
+          <li key={id} className={`${SPANS[n] ?? "@2xl:col-span-2"}${n === offered.length - 1 && n % 2 === 1 ? " col-span-2" : ""}`}>
             <Tile o={occasionOf(id)!} href={`/newwave/s/${slug}/event/${id}`} logo={logo} big={n === 0} />
           </li>
         ))}

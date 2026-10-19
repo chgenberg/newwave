@@ -136,10 +136,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
           <p className="nw-mono text-[13px]">
             <span className="text-white/60">POST</span> /v1/print-jobs
           </p>
-          <p className="nw-mono flex items-center gap-2 text-[13px]">
-            <span className="h-2 w-2 rounded-full bg-[#4ADE80]" aria-hidden />
-            201 Created · {d.ms} ms
-          </p>
+          <p className="nw-mono text-[12px] text-white/75">Byggt av demot · skickas i produktion</p>
         </div>
         <p className="mt-2 text-[13.5px] text-white/70">
           {d.jobs.length} jobb med fil-URL:er och SHA-256 per fil. New Waves hubb hämtar filerna och fördelar jobben till {[...new Set(d.jobs.map((j) => j.receiver.toLowerCase()))].join(", ")}.

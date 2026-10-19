@@ -19,7 +19,7 @@ export default async function Ordrar() {
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Ordrar</h1>
       <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Beställningar i butiken och godkända offerter går direkt till New Wave. Här ser ni var varje order är – ni behöver inte göra något.</p>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 [&>:first-child]:col-span-2 sm:[&>:first-child]:col-span-1">
         {[
           { label: "Pågående", value: String(open.length) },
           { label: "Ordervärde", value: sek(total) },

@@ -190,10 +190,7 @@ export async function HubSection({ approvedAt }: { approvedAt: string }) {
       <div className="mt-4 rounded-[24px] bg-[var(--club)] p-4 text-white sm:p-5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <p className="nw-mono text-[13px]">POST /v1/print-jobs → New Waves hubb</p>
-          <p className="nw-mono ml-auto flex items-center gap-2 text-[13px]">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-[#3DDC84]" />
-            201 Created · {d.ms} ms
-          </p>
+          <p className="nw-mono ml-auto text-[12px] text-white/75">Byggt av demot · skickas i produktion</p>
         </div>
         <p className="mt-1.5 text-[13px] text-white/70">
           {d.jobs.length} tryckjobb · {stats.files} produktionsfiler · {fmtBytes(stats.bytes)} · med kontrollsumma per fil

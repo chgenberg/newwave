@@ -22,7 +22,7 @@ export function ShopFrame({ shop, preview, children }: { shop: Shop; preview?: b
   const events = offeredOccasions(shop);
   const contact = [shop.texts.email, shop.texts.phone, shop.texts.address, shop.texts.hours].filter(Boolean);
   return (
-    <div data-studio-root style={shopVars(shop.theme)} className="@container flex min-h-full flex-col bg-white text-[#1D1D1F]">
+    <div data-studio-root style={shopVars(shop.theme)} className={`@container flex flex-col bg-white text-[#1D1D1F] ${preview ? "min-h-full" : "min-h-screen"}`}>
       {preview ? null : <TesterBanner slug={shop.slug} />}
       <StoreHeader brand={brand} search={searchOf(shop)} preview={preview} />
       <main className="flex-1">{children}</main>

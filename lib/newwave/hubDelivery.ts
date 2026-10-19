@@ -47,7 +47,6 @@ export type HubDelivery = {
   from?: string;
   approvedAt: string;
   sentAt: string;
-  ms: number;
   jobs: HubJob[];
 };
 
@@ -189,9 +188,6 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
 
 type Source = Pick<Approval, "id" | "title" | "occasion" | "from" | "printFiles" | "previewUrl" | "products" | "knit"> & { approvedAt: string };
 
-/** Hubbens svarstid i demot: stabil per leverans så att sidan inte hoppar. */
-const latency = (id: string) => 140 + (Number.parseInt(sha(id).slice(0, 4), 16) % 260);
-
 async function build(clubId: string, src: Source): Promise<HubDelivery | null> {
   const club = await clubOf(clubId);
   if (!club) return null;
@@ -200,7 +196,7 @@ async function build(clubId: string, src: Source): Promise<HubDelivery | null> {
   if (src.knit) jobs.push(await knitJob(club, src.id, src.knit, date));
   if (!jobs.length) return null;
   const id = `HUB-${date.replace(/-/g, "")}-${src.id.toUpperCase()}`;
-  return { id, clubId, club: club.name, approvalId: src.id, title: src.title, occasion: src.occasion, from: src.from, approvedAt: src.approvedAt, sentAt: src.approvedAt, ms: latency(id), jobs };
+  return { id, clubId, club: club.name, approvalId: src.id, title: src.title, occasion: src.occasion, from: src.from, approvedAt: src.approvedAt, sentAt: src.approvedAt, jobs };
 }
 
 const CREST = "/api/v1/brand/asa-if/skold-farg.png";
