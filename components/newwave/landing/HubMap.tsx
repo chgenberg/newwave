@@ -234,6 +234,11 @@ const INTRO = [
   { n: "3", text: "New Waves hubb fördelar vidare till tryck, leverantörer, frakt, ekonomi och butiker." },
 ];
 
+const MORE = [
+  { href: "/newwave/teknik", label: "För IT – så är hubben byggd" },
+  { href: "/halsduk", label: "Exempel – Halsduk" },
+];
+
 function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) => void }) {
   if (!pick)
     return (
@@ -251,12 +256,18 @@ function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
         <button type="button" onClick={() => onPick({ kind: "core" })} className="mt-6 inline-flex h-10 items-center rounded-full bg-[#111] px-4 text-[13.5px] font-semibold text-white transition hover:opacity-90">
           Börja i hubben
         </button>
-        <Link href="/halsduk" className="group mt-6 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(17,17,17,0.08)] bg-[#F7F7F5] px-4 py-3.5 text-[14px] font-semibold text-[#111] transition hover:bg-[#F1F1EE]">
-          Exempel – Halsduk
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-none stroke-current transition-transform group-hover:translate-x-0.5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
-        </Link>
+        <ul className="mt-6 flex flex-col gap-2">
+          {MORE.map((m) => (
+            <li key={m.href}>
+              <Link href={m.href} className="group flex items-center justify-between gap-3 rounded-2xl border border-[rgba(17,17,17,0.08)] bg-[#F7F7F5] px-4 py-3.5 text-[14px] font-semibold text-[#111] transition hover:bg-[#F1F1EE]">
+                {m.label}
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-none stroke-current transition-transform group-hover:translate-x-0.5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     );
 
