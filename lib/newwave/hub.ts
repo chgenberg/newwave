@@ -154,6 +154,7 @@ export const PORTALS: Portal[] = [
     description: "Brandbook, kalender, färdigt material att godkänna och klubbens egen butik.",
     start: "/newwave/klubb",
     poster: "/newwave/portals/klubb.jpg",
+    film: "/newwave/portals/klubb.mp4",
   },
   {
     id: "craft",
@@ -174,7 +175,8 @@ export const PORTALS: Portal[] = [
     who: "För supportrarna",
     description: "Alla klubbar och all deras merch i en lista, med en sida per klubb. Filtrera på klubb, sport och produkt – och köp i klubbens butik hos Intersport.",
     start: "/newwave/merch",
-    poster: "/newwave/portals/merch-butik.jpg",
+    poster: "/newwave/portals/merch.jpg",
+    film: "/newwave/portals/merch.mp4",
   },
   {
     id: "shop",
@@ -185,6 +187,7 @@ export const PORTALS: Portal[] = [
     description: "En återförsäljares webbshop som kunden ser den: välj event, agenterna lägger företagets logga på miljön och produkterna, och beställ direkt. Dashboarden bygger och redigerar butiken.",
     start: "/newwave/s/vastkust-profil",
     poster: "/newwave/portals/shop.jpg",
+    film: "/newwave/portals/shop.mp4",
   },
 ];
 
