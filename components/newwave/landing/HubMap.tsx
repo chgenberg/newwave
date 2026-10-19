@@ -251,6 +251,12 @@ function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
         <button type="button" onClick={() => onPick({ kind: "core" })} className="mt-6 inline-flex h-10 items-center rounded-full bg-[#111] px-4 text-[13.5px] font-semibold text-white transition hover:opacity-90">
           Börja i hubben
         </button>
+        <Link href="/halsduk" className="group mt-6 flex items-center justify-between gap-3 rounded-2xl border border-[rgba(17,17,17,0.08)] bg-[#F7F7F5] px-4 py-3.5 text-[14px] font-semibold text-[#111] transition hover:bg-[#F1F1EE]">
+          Exempel – Halsduk
+          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 fill-none stroke-current transition-transform group-hover:translate-x-0.5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </Link>
       </div>
     );
 
@@ -370,7 +376,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="hubmap-title"
-        className="flex max-h-full w-full max-w-[1400px] flex-col overflow-hidden rounded-[26px] bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.5)]"
+        className="flex h-full max-h-full w-full max-w-[1400px] flex-col lg:h-auto overflow-hidden rounded-[26px] bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.5)]"
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -393,13 +399,15 @@ function Dialog({ onClose }: { onClose: () => void }) {
             </svg>
           </button>
         </header>
-        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
+        <div className="grid min-h-0 flex-1 auto-rows-max overflow-y-auto lg:auto-rows-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
           <div className="min-w-0 overflow-x-auto p-3 sm:p-5 lg:overflow-y-auto">
             <Diagram pick={pick} onPick={setPick} />
             <p className="mt-2 text-center text-[12px] text-[#6F6B63] lg:hidden">Svep i sidled för att se hela kartan</p>
           </div>
-          <aside className="border-t border-[rgba(17,17,17,0.07)] p-5 sm:p-7 lg:overflow-y-auto lg:border-l lg:border-t-0">
-            <Details pick={pick} onPick={setPick} />
+          <aside className="relative border-t border-[rgba(17,17,17,0.07)] lg:border-l lg:border-t-0">
+            <div className="p-5 sm:p-7 lg:absolute lg:inset-0 lg:overflow-y-auto">
+              <Details pick={pick} onPick={setPick} />
+            </div>
           </aside>
         </div>
       </motion.div>
