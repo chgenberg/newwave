@@ -31,8 +31,6 @@ export type MerchItem = {
   /** Trycket för ljusa och mörka plagg. */
   art: { light: string; dark: string };
   design: Design;
-  /** Ett större kort i rutnätet. */
-  featured?: boolean;
 };
 
 const ASA_CREST = "/api/v1/brand/asa-if/skold-farg.png";
@@ -69,11 +67,11 @@ function build(): MerchItem[] {
   const asa = { clubId: ASA_IF.id, club: ASA_IF.name, city: "Åsa", crest: ASA_IF.logo, clubColor: ASA_IF.brand.primary };
   const cup = APPROVALS.find((a) => a.id === "a3");
   const own = [
-    ...CLUB_CASE.products.map((p, i) => item({ ...asa, motif: CLUB_CASE.title, art: CLUB_CASE.printFiles, featured: i === 1 }, p, "klubbandan")),
+    ...CLUB_CASE.products.map((p) => item({ ...asa, motif: CLUB_CASE.title, art: CLUB_CASE.printFiles }, p, "klubbandan")),
     ...(cup?.products ?? []).map((p) => item({ ...asa, motif: "Åsa Cupen 2026", art: { light: ASA_CREST, dark: ASA_CREST } }, p, "cupen")),
   ];
   const others = CRAFT_CLUBS.filter((c) => c.id !== ASA_IF.id && c.logo).flatMap((c, i) =>
-    SETS[i % SETS.length].map((p, k) => item({ clubId: c.id, club: c.name, city: c.city, crest: c.logo!, clubColor: c.colors[0], motif: "Klubbmärket", art: { light: c.logo!, dark: c.logoDark ?? c.logo! }, featured: k === 0 && i % 3 === 0 }, p, "marke")),
+    SETS[i % SETS.length].map((p) => item({ clubId: c.id, club: c.name, city: c.city, crest: c.logo!, clubColor: c.colors[0], motif: "Klubbmärket", art: { light: c.logo!, dark: c.logoDark ?? c.logo! } }, p, "marke")),
   );
   const list = [...own, ...others].filter((x): x is MerchItem => x !== null);
   // Klubbarna blandas så att rutnätet inte blir en klubb i taget; Åsa IF:s veckokollektion först.
@@ -86,6 +84,36 @@ function build(): MerchItem[] {
 }
 
 export const MERCH: MerchItem[] = build();
+
+/** Fotografier av produkterna i bruk. Varje bild hör till en produkt och öppnar den; de breda står över hela rutnätet. */
+export type MerchScene = {
+  id: string;
+  itemId: string;
+  src: string;
+  caption: string;
+  /** Hela bredden; `focus` är var bilden beskärs i höjdled. */
+  wide?: { focus: string };
+};
+
+const scene = (id: string, itemId: string, caption: string, wide?: MerchScene["wide"]): MerchScene => ({ id, itemId, src: `/newwave/merch/scenes/${id}.jpg`, caption, wide });
+
+export const MERCH_SCENES: MerchScene[] = [
+  scene("goteborg-hoodie", "ifk-goteborg-marke-p004", "Kvällsmatch på läktaren"),
+  scene("fjaras-filt", "fjaras-bk-marke-p035", "Söndag i soffan"),
+  scene("lerum-sweat", "lerums-is-marke-p005", "Fika i solen"),
+  scene("kungsbacka-mossa", "kungsbacka-if-marke-p012", "Vinterträning"),
+  scene("onsala-mugg", "onsala-bk-marke-p022", "Morgonkaffe"),
+  scene("partille-tee", "partille-if-marke-p008", "Träning i hallen"),
+  scene("tolo-keps", "tolo-if-marke-p011", "Lördag vid sidlinjen"),
+  scene("alingsas-filt", "alingsas-hk-marke-p035", "Picknick på cupen"),
+  scene("varberg-kasse", "varbergs-gif-marke-p014", "Promenad vid fästningen"),
+  scene("molndal-hoodie", "molndals-ibk-marke-p004", "Efter träningen"),
+  scene("torslanda-bag", "torslanda-hk-marke-p016", "Packad och klar"),
+  scene("stenungsund-flaska", "stenungsunds-if-marke-p020", "I omklädningsrummet"),
+  scene("asa-hoodie", "asa-if-klubbandan-p004", "Kväll på klipporna i Åsa", { focus: "50% 62%" }),
+  scene("kungsbacka-termos", "kungsbacka-if-marke-p021", "Kvällsmatch i november", { focus: "50% 10%" }),
+  scene("asa-cup", "asa-if-cupen-p001", "Mål på Åsa Cupen", { focus: "50% 35%" }),
+];
 
 export type MerchClub = {
   id: string;

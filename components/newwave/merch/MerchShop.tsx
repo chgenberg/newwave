@@ -4,7 +4,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MerchClub, MerchItem } from "@/lib/newwave/merch";
+import type { MerchClub, MerchItem, MerchScene } from "@/lib/newwave/merch";
 import { sek } from "@/lib/newwave/reseller";
 import { LogoMark } from "../Logo";
 import { EASE } from "../motion/Motion";
@@ -42,36 +42,95 @@ export function MerchHeader({ club }: { club?: MerchClub }) {
   );
 }
 
-function Tile({ item, big, active, onOpen }: { item: MerchItem; big: boolean; active: boolean; onOpen: () => void }) {
+const lift =
+  "group relative block h-full w-full overflow-hidden rounded-[24px] text-left outline-none ring-offset-2 transition-[box-shadow,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:shadow-[0_30px_50px_-30px_rgba(17,17,17,0.45)] focus-visible:ring-2 focus-visible:ring-[#111]";
+
+function ClubPill({ item }: { item: MerchItem }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`${item.name} – ${item.club}, ${item.motif}, ${sek(item.priceSek)}`}
-      className={`group relative block h-full w-full overflow-hidden rounded-[24px] bg-[#F4F4F2] text-left outline-none ring-offset-2 transition-[box-shadow,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:shadow-[0_30px_50px_-30px_rgba(17,17,17,0.45)] focus-visible:ring-2 focus-visible:ring-[#111] ${active ? "ring-2 ring-[#111]" : ""}`}
-    >
+    <span className="absolute left-2.5 top-2.5 flex max-w-[calc(100%-20px)] items-center gap-1.5 rounded-full bg-white/85 py-1 pl-1 pr-2.5 shadow-[0_1px_2px_rgba(17,17,17,0.08)] backdrop-blur-md">
+      <img src={item.crest} alt="" className="h-5 w-5 shrink-0 rounded-full bg-white object-contain p-[1px]" />
+      <span className="truncate text-[11.5px] font-semibold text-[#111]">{item.club}</span>
+    </span>
+  );
+}
+
+function OpenArrow() {
+  return (
+    <span aria-hidden className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full bg-[#111] text-white opacity-0 transition-all duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {ARROW}
+      </svg>
+    </span>
+  );
+}
+
+function Tile({ item, active, onOpen }: { item: MerchItem; active: boolean; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen} aria-label={`${item.name} – ${item.club}, ${item.motif}, ${sek(item.priceSek)}`} className={`${lift} bg-[#F4F4F2] ${active ? "ring-2 ring-[#111]" : ""}`}>
       <span className="absolute inset-0 transition-transform duration-[1.1s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.05]">
         <MerchImage item={item} />
       </span>
-      <span className="absolute left-2.5 top-2.5 flex max-w-[calc(100%-20px)] items-center gap-1.5 rounded-full bg-white/85 py-1 pl-1 pr-2.5 shadow-[0_1px_2px_rgba(17,17,17,0.08)] backdrop-blur-md">
-        <img src={item.crest} alt="" className="h-5 w-5 shrink-0 rounded-full bg-white object-contain p-[1px]" />
-        <span className="truncate text-[11.5px] font-semibold text-[#111]">{item.club}</span>
-      </span>
-      <span aria-hidden className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full bg-[#111] text-white opacity-0 transition-all duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
-        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          {ARROW}
-        </svg>
-      </span>
-      <span className={`absolute inset-x-2 bottom-2 flex items-end justify-between gap-2 rounded-[16px] bg-white/90 backdrop-blur-md transition-transform duration-500 group-hover:-translate-y-0.5 ${big ? "px-4 py-3" : "px-3 py-2"}`}>
+      <ClubPill item={item} />
+      <OpenArrow />
+      <span className="absolute inset-x-2 bottom-2 flex items-end justify-between gap-2 rounded-[16px] bg-white/90 px-3 py-2 backdrop-blur-md transition-transform duration-500 group-hover:-translate-y-0.5">
         <span className="min-w-0">
-          <span className={`block truncate font-semibold tracking-[-0.01em] text-[#111] ${big ? "text-[17px]" : "text-[13.5px]"}`}>{item.name}</span>
-          <span className={`block truncate text-[#6F6B63] ${big ? "text-[13px]" : "text-[11.5px]"}`}>{item.motif}</span>
+          <span className="block truncate text-[13.5px] font-semibold tracking-[-0.01em] text-[#111]">{item.name}</span>
+          <span className="block truncate text-[11.5px] text-[#6F6B63]">{item.motif}</span>
         </span>
-        <span className={`shrink-0 font-semibold text-[#111] ${big ? "text-[15px]" : "text-[12.5px]"}`}>{sek(item.priceSek)}</span>
+        <span className="shrink-0 text-[12.5px] font-semibold text-[#111]">{sek(item.priceSek)}</span>
       </span>
     </button>
   );
 }
+
+/** Ett foto av produkten i bruk; öppnar samma produkt som rutan. */
+function SceneTile({ scene, item, onOpen }: { scene: MerchScene; item: MerchItem; onOpen: () => void }) {
+  const wide = Boolean(scene.wide);
+  return (
+    <button type="button" onClick={onOpen} aria-label={`${scene.caption} – ${item.name} från ${item.club}, ${sek(item.priceSek)}`} className={`${lift} bg-[#E9E8E4]`}>
+      <img src={scene.src} alt="" loading="lazy" style={{ objectPosition: scene.wide?.focus }} className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1.1s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]" />
+      <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 via-45% to-transparent" />
+      <ClubPill item={item} />
+      <OpenArrow />
+      <span className={`absolute inset-x-0 bottom-0 text-white ${wide ? "p-5 sm:p-8" : "p-3.5"}`}>
+        <span className={`block font-semibold tracking-[-0.02em] ${wide ? "text-[clamp(22px,2.6vw,38px)] leading-[1.05]" : "truncate text-[14px]"}`}>{scene.caption}</span>
+        <span className={`block truncate text-white/80 ${wide ? "mt-1.5 text-[14px]" : "mt-0.5 text-[11.5px]"}`}>
+          I bild: {item.name} · {sek(item.priceSek)}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+type Cell = { item: MerchItem; scene?: MerchScene };
+
+/**
+ * Produkterna med fotona inflikade: ett foto efter var femte produkt, så att de hamnar i olika kolumner, och en bred bild
+ * efter var tjugonde ruta – var femte rad med fem i bredd. Ett foto visas bara när dess produkt finns bland träffarna.
+ */
+function arrange(shown: MerchItem[], scenes: MerchScene[]): Cell[] {
+  const byId = new Map(shown.map((i) => [i.id, i]));
+  const live = scenes.flatMap((scene) => {
+    const item = byId.get(scene.itemId);
+    return item ? [{ item, scene }] : [];
+  });
+  const photos = live.filter((c) => !c.scene.wide);
+  const wides = live.filter((c) => c.scene.wide);
+  const cells: Cell[] = [];
+  let n = 0;
+  for (const item of shown) {
+    cells.push({ item });
+    if (++n % 6 === 5 && photos.length) {
+      cells.push(photos.shift()!);
+      n++;
+    }
+    if (n % 20 === 0 && wides.length) cells.push(wides.shift()!);
+  }
+  if (n >= 10 && wides.length && !cells.some((c) => c.scene?.wide)) cells.push(wides[0]);
+  return cells;
+}
+
+const APPEAR = { layout: true, initial: { opacity: 0, scale: 0.94 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.94 }, transition: { duration: 0.4, ease: EASE } } as const;
 
 type Facet = "klubb" | "stad" | "land";
 type Option = { value: string; label: string; note: string; crest?: string };
@@ -97,7 +156,7 @@ const chip = (on: boolean) => `inline-flex h-10 shrink-0 items-center gap-2 roun
  * En sökruta överst, tre hopfällda filter under och produkterna i ett levande rutnät, med detaljerna i en panel till höger.
  * På en klubbs undersida (`club`) finns bara sökrutan.
  */
-export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]; clubs: MerchClub[]; club?: MerchClub }) {
+export function MerchBrowser({ items, clubs, scenes, club: fixed }: { items: MerchItem[]; clubs: MerchClub[]; scenes: MerchScene[]; club?: MerchClub }) {
   const [q, setQ] = useState("");
   const [pick, setPick] = useState(NONE);
   const [panel, setPanel] = useState<Facet | null>(null);
@@ -239,14 +298,17 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
           <div className="@container">
             <div className="grid grid-cols-2 gap-[var(--gap)] [--cols:2] [--gap:10px] [grid-auto-flow:dense] [grid-auto-rows:calc((100cqw_-_(var(--cols)_-_1)_*_var(--gap))_/_var(--cols))] @[640px]:grid-cols-3 @[640px]:[--cols:3] @[640px]:[--gap:14px] @[980px]:grid-cols-4 @[980px]:[--cols:4] @[1280px]:grid-cols-5 @[1280px]:[--cols:5]">
               <AnimatePresence mode="popLayout" initial={false}>
-                {shown.map((item) => {
-                  const big = Boolean(item.featured) && !q;
-                  return (
-                    <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }} transition={{ duration: 0.4, ease: EASE }} className={`min-h-0 ${big ? "col-span-2 row-span-2" : ""}`}>
-                      <Tile item={item} big={big} active={open === item.id} onOpen={() => setOpen(item.id)} />
+                {arrange(shown, scenes).map(({ item, scene }) =>
+                  scene ? (
+                    <motion.div key={`scene-${scene.id}`} {...APPEAR} className={`min-h-0 ${scene.wide ? "col-span-full @[640px]:row-span-2" : ""}`}>
+                      <SceneTile scene={scene} item={item} onOpen={() => setOpen(item.id)} />
                     </motion.div>
-                  );
-                })}
+                  ) : (
+                    <motion.div key={item.id} {...APPEAR} className="min-h-0">
+                      <Tile item={item} active={open === item.id} onOpen={() => setOpen(item.id)} />
+                    </motion.div>
+                  ),
+                )}
               </AnimatePresence>
             </div>
           </div>
@@ -264,7 +326,7 @@ export function MerchBrowser({ items, clubs, club: fixed }: { items: MerchItem[]
 }
 
 /** Alla klubbars merch i en lista. Här säljs inget – produkterna länkar till klubbarnas butiker hos Intersport. */
-export function MerchShop({ items, clubs }: { items: MerchItem[]; clubs: MerchClub[] }) {
+export function MerchShop({ items, clubs, scenes }: { items: MerchItem[]; clubs: MerchClub[]; scenes: MerchScene[] }) {
   return (
     <div className="min-h-screen bg-white text-[#111]">
       <MerchHeader />
@@ -274,13 +336,13 @@ export function MerchShop({ items, clubs }: { items: MerchItem[]; clubs: MerchCl
           {clubs.length} klubbar · {items.length} produkter · säljs hos Intersport
         </p>
       </section>
-      <MerchBrowser items={items} clubs={clubs} />
+      <MerchBrowser items={items} clubs={clubs} scenes={scenes} />
     </div>
   );
 }
 
 /** En klubbs undersida: kort presentation, länken till butiken och all klubbens merch. */
-export function MerchClubPage({ club, items, clubs }: { club: MerchClub; items: MerchItem[]; clubs: MerchClub[] }) {
+export function MerchClubPage({ club, items, clubs, scenes }: { club: MerchClub; items: MerchItem[]; clubs: MerchClub[]; scenes: MerchScene[] }) {
   return (
     <div className="min-h-screen bg-white text-[#111]">
       <MerchHeader club={club} />
@@ -319,7 +381,7 @@ export function MerchClubPage({ club, items, clubs }: { club: MerchClub; items: 
           </div>
         </div>
       </section>
-      <MerchBrowser items={items} clubs={clubs} club={club} />
+      <MerchBrowser items={items} clubs={clubs} scenes={scenes} club={club} />
     </div>
   );
 }

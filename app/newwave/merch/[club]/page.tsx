@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MerchClubPage } from "@/components/newwave/merch/MerchShop";
-import { MERCH, MERCH_CLUBS, merchClub } from "@/lib/newwave/merch";
+import { MERCH, MERCH_CLUBS, MERCH_SCENES, merchClub } from "@/lib/newwave/merch";
 
 export function generateStaticParams() {
   return MERCH_CLUBS.map((c) => ({ club: c.id }));
@@ -15,5 +15,5 @@ export async function generateMetadata({ params }: { params: Promise<{ club: str
 export default async function MerchClubRoute({ params }: { params: Promise<{ club: string }> }) {
   const c = merchClub((await params).club);
   if (!c) notFound();
-  return <MerchClubPage club={c} items={MERCH.filter((x) => x.clubId === c.id)} clubs={[c]} />;
+  return <MerchClubPage club={c} items={MERCH.filter((x) => x.clubId === c.id)} clubs={[c]} scenes={MERCH_SCENES} />;
 }

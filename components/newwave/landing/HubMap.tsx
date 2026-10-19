@@ -444,8 +444,8 @@ export function HubMapButton({ className = "", children }: { className?: string;
         </span>
         <span className="mt-1.5 flex items-center justify-between gap-2 px-2 pb-1 pt-0.5">
           <span className="min-w-0">
-            <span className="block truncate text-[13px] font-semibold text-[#111]">Så pratar navet med New Wave</span>
-            <span className="block truncate text-[11.5px] text-[#6F6B63]">Klicka för den interaktiva kartan</span>
+            <span className="block text-[13px] font-semibold leading-snug text-[#111]">Så pratar navet med New Wave</span>
+            <span className="block text-[11.5px] leading-snug text-[#6F6B63]">Klicka för den interaktiva kartan</span>
           </span>
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#111] text-white transition-transform duration-500 group-hover:rotate-45">
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

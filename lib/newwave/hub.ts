@@ -164,6 +164,7 @@ export const PORTALS: Portal[] = [
     description: "Alla klubbar och allt material på ett ställe – med insikter och export till New Wave.",
     start: "/newwave/craft",
     poster: "/newwave/portals/craft.jpg",
+    film: "/newwave/portals/craft.mp4",
   },
   {
     id: "merch",

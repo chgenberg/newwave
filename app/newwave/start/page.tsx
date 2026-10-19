@@ -10,10 +10,7 @@ import { PORTALS } from "@/lib/newwave/hub";
 
 export const metadata: Metadata = { title: "Välj ingång · Next Wave" };
 
-/** På bred skärm står kartan i mitten och ingångarna två och två på var sida. */
-const PLACE = ["xl:col-start-1 xl:row-start-1", "xl:col-start-3 xl:row-start-1", "xl:col-start-1 xl:row-start-2", "xl:col-start-3 xl:row-start-2"];
-
-/** Efter filmen: de fyra ingångarna i samma skal som designmotorn och dashboardsen. */
+/** Efter filmen: de fyra ingångarna i samma skal som designmotorn och dashboardsen, på bred skärm i en rad med kartan i mitten. */
 export default function StartPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#E9E9E5] p-2 min-[900px]:p-6 min-[900px]:pb-0">
@@ -30,19 +27,19 @@ export default function StartPage() {
         </header>
 
         <div className="flex flex-1 flex-col">
-          <main className="min-w-0 flex-1 px-3 py-5 min-[900px]:px-10 min-[900px]:py-7">
-            <div className="mx-auto max-w-[1180px] xl:max-w-[min(1280px,calc((100svh-290px)*1.6+330px))]">
+          <main className="min-w-0 flex-1 px-3 py-5 min-[900px]:px-10 min-[900px]:py-7 xl:flex xl:flex-col xl:justify-center">
+            <div className="mx-auto max-w-[1180px] xl:w-full xl:max-w-[1600px]">
               <p className="nw-mono text-[12px] uppercase tracking-[0.06em] text-[#6F6B63]">Fyra ingångar · samma motor</p>
               <h1 className="mt-2 text-[clamp(30px,3.6vw,46px)] font-semibold leading-[1.02] tracking-[-0.045em] text-[#111]">Vem är du?</h1>
-              <ul className="mt-6 grid gap-5 sm:grid-cols-2 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(250px,0.62fr)_minmax(0,1fr)] xl:gap-x-10 xl:gap-y-9">
+              <ul className="mt-6 grid gap-5 sm:grid-cols-2 sm:gap-8 xl:grid-cols-5 xl:gap-5">
                 {PORTALS.map((p, i) => (
                   <Fragment key={p.id}>
                     {i === 2 ? (
-                      <li className="grid place-items-center sm:col-span-2 xl:col-span-1 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+                      <li className="flex items-center justify-center sm:col-span-2 xl:col-span-1">
                         <HubMapButton className="w-full max-w-[420px]" />
                       </li>
                     ) : null}
-                    <li className={PLACE[i]}>
+                    <li>
                       <PortalFilm portal={p} n={i + 1} />
                     </li>
                   </Fragment>
