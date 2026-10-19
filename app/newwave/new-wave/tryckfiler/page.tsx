@@ -9,11 +9,11 @@ import { ASA_IF } from "@/lib/newwave/club";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-export const metadata: Metadata = { title: "Tryckfiler från navet" };
+export const metadata: Metadata = { title: "Tryckfiler från hubben" };
 
 const STEPS = [
   { title: "Klubben godkänner", text: "Kansliet säger ja till materialet i sin dashboard." },
-  { title: "Navet gör filerna", text: "Rätt format per metod, i exakt tryckstorlek, med färger och specifikation." },
+  { title: "Hubben gör filerna", text: "Rätt format per metod, i exakt tryckstorlek, med färger och specifikation." },
   { title: "API-anrop till New Wave", text: "Ett jobb per tryckposition med filer, kontrollsummor och SKU." },
   { title: "New Wave fördelar", text: "Till tryck, brodyr, laser, sublimering och stickeri." },
 ];
@@ -36,9 +36,9 @@ export default async function HubFilesPage() {
 
   return (
     <div className="nw-page">
-      <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Tryckfiler från navet</h1>
+      <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Tryckfiler från hubben</h1>
       <p className="mt-1 max-w-[680px] text-[14.5px] text-[var(--nw-muted)]">
-        När en klubb godkänner nytt material gör navet produktionsfilerna – i det format varje tryckeri, brodyr, laser och stickeri läser – och skickar dem till er hub via API. Här är allt som kommit in.
+        När en klubb godkänner nytt material gör Next Wave-hubben produktionsfilerna – i det format varje tryckeri, brodyr, laser och stickeri läser – och skickar dem till er hubb via API. Här är allt som kommit in.
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

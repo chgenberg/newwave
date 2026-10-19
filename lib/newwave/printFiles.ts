@@ -7,7 +7,7 @@ import { embroider, METERS_PER_1000, ROW_MM, STITCHES_PER_MIN, stitchSvg } from 
 import { colorsOf, METHOD_INFO, type Method, type Names, type Placement, zoneLabel } from "./marking";
 
 /**
- * Produktionsfilerna som navet skickar till New Wave när materialet är godkänt: det format varje tryckeri,
+ * Produktionsfilerna som hubben skickar till New Wave när materialet är godkänt: det format varje tryckeri,
  * brodyr, laser och stickeri vill ha, i rätt storlek och med specifikationen bredvid.
  */
 

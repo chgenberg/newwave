@@ -71,7 +71,7 @@ export default async function CraftInsights() {
   return (
     <div className="nw-page">
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Insikter</h1>
-      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Hur klubbarna använder navet – vad som skapas, godkänns och säljs.</p>
+      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Hur klubbarna använder hubben – vad som skapas, godkänns och säljs.</p>
 
       <div className="mt-5">
         <AgentStrip summary={summary.text} suggestions={summary.tips} />

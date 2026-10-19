@@ -20,7 +20,7 @@ export type CraftClub = {
   /** Märket för mörka plagg, när det vanliga försvinner mot svart. */
   logoDark?: string;
   joined: string;
-  /** Har varumärkeskit i navet, så att Craft kan skapa riktigt material åt klubben. */
+  /** Har varumärkeskit i hubben, så att Craft kan skapa riktigt material åt klubben. */
   live: boolean;
   dashboard?: string;
 };
@@ -241,9 +241,9 @@ const priceOf = (id: string) => nwProduct(id)?.priceSek ?? 299;
 
 // --- Utskick -------------------------------------------------------------------
 
-/** Lägger kampanjen som godkännande hos klubbarna som har varumärkeskit i navet och returnerar deras godkännande-id. */
+/** Lägger kampanjen som godkännande hos klubbarna som har varumärkeskit i hubben och returnerar deras godkännande-id. */
 /**
- * Lägger kampanjen hos varje klubb i navet. En kampanj från designstudion får klubbens logga på produkterna
+ * Lägger kampanjen hos varje klubb i hubben. En kampanj från designstudion får klubbens logga på produkterna
  * och färdiga butiksprodukter, så att ett godkännande lägger ut dem i klubbens butik hos Intersport.
  */
 export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<string, string>> {

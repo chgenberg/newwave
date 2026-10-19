@@ -289,7 +289,7 @@
   --font-brand: var(--font-club);
 }
 
-/* Craft, New Wave och återförsäljaren har inget eget typsnitt: rubrikerna sätts i navets grotesk, i gemener. */
+/* Craft, New Wave och återförsäljaren har inget eget typsnitt: rubrikerna sätts i hubbens grotesk, i gemener. */
 .nw-club--plain {
   --club-case: none;
   --club-tracking: -0.035em;

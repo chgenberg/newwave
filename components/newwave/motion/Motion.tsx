@@ -5,7 +5,7 @@ import { Fragment, type ReactNode, useLayoutEffect, useRef } from "react";
 
 export const EASE = [0.16, 1, 0.3, 1] as const;
 
-/** Alla animationer i navet följer användarens inställning för minskad rörelse. */
+/** Alla animationer i hubben följer användarens inställning för minskad rörelse. */
 export function MotionRoot({ children }: { children: ReactNode }) {
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: 0.8, ease: EASE }}>

@@ -53,7 +53,7 @@ export default async function ClubDashboard() {
         {greeting(now)}, {ASA_IF.name}
       </h1>
       <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">
-        {pending.length ? `${pending.length} ${pending.length === 1 ? "sak väntar" : "saker väntar"} på ert godkännande.` : "Allt är godkänt – navet jobbar vidare."}
+        {pending.length ? `${pending.length} ${pending.length === 1 ? "sak väntar" : "saker väntar"} på ert godkännande.` : "Allt är godkänt – hubben jobbar vidare."}
       </p>
 
       <div className="mt-6 grid grid-cols-3 gap-3">

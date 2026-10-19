@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   for (const id of clubIds.filter(isLive)) {
     const r = rows.find((x) => x.id === id);
     if (body.action === "remind" && r?.stats.pending) await addFeed(id, "Craft", `Påminnelse: ${r.stats.pending} material väntar på ert godkännande.`);
-    if (body.action === "onboard") await addFeed(id, "Craft", "Skickade en länk för att slutföra uppstarten i navet.");
+    if (body.action === "onboard") await addFeed(id, "Craft", "Skickade en länk för att slutföra uppstarten i hubben.");
   }
   await updateState((s) =>
     void s.log.unshift(

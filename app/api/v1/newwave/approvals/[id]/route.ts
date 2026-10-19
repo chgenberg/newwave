@@ -35,7 +35,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (d) {
       const s = deliveryStats(d);
       delivery = { id: d.id, ...s };
-      await addFeed(clubId, "Produktionsagenten", `Skapade ${s.files} produktionsfiler för ${s.products} produkter och skickade dem till New Waves hub via API.`);
+      await addFeed(clubId, "Produktionsagenten", `Skapade ${s.files} produktionsfiler för ${s.products} produkter och skickade dem till New Waves hubb via API.`);
     }
   } else {
     await addFeed(clubId, "Kansliet", `Bad om ändring på "${approval.title}": ${note}`);

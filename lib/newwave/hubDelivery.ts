@@ -16,7 +16,7 @@ import { type Approval, type ApprovalProduct, type Knit, readBrand } from "./sto
 import { readData, writeData } from "./workspace";
 
 /**
- * Leveransen till New Waves hub: när en klubb godkänner material gör navet produktionsfilerna för varje produkt
+ * Leveransen till New Waves hubb: när en klubb godkänner material gör vår hubb produktionsfilerna för varje produkt
  * och skickar dem med ett API-anrop. Filerna sparas en gång per innehåll och delas mellan besökarna; listan över
  * leveranser ligger i besökarens arbetsyta.
  */
@@ -268,7 +268,7 @@ export const deliveryStats = (d: HubDelivery) => ({
   methods: [...new Set(d.jobs.map((j) => j.methodLabel))],
 });
 
-/** Anropet som New Waves hub tar emot: ett jobb per tryckposition med filerna, deras kontrollsummor och specifikationen. */
+/** Anropet som New Waves hubb tar emot: ett jobb per tryckposition med filerna, deras kontrollsummor och specifikationen. */
 export function apiPayload(d: HubDelivery) {
   return {
     event: "material.approved",

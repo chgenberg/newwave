@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ACTORS, HUB_NODES, LEGS, type Payload, PAYLOADS } from "@/lib/newwave/hub";
 
-const IMAGE = "/newwave/hub/navet-och-new-wave.jpg";
+const IMAGE = "/newwave/hub/hubben-och-new-wave.jpg";
 const BLUE = "#1D4ED8";
 
 type Sel = { kind: "core" } | { kind: "api" } | { kind: "profile" } | { kind: "leg" | "payload" | "actor"; id: string };
@@ -74,7 +74,7 @@ function Diagram({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
   const trunk = on.core && on.api && on.profile;
 
   return (
-    <svg viewBox="0 0 1200 660" className="block h-auto w-full min-w-[860px] select-none" role="group" aria-label="Karta över navet, HUB-API:t och New Waves hub">
+    <svg viewBox="0 0 1200 660" className="block h-auto w-full min-w-[860px] select-none" role="group" aria-label="Karta över vår hubb, HUB-API:t och New Waves hubb">
       <rect x="12" y="24" width="660" height="612" rx="30" fill="#F5F5F2" />
       <text x="40" y="60" className="nw-mono" fontSize="12" letterSpacing="1" fill="#6F6B63">
         VÅR PLATTFORM · ISOLERAD
@@ -109,7 +109,7 @@ function Diagram({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
         );
       })}
 
-      <Node pick={{ kind: "core" }} current={pick} onPick={choose} label={`${HUB_NODES.core.title} – visa vad navet gör`}>
+      <Node pick={{ kind: "core" }} current={pick} onPick={choose} label={`${HUB_NODES.core.title} – visa vad hubben gör`}>
         <circle cx={CORE.x} cy={CORE.y} r="104" fill="#FFFFFF" stroke={selected({ kind: "core" }) ? "#111" : "#E2DFD7"} strokeWidth="2" strokeDasharray="3 5" />
         <g {...fade(on.core)}>
           <circle cx={CORE.x} cy={CORE.y} r="80" fill="#111111" />
@@ -117,7 +117,7 @@ function Diagram({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
             NEXT WAVE
           </text>
           <text x={CORE.x} y={CORE.y + 4} textAnchor="middle" fontSize="21" fontWeight="600" fill="#ffffff">
-            Navet
+            Hubben
           </text>
           <text x={CORE.x} y={CORE.y + 26} textAnchor="middle" fontSize="11.5" fill="#ffffff" opacity=".7">
             AI Orchestrator
@@ -229,9 +229,9 @@ function Chips<T extends string>({ title, list, onPick }: { title: string; list:
 }
 
 const INTRO = [
-  { n: "1", text: "Allt byggs i vår plattform: navet styr sju ben som tar fram design, innehåll, priser och offerter." },
-  { n: "2", text: "Det som är klart går över ett enda API till New Waves hub – tryckfiler, ordrar, produktdata och kunddata." },
-  { n: "3", text: "New Waves hub fördelar vidare till tryck, leverantörer, frakt, ekonomi och butiker." },
+  { n: "1", text: "Allt byggs i vår plattform: hubben styr sju ben som tar fram design, innehåll, priser och offerter." },
+  { n: "2", text: "Det som är klart går över ett enda API till New Waves hubb – tryckfiler, ordrar, produktdata och kunddata." },
+  { n: "3", text: "New Waves hubb fördelar vidare till tryck, leverantörer, frakt, ekonomi och butiker." },
 ];
 
 function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) => void }) {
@@ -249,7 +249,7 @@ function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
           ))}
         </ol>
         <button type="button" onClick={() => onPick({ kind: "core" })} className="mt-6 inline-flex h-10 items-center rounded-full bg-[#111] px-4 text-[13.5px] font-semibold text-white transition hover:opacity-90">
-          Börja i navet
+          Börja i hubben
         </button>
       </div>
     );
@@ -381,7 +381,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
           <div className="min-w-0 flex-1">
             <p className="nw-mono text-[11.5px] uppercase tracking-[0.06em] text-[#6F6B63]">Next Wave Commerce Hub</p>
             <h2 id="hubmap-title" className="mt-1 text-[clamp(20px,2.2vw,28px)] font-semibold leading-tight tracking-[-0.035em] text-[#111]">
-              Navet och benen – så pratar vi med New Waves hub
+              Hubben och benen – så pratar vi med New Waves hubb
             </h2>
           </div>
           <a href={IMAGE} target="_blank" rel="noreferrer" className="hidden h-10 shrink-0 items-center rounded-full px-3 text-[13px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111] sm:inline-flex">
@@ -408,7 +408,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * Kartan över hur navet talar med New Waves hub: bilden som knapp, och en interaktiv version i en dialog.
+ * Kartan över hur vår hubb talar med New Waves hubb: bilden som knapp, och en interaktiv version i en dialog.
  * Med `children` blir knappen bara det innehållet, t.ex. en textlänk.
  */
 export function HubMapButton({ className = "", children }: { className?: string; children?: React.ReactNode }) {
@@ -436,7 +436,7 @@ export function HubMapButton({ className = "", children }: { className?: string;
         type="button"
         onClick={show}
         aria-haspopup="dialog"
-        aria-label="Så pratar navet med New Waves hub – öppna den interaktiva kartan"
+        aria-label="Så pratar vår hubb med New Waves hubb – öppna den interaktiva kartan"
         className={`group relative block rounded-[22px] bg-white p-1.5 text-left shadow-[0_0_0_1px_rgba(17,17,17,0.06),0_26px_60px_-24px_rgba(17,17,17,0.55)] outline-none ring-[#111] ring-offset-2 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.03] focus-visible:ring-2 ${className}`}
       >
         <span className="relative block overflow-hidden rounded-[17px]">
@@ -444,7 +444,7 @@ export function HubMapButton({ className = "", children }: { className?: string;
         </span>
         <span className="mt-1.5 flex items-center justify-between gap-2 px-2 pb-1 pt-0.5">
           <span className="min-w-0">
-            <span className="block text-[13px] font-semibold leading-snug text-[#111]">Så pratar navet med New Wave</span>
+            <span className="block text-[13px] font-semibold leading-snug text-[#111]">Så pratar hubben med New Wave</span>
             <span className="block text-[11.5px] leading-snug text-[#6F6B63]">Klicka för den interaktiva kartan</span>
           </span>
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#111] text-white transition-transform duration-500 group-hover:rotate-45">

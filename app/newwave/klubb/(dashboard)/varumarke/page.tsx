@@ -23,7 +23,7 @@ export default async function BrandPage() {
   return (
     <div className="nw-page">
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Varumärke</h1>
-      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Det här vet navet om {CLUB.name}. Alla agenter följer det när de skapar material.</p>
+      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Det här vet hubben om {CLUB.name}. Alla agenter följer det när de skapar material.</p>
 
       <section className="mt-8">
         <h2 className="nw-club-heading text-[18px] text-[var(--club)]">Klubbmärke</h2>

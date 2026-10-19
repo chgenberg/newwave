@@ -13,7 +13,7 @@ const STEPS: Step[] = [
   { title: "Två granskare", detail: "Varumärke och sälj väljer det bästa", lines: ["Varumärket betygsätter", "Sälj betygsätter", "Det bästa motivet vann"], target: "motiv" },
   { title: "Komplett paket", detail: "Foton, inlägg, banner, affisch och produktbilder", lines: ["Tryckfilen ritas i 300 dpi", "Fotografen tar bilderna", "Inlägg, story och banner", "Produkterna fotograferas"], target: "paket" },
   { title: "Mejl till kansliet", detail: "Allt i en zip, måndag 07.00", lines: ["Packar zip-filen", "Skriver guiden", "Skickat till kansliet"], target: "mejl" },
-  { title: "Godkänt", detail: "Tryckfiler till New Wave och ut i butiken", lines: ["Kansliet godkänner", "Tryckfiler till New Waves hub", "Ut i Intersport-butiken"], target: "tryck" },
+  { title: "Godkänt", detail: "Tryckfiler till New Wave och ut i butiken", lines: ["Kansliet godkänner", "Tryckfiler till New Waves hubb", "Ut i Intersport-butiken"], target: "tryck" },
 ];
 
 const STEP_MS = 2800;

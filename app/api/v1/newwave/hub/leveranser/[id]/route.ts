@@ -3,7 +3,7 @@ import { apiPayload, getDelivery, readHubFile } from "@/lib/newwave/hubDelivery"
 
 export const maxDuration = 60;
 
-/** Leveransen som New Waves hub tog emot: API-anropet som JSON, eller med `?zip=1` alla filer i en mapp per jobb. */
+/** Leveransen som New Waves hubb tog emot: API-anropet som JSON, eller med `?zip=1` alla filer i en mapp per jobb. */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const d = await getDelivery(id);

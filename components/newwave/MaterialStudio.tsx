@@ -60,7 +60,7 @@ export function MaterialStudio({
   loaderDone?: string;
   /** Avsändare när någon annan än klubben skapar materialet, t.ex. "Craft". */
   from?: string;
-  /** Var klubbens godkännandesida ligger; null när klubben saknar dashboard i navet. */
+  /** Var klubbens godkännandesida ligger; null när klubben saknar dashboard i hubben. */
   approveBase?: string | null;
 }) {
   const loader = useLoader();

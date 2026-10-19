@@ -1,4 +1,4 @@
-/** Vad varje mottagare hos New Wave får från navet, per metod – samma krav som tryckerierna ställer på inskickade original. */
+/** Vad varje mottagare hos New Wave får från hubben, per metod – samma krav som tryckerierna ställer på inskickade original. */
 export const FORMATS = [
   {
     method: "dtg",

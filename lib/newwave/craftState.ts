@@ -20,7 +20,7 @@ export type Campaign = {
   sourceId?: string;
   delivered?: boolean;
   reminded?: boolean;
-  /** Godkännande-id per klubb med varumärkeskit i navet. */
+  /** Godkännande-id per klubb med varumärkeskit i hubben. */
   approvals?: Record<string, string>;
   /** Tryck och färg per produkt när kampanjen designats i studion; klubbens egen logga trycks. */
   designs?: Record<string, Omit<Customized, "mockupUrl">>;

@@ -4,7 +4,7 @@ import { readShop } from "@/lib/newwave/shopState";
 
 const BASE = "/newwave/new-wave";
 const ITEMS: NavItem[] = [
-  { href: BASE, label: "Navet", icon: "home" },
+  { href: BASE, label: "Hubben", icon: "home" },
   { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },
   { href: `${BASE}/tryckfiler`, label: "Tryckfiler", icon: "layers" },
   { href: `${BASE}/aterforsaljare`, label: "Återförsäljare", icon: "store" },

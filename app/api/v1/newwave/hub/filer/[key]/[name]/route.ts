@@ -10,7 +10,7 @@ const TYPES: Record<string, string> = {
   txt: "text/plain; charset=utf-8",
 };
 
-/** En produktionsfil från navet; `?dl=1` laddar ner den med sitt riktiga namn. */
+/** En produktionsfil från hubben; `?dl=1` laddar ner den med sitt riktiga namn. */
 export async function GET(req: Request, ctx: { params: Promise<{ key: string; name: string }> }) {
   const { key, name } = await ctx.params;
   const data = await readHubFile(key, name);

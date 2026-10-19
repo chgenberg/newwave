@@ -7,7 +7,7 @@ import { isOrder, ordersSince, sek, type Quote, type Reseller } from "./reseller
 import { readShop } from "./shopState";
 import { listApprovals, listFeed } from "./store";
 
-/** New Waves bild av navet: vad som händer i varje ben och vad som väntar hos varje aktör. */
+/** New Waves bild av hubben: vad som händer i varje ben och vad som väntar hos varje aktör. */
 
 const DAY = 86_400_000;
 const TZ = "Europe/Stockholm";

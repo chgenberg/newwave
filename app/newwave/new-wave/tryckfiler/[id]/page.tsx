@@ -8,7 +8,7 @@ import { fmtWhen } from "@/lib/newwave/reseller";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-export const metadata: Metadata = { title: "Leverans till New Waves hub" };
+export const metadata: Metadata = { title: "Leverans till New Waves hubb" };
 
 const ROLE: Record<HubJob["files"][number]["role"], string> = { tryck: "Tryck", separation: "Separation", maskin: "Maskin", korrektur: "Korrektur", data: "Data" };
 const IMAGE = /\.(png|jpg|svg)$/;
@@ -142,7 +142,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
           </p>
         </div>
         <p className="mt-2 text-[13.5px] text-white/70">
-          {d.jobs.length} jobb med fil-URL:er och SHA-256 per fil. New Waves hub hämtar filerna och fördelar jobben till {[...new Set(d.jobs.map((j) => j.receiver.toLowerCase()))].join(", ")}.
+          {d.jobs.length} jobb med fil-URL:er och SHA-256 per fil. New Waves hubb hämtar filerna och fördelar jobben till {[...new Set(d.jobs.map((j) => j.receiver.toLowerCase()))].join(", ")}.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={`/api/v1/newwave/hub/leveranser/${d.id}?zip=1`} className="nw-btn nw-club-btn">

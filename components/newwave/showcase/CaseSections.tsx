@@ -169,7 +169,7 @@ export function MailSection({ pack, agent, sentAt }: { pack: ZipPack; agent: str
 
 const METHOD_CHIP = "rounded-full bg-[var(--nw-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--nw-ink)]";
 
-/** Steg 5: godkännandet och tryckfilerna som navet skickar till New Waves hub. */
+/** Steg 5: godkännandet och tryckfilerna som vår hubb skickar till New Waves hubb. */
 export async function HubSection({ approvedAt }: { approvedAt: string }) {
   const d = await caseDelivery();
   if (!d) return null;
@@ -179,7 +179,7 @@ export async function HubSection({ approvedAt }: { approvedAt: string }) {
       <Head
         kicker="Steg 5 · godkänt"
         title="Ett klick – och det trycks."
-        lead="Kansliet godkände. Samma sekund gjorde navet produktionsfilerna för varje produkt, i exakt det format tryckeriet, brodyren och sublimeringen vill ha, och skickade dem till New Waves hub."
+        lead="Kansliet godkände. Samma sekund gjorde vår hubb produktionsfilerna för varje produkt, i exakt det format tryckeriet, brodyren och sublimeringen vill ha, och skickade dem till New Waves hubb."
       />
       <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--club-soft)] px-3.5 py-1.5 text-[13.5px] text-[var(--nw-ink)] ring-1 ring-[var(--club-accent)]">
         <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full bg-[var(--club)] text-[11px] text-white">
@@ -189,7 +189,7 @@ export async function HubSection({ approvedAt }: { approvedAt: string }) {
       </p>
       <div className="mt-4 rounded-[24px] bg-[var(--club)] p-4 text-white sm:p-5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <p className="nw-mono text-[13px]">POST /v1/print-jobs → New Waves hub</p>
+          <p className="nw-mono text-[13px]">POST /v1/print-jobs → New Waves hubb</p>
           <p className="nw-mono ml-auto flex items-center gap-2 text-[13px]">
             <span aria-hidden className="h-2 w-2 rounded-full bg-[#3DDC84]" />
             201 Created · {d.ms} ms
@@ -233,7 +233,7 @@ export function HubSkeleton() {
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-[var(--nw-soft)]" />
       ))}
-      <p className="col-span-full text-[13px] text-[var(--nw-muted)]">Navet gör tryckfilerna…</p>
+      <p className="col-span-full text-[13px] text-[var(--nw-muted)]">Hubben gör tryckfilerna…</p>
     </div>
   );
 }

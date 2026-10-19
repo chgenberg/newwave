@@ -246,7 +246,7 @@ export function ClubsTab({ clubs, items, onStart, onSent }: { clubs: WorkspaceCl
                 <span className="flex items-center justify-between gap-2 bg-white px-3 py-2.5">
                   <span className="min-w-0">
                     <span className="block truncate text-[13.5px] font-semibold">{c.name}</span>
-                    <span className="block truncate text-[12px] text-[#6F6B63]">{c.live ? "I navet · godkänner i sin dashboard" : `${c.city} · får den via mejl`}</span>
+                    <span className="block truncate text-[12px] text-[#6F6B63]">{c.live ? "I hubben · godkänner i sin dashboard" : `${c.city} · får den via mejl`}</span>
                   </span>
                   <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] ${on ? "bg-[#111] text-white" : "shadow-[inset_0_0_0_1.5px_rgba(17,17,17,0.25)]"}`}>
                     {on ? "✓" : ""}

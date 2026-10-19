@@ -30,7 +30,7 @@ export default async function CraftClubs({ searchParams }: { searchParams: Promi
   return (
     <div className="nw-page">
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Klubbarna</h1>
-      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Alla föreningar som skapar merch och innehåll med Craft i navet.</p>
+      <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">Alla föreningar som skapar merch och innehåll med Craft i hubben.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (

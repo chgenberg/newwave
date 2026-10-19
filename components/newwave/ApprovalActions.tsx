@@ -21,7 +21,7 @@ export function ApprovalActions({
   shopCount: number;
   /** Veckans paket: neka ger näst bästa motivet i stället för en ändring. */
   weekly?: boolean;
-  /** Produktionsfilerna som gick till New Waves hub när materialet godkändes. */
+  /** Produktionsfilerna som gick till New Waves hubb när materialet godkändes. */
   delivery?: { href: string; files: number; products: number };
 }) {
   const router = useRouter();
@@ -59,7 +59,7 @@ export function ApprovalActions({
         <p className="mt-1 text-[14px] text-white/70">
           {published ? `${published} produkter ligger nu i klubbens butik. ` : ""}
           {delivery
-            ? `${delivery.files} produktionsfiler för ${delivery.products} produkter är skickade till New Waves hub via API.`
+            ? `${delivery.files} produktionsfiler för ${delivery.products} produkter är skickade till New Waves hubb via API.`
             : published
               ? ""
               : "Materialet är skickat vidare till New Wave via API."}

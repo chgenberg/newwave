@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     try {
       const current = await withBrand(club);
       const out = await generateJson<Interpreted>({
-        system: `Du är regelagenten i Next Wave-navet. Kansliet i ${club.name} skriver en regel med egna ord. Gör om den till 1–3 korta, tydliga regler som design-, text- och bildagenterna och granskaren kan följa och kontrollera.
+        system: `Du är regelagenten i Next Wave-hubben. Kansliet i ${club.name} skriver en regel med egna ord. Gör om den till 1–3 korta, tydliga regler som design-, text- och bildagenterna och granskaren kan följa och kontrollera.
 - Skriv på svenska, i imperativ eller som ett förbud ("Skriv alltid …", "Använd aldrig …"). Max 25 ord per regel.
 - Behåll kansliets mening exakt – lägg inte till krav de inte bett om. Dela bara upp om texten innehåller flera olika saker.
 - scope: "motiv" för det som trycks och designen, "texter" för inlägg, nyhetsbrev och banner, "bilder" för foton och kampanjbilder, "allt" när det gäller allt.
@@ -136,7 +136,7 @@ ${current.rules.map((r) => `- ${r}`).join("\n")}`,
     const site = new URL(club.sources.website).host;
     const page = await scrapeSite(site, { deadlineMs: 40_000 });
     const scan = await generateJson<Scan>({
-      system: `Du är varumärkesagenten i Next Wave-navet. Du läser av en idrottsförenings webbplats och beskriver hur föreningen låter, så att alla andra agenter (innehåll, design, nyhetsbrev, butik) kan skriva och formge i föreningens anda.
+      system: `Du är varumärkesagenten i Next Wave-hubben. Du läser av en idrottsförenings webbplats och beskriver hur föreningen låter, så att alla andra agenter (innehåll, design, nyhetsbrev, butik) kan skriva och formge i föreningens anda.
 Skriv på svenska. Hitta inte på fakta som inte står på sidan.
 - tone: 2–3 meningar om tonalitet och vem föreningen pratar med.
 - tagline: en kort devis (max 8 ord) som känns äkta för föreningen.

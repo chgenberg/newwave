@@ -119,7 +119,7 @@ export const ACTORS: Actor[] = [
     id: "orderflode",
     name: "Orderflöde",
     sub: "order och status",
-    description: "Varje order följs från mottagen till skickad, och statusen går tillbaka till navet.",
+    description: "Varje order följs från mottagen till skickad, och statusen går tillbaka till hubben.",
     payloads: ["ordrar", "offerter"],
     demo: { href: "/newwave/new-wave/ordrar", label: "Se ordrarna hos New Wave" },
   },
@@ -188,8 +188,8 @@ export const PORTALS: Portal[] = [
   },
 ];
 
-/** New Waves hub i demot: inte en ingång, men sidorna visar det New Wave tar emot – ordrar och tryckfiler. */
-export const NEW_WAVE_HUB = { id: "new-wave", short: "New Waves hub", href: "/newwave/new-wave" } as const;
+/** New Waves hubb i demot: inte en ingång, men sidorna visar det New Wave tar emot – ordrar och tryckfiler. */
+export const NEW_WAVE_HUB = { id: "new-wave", short: "New Waves hubb", href: "/newwave/new-wave" } as const;
 
 export type HubTarget = PortalId | "studio";
 
@@ -203,26 +203,26 @@ export const HUB_TARGETS: { id: HubTarget; href: string; title: string; short: s
 
 export const targetShort = (id: HubTarget) => (id === NEW_WAVE_HUB.id ? NEW_WAVE_HUB.short : HUB_TARGETS.find((t) => t.id === id)?.short);
 
-/** Rutorna i kartan över hur navet talar med New Waves hub. */
+/** Rutorna i kartan över hur vår hubb talar med New Waves hubb. */
 export const HUB_NODES = {
   core: {
     kicker: "Vår plattform · isolerad",
     title: "Next Wave Commerce Hub",
     description:
-      "Navet. AI-orkestreraren styr de sju benen, och alla delar samma datalager: varumärken, produkter, kunder och material. Allt byggs här, isolerat, utan att röra New Waves system.",
+      "Hubben. AI-orkestreraren styr de sju benen, och alla delar samma datalager: varumärken, produkter, kunder och material. Allt byggs här, isolerat, utan att röra New Waves system.",
     items: ["AI Orchestrator", "Delat datalager", "Sju ben som arbetar parallellt"],
   },
   api: {
     kicker: "Den enda kopplingen",
     title: "HUB-API · REST + webhooks",
     description:
-      "Det som är klart skickas som ett API-anrop med filer, SKU och kontrollsummor. New Waves hub svarar 201 Created och skickar sedan status tillbaka via webhooks: mottaget, i produktion, skickat.",
+      "Det som är klart skickas som ett API-anrop med filer, SKU och kontrollsummor. New Waves hubb svarar 201 Created och skickar sedan status tillbaka via webhooks: mottaget, i produktion, skickat.",
     items: ["POST /v1/print-jobs", "POST /v1/orders", "Webhooks för status"],
   },
   profile: {
     kicker: "New Wave Profile · utanför vår plattform",
     title: "New Wave Profile hub",
-    description: "New Waves egen hub tar emot paketen och fördelar dem vidare till produktion, leverantörer, ekonomi och butiker. Den finns redan och behöver inte byggas om.",
+    description: "New Waves egen hubb tar emot paketen och fördelar dem vidare till produktion, leverantörer, ekonomi och butiker. Den finns redan och behöver inte byggas om.",
     items: ["Tar emot paket", "Fördelar till rätt mottagare", "Svarar med status"],
   },
 } as const;

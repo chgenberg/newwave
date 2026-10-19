@@ -69,7 +69,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
 
       {a.status === "väntar" && (a.products?.length || a.knit) && !a.content ? (
         <p className="mt-3 text-[13.5px] text-[var(--nw-muted)]">
-          När ni godkänner gör navet produktionsfilerna för varje produkt – tryckfiler, separationer, brodyrfil och stickfil – och skickar dem till New Wave via API.
+          När ni godkänner gör hubben produktionsfilerna för varje produkt – tryckfiler, separationer, brodyrfil och stickfil – och skickar dem till New Wave via API.
         </p>
       ) : null}
 

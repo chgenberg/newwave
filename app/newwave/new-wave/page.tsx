@@ -28,7 +28,7 @@ export default async function NewWaveHome() {
 
   return (
     <div className="nw-page">
-      <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Navet just nu</h1>
+      <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Hubben just nu</h1>
       <p className="mt-1 text-[14.5px] text-[var(--nw-muted)]">
         {live.stats.toStart ? `${live.stats.toStart} ${live.stats.toStart === 1 ? "ny order väntar" : "nya ordrar väntar"} på att starta. ` : ""}
         {live.stats.shops} webbshoppar och {live.stats.clubsLive} klubbutiker skickar till er via API.
@@ -47,7 +47,7 @@ export default async function NewWaveHome() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="nw-club-heading text-[19px] text-[var(--club)]">De sju benen</h2>
-            <p className="mt-0.5 text-[13.5px] text-[var(--nw-muted)]">Det som händer i navet, live från klubbar, Craft och återförsäljare.</p>
+            <p className="mt-0.5 text-[13.5px] text-[var(--nw-muted)]">Det som händer i hubben, live från klubbar, Craft och återförsäljare.</p>
           </div>
           <Link href="/newwave/studio" className="nw-hit hidden shrink-0 text-[13px] font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4 sm:inline">
             Designstudion
@@ -83,7 +83,7 @@ export default async function NewWaveHome() {
       <section className="mt-10 grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="rounded-[var(--nw-radius)] bg-[var(--nw-soft)] p-5">
           <h2 className="nw-club-heading text-[17px] text-[var(--club)]">Paket via API</h2>
-          <p className="mt-0.5 text-[13px] text-[var(--nw-muted)]">Det som ligger redo att hämtas från navet.</p>
+          <p className="mt-0.5 text-[13px] text-[var(--nw-muted)]">Det som ligger redo att hämtas från hubben.</p>
           <ul className="mt-4 flex flex-col gap-3">
             {PAYLOADS.map((p) => (
               <li key={p.id}>
