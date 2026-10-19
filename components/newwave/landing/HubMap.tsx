@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -430,7 +429,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
  * Kartan över hur vår hubb talar med New Waves hubb: bilden som knapp, och en interaktiv version i en dialog.
  * Med `children` blir knappen bara det innehållet, t.ex. en textlänk.
  */
-export function HubMapButton({ className = "", children }: { className?: string; children?: React.ReactNode }) {
+export function HubMapButton({ className = "", children }: { className?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   /** Portalen läggs först när kartan öppnats, så att servern och första renderingen är lika. */
   const [used, setUsed] = useState(false);
@@ -439,41 +438,12 @@ export function HubMapButton({ className = "", children }: { className?: string;
     setUsed(true);
     setOpen(true);
   };
-  const dialog = used ? createPortal(<AnimatePresence>{open ? <Dialog onClose={close} /> : null}</AnimatePresence>, document.body) : null;
-  if (children)
-    return (
-      <>
-        <button type="button" onClick={show} aria-haspopup="dialog" className={className}>
-          {children}
-        </button>
-        {dialog}
-      </>
-    );
   return (
     <>
-      <button
-        type="button"
-        onClick={show}
-        aria-haspopup="dialog"
-        aria-label="Så pratar vår hubb med New Waves hubb – öppna den interaktiva kartan"
-        className={`group relative block rounded-[22px] bg-white p-1.5 text-left shadow-[0_0_0_1px_rgba(17,17,17,0.06),0_26px_60px_-24px_rgba(17,17,17,0.55)] outline-none ring-[#111] ring-offset-2 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.03] focus-visible:ring-2 ${className}`}
-      >
-        <span className="relative block overflow-hidden rounded-[17px]">
-          <Image src={IMAGE} alt="" width={2400} height={1350} sizes="(min-width: 640px) 340px, 100vw" className="block h-auto w-full" />
-        </span>
-        <span className="mt-1.5 flex items-center justify-between gap-2 px-2 pb-1 pt-0.5">
-          <span className="min-w-0">
-            <span className="block text-[13px] font-semibold leading-snug text-[#111]">Så pratar hubben med New Wave</span>
-            <span className="block text-[11.5px] leading-snug text-[#6F6B63]">Klicka för den interaktiva kartan</span>
-          </span>
-          <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#111] text-white transition-transform duration-500 group-hover:rotate-45">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17 17 7M9 7h8v8" />
-            </svg>
-          </span>
-        </span>
+      <button type="button" onClick={show} aria-haspopup="dialog" className={className}>
+        {children}
       </button>
-      {dialog}
+      {used ? createPortal(<AnimatePresence>{open ? <Dialog onClose={close} /> : null}</AnimatePresence>, document.body) : null}
     </>
   );
 }

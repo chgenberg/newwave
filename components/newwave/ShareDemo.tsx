@@ -101,7 +101,7 @@ export function ShareDemo({ variant = "button" }: { variant?: "menu" | "button" 
 
   return (
     <div ref={root} className="relative">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
         <ShareIcon />
         <span>Dela demon</span>
       </button>

@@ -30,7 +30,7 @@ export function PortalFilm({ portal: p, n }: { portal: Portal; n: number }) {
         {p.film ? (
           <video ref={video} src={p.film} poster={p.poster} muted loop playsInline preload="metadata" aria-hidden className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1.2s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]" />
         ) : (
-          <Image src={p.poster} alt="" fill sizes="(min-width: 1280px) 20vw, (min-width: 640px) 45vw, 100vw" className="object-cover object-top transition-transform duration-[1.2s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]" />
+          <Image src={p.poster} alt="" fill sizes="(min-width: 1280px) 25vw, (min-width: 640px) 45vw, 100vw" className="object-cover object-top transition-transform duration-[1.2s] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]" />
         )}
       </span>
       <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 via-45% to-black/0 to-70% xl:hidden" />
