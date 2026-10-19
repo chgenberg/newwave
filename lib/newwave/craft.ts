@@ -5,6 +5,7 @@ import type { Customized } from "./marking";
 import { ASA_IF } from "./club";
 import { type Campaign, type ClubSettings, type CraftRules, type LogItem, DEFAULT_RULES, logItem, readState, updateState } from "./craftState";
 import { ONBOARD_STEPS } from "./craftQuery";
+import { clubScenes } from "./scenes";
 import { serverMockup } from "./serverMockup";
 import { addFeed, createApproval, listApprovals, readBrand, type ApprovalStatus } from "./store";
 import { workspaceId } from "./workspace";
@@ -38,6 +39,8 @@ export type CraftMaterial = {
   createdAt: string;
   products: string[];
   image?: string;
+  /** Klubbens foto när materialet saknar en egen bild och klubben har ett. */
+  photo?: string;
   from: "Klubbens agent" | "Craft";
   campaignId?: string;
   review: Review;
@@ -167,6 +170,12 @@ function review(key: string, live: boolean): Review {
   return { score, parts, flags, summary };
 }
 
+/** Ett av klubbens foton, alltid samma för samma material. */
+function photoFor(clubId: string, id: string) {
+  const scenes = clubScenes(clubId);
+  return scenes.length ? scenes[Math.floor(seeded(`${id}-foto`)() * scenes.length)].src : undefined;
+}
+
 function seedMaterials(club: CraftClub, now: number): Omit<CraftMaterial, "gate" | "sold">[] {
   const rnd = seeded(club.id);
   const activity = 0.25 + rnd() * 0.75;
@@ -186,7 +195,7 @@ function seedMaterials(club: CraftClub, now: number): Omit<CraftMaterial, "gate"
     const status: ApprovalStatus = age < 6 ? (r < 0.7 ? "väntar" : "godkänd") : r < 0.82 ? "godkänd" : r < 0.92 ? "ändring" : "väntar";
     const title = p.slogans[Math.floor(rnd() * p.slogans.length)].replace("{short}", short(club.name)).replace("{city}", club.city);
     const id = `${club.id}-${i}`;
-    out.push({ id, clubId: club.id, title, occasion: p.occasion, kind: p.kind, status, createdAt: iso(t), products: p.products, image: p.products[0] ? nwProduct(p.products[0])?.photo : undefined, from: "Klubbens agent", review: review(id, false) });
+    out.push({ id, clubId: club.id, title, occasion: p.occasion, kind: p.kind, status, createdAt: iso(t), products: p.products, image: p.products[0] ? nwProduct(p.products[0])?.photo : undefined, photo: photoFor(club.id, id), from: "Klubbens agent", review: review(id, false) });
   }
   return out;
 }
@@ -199,7 +208,7 @@ function campaignMaterial(c: Campaign, club: CraftClub, now: number): Omit<Craft
   const r = rnd();
   const status: ApprovalStatus = age < 3 ? "väntar" : age < 10 ? (r < 0.55 ? "godkänd" : r < 0.68 ? "ändring" : "väntar") : r < 0.74 ? "godkänd" : r < 0.86 ? "ändring" : "väntar";
   const created = iso(new Date(`${sent}T12:00:00Z`).getTime() + Math.min(Math.floor(age), Math.floor(rnd() * 3)) * DAY);
-  return { id, clubId: club.id, title: c.title, occasion: c.occasion, kind: "Craft-kampanj", status, createdAt: created, products: c.products, image: c.products[0] ? nwProduct(c.products[0])?.photo : undefined, from: "Craft", campaignId: c.id, review: review(id, false) };
+  return { id, clubId: club.id, title: c.title, occasion: c.occasion, kind: "Craft-kampanj", status, createdAt: created, products: c.products, image: c.products[0] ? nwProduct(c.products[0])?.photo : undefined, photo: photoFor(club.id, id), from: "Craft", campaignId: c.id, review: review(id, false) };
 }
 
 async function liveMaterials(club: CraftClub, campaigns: Campaign[]): Promise<Omit<CraftMaterial, "gate" | "sold">[]> {
@@ -214,6 +223,7 @@ async function liveMaterials(club: CraftClub, campaigns: Campaign[]): Promise<Om
     createdAt: a.createdAt,
     products: a.products?.map((p) => p.id) ?? [],
     image: a.products?.[0]?.mockupUrl ?? a.previewUrl,
+    photo: a.products?.[0]?.mockupUrl || a.previewUrl ? undefined : photoFor(club.id, a.id),
     from: a.from === "Craft" ? "Craft" : "Klubbens agent",
     campaignId: campaigns.find((c) => c.approvals?.[club.id] === a.id)?.id,
     review: review(a.id, true),

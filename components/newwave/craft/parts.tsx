@@ -57,10 +57,10 @@ export const fmtN = (n: number) => new Intl.NumberFormat("sv-SE").format(n);
 
 const BY_PHOTO = new Map(NW_CATALOG.map((p) => [p.photo, p]));
 
-/** Materialets bild; har produkten på bilden anpassats i designstudion visas studions bild. */
-export const materialImage = (m: { image?: string; designs?: Record<string, { mockupUrl: string }> }) => {
+/** Materialets bild; har produkten på bilden anpassats i designstudion visas studions bild. Exempelmaterial med klubbfoto visar fotot i stället för produkten. */
+export const materialImage = (m: { image?: string; photo?: string; designs?: Record<string, { mockupUrl: string }> }) => {
   const p = m.image ? BY_PHOTO.get(m.image) : undefined;
-  return (p && m.designs?.[p.id]?.mockupUrl) || m.image;
+  return (p && m.designs?.[p.id]?.mockupUrl) || (m.photo ? undefined : m.image);
 };
 
 /** Platshållarmärket mitt i tryckytan, för klubbar utan logga. */
@@ -70,10 +70,20 @@ type ThumbClub = { name: string; logo?: string; logoDark?: string; colors: [stri
 
 const TSHIRT = NW_CATALOG.find((p) => p.id === "p001")?.photo;
 
-export function MaterialThumb({ image, kind, title, occasion, seed, club }: { image?: string; kind: string; title: string; occasion?: string; seed?: string; club?: ThumbClub }) {
-  const src = image ?? (/tryck/i.test(kind) ? TSHIRT : undefined);
+export function MaterialThumb({ image, photo, kind, title, occasion, seed, club }: { image?: string; photo?: string; kind: string; title: string; occasion?: string; seed?: string; club?: ThumbClub }) {
+  const src = image ?? (photo ? undefined : /tryck/i.test(kind) ? TSHIRT : undefined);
   if (!src)
-    return <div className="h-full w-full [container-type:size]">{/nyhetsbrev/i.test(kind) ? <NewsletterArt title={title} occasion={occasion} club={club} /> : <PostArt title={title} occasion={occasion ?? kind} seed={seed ?? title} club={club} />}</div>;
+    return (
+      <div className="h-full w-full [container-type:size]">
+        {/nyhetsbrev/i.test(kind) ? (
+          <NewsletterArt title={title} occasion={occasion} club={club} photo={photo} />
+        ) : photo ? (
+          <PhotoPost photo={photo} title={title} occasion={occasion ?? kind} seed={seed ?? title} club={club} />
+        ) : (
+          <PostArt title={title} occasion={occasion ?? kind} seed={seed ?? title} club={club} />
+        )}
+      </div>
+    );
   const product = BY_PHOTO.get(src);
   if (product && club?.logo)
     return (
@@ -187,8 +197,45 @@ function PostArt({ title, occasion, seed, club }: { title: string; occasion: str
   );
 }
 
-/** Nyhetsbrevet som ett litet mejl: klubbens sidhuvud, rubriken, brödtext och en knapp. */
-function NewsletterArt({ title, occasion, club }: { title: string; occasion?: string; club?: ThumbClub }) {
+/** Ett inlägg byggt på klubbens foto: rubriken över en mörk toning eller i ett band i klubbens färg. */
+function PhotoPost({ photo, title, occasion, seed, club }: { photo: string; title: string; occasion: string; seed: string; club?: ThumbClub }) {
+  const c = palette(club);
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={photo} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+  );
+
+  if (pickIndex(seed, 2) === 0)
+    return (
+      <div className="relative h-full overflow-hidden bg-[#111] text-white">
+        {img}
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 via-45% to-black/0 to-70%" />
+        <span className="absolute inset-x-0 bottom-0 p-[7cqmin] pr-[22cqmin]">
+          <span className="flex items-center gap-[3cqmin]">
+            <Badge club={club} size="11cqmin" />
+            <span className="min-w-0 truncate text-[5cqmin] font-semibold uppercase tracking-[0.14em] opacity-85">{occasion}</span>
+          </span>
+          <span className="nw-club-heading mt-[2.6cqmin] line-clamp-3 block text-[11cqmin] leading-[0.98]">{title}</span>
+        </span>
+      </div>
+    );
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden" style={{ background: c.primary, color: c.onPrimary }}>
+      <div className="relative min-h-0 flex-1">{img}</div>
+      <div className="flex items-center gap-[3.4cqmin] px-[6cqmin] py-[5cqmin] pr-[22cqmin]">
+        <Badge club={club} size="12cqmin" light />
+        <span className="min-w-0">
+          <span className="block truncate text-[4.6cqmin] font-semibold uppercase tracking-[0.12em] opacity-75">{occasion}</span>
+          <span className="nw-club-heading line-clamp-2 block text-[8.4cqmin] leading-[1]">{title}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Nyhetsbrevet som ett litet mejl: klubbens sidhuvud, gärna ett foto, rubriken, brödtext och en knapp. */
+function NewsletterArt({ title, occasion, club, photo }: { title: string; occasion?: string; club?: ThumbClub; photo?: string }) {
   const c = palette(club);
   return (
     <div className="flex h-full items-end justify-center overflow-hidden px-[9cqmin] pt-[9cqmin]" style={{ background: c.accent }}>
@@ -197,12 +244,16 @@ function NewsletterArt({ title, occasion, club }: { title: string; occasion?: st
           <Badge club={club} size="11cqmin" light />
           <span className="min-w-0 truncate text-[5cqmin] font-semibold">{club?.name}</span>
         </div>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" loading="lazy" className="h-[34%] w-full shrink-0 object-cover" />
+        ) : null}
         <div className="flex flex-1 flex-col gap-[2.6cqmin] p-[5cqmin]">
           {occasion ? <span className="text-[4.2cqmin] font-semibold uppercase tracking-[0.12em] text-[#6F6B63]">{occasion}</span> : null}
           <span className="nw-club-heading line-clamp-2 text-[8cqmin] leading-[1.02] text-[#111]">{title}</span>
           <span className="mt-[1cqmin] h-[2cqmin] w-full rounded-full bg-[#ECECE8]" />
           <span className="h-[2cqmin] w-[86%] rounded-full bg-[#ECECE8]" />
-          <span className="h-[2cqmin] w-[64%] rounded-full bg-[#ECECE8]" />
+          {photo ? null : <span className="h-[2cqmin] w-[64%] rounded-full bg-[#ECECE8]" />}
           <span className="mt-[2cqmin] w-fit rounded-full px-[4cqmin] py-[1.8cqmin] text-[4.4cqmin] font-semibold" style={{ background: c.primary, color: c.onPrimary }}>
             Läs mer
           </span>

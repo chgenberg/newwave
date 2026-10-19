@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MerchClubPage } from "@/components/newwave/merch/MerchShop";
-import { MERCH, MERCH_CLUBS, MERCH_SCENES, merchClub } from "@/lib/newwave/merch";
+import { MERCH, MERCH_CLUBS, merchClub } from "@/lib/newwave/merch";
+import { MERCH_SCENES } from "@/lib/newwave/scenes";
 
 export function generateStaticParams() {
   return MERCH_CLUBS.map((c) => ({ club: c.id }));

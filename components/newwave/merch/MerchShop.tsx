@@ -4,7 +4,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MerchClub, MerchItem, MerchScene } from "@/lib/newwave/merch";
+import type { MerchClub, MerchItem } from "@/lib/newwave/merch";
+import type { MerchScene } from "@/lib/newwave/scenes";
 import { sek } from "@/lib/newwave/reseller";
 import { LogoMark } from "../Logo";
 import { EASE } from "../motion/Motion";

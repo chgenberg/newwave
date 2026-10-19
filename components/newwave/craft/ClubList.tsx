@@ -145,7 +145,7 @@ function ClubDetail({ r, onDone }: { r: ClubRow; onDone: (msg: string) => void }
           {r.materials.slice(0, 4).map((m) => (
             <li key={m.id} className="min-w-0 rounded-2xl bg-white p-2">
               <div className="aspect-square overflow-hidden rounded-xl bg-[var(--nw-soft)]">
-                <MaterialThumb image={materialImage(m)} kind={m.kind} title={m.title} occasion={m.occasion} seed={m.id} club={r} />
+                <MaterialThumb image={materialImage(m)} photo={m.photo} kind={m.kind} title={m.title} occasion={m.occasion} seed={m.id} club={r} />
               </div>
               <p className="mt-2 truncate px-1 text-[13px] font-medium text-[var(--nw-ink)]">{m.title}</p>
               <p className="flex items-center justify-between gap-2 px-1 pb-1 text-[11.5px] text-[var(--nw-muted)]">
