@@ -10,9 +10,6 @@ import { openHelp } from "./Help";
 import { ShareDemo } from "./ShareDemo";
 import { STORAGE_PREFIX } from "./workspace/roles";
 
-/** Studions val av öppen panel är en inställning, inte demodata. */
-const RAIL_KEY = "nw.studio.rail";
-
 /** Rensar besökarens egen demomiljö på servern och det studion sparat i webbläsaren. */
 function Restart() {
   const router = useRouter();
@@ -21,7 +18,7 @@ function Restart() {
   const restart = async () => {
     setStep("busy");
     await fetch("/api/v1/newwave/demo", { method: "DELETE" }).catch(() => null);
-    for (const k of Object.keys(localStorage)) if ((k.startsWith(STORAGE_PREFIX) && k !== RAIL_KEY) || k.startsWith("nw-shop:")) localStorage.removeItem(k);
+    for (const k of Object.keys(localStorage)) if (k.startsWith(STORAGE_PREFIX) || k.startsWith("nw-shop:")) localStorage.removeItem(k);
     if (window.location.pathname === "/newwave") window.location.reload();
     else router.push("/newwave");
   };

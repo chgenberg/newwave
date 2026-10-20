@@ -133,7 +133,8 @@ const DAY = 86_400_000;
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 const ageDays = (date: string, now: number) => (now - new Date(`${date.slice(0, 10)}T12:00:00Z`).getTime()) / DAY;
 
-function seeded(key: string) {
+/** Slumptal som alltid blir desamma för samma nyckel, så att demodatan inte hoppar mellan sidladdningar. */
+export function seeded(key: string) {
   let h = 1779033703 ^ key.length;
   for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 3432918353);
   let a = h >>> 0;

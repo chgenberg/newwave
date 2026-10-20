@@ -58,7 +58,6 @@ const shortcuts = (MOD: string): [string[], string][] => [
   [["M"], "Byt märkmetod"],
   [["F"], "Byt form"],
   [["R"], "Vrid fram valt tryck"],
-  [["P"], "Visa / dölj panelen"],
   [["V"], "Spela in ett 3D-klipp"],
   [[MOD, "S"], "Spara design"],
   [["?"], "Visa kortkommandon"],
@@ -67,25 +66,6 @@ const shortcuts = (MOD: string): [string[], string][] => [
 
 type Toast = { id: number; text: string; undo?: boolean };
 
-const PANEL_KEY = "nw.studio.rail";
-
-type Tool = { sec: string; label: string; icon: string; names?: boolean };
-
-/** Verktygsmenyn till vänster; varje symbol leder till sin sektion i panelen. */
-const RAIL: Tool[] = [
-  { sec: "positions", label: "Tryckpositioner", icon: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 18l9 5 9-5", names: true },
-  { sec: "logo", label: "Motiv", icon: "M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5a1.5 1.5 0 1 0 0-.01" },
-  { sec: "shape", label: "Form", icon: "M4 4h7v7H4zM17.5 4a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7zM4 20l3.5-6 3.5 6zM14 14h7v6h-7z" },
-  { sec: "method", label: "Märkmetod", icon: "M15 4l5 5-9.5 9.5H5.5v-5zM13 6l5 5" },
-  { sec: "colors", label: "Antal färger", icon: "M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2 0-1.5-1.5-1.6-1.5-3 0-1 .8-2 2.5-2H18a3 3 0 0 0 3-3c0-4.4-4-8-9-8zM7.5 11.5h.01M10.5 7.5h.01M15.5 7.5h.01" },
-  { sec: "zone", label: "Placering", icon: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z", names: true },
-  { sec: "size", label: "Storlek", icon: "M4 14v6h6M20 10V4h-6M4 20l7-7M20 4l-7 7", names: true },
-  { sec: "product", label: "Produktfärg", icon: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z", names: true },
-  { sec: "price", label: "Pris och leverans", icon: "M3 12V4h8l10 10-8 8zM7.5 7.5h.01", names: true },
-];
-
-const PICK_RAIL: Tool = { sec: "pick", label: "Produkt", icon: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10", names: true };
-const BRAND_RAIL: Tool = { sec: "brand", label: "Varumärke", icon: "M5 3.5h5v17H5zM10 7.5l4.5-1.8 5 13.5-4.6 1.8M7.5 16.5h.01", names: true };
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "fram", label: "Fram" },
@@ -182,31 +162,9 @@ export function DesignStudio({
     return () => clearTimeout(t);
   }, [toast]);
   const [help, setHelp] = useState(false);
-  const [collapsed, setCollapsedNow] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage går bara att läsa efter mount
-    setCollapsedNow(localStorage.getItem(PANEL_KEY) === "1");
-  }, []);
-  const setCollapsed = (v: boolean) => {
-    setCollapsedNow(v);
-    localStorage.setItem(PANEL_KEY, v ? "1" : "0");
-  };
   const panel = useRef<HTMLElement>(null);
-  const [sec, setSec] = useState("");
-  /** Markerar den sektion i panelen som ligger överst. */
-  const spy = () => {
-    const el = panel.current;
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + 48;
-    let current = "";
-    el.querySelectorAll<HTMLElement>("[data-sec]").forEach((s) => {
-      if (s.getBoundingClientRect().top <= top) current = s.dataset.sec ?? "";
-    });
-    setSec(current || (el.querySelector<HTMLElement>("[data-sec]")?.dataset.sec ?? ""));
-  };
+  /** Scrollar panelen till sektionen och blinkar den. */
   const openAt = (to: string) => {
-    setCollapsed(false);
-    setSec(to);
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         const el = panel.current?.querySelector<HTMLElement>(`[data-sec="${to}"]`);
@@ -517,7 +475,6 @@ export function DesignStudio({
       if (k === "m") return run(cycleMethod);
       if (k === "f") return run(cycleShape);
       if (k === "r") return run(() => api.current?.frame(active));
-      if (k === "p") return run(() => setCollapsed(!collapsed));
       if (k === "v") return run(() => void recordSpin());
     };
   });
@@ -597,13 +554,6 @@ export function DesignStudio({
         [`Märkning för ${units} st`, sek(marking.perUnit * units + marking.setup)],
       ];
 
-  const hasPicker = Boolean(picker);
-  const hasBrand = Boolean(brand);
-  useEffect(() => {
-    const id = requestAnimationFrame(spy);
-    return () => cancelAnimationFrame(id);
-  }, [onNames, hasPicker, hasBrand, collapsed]);
-  const tools = [...(picker ? [PICK_RAIL] : []), ...(brand ? [BRAND_RAIL] : []), ...RAIL].filter((r) => !onNames || r.names);
 
   return (
     <div
@@ -612,37 +562,7 @@ export function DesignStudio({
       {...(embedded ? { "aria-label": `Designstudio för ${product.name}` } : { role: "dialog", "aria-modal": true, "aria-label": `Designstudio: ${product.name}` })}
     >
       {embedded ? null : <button type="button" className="drawer-veil" aria-label="Stäng" onClick={onClose} />}
-      <div className={`cz${collapsed ? " is-collapsed" : ""}${aside ? " has-aside" : ""}`}>
-        <nav className="cz-rail" aria-label="Designverktyg">
-          {tools.map((r) => (
-            <button key={r.sec} type="button" className="cz-rail-btn" aria-current={!collapsed && sec === r.sec ? "true" : undefined} onClick={() => openAt(r.sec)} aria-label={r.label} data-tip={r.label}>
-              <svg viewBox="0 0 24 24" aria-hidden>
-                <path d={r.icon} />
-              </svg>
-            </button>
-          ))}
-          <span className="cz-rail-swatch" style={{ background: color }} data-tip={colorName(color)} aria-hidden />
-          <div className="cz-rail-foot">
-            <button type="button" className="cz-rail-btn" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Visa panelen (P)" : "Dölj panelen (P)"} aria-expanded={!collapsed} data-tip={`${collapsed ? "Visa" : "Dölj"} panelen · P`}>
-              <svg viewBox="0 0 24 24" aria-hidden>
-                <path d={collapsed ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} />
-              </svg>
-            </button>
-            <button type="button" className="cz-rail-btn is-save" onClick={() => void save()} disabled={!art || saving} aria-label={saveLabel} data-tip={`${saveLabel} · ${MOD}S`}>
-              <svg viewBox="0 0 24 24" aria-hidden>
-                <path d="M5 12.5l4.5 4.5L19 7.5" />
-              </svg>
-            </button>
-            {onClose && collapsed ? (
-              <button type="button" className="cz-rail-btn" onClick={onClose} aria-label="Stäng" data-tip="Stäng · Esc">
-                <svg viewBox="0 0 24 24" aria-hidden>
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            ) : null}
-          </div>
-        </nav>
-
+      <div className={`cz${aside ? " has-aside" : ""}`}>
         <div className={`cz-stage${dropping === "stage" ? " is-dropping" : ""}`} onPointerDown={() => setView(null)} {...dropTarget("stage")}>
           {dropping === "stage" ? <div className="cz-drop-veil">Släpp för att lägga loggan på produkten</div> : null}
           {modelUrl === undefined ? null : (
@@ -763,7 +683,7 @@ export function DesignStudio({
           </div>
         </div>
 
-        <aside ref={panel} className="cz-panel" aria-label="Inställningar" onScroll={spy} inert={collapsed || undefined}>
+        <aside ref={panel} className="cz-panel" aria-label="Inställningar">
               <div className="drawer-head cz-head">
                 <div>
                   <p className="kicker">Designstudio</p>
@@ -777,18 +697,18 @@ export function DesignStudio({
               </div>
 
               {picker ? (
-                <section className="cz-sec" data-sec={PICK_RAIL.sec}>
+                <section className="cz-sec">
                   {picker}
                 </section>
               ) : null}
 
               {brand ? (
-                <section className="cz-sec" data-sec={BRAND_RAIL.sec}>
+                <section className="cz-sec">
                   {brand}
                 </section>
               ) : null}
 
-              <section className="cz-sec" data-sec="positions">
+              <section className="cz-sec">
                 <p className="drawer-label">Tryckpositioner</p>
                 <div className="cz-tabs" role="tablist">
                   <button type="button" role="tab" aria-selected={active === "main"} onClick={() => setActive("main")}>
@@ -859,7 +779,7 @@ export function DesignStudio({
                       </p>
                     ) : null}
                   </section>
-                  <section className="cz-sec" data-sec="zone">
+                  <section className="cz-sec">
                     <p className="drawer-label">Placering</p>
                     <div className="cz-chips">
                       {zones.map((z) => (
@@ -875,7 +795,7 @@ export function DesignStudio({
                     </div>
                     {clashNote}
                   </section>
-                  <section className="cz-sec" data-sec="size">
+                  <section className="cz-sec">
                     <label className="insp-range">
                       <span className="drawer-label">
                         Storlek <span>{design.names.sizeCm} cm bred</span>
@@ -886,7 +806,7 @@ export function DesignStudio({
                 </>
               ) : (
                 <>
-                  <section className="cz-sec" data-sec="logo">
+                  <section className="cz-sec">
                     <p className="drawer-label">Motiv</p>
                     <label className={`cz-drop${dropping === "panel" ? " is-dropping" : ""}`} {...dropTarget("panel")}>
                       <input
@@ -926,7 +846,7 @@ export function DesignStudio({
                     </div>
                   </section>
 
-                  <section className="cz-sec" data-sec="shape">
+                  <section className="cz-sec">
                     <p className="drawer-label">Form</p>
                     <div className="cz-chips">
                       {SHAPES.map((s) => (
@@ -940,7 +860,7 @@ export function DesignStudio({
                     </div>
                   </section>
 
-                  <section className="cz-sec" data-sec="method">
+                  <section className="cz-sec">
                     <p className="drawer-label">Märkmetod</p>
                     <div className="cz-methods">
                       {methods.map((m) => (
@@ -952,7 +872,7 @@ export function DesignStudio({
                     </div>
                   </section>
 
-                  <section className="cz-sec" data-sec="colors">
+                  <section className="cz-sec">
                     <p className="drawer-label">
                       Antal färger <span>{colorText(cur)}</span>
                     </p>
@@ -969,7 +889,7 @@ export function DesignStudio({
                     </div>
                   </section>
 
-                  <section className="cz-sec" data-sec="zone">
+                  <section className="cz-sec">
                     <p className="drawer-label">Placering</p>
                     <div className="cz-chips">
                       {zones.map((z) => (
@@ -986,7 +906,7 @@ export function DesignStudio({
                     {clashNote}
                   </section>
 
-                  <section className="cz-sec" data-sec="size">
+                  <section className="cz-sec">
                     <label className="insp-range">
                       <span className="drawer-label">
                         Storlek <span>{cur.sizeCm} cm bred</span>
@@ -1023,7 +943,7 @@ export function DesignStudio({
                 ) : null}
               </section>
 
-              <div className="cz-price" data-sec="price">
+              <div className="cz-price">
                 {rows.map(([k, v]) => (
                   <div key={k}>
                     <span>{k}</span>

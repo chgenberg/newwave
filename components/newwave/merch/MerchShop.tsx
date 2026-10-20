@@ -15,7 +15,7 @@ import { MerchImage } from "./MerchImage";
 const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const ARROW = <path d="M5 12h14M13 6l6 6-6 6" />;
 
-export function MerchHeader({ club }: { club?: MerchClub }) {
+export function MerchHeader({ club, dashboard }: { club?: MerchClub; dashboard?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[rgba(17,17,17,0.06)] bg-white/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-4 sm:px-8">
@@ -24,20 +24,30 @@ export function MerchHeader({ club }: { club?: MerchClub }) {
           <span className="hidden text-[13px] font-semibold tracking-[0.18em] sm:inline">NEXT WAVE</span>
         </Link>
         <span aria-hidden className="text-[#C9C7C0]">/</span>
-        {club ? (
+        {club || dashboard ? (
           <>
             <Link href="/newwave/merch" className="hidden text-[14px] text-[#6F6B63] transition hover:text-[#111] sm:inline">
               Merch
             </Link>
             <span aria-hidden className="hidden text-[#C9C7C0] sm:inline">/</span>
-            <span className="truncate text-[14px] font-medium">{club.name}</span>
+            <span className="truncate text-[14px] font-medium">{club?.name ?? "Dashboard"}</span>
           </>
         ) : (
           <span className="text-[14px] font-medium">Merch</span>
         )}
-        <Link href="/newwave/start" className="ml-auto inline-flex h-10 shrink-0 items-center rounded-full px-3.5 text-[13.5px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]">
-          Ingångar
-        </Link>
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          {dashboard ? null : (
+            <Link href="/newwave/merch/dashboard" className="inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
+              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+              </svg>
+              Dashboard
+            </Link>
+          )}
+          <Link href="/newwave/start" className="inline-flex h-10 items-center rounded-full px-3.5 text-[13.5px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]">
+            Ingångar
+          </Link>
+        </span>
       </div>
     </header>
   );
@@ -332,7 +342,7 @@ export function MerchShop({ items, clubs, scenes }: { items: MerchItem[]; clubs:
     <div className="min-h-screen bg-white text-[#111]">
       <MerchHeader />
       <section className="mx-auto max-w-[980px] px-4 pb-4 pt-5 text-center sm:px-8 sm:pt-6">
-        <h1 className="text-[20px] font-semibold tracking-[-0.03em] sm:text-[22px]">All klubbmerch. En lista.</h1>
+        <h1 className="text-[20px] font-semibold tracking-[-0.03em] sm:text-[22px]">Vi samlar hela Sveriges klubbmerch på 1 sida</h1>
         <p className="nw-mono mt-1 text-[11px] uppercase tracking-[0.08em] text-[#6F6B63]">
           {clubs.length} klubbar · {items.length} produkter · säljs hos Intersport
         </p>
