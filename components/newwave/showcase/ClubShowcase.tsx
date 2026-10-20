@@ -16,7 +16,8 @@ const STEPS: Step[] = [
   { title: "Godkänt", detail: "Tryckfiler till New Wave och ut i butiken", lines: ["Kansliet godkänner", "Tryckfiler till New Waves hubb", "Ut i Intersport-butiken"], target: "tryck" },
 ];
 
-const STEP_MS = 2800;
+const STEP_MS = 5000;
+const TOTAL_S = (STEPS.length * STEP_MS) / 1000;
 const KEY = "nw.klubb.visning";
 
 export type ShowcaseSection = { id: string; /** Visas när så många steg är klara. */ after: number; node: ReactNode };
@@ -121,7 +122,7 @@ export function ClubShowcase({
                 </button>
               )}
               <p className="text-[13px] text-[var(--nw-muted)]" aria-live="polite">
-                {finished ? "Klart – det som tar en natt visades på 15 sekunder. Klicka på ett steg eller scrolla ner." : running ? `Vecka ${week} · steg ${done + 1} av ${STEPS.length}` : `Vecka ${week} · tar 15 sekunder · inget publiceras`}
+                {finished ? `Klart – det som tar en natt visades på ${TOTAL_S} sekunder. Klicka på ett steg eller scrolla ner.` : running ? `Vecka ${week} · steg ${done + 1} av ${STEPS.length}` : `Vecka ${week} · tar ${TOTAL_S} sekunder · inget publiceras`}
               </p>
             </div>
           </section>
