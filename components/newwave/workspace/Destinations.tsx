@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { type BrandKit, isOwnKit } from "@/lib/newwave/brandKit";
 import { type NwProduct, nwProduct } from "@/lib/newwave/catalog";
-import { designSummary, onChest } from "@/lib/newwave/marking";
+import { designSummary } from "@/lib/newwave/marking";
 import { photoMockup } from "@/lib/newwave/photoMockup";
 import { logoFor, priceLine, type QuoteLineInput, sek, splitSizes } from "@/lib/newwave/reseller";
 import { call, upload } from "../shop/api";
@@ -27,7 +27,7 @@ const printLogos = (kit: BrandKit, item: Item) => {
 async function itemImage(item: Item, kit: BrandKit) {
   const p = nwProduct(item.id)!;
   const logos = printLogos(kit, item);
-  return upload(item.preview ?? (await photoMockup(p, logoFor(p, logos) ?? logos.logo, p.dark)));
+  return upload(item.preview ?? (await photoMockup(p, logoFor(p, logos) ?? logos.logo, p.dark, item.design.zone)));
 }
 
 /** Kör ett steg per produkt och visar hur långt det kommit. */
@@ -61,7 +61,7 @@ function Row({ item, kit, children }: { item: Item; kit: BrandKit; children?: Re
         // eslint-disable-next-line @next/next/no-img-element
         <img src={item.preview} alt="" className="h-14 w-14 shrink-0 rounded-xl bg-[#F4F4F2] object-cover" />
       ) : (
-        <ProductMock product={p} {...printLogos(kit, item)} chest={onChest(item.design)} className="h-14 w-14 shrink-0 rounded-xl" />
+        <ProductMock product={p} {...printLogos(kit, item)} zone={item.design.zone} className="h-14 w-14 shrink-0 rounded-xl" />
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[14px] font-semibold">{p.name}</span>
@@ -242,7 +242,7 @@ export function ClubsTab({ clubs, items, onStart, onSent }: { clubs: WorkspaceCl
           return (
             <li key={c.id}>
               <button type="button" onClick={() => toggle(c.id)} aria-pressed={on} className={`group block w-full overflow-hidden rounded-[20px] bg-[#F4F4F2] text-left transition ${on ? "shadow-[0_0_0_2px_#111]" : "opacity-55 hover:opacity-80"}`}>
-                <ProductMock product={product} logo={c.logo} logoDark={c.logoDark} chest={onChest(item.design)} className="transition duration-500 group-hover:scale-[1.03]" />
+                <ProductMock product={product} logo={c.logo} logoDark={c.logoDark} zone={item.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
                 <span className="flex items-center justify-between gap-2 bg-white px-3 py-2.5">
                   <span className="min-w-0">
                     <span className="block truncate text-[13.5px] font-semibold">{c.name}</span>

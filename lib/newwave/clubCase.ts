@@ -1,3 +1,4 @@
+import { CLUBS } from "@/lib/club";
 import type { ApprovalProduct, PackAssets, PackContent, PackPhoto } from "./store";
 
 /**
@@ -7,7 +8,7 @@ import type { ApprovalProduct, PackAssets, PackContent, PackPhoto } from "./stor
  */
 
 const DIR = "/newwave/clubs/asa-if/klubbandan";
-const SHOP = "https://www.intersport.se/klubbshop/asa-if";
+const SHOP = CLUBS["asa-if"].intersportShopUrl;
 const DROP = "asa-if-v42-klubbandan";
 const utm = (source: string, medium: string) => `${SHOP}?drop=${DROP}&utm_source=${source}&utm_medium=${medium}&utm_campaign=${DROP}&utm_content=asa-if`;
 

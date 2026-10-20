@@ -121,7 +121,7 @@ async function productJobs(club: Club, a: Pick<Approval, "id" | "printFiles" | "
       const key = sha(JSON.stringify({ v: VERSION, p: p.id, color, placement, names, artSha, club: club.name, palette: club.palette })).slice(0, 20);
       const job = await stored(key, async () => ({
         ...(await makeJob({ club: club.name, palette: club.palette, product: p, color, placement, names, art, slug: base })),
-        mockup: (await mockupJpeg({ ...p, dark }, artUrl!, 900)) ?? undefined,
+        mockup: (await mockupJpeg({ ...p, dark }, artUrl!, 900, placement.zone)) ?? undefined,
       }));
       return {
         ...job,

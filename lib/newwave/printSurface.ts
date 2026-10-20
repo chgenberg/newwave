@@ -27,11 +27,13 @@ export type Surface = {
   quad?: Quad;
   /** Rund produkt med lodrät axel genom `cx`: radien på fotot och hur mycket uppifrån kameran ser den, i grader. */
   round?: { r: number; e: number };
+  /** Täckande tryck som inte tar upp fotots mönster, som reflexens prismor. */
+  solid?: boolean;
   fill: number;
 };
 
 export type SurfaceInput =
-  | (Pick<Surface, "cx" | "cy" | "w" | "h"> & Partial<Pick<Surface, "rx" | "ry" | "rz" | "bend" | "top" | "round">>)
+  | (Pick<Surface, "cx" | "cy" | "w" | "h"> & Partial<Pick<Surface, "rx" | "ry" | "rz" | "bend" | "top" | "round" | "solid">>)
   /** `aspect` är ytans verkliga bredd genom höjd, när den syns förkortad på fotot. */
   | { quad: Quad; fill?: number; aspect?: number };
 
@@ -221,7 +223,7 @@ export function printOnPhoto(s: Surface, photo: Rgba, logo: Rgba, o: { dark: boo
     }
     const ink = [layer[i * 4] / layer[i * 4 + 3], layer[i * 4 + 1] / layer[i * 4 + 3], layer[i * 4 + 2] / layer[i * 4 + 3]];
     if (near && wide) {
-      const light = Math.min(1.4, Math.max(0.55, (near[i] + 0.05) / (wide[i] + 0.05))) ** 0.8;
+      const light = s.solid ? 1 : Math.min(1.4, Math.max(0.55, (near[i] + 0.05) / (wide[i] + 0.05))) ** 0.8;
       const k = a * 0.94;
       out[i * 4] = r * (1 - k) + ink[0] * light * k;
       out[i * 4 + 1] = g * (1 - k) + ink[1] * light * k;

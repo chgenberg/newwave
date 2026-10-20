@@ -105,6 +105,9 @@ export type MerchClub = {
   ownPage?: string;
 };
 
+/** Intersports föreningslista, för klubbar som inte har en egen föreningsbutik där. */
+const INTERSPORT_CLUBS = "https://team.intersport.se/foreningar";
+
 const list = (words: string[]) => (words.length > 1 ? `${words.slice(0, -1).join(", ")} och ${words.at(-1)}` : (words[0] ?? ""));
 
 function aboutClub(c: (typeof CRAFT_CLUBS)[number], motifs: string[]) {
@@ -132,7 +135,7 @@ export const MERCH_CLUBS: MerchClub[] = CRAFT_CLUBS.flatMap((c) => {
       count: items.length,
       motifs,
       about: aboutClub(c, motifs),
-      shopUrl: CLUBS[c.id]?.intersportShopUrl ?? `https://www.intersport.se/klubbshop/${c.id}`,
+      shopUrl: c.intersport ?? CLUBS[c.id]?.intersportShopUrl ?? INTERSPORT_CLUBS,
       ownPage: c.dashboard,
     },
   ];

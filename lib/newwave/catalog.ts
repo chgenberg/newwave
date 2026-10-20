@@ -24,6 +24,8 @@ export type NwProduct = {
   print: Surface;
   /** Den lilla ytan på vänster bröst, för plagg som annars har trycket mitt på. */
   chest?: Surface;
+  /** Mitt på bröstet, för plagg som annars har trycket på vänster bröst. */
+  center?: Surface;
   model: string | null;
   /** Var trycket projiceras på 3D-modellen: riktning och förskjutning i andelar av modellens storlek. */
   zone: { dir: Vec3; offset: [number, number] };
@@ -68,7 +70,7 @@ function row(
   priceSek: number,
   seasons: Season[],
   use: string,
-  place: { print: SurfaceInput; chest?: SurfaceInput; leftChest?: boolean },
+  place: { print: SurfaceInput; chest?: SurfaceInput; center?: SurfaceInput; leftChest?: boolean },
 ): NwProduct {
   const leftChest = Boolean(place.leftChest);
   const k = { ...KIND[kind], ...TUNED[id] };
@@ -89,6 +91,7 @@ function row(
     photo: `/newwave/products/${id}-${garmentHex.slice(1)}.jpg`,
     print: surface(place.print),
     chest: place.chest && surface(place.chest),
+    center: place.center && surface(place.center),
     model: NO_MODEL.has(id) ? null : `/newwave/models/${id}.glb`,
     zone: { dir: TOP_DOWN.has(id) ? [0, 1, 0] : k.dir, offset: leftChest ? [0.12, 0.22] : k.offset },
     sizeCm: k.sizeCm,
@@ -103,7 +106,8 @@ function garment([x, y, w, h]: [number, number, number, number], leftChest = fal
   return { print, chest: { cx: x + w * 0.66, cy: y + h * 0.06 + h * 0.15, w: w * 0.3, h: h * 0.3, bend: 18, top: true } };
 }
 
-export const printOf = (p: Pick<NwProduct, "print" | "chest">, chest = false) => (chest && p.chest) || p.print;
+/** Ytan på fotot för designens zon; utan zon, eller för zoner som fotot inte visar, produktens huvudtryck. */
+export const printOf = (p: Pick<NwProduct, "print" | "chest" | "center">, zone?: string) => (zone === "vanster" ? p.chest : zone === "brost" ? p.center : undefined) ?? p.print;
 
 const SOFT: ReadonlySet<Kind> = new Set(["top", "beanie", "bag", "textile"]);
 /** Tyg som veckar sig, där trycket följer vecken. */
@@ -112,7 +116,7 @@ export const isSoft = (p: Pick<NwProduct, "kind">) => SOFT.has(p.kind);
 export const NW_CATALOG: NwProduct[] = [
   row("P001", "T-shirt", "Kläder", "top", "Vit", "#F4F3EF", 249, ["vinter", "vår", "sommar", "höst"], "match, träning, cup och sommarläger", garment([0.347, 0.228, 0.308, 0.355])),
   row("P002", "T-shirt Premium", "Kläder", "top", "Svart", "#111111", 349, ["vinter", "vår", "sommar", "höst"], "supportrar och present", garment([0.319, 0.196, 0.352, 0.383])),
-  row("P003", "Piké", "Kläder", "top", "Svart", "#111111", 449, ["vår", "sommar"], "ledare, funktionärer och avslutning", garment([0.339, 0.196, 0.32, 0.382])),
+  row("P003", "Piké", "Kläder", "top", "Svart", "#111111", 449, ["vår", "sommar"], "ledare, funktionärer och avslutning", { ...garment([0.55, 0.235, 0.14, 0.15], true), center: { cx: 0.5, cy: 0.47, w: 0.22, h: 0.24, bend: 28, top: true } }),
   row("P004", "Hoodie", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter", "vår"], "kalla kvällar på läktaren och träning", garment([0.356, 0.385, 0.29, 0.26])),
   row("P005", "Sweatshirt", "Kläder", "top", "Gråmelerad", "#9A9CA1", 499, ["höst", "vinter", "vår"], "vardag och hemmamatch inomhus", garment([0.334, 0.206, 0.33, 0.375])),
   row("P006", "Softshelljacka", "Kläder", "top", "Svart", "#111111", 899, ["höst", "vår"], "ledare och blåsiga utomhusmatcher", garment([0.545, 0.224, 0.121, 0.157], true)),
@@ -120,7 +124,7 @@ export const NW_CATALOG: NwProduct[] = [
   row("P008", "Funktions-t-shirt", "Kläder", "top", "Svart", "#111111", 299, ["vinter", "vår", "sommar", "höst"], "träning, lopp och cup", garment([0.335, 0.219, 0.327, 0.367])),
   row("P009", "Skaljacka", "Kläder", "top", "Svart", "#111111", 1199, ["höst", "vår"], "regn och ledare", garment([0.54, 0.25, 0.112, 0.156], true)),
   row("P010", "Funktionärsväst", "Kläder", "top", "Svart", "#111111", 699, ["vinter", "vår", "sommar", "höst"], "funktionärer, parkering och arrangörer", garment([0.537, 0.223, 0.098, 0.162], true)),
-  row("P011", "Keps", "Huvudbonader", "cap", "Svart", "#111111", 249, ["vår", "sommar"], "sol, sommarcup och läger", { print: { cx: 0.43, cy: 0.42, w: 0.22, h: 0.14, rx: 8, ry: -30, rz: -6, bend: 70 } }),
+  row("P011", "Keps", "Huvudbonader", "cap", "Svart", "#111111", 249, ["vår", "sommar"], "sol, sommarcup och läger", { print: { cx: 0.46, cy: 0.39, w: 0.24, h: 0.13, rx: 8, ry: -26, rz: 2, bend: 70 } }),
   row("P012", "Mössa", "Huvudbonader", "beanie", "Svart", "#111111", 249, ["höst", "vinter"], "kyla, läktare och jul", { print: { cx: 0.505, cy: 0.71, w: 0.22, h: 0.12, round: { r: 0.385, e: 17 } } }),
   row("P013", "Buff", "Huvudbonader", "beanie", "Svart", "#111111", 179, ["höst", "vinter"], "kyla, löpning och skidor", { print: { cx: 0.5, cy: 0.55, w: 0.28, h: 0.17, round: { r: 0.36, e: 12 } } }),
   row("P014", "Tygkasse", "Väskor", "bag", "Sand", "#C8B08C", 149, ["vinter", "vår", "sommar", "höst"], "loppis, julmarknad och present", { print: { quad: [[0.29, 0.395], [0.785, 0.385], [0.8, 0.88], [0.295, 0.915]], fill: 0.55 } }),
@@ -139,7 +143,7 @@ export const NW_CATALOG: NwProduct[] = [
   row("P027", "Skrivbordsmatta", "Kontor", "flat", "Svart", "#111111", 249, ["vinter", "vår", "sommar", "höst"], "kansli och sponsorer", { print: { quad: [[0.2, 0.22], [0.97, 0.4], [0.76, 0.79], [0.03, 0.505]], fill: 0.5, aspect: 2 } }),
   row("P028", "Nyckelband", "Kontor", "lanyard", "Svart", "#111111", 59, ["vinter", "vår", "sommar", "höst"], "cup, funktionärer och ackreditering", { print: { cx: 0.307, cy: 0.45, w: 0.2, h: 0.055, rz: 70 } }),
   row("P029", "Paraply", "Fritid", "umbrella", "Svart", "#111111", 349, ["höst", "vår"], "regn på läktaren", { print: { quad: [[0.63, 0.098], [0.81, 0.09], [0.81, 0.138], [0.63, 0.148]], aspect: 1.4 } }),
-  row("P030", "Reflex", "Fritid", "flat", "Svart", "#111111", 39, ["höst", "vinter"], "mörker och skolväg", { print: { cx: 0.47, cy: 0.56, w: 0.2, h: 0.2 } }),
+  row("P030", "Reflex", "Fritid", "flat", "Svart", "#111111", 39, ["höst", "vinter"], "mörker och skolväg", { print: { cx: 0.5, cy: 0.645, w: 0.34, h: 0.28, solid: true } }),
   row("P031", "Powerbank", "Teknik", "tech", "Svart", "#111111", 399, ["vinter", "vår", "sommar", "höst"], "resor och cup", { print: { quad: [[0.4, 0.19], [0.93, 0.575], [0.575, 0.725], [0.08, 0.3]], fill: 0.55, aspect: 2 } }),
   row("P032", "Laddkabel", "Teknik", "tech", "Svart", "#111111", 149, ["vinter", "vår", "sommar", "höst"], "resor", { print: { quad: [[0.425, 0.722], [0.54, 0.722], [0.54, 0.838], [0.425, 0.838]], fill: 0.75 } }),
   row("P033", "Trådlös laddare", "Teknik", "tech", "Svart", "#111111", 299, ["vinter", "vår", "sommar", "höst"], "kansli och sponsorer", { print: { quad: [[0.2825, 0.431], [0.58, 0.393], [0.5675, 0.579], [0.27, 0.617]], aspect: 1 } }),

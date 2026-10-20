@@ -29,14 +29,14 @@ export async function GET(req: Request) {
   const p = nwProduct(q.get("p") ?? "");
   const logo = q.get("l") ?? "";
   const size = Number(q.get("s") ?? 800);
-  const chest = q.get("c") === "1";
-  if (!p || !logo || logo.length > 300 || !SIZES.has(size)) return new Response("Ogiltig förfrågan", { status: 400 });
+  const zone = q.get("z") ?? undefined;
+  if (!p || !logo || logo.length > 300 || !SIZES.has(size) || (zone && zone.length > 20)) return new Response("Ogiltig förfrågan", { status: 400 });
 
-  const key = createHash("sha256").update(JSON.stringify([MOCKUP_VERSION, p.photo, printOf(p, chest), p.dark, p.kind, logo, size])).digest("hex").slice(0, 40);
+  const key = createHash("sha256").update(JSON.stringify([MOCKUP_VERSION, p.photo, printOf(p, zone), p.dark, p.kind, logo, size])).digest("hex").slice(0, 40);
   const file = path.join(DIR, `${key}.jpg`);
   let jpg: Buffer | null = await readFile(file).catch(() => null);
   if (!jpg) {
-    jpg = await limited(() => mockupJpeg(p, logo, size, chest));
+    jpg = await limited(() => mockupJpeg(p, logo, size, zone));
     if (!jpg) return new Response("Hittades inte", { status: 404 });
     await mkdir(DIR, { recursive: true });
     const tmp = `${file}.${process.pid}.${Date.now()}`;

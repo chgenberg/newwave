@@ -40,7 +40,7 @@ export const IFK_GOTEBORG: Club = {
     "Slogan max 32 tecken, på svenska eller göteborgska.",
     "Motiv ska fungera i digitaltryck (DTG): max tre färger, tydliga former, inga fotografier.",
   ],
-  intersportShopUrl: "https://www.intersport.se/klubbshop/ifk-goteborg",
+  intersportShopUrl: "https://team.intersport.se/foreningar",
   contactPerson: { role: "Klubbens merchandiseansvarige", channel: "e-post" },
   sources: {
     website: "https://ifkgoteborg.se",
@@ -223,7 +223,7 @@ export const ASA_IF: Club = {
     "Slogan max 32 tecken, på svenska.",
     "Motiv ska fungera i digitaltryck (DTG): max tre färger, tydliga former, inga fotografier.",
   ],
-  intersportShopUrl: "https://www.intersport.se/klubbshop/asa-if",
+  intersportShopUrl: "https://team.intersport.se/asa-if",
   contactPerson: { role: "Klubbens kansli", channel: "e-post" },
   sources: {
     website: "https://www.asaif.com",

@@ -251,7 +251,7 @@ export function ShopSection({ club, logo, slogan, week, products }: { club: stri
               <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c }} />
             ))}
           </span>
-          <span className="min-w-0 flex-1 truncate rounded-full bg-white px-3 py-1 text-center text-[12px] text-[var(--nw-muted)]">intersport.se/klubbshop/asa-if</span>
+          <span className="min-w-0 flex-1 truncate rounded-full bg-white px-3 py-1 text-center text-[12px] text-[var(--nw-muted)]">team.intersport.se/asa-if</span>
         </div>
         <div className="flex items-center gap-6 border-b border-[var(--nw-line)] bg-white px-4 py-3.5 sm:px-6">
           <img src="/intersport-logo.svg" alt="Intersport" className="h-[15px] w-auto sm:h-[17px]" />

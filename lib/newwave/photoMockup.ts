@@ -12,9 +12,9 @@ const pixels = (img: CanvasImageSource, width: number, height: number) => {
 };
 
 /** Trycket på det riktiga produktfotot i webbläsaren, för tryckfiler som bara finns här; samma bild som servern ritar. */
-export async function photoMockup(visual: Pick<NwProduct, "photo" | "print" | "chest" | "kind">, printUrl: string, dark: boolean, size = 1000) {
+export async function photoMockup(visual: Pick<NwProduct, "photo" | "print" | "chest" | "center" | "kind">, printUrl: string, dark: boolean, zone?: string, size = 1000) {
   const [photoImg, printImg] = await Promise.all([loadImage(visual.photo), loadImage(printUrl)]);
-  const s = printOf(visual);
+  const s = printOf(visual, zone);
   const fit = printFit(s, (printImg.width || 3) / (printImg.height || 4), size);
   const photo = pixels(photoImg, size, size);
   const logo = pixels(printImg, Math.max(1, Math.round(fit.w * 2)), Math.max(1, Math.round(fit.h * 2))).image;

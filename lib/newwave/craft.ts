@@ -24,6 +24,8 @@ export type CraftClub = {
   /** Har varumärkeskit i hubben, så att Craft kan skapa riktigt material åt klubben. */
   live: boolean;
   dashboard?: string;
+  /** Klubbens föreningsbutik hos Intersport, när den har en. */
+  intersport?: string;
 };
 
 export type Review = { score: number; parts: { realism: number; relevance: number; brandFit: number; sales: number }; flags: string[]; summary: string };
@@ -93,13 +95,13 @@ const ROSTER: CraftClub[] = [
   { id: "kungsbacka-if", name: "Kungsbacka IF", city: "Kungsbacka", region: "Halland", sports: ["Fotboll"], colors: ["#181830", "#FFFFFF"], logo: "/newwave/clubs/kungsbacka-if/logo.png", joined: "2026-03-04", live: false },
   { id: "onsala-bk", name: "Onsala BK", city: "Onsala", region: "Halland", sports: ["Fotboll"], colors: ["#0060A8", "#F0C000"], logo: "/newwave/clubs/onsala-bk/logo.png", joined: "2026-04-18", live: false },
   { id: "fjaras-bk", name: "IFK Fjärås", city: "Fjärås", region: "Halland", sports: ["Fotboll"], colors: ["#D8001A", "#FFFFFF"], logo: "/newwave/clubs/fjaras-bk/logo.png", joined: "2026-02-10", live: false },
-  { id: "tolo-if", name: "Tölö IF", city: "Kungsbacka", region: "Halland", sports: ["Fotboll", "Innebandy"], colors: ["#007830", "#FFFFFF"], logo: "/newwave/clubs/tolo-if/logo.png", joined: "2026-06-02", live: false },
+  { id: "tolo-if", name: "Tölö IF", city: "Kungsbacka", region: "Halland", sports: ["Fotboll", "Innebandy"], colors: ["#007830", "#FFFFFF"], logo: "/newwave/clubs/tolo-if/logo.png", joined: "2026-06-02", live: false, intersport: "https://team.intersport.se/tolo-if" },
   { id: "varbergs-gif", name: "Varbergs GIF", city: "Varberg", region: "Halland", sports: ["Fotboll", "Friidrott"], colors: ["#004890", "#F2C200"], logo: "/newwave/clubs/varbergs-gif/logo.png", joined: "2026-01-20", live: false },
   { id: "lerums-is", name: "Lerums IS", city: "Lerum", region: "Västra Götaland", sports: ["Fotboll", "Bandy"], colors: ["#43295D", "#FFFFFF"], logo: "/newwave/clubs/lerums-is/logo.png", joined: "2026-03-22", live: false },
-  { id: "alingsas-hk", name: "Alingsås HK", city: "Alingsås", region: "Västra Götaland", sports: ["Handboll"], colors: ["#0062A8", "#FFFFFF"], logo: "/newwave/clubs/alingsas-hk/logo.png", joined: "2025-11-08", live: false },
+  { id: "alingsas-hk", name: "Alingsås HK", city: "Alingsås", region: "Västra Götaland", sports: ["Handboll"], colors: ["#0062A8", "#FFFFFF"], logo: "/newwave/clubs/alingsas-hk/logo.png", joined: "2025-11-08", live: false, intersport: "https://team.intersport.se/alingsas-hk" },
   { id: "stenungsunds-if", name: "Stenungsunds IF", city: "Stenungsund", region: "Västra Götaland", sports: ["Fotboll", "Handboll"], colors: ["#D81830", "#FFFFFF"], logo: "/newwave/clubs/stenungsunds-if/logo.png", joined: "2026-07-15", live: false },
   { id: "partille-if", name: "Partille IF", city: "Partille", region: "Göteborg", sports: ["Fotboll"], colors: ["#B80704", "#FFFFFF"], logo: "/newwave/clubs/partille-if/logo.png", logoDark: "/newwave/clubs/partille-if/logo-vit.png", joined: "2026-04-01", live: false },
-  { id: "torslanda-hk", name: "Torslanda HK", city: "Göteborg", region: "Göteborg", sports: ["Handboll"], colors: ["#A81830", "#FFFFFF"], logo: "/newwave/clubs/torslanda-hk/logo.png", joined: "2026-08-19", live: false },
+  { id: "torslanda-hk", name: "Torslanda HK", city: "Göteborg", region: "Göteborg", sports: ["Handboll"], colors: ["#A81830", "#FFFFFF"], logo: "/newwave/clubs/torslanda-hk/logo.png", joined: "2026-08-19", live: false, intersport: "https://team.intersport.se/torslanda-hk" },
   { id: "hovas-billdal-if", name: "Hovås Billdal IF", city: "Göteborg", region: "Göteborg", sports: ["Fotboll"], colors: ["#183078", "#FFFFFF"], logo: "/newwave/clubs/hovas-billdal-if/logo.png", joined: "2025-12-01", live: false },
   { id: "molndals-ibk", name: "Mölndals IBF", city: "Mölndal", region: "Göteborg", sports: ["Innebandy"], colors: ["#D80000", "#111111"], logo: "/newwave/clubs/molndals-ibk/logo.png", joined: "2026-09-28", live: false },
 ];
@@ -269,7 +271,7 @@ export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<
       products.map(async (p) => {
         const custom = c.designs?.[p.id];
         const print = studio && (p.dark ? studio.dark : studio.light);
-        return { p, custom, print, mockupUrl: (custom && print && (await serverMockup(p, print).catch(() => null))) || p.photo };
+        return { p, custom, print, mockupUrl: (custom && print && (await serverMockup(p, print, 1000, custom.design.zone).catch(() => null))) || p.photo };
       }),
     );
     const a = await createApproval(clubId, {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { type BrandKit, kitAccent } from "@/lib/newwave/brandKit";
 import { NW_CATALOG, nwProduct } from "@/lib/newwave/catalog";
-import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday, onChest } from "@/lib/newwave/marking";
+import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday } from "@/lib/newwave/marking";
 import { type OccasionId, occasion } from "@/lib/newwave/occasions";
 import { sek } from "@/lib/newwave/reseller";
 import { luminance } from "@/lib/newwave/theme";
@@ -67,7 +67,7 @@ export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next, occ
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={i.preview} alt={p.name} className="aspect-square w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                     ) : (
-                      <ProductMock product={p} {...logoOf(kit, i.design)} chest={onChest(i.design)} className="transition duration-500 group-hover:scale-[1.03]" />
+                      <ProductMock product={p} {...logoOf(kit, i.design)} zone={i.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
                     )}
                   </button>
                   <div className="flex items-start justify-between gap-2 bg-white px-3.5 py-3">

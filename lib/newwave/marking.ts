@@ -188,9 +188,6 @@ export function defaultDesign(p: NwProduct, method?: Method): Design {
 
 export const zoneLabel = (p: NwProduct, id: string) => (id === "egen" ? "Egen placering" : (zonesFor(p).find((z) => z.id === id)?.label ?? id));
 
-/** Loggan sitter på vänster bröst – den 2D-bild som bäst motsvarar designen. */
-export const onChest = (d: Pick<Design, "zone">) => d.zone === "vanster";
-
 const placementSummary = (p: NwProduct, d: Placement) =>
   [METHOD_INFO[d.method].label, colorText(d), zoneLabel(p, d.zone), d.shape === "original" ? null : SHAPE_LABEL[d.shape], `${d.sizeCm} cm`].filter(Boolean).join(" · ");
 

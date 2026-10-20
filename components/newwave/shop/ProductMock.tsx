@@ -1,5 +1,4 @@
 import { type NwProduct, nwProduct, printOf } from "@/lib/newwave/catalog";
-import { onChest } from "@/lib/newwave/marking";
 import { MOCKUP_VERSION } from "@/lib/newwave/printSurface";
 import { logoFor, type QuoteLineInput } from "@/lib/newwave/reseller";
 
@@ -7,24 +6,24 @@ type Props = {
   product: NwProduct;
   logo?: string;
   logoDark?: string;
-  /** Liten logga på vänster bröst i stället för stor mitt på. */
-  chest?: boolean;
+  /** Designens zon, när den ändrar var trycket sitter på fotot (vänster bröst eller mitt på). */
+  zone?: string;
   className?: string;
 };
 
 /** Ändras när tryckytan eller renderingen ändras, så att webbläsaren inte visar en gammal bild. */
-function version(p: NwProduct, chest: boolean) {
-  const s = JSON.stringify([MOCKUP_VERSION, p.photo, printOf(p, chest)]);
+function version(p: NwProduct, zone?: string) {
+  const s = JSON.stringify([MOCKUP_VERSION, p.photo, printOf(p, zone)]);
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = (h * 33) ^ s.charCodeAt(i);
   return (h >>> 0).toString(36);
 }
 
-const mockupSrc = (p: NwProduct, logo: string, chest: boolean) =>
-  `/api/v1/newwave/mockup?${new URLSearchParams({ p: p.id, l: logo, s: "800", ...(chest ? { c: "1" } : {}), v: version(p, chest) })}`;
+const mockupSrc = (p: NwProduct, logo: string, zone?: string) =>
+  `/api/v1/newwave/mockup?${new URLSearchParams({ p: p.id, l: logo, s: "800", ...(zone ? { z: zone } : {}), v: version(p, zone) })}`;
 
 /** Produktfotot med loggan tryckt på ytan: rätt vinkel, böjd runt runda produkter och med fotots ljus och veck. */
-export function ProductMock({ product, logo, logoDark, chest = false, className = "" }: Props) {
+export function ProductMock({ product, logo, logoDark, zone, className = "" }: Props) {
   const src = logoFor(product, { logo, logoDark });
   return (
     <div className={`relative aspect-square overflow-hidden bg-[#F4F4F2] ${className}`}>
@@ -32,7 +31,7 @@ export function ProductMock({ product, logo, logoDark, chest = false, className 
       <img src={product.photo} alt={product.name} className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={mockupSrc(product, src, chest)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
+        <img src={mockupSrc(product, src, zone)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
       ) : null}
     </div>
   );
@@ -49,5 +48,5 @@ export function LineMock({ line, className = "" }: { line: Pick<QuoteLineInput, 
         <img src={line.preview} alt={p.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
       </div>
     );
-  return <ProductMock product={p} logo={line.design.logo ?? line.logo} logoDark={line.design.logo ? line.design.logoDark : line.logoDark} chest={onChest(line.design)} className={className} />;
+  return <ProductMock product={p} logo={line.design.logo ?? line.logo} logoDark={line.design.logo ? line.design.logoDark : line.logoDark} zone={line.design.zone} className={className} />;
 }

@@ -3,7 +3,7 @@ import { htmlToPdf } from "@/lib/pdf";
 import { readAsset } from "./asset";
 import { nwProduct } from "./catalog";
 import { colorName } from "./colors";
-import { designSummary, onChest } from "./marking";
+import { designSummary } from "./marking";
 import { logoFor, type Quote, type QuoteLine, type Reseller, sek, shopUrl } from "./reseller";
 import { mockupJpeg } from "./serverMockup";
 import { SITE } from "./site";
@@ -20,7 +20,7 @@ async function lineImage(line: QuoteLine, size = 480): Promise<Buffer> {
   const p = nwProduct(line.productId);
   if (!p) return sharp({ create: { width: size, height: size, channels: 3, background: BG } }).jpeg({ quality: 84 }).toBuffer();
   const src = logoFor(p, { logo: line.design.logo ?? line.logo, logoDark: line.design.logo ? line.design.logoDark : line.logoDark });
-  const mock = src ? await mockupJpeg(p, src, size, onChest(line.design)) : null;
+  const mock = src ? await mockupJpeg(p, src, size, line.design.zone) : null;
   if (mock) return mock;
   const photo = await readAsset(p.photo);
   return (photo ? sharp(photo).resize(size, size, { fit: "fill" }) : sharp({ create: { width: size, height: size, channels: 3, background: BG } })).jpeg({ quality: 84 }).toBuffer();

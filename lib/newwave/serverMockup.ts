@@ -4,13 +4,13 @@ import { readAsset } from "./asset";
 import { isSoft, type NwProduct, printOf } from "./catalog";
 import { printFit, printOnPhoto } from "./printSurface";
 
-type Visual = Pick<NwProduct, "photo" | "print" | "chest" | "dark" | "kind">;
+type Visual = Pick<NwProduct, "photo" | "print" | "chest" | "center" | "dark" | "kind">;
 
 /** Trycket på produktfotot som JPEG, `size` pixlar i kvadrat; samma bild som butiken visar. */
-export async function mockupJpeg(p: Visual, printUrl: string, size = 1000, chest = false): Promise<Buffer | null> {
+export async function mockupJpeg(p: Visual, printUrl: string, size = 1000, zone?: string): Promise<Buffer | null> {
   const [photoFile, logoFile] = await Promise.all([readAsset(p.photo), readAsset(printUrl)]);
   if (!photoFile || !logoFile) return null;
-  const s = printOf(p, chest);
+  const s = printOf(p, zone);
   const meta = await sharp(logoFile, { density: 200 }).metadata();
   const fit = printFit(s, (meta.width || 1) / (meta.height || 1), size);
   const [photo, logo] = await Promise.all([
@@ -27,7 +27,7 @@ export async function mockupJpeg(p: Visual, printUrl: string, size = 1000, chest
     .toBuffer();
 }
 
-export async function serverMockup(p: Visual, printUrl: string, size = 1000): Promise<string | null> {
-  const out = await mockupJpeg(p, printUrl, size);
+export async function serverMockup(p: Visual, printUrl: string, size = 1000, zone?: string): Promise<string | null> {
+  const out = await mockupJpeg(p, printUrl, size, zone);
   return out ? (await saveFile(out, "jpg")).url : null;
 }
