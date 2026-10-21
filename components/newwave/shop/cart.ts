@@ -14,7 +14,8 @@ export type Cart = { logo: CustomerLogo | null; lines: CartLine[]; tester?: Test
 
 const EMPTY: Cart = { logo: null, lines: [] };
 
-function store<T>(key: (slug: string) => string, empty: T, parse: (saved: Partial<T>) => T) {
+/** Ett värde i localStorage per nyckel, delat mellan alla komponenter och flikar som läser samma nyckel. */
+export function store<T>(key: (slug: string) => string, empty: T, parse: (saved: Partial<T>) => T) {
   const cache = new Map<string, { raw: string | null; value: T }>();
   const read = (slug: string): T => {
     const raw = localStorage.getItem(key(slug));

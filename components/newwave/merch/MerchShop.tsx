@@ -37,14 +37,23 @@ export function MerchHeader({ club, dashboard }: { club?: MerchClub; dashboard?:
         )}
         <span className="ml-auto flex shrink-0 items-center gap-1">
           {dashboard ? null : (
-            <Link href="/newwave/merch/dashboard" className="inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
-              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-              </svg>
-              Dashboard
-            </Link>
+            <>
+              <Link href="/newwave/sportshop" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#111] px-3.5 text-[13.5px] font-medium text-white transition hover:bg-[#333]">
+                <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 7h16l-1.5 12.5a1.5 1.5 0 0 1-1.5 1.3H7a1.5 1.5 0 0 1-1.5-1.3zM9 7V5.5a3 3 0 0 1 6 0V7" />
+                </svg>
+                <span className="sm:hidden">Sportbutik</span>
+                <span className="hidden sm:inline">Sportbutik i Tyskland</span>
+              </Link>
+              <Link href="/newwave/merch/dashboard" aria-label="Dashboard" className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-full text-[13.5px] sm:w-auto sm:px-3.5 font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
+                <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+                </svg>
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            </>
           )}
-          <Link href="/newwave/start" className="inline-flex h-10 items-center rounded-full px-3.5 text-[13.5px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]">
+          <Link href="/newwave/start" className={`h-10 items-center rounded-full ${dashboard ? "inline-flex" : "hidden sm:inline-flex"} px-3.5 text-[13.5px] text-[#6F6B63] transition hover:bg-[#F2F2EF] hover:text-[#111]`}>
             Ingångar
           </Link>
         </span>

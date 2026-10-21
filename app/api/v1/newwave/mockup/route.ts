@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     jpg = await limited(() => mockupJpeg(p, logo, size, zone));
     if (!jpg) return new Response("Hittades inte", { status: 404 });
     await mkdir(DIR, { recursive: true });
-    const tmp = `${file}.${process.pid}.${Date.now()}`;
+    const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
     await writeFile(tmp, jpg);
     await rename(tmp, file);
   }
