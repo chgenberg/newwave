@@ -223,41 +223,30 @@ export function ProductionTab({ items, onStart }: { items: Item[]; onStart: () =
     const p = nwProduct(i.id);
     return p ? [{ i, p, d: estimate(p, i.design, today) }] : [];
   });
-  const last = rows.reduce((max, r) => (r.d.date > max ? r.d.date : max), "");
   return (
     <div className={PAGE}>
       <p className="nw-kicker text-[#6F6B63]">New Wave trycker</p>
       <h2 className={H}>Produktion</h2>
       <p className={LEAD}>Korrektur, tryck och frakt räknat i arbetsdagar från i dag. Varje produkt trycks med den metod ni valt i studion.</p>
       {rows.length ? (
-        <>
-          <ol className="mt-8 divide-y divide-[rgba(17,17,17,0.08)] overflow-hidden rounded-[20px] border border-[rgba(17,17,17,0.08)] bg-white">
-            {rows.map(({ i, p, d }) => (
-              <li key={i.id} className="flex items-center gap-4 px-4 py-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={i.preview ?? p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-[#F4F4F2] object-cover" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold">{p.name}</span>
-                  <span className="block truncate text-[12.5px] text-[#6F6B63]">
-                    {METHOD_INFO[d.method].label} · {METHOD_INFO[d.method].blurb.toLowerCase()}
-                  </span>
+        <ol className="mt-8 divide-y divide-[rgba(17,17,17,0.08)] overflow-hidden rounded-[20px] border border-[rgba(17,17,17,0.08)] bg-white">
+          {rows.map(({ i, p, d }) => (
+            <li key={i.id} className="flex items-center gap-4 px-4 py-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={i.preview ?? p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-[#F4F4F2] object-cover" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold">{p.name}</span>
+                <span className="block truncate text-[12.5px] text-[#6F6B63]">
+                  {METHOD_INFO[d.method].label} · {METHOD_INFO[d.method].blurb.toLowerCase()}
                 </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-[14px] font-semibold">{fmtWeekday(d.date)}</span>
-                  <span className="nw-mono block text-[12px] text-[#6F6B63]">{d.days} arbetsdagar</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[20px] bg-[#F4F4F2] px-5 py-4">
-            <p className="text-[14px]">
-              Hela kollektionen är framme <b>{fmtWeekday(last)}</b>.
-            </p>
-            <Link href="/newwave/new-wave/ordrar" className={GHOST}>
-              Se tryckflödet hos New Wave →
-            </Link>
-          </div>
-        </>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block text-[14px] font-semibold">{fmtWeekday(d.date)}</span>
+                <span className="nw-mono block text-[12px] text-[#6F6B63]">{d.days} arbetsdagar</span>
+              </span>
+            </li>
+          ))}
+        </ol>
       ) : (
         <Empty onStart={onStart} />
       )}

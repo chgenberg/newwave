@@ -40,9 +40,9 @@ export default function StartPage() {
         <div className="flex flex-1 flex-col">
           <main className="min-w-0 flex-1 px-3 py-5 min-[900px]:px-10 min-[900px]:py-7 xl:flex xl:flex-col xl:justify-center">
             <div className="mx-auto max-w-[1180px] xl:w-full xl:max-w-[1320px]">
-              <p className="nw-mono text-[12px] uppercase tracking-[0.06em] text-[#6F6B63]">Fyra ingångar · samma motor</p>
-              <h1 className="mt-2 text-[clamp(30px,3.6vw,46px)] font-semibold leading-[1.02] tracking-[-0.045em] text-[#111]">Vem är du?</h1>
-              <ul className="mt-6 grid gap-5 sm:grid-cols-2 sm:gap-8 xl:grid-cols-4 xl:gap-5">
+              <p className="nw-mono text-center text-[12px] uppercase tracking-[0.06em] text-[#6F6B63]">Fyra ingångar · samma motor</p>
+              <h1 className="sr-only">Välj ingång</h1>
+              <ul className="mt-4 grid gap-5 sm:grid-cols-2 sm:gap-8 xl:grid-cols-4 xl:gap-5">
                 {PORTALS.map((p, i) => (
                   <li key={p.id}>
                     <PortalFilm portal={p} n={i + 1} />
