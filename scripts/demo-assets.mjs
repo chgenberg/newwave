@@ -9,7 +9,7 @@ import sharp from "sharp";
 
 process.loadEnvFile(path.join(process.cwd(), ".env.local"));
 
-const MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-flare";
+const MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst";
 const QUALITY = process.env.OPENAI_IMAGE_QUALITY || "medium";
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const OUT = path.join(process.cwd(), "public", "demo");

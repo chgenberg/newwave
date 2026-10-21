@@ -1,7 +1,7 @@
 import OpenAI, { toFile } from "openai";
 
 export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL || "gpt-6-astra";
-export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-flare";
+export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst";
 export const IMAGE_QUALITY = (process.env.OPENAI_IMAGE_QUALITY || "medium") as "low" | "medium" | "high";
 
 export const hasOpenAIKey = () => Boolean(process.env.OPENAI_API_KEY);
