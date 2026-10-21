@@ -6,19 +6,21 @@ import type { CustomerLogo } from "./cart";
 
 /**
  * Scenerna med kundens logga, delade mellan karusellen, mosaiken och eventsidan. En scen som redan är gjord hämtas ur
- * serverns cache; en ny ritas bara när eventsidan ber om det.
+ * serverns cache; nya ritas när kunden har valt logga, för alla butikens tillfällen på en gång.
  */
 const scenes = new Map<string, string>();
 const asked = new Set<string>();
+const drawing = new Map<string, Promise<string | null>>();
 const listeners = new Set<() => void>();
 
 const subscribe = (cb: () => void) => {
   listeners.add(cb);
   return () => listeners.delete(cb);
 };
+const notify = () => listeners.forEach((l) => l());
 const keep = (key: string, url: string) => {
   scenes.set(key, url);
-  listeners.forEach((l) => l());
+  notify();
 };
 
 const sceneKey = (o: OccasionId, logo: CustomerLogo) => `${o}|${logo.light}|${(logo.color ?? "").toUpperCase()}`;
@@ -44,14 +46,40 @@ export function useBrandedScene(o: OccasionId, logo: CustomerLogo | null): strin
   return url;
 }
 
+/** Om scenagenten håller på att rita tillfället med kundens logga. */
+export function useSceneDrawing(o: OccasionId, logo: CustomerLogo | null): boolean {
+  const key = logo ? sceneKey(o, logo) : "";
+  return useSyncExternalStore(
+    subscribe,
+    () => Boolean(key && drawing.has(key)),
+    () => false,
+  );
+}
+
 /** Scenagenten ritar tillfället med kundens logga och märkesfärg. */
-export async function renderScene(o: OccasionId, logo: CustomerLogo) {
+export async function renderScene(o: OccasionId, logo: CustomerLogo): Promise<string | null> {
   const key = sceneKey(o, logo);
   const hit = scenes.get(key);
   if (hit) return hit;
-  const { image } = await call<{ image: string | null }>("/api/v1/newwave/scene", sceneBody(o, logo));
-  if (image) keep(key, image);
-  return image;
+  const busy = drawing.get(key);
+  if (busy) return busy;
+  const job = call<{ image: string | null }>("/api/v1/newwave/scene", sceneBody(o, logo))
+    .then(({ image }) => {
+      if (image) keep(key, image);
+      return image;
+    })
+    .finally(() => {
+      drawing.delete(key);
+      notify();
+    });
+  drawing.set(key, job);
+  notify();
+  return job;
+}
+
+/** Alla butikens tillfällen med samma logga, så att startsidan och de andra eventsidorna har dem när kunden kommer dit. */
+export function renderScenes(ids: OccasionId[], logo: CustomerLogo) {
+  for (const id of ids) renderScene(id, logo).catch(() => {});
 }
 
 /** Produktagenten: fyra produkter för företaget på tillfället. Kräver det varumärkesagenten läste av på webbplatsen. */

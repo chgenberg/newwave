@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nwProduct, type NwProduct } from "@/lib/newwave/catalog";
 import { type Occasion, occasion as occasionOf, type OccasionId } from "@/lib/newwave/occasions";
-import { genitive, useBrandedScene } from "./brandAgent";
+import { genitive, renderScenes, useBrandedScene, useSceneDrawing } from "./brandAgent";
 import { BrandIntake, EventPicker } from "./BrandIntake";
 import { type CustomerLogo, useCart } from "./cart";
 import { CATEGORY_EVENT, CartLink } from "./ShopClient";
@@ -62,6 +62,12 @@ export function StoreHero({ tagline, search, preview }: { tagline: string; searc
   const [cart] = useCart(search.slug);
   const logo = preview ? null : cart.logo;
   const events = search.occasions.map((id) => occasionOf(id)!);
+  const brand = logo ? `${logo.light}|${logo.color ?? ""}` : "";
+  useEffect(() => {
+    if (logo) renderScenes(search.occasions, logo);
+    // `brand` täcker loggan och färgen; tillfällena är butikens och ändras inte.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brand]);
   return (
     <section className="bg-white">
       <div className="mx-auto grid max-w-[1320px] items-center gap-10 px-5 pb-12 pt-8 @4xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] @4xl:gap-14 @4xl:px-8 @4xl:pb-16 @4xl:pt-12">
@@ -113,6 +119,8 @@ function HeroCarousel({ slug, events, logo }: { slug: string; events: Occasion[]
   }, [i, paused, go]);
 
   const o = events[i];
+  const branded = useBrandedScene(o.id, logo);
+  const drawing = useSceneDrawing(o.id, logo);
   return (
     <div
       className="relative min-w-0 [perspective:1400px]"
@@ -137,7 +145,7 @@ function HeroCarousel({ slug, events, logo }: { slug: string; events: Occasion[]
           <Slide key={e.id} o={e} logo={logo} on={n === i} />
         ))}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/55 to-transparent" />
-        {logo ? <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold backdrop-blur">Med {genitive(logo.name)} logga</span> : null}
+        {logo && (branded || drawing) ? <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold backdrop-blur">{branded ? `Med ${genitive(logo.name)} logga` : `Ritas med ${genitive(logo.name)} logga…`}</span> : null}
         <Link key={o.id} href={`/newwave/s/${slug}/event/${o.id}`} className="nw-pop absolute bottom-4 left-4 grid gap-0.5 rounded-[18px] border border-white/30 bg-white/15 py-3 pl-4 pr-5 text-white backdrop-blur-[14px] transition-colors hover:bg-white/30 @2xl:bottom-5 @2xl:left-5">
           <span className="text-[12px] opacity-85">{o.name}</span>
           <b className="text-[16px]">{o.title} →</b>
@@ -240,11 +248,13 @@ const SPANS = ["@2xl:col-span-4 @2xl:row-span-2 col-span-2", "@2xl:col-span-2", 
 
 function Tile({ o, href, logo, big }: { o: Occasion; href: string; logo: CustomerLogo | null; big: boolean }) {
   const branded = useBrandedScene(o.id, logo);
+  const drawing = useSceneDrawing(o.id, logo) && !branded;
   return (
     <Link href={href} className="group relative block h-full min-h-[168px] overflow-hidden rounded-[22px] bg-[#ECE9E3] text-white transition-transform duration-400 hover:-translate-y-0.5">
       <img src={branded ?? o.scene} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]" loading="lazy" />
       <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(17,16,14,0.72))]" />
-      {branded ? <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-0.5 text-[11.5px] font-semibold text-[#1D1D1F]">Med er logga</span> : null}
+      {drawing ? <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent [animation:nw-load_1.8s_ease-in-out_infinite]" /> : null}
+      {branded || drawing ? <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-0.5 text-[11.5px] font-semibold text-[#1D1D1F]">{branded ? "Med er logga" : "Ritas med er logga…"}</span> : null}
       <span className={`absolute grid gap-1 ${big ? "bottom-6 left-6 right-16 @4xl:bottom-8 @4xl:left-8" : "bottom-5 left-5 right-5 @2xl:right-16"}`}>
         <span className={`font-bold leading-[1.05] tracking-[-0.03em] ${big ? "text-[26px] @4xl:text-[44px]" : "text-[20px] @4xl:text-[26px]"}`}>{o.name}</span>
         <small className="truncate text-[13.5px] opacity-85">{o.hint}</small>

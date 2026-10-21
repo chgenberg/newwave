@@ -13,7 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ occasion:
 export default async function ShopOccasion({ params }: { params: Promise<{ slug: string; occasion: string }> }) {
   const { slug, occasion: id } = await params;
   const r = await getResellerBySlug(slug);
-  if (!r || !isOccasion(id) || !offeredOccasions(r).some((o) => o.id === id)) notFound();
+  const offered = r ? offeredOccasions(r).map((o) => o.id) : [];
+  if (!r || !isOccasion(id) || !offered.includes(id)) notFound();
   const products = occasion(id)!.products.filter((p) => nwProduct(p));
-  return <EventShop slug={r.slug} shopName={r.texts.shopName || r.name} markup={r.markup} occasionId={id} products={products} />;
+  return <EventShop slug={r.slug} shopName={r.texts.shopName || r.name} markup={r.markup} occasionId={id} offered={offered} products={products} />;
 }

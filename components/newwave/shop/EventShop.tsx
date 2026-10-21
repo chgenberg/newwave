@@ -9,7 +9,7 @@ import type { Idea } from "@/lib/newwave/eventIdeas";
 import { occasion as occasionOf, type OccasionId } from "@/lib/newwave/occasions";
 import { fromPrice, priceLine, sek } from "@/lib/newwave/reseller";
 import { AgentLoader } from "./AgentLoader";
-import { fetchIdeas, genitive, renderScene, useBrandedScene } from "./brandAgent";
+import { fetchIdeas, genitive, renderScene, renderScenes, useBrandedScene } from "./brandAgent";
 import { BrandIntake } from "./BrandIntake";
 import { type CustomerLogo, PLACEHOLDER, useCart } from "./cart";
 import { EventPackages } from "./EventPackages";
@@ -25,7 +25,7 @@ const brandKey = (l: CustomerLogo) => `${l.light}|${l.color ?? ""}|${l.name}`;
  * scenagenten om miljön med kundens logga medan produktagenten väljer det som passar företaget. Under det paket,
  * kit och alla produkter för tillfället.
  */
-export function EventShop({ slug, shopName, markup, occasionId, products }: { slug: string; shopName: string; markup: number; occasionId: OccasionId; products: string[] }) {
+export function EventShop({ slug, shopName, markup, occasionId, offered, products }: { slug: string; shopName: string; markup: number; occasionId: OccasionId; offered: OccasionId[]; products: string[] }) {
   const o = occasionOf(occasionId)!;
   const [cart] = useCart(slug);
   const logo = cart.logo;
@@ -50,6 +50,7 @@ export function EventShop({ slug, shopName, markup, occasionId, products }: { sl
       };
       setSceneError(null);
       setRun({ id, brand: l.name, done: 0, total: wantIdeas ? 2 : 1, complete: false });
+      renderScenes(offered, l);
       await Promise.all([
         renderScene(o.id, l)
           .then((img) => (img ? null : setSceneError({ for: key, text: "Scenen kunde inte ritas just nu." })))
@@ -65,7 +66,7 @@ export function EventShop({ slug, shopName, markup, occasionId, products }: { sl
       setRun((r) => (r?.id === id ? { ...r, complete: true } : r));
       setTimeout(() => setRun((r) => (r?.id === id ? null : r)), 2600);
     },
-    [o.id, slug],
+    [o.id, offered, slug],
   );
 
   useEffect(() => {

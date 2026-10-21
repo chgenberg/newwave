@@ -7,8 +7,8 @@ import { errorMessage, hasOpenAIKey } from "@/lib/openai";
 export const maxDuration = 300;
 
 const limiter = createLimiter(() => ({
-  perKey: envInt("NW_SCENE_PER_IP_HOUR", 6),
-  global: envInt("NW_SCENE_GLOBAL_HOUR", 80),
+  perKey: envInt("NW_SCENE_PER_IP_HOUR", 36),
+  global: envInt("NW_SCENE_GLOBAL_HOUR", 200),
   windowMs: 60 * 60 * 1000,
 }));
 
