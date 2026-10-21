@@ -12,7 +12,7 @@ export type NewsletterInput = {
   shopUrl: string;
 };
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** "Åsa IF:s", "Mölndals", "IFK Göteborgs". */
 export const genitive = (name: string) => (/[A-ZÅÄÖ]$/.test(name) ? `${name}:s` : /[sxz]$/i.test(name) ? name : `${name}s`);

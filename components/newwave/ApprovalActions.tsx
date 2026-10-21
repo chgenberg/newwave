@@ -22,7 +22,7 @@ export function ApprovalActions({
   /** Veckans paket: neka ger näst bästa motivet i stället för en ändring. */
   weekly?: boolean;
   /** Produktionsfilerna som gick till New Waves hubb när materialet godkändes. */
-  delivery?: { href: string; files: number; products: number };
+  delivery?: { files: number; products: number };
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -69,11 +69,6 @@ export function ApprovalActions({
           {shopCount ? (
             <Link href="/newwave/klubb/butik" className="nw-btn nw-club-btn">
               Se i butiken
-            </Link>
-          ) : null}
-          {delivery ? (
-            <Link href={delivery.href} className={shopCount ? "text-[14px] font-medium text-white underline underline-offset-4" : "nw-btn nw-club-btn"}>
-              Så landar filerna hos New Wave{shopCount ? " →" : ""}
             </Link>
           ) : null}
           <Link href="/newwave/craft" className="text-[14px] font-medium text-white underline underline-offset-4">

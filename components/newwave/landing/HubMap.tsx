@@ -295,7 +295,6 @@ function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) =
       ) : (
         <Chips title="Fördelar till" list={ACTORS.map((a) => ({ id: a.id, label: a.name }))} onPick={toActor} />
       );
-    demo = pick.kind === "api" ? { href: "/newwave/new-wave/tryckfiler", label: "Se anropen som kommit in" } : undefined;
   } else if (pick.kind === "leg") {
     const { id } = pick;
     const l = LEGS.find((x) => x.id === id)!;

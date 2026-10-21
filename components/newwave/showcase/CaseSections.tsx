@@ -1,5 +1,4 @@
 /* eslint-disable @next/next/no-img-element */
-import Link from "next/link";
 import { OfficeMail } from "@/components/newwave/PackZip";
 import type { CaseMotif } from "@/lib/newwave/clubCase";
 import { fmtBytes } from "@/lib/newwave/hubFormats";
@@ -217,9 +216,6 @@ export async function HubSection({ approvedAt }: { approvedAt: string }) {
           ))}
         </ul>
       </div>
-      <Link href={`/newwave/new-wave/tryckfiler/${d.id}`} className="nw-hit mt-4 inline-block text-[13.5px] font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4">
-        Se leveransen som New Wave ser den →
-      </Link>
     </>
   );
 }

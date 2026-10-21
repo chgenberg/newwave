@@ -34,7 +34,7 @@ async function bytes(url: string) {
 type Step = { when: string; channel: string; action: string; folder: string };
 
 /** Agentens publiceringsplan, eller en enkel vecka om planen saknas. */
-function plan(p: ZipPack): Step[] {
+export function publishPlan(p: ZipPack): Step[] {
   const folderFor = (channel: string) =>
     /insta/i.test(channel) ? "01 Instagram" : /face/i.test(channel) ? "02 Facebook" : /story|reels|tiktok/i.test(channel) ? "03 Story och Reels" : /hemsid|sajt|webb|banner/i.test(channel) ? "04 Hemsidan" : /nyhetsbrev|mejl|e-post/i.test(channel) ? "05 Nyhetsbrev" : /affisch|klubbhus|skärm|tv/i.test(channel) ? "06 Affisch" : "";
   if (p.content.plan?.length) return p.content.plan.map((s) => ({ when: s.date, channel: s.channel, action: s.action, folder: folderFor(s.channel) }));
@@ -130,7 +130,7 @@ export async function buildPackZip(p: ZipPack, onProgress?: (percent: number) =>
   }
   onProgress?.(70);
 
-  root.file("SÅ HÄR GÖR DU.html", guide(p, plan(p), files));
+  root.file("SÅ HÄR GÖR DU.html", guide(p, publishPlan(p), files));
   root.file("LÄS MIG.txt", `${genitive(p.club.name)} material${p.week ? ` för vecka ${p.week}` : ""}: ${p.slogan}\n\nÖppna "SÅ HÄR GÖR DU.html" – där står vad som ska upp var och när, med alla texter klara att kopiera.\nInget är publicerat automatiskt.\n`);
   return zip.generateAsync({ type: "blob" }, (m) => onProgress?.(70 + m.percent * 0.3));
 }

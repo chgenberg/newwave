@@ -19,7 +19,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
   if (!a) notFound();
   const theme = clubTheme((await readBrand(ASA_IF.id)).palette ?? CLUB.palette);
   const sent = a.status === "godkänd" ? await deliveryFor(ASA_IF.id, a.id) : null;
-  const delivery = sent ? { href: `/newwave/new-wave/tryckfiler/${sent.id}`, ...deliveryStats(sent) } : undefined;
+  const delivery = sent ? deliveryStats(sent) : undefined;
   const club = packClub(ASA_IF, theme);
   const zip =
     a.content && a.assets

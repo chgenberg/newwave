@@ -112,7 +112,6 @@ export const ACTORS: Actor[] = [
     sub: "tar emot tryckfiler",
     description: "Tryckeri, brodyr, laser, sublimering och stickeri får filerna i det format maskinen läser, i exakt tryckstorlek.",
     payloads: ["tryckfiler", "ordrar"],
-    demo: { href: "/newwave/new-wave/tryckfiler", label: "Se tryckfilerna som kommit in" },
   },
   { id: "leverantorer", name: "Leverantörer", sub: "plagg och ämnen", description: "Plagg och ämnen beställs utifrån ordrarnas SKU, färg och storlek.", payloads: ["ordrar", "produktdata"] },
   {
@@ -121,7 +120,6 @@ export const ACTORS: Actor[] = [
     sub: "order och status",
     description: "Varje order följs från mottagen till skickad, och statusen går tillbaka till hubben.",
     payloads: ["ordrar", "offerter"],
-    demo: { href: "/newwave/new-wave/ordrar", label: "Se ordrarna hos New Wave" },
   },
   { id: "frakt", name: "Frakt och logistik", sub: "bokning och spårning", description: "Frakten bokas med kundens adress, och spårningen skickas till kunden.", payloads: ["ordrar", "kunddata"] },
   { id: "erp", name: "Ekonomi / ERP", sub: "faktura och avräkning", description: "Fakturor, avräkning mot klubbar och återförsäljare, och provision per såld produkt.", payloads: ["ordrar", "offerter", "kunddata"] },
