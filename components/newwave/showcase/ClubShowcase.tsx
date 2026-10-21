@@ -9,7 +9,7 @@ import { LogoMark } from "@/components/newwave/Logo";
 type Step = { title: string; detail: string; lines: string[]; target: string };
 
 const STEPS: Step[] = [
-  { title: "Fyra motiv", detail: "Ur kalendern, matcherna och klubbens nyheter", lines: ["Läser klubbens kalender", "Halloween om 19 dagar", "Öppen hall på fredag", "Fyra motiv klara"], target: "motiv" },
+  { title: "Fyra motiv", detail: "Ur kalendern, matcherna och klubbens nyheter", lines: ["Läser klubbens kalender", "Knattefotbollens sista helg", "Öppen hall på fredag", "Fyra motiv klara"], target: "motiv" },
   { title: "Två granskare", detail: "Varumärke och sälj väljer det bästa", lines: ["Varumärket betygsätter", "Sälj betygsätter", "Det bästa motivet vann"], target: "motiv" },
   { title: "Komplett paket", detail: "Foton, inlägg, banner, affisch och produktbilder", lines: ["Tryckfilen ritas i 300 dpi", "Fotografen tar bilderna", "Inlägg, story och banner", "Produkterna fotograferas"], target: "paket" },
   { title: "Mejl till kansliet", detail: "Allt i en zip, måndag 07.00", lines: ["Packar zip-filen", "Skriver guiden", "Skickat till kansliet"], target: "mejl" },

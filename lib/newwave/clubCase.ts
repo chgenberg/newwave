@@ -18,22 +18,22 @@ export const CLUB_CASE = {
   id: "v42",
   week: 42,
   title: "Åsa har klubbanda",
-  occasion: "Halloween",
+  occasion: "Säsongsavslutning",
   story:
-    "Till Halloween får Åsas klubbanda bokstavligen ett litet spöke, med en ordvits som passar lika bra för pingisfamiljen som för fotbolls- och innebandygänget. Sloganen sätts stort och typografiskt avskalad, med spöket som enda lilla bildaccent.",
+    "När knattefotbollen spelar sin sista helg samlas hela Åsa, och då ska klubbandan synas. Åsa IF:s sköld i gult och svart sitter stort fram, utan krusiduller, så att fotbollen, pingisfamiljen och innebandygänget bär samma märke.",
   signals: [
-    { title: "Halloween", detail: "Lördag 31 oktober" },
-    { title: "Öppen hall – innebandy", detail: "Fredag 16–17.30" },
     { title: "Knattefotbollens sista helg", detail: "Åsavallen" },
+    { title: "Öppen hall – innebandy", detail: "Fredag 16–17.30" },
+    { title: "Halloween", detail: "Lördag 31 oktober" },
   ],
   motifs: [
     {
       slogan: "Åsa har klubbanda",
-      signal: "Halloween",
-      story: "Ett litet spöke och en ordvits för hela föreningen – från pingisfamiljen till fotbolls- och innebandygänget.",
+      signal: "Knattefotbollens sista helg",
+      story: "Klubbens sköld stort fram – samma märke för knattefotbollen, pingisfamiljen och innebandygänget.",
       brand: 9,
       sales: 9,
-      note: "Träffsäker och inkluderande ordvits med ett avskalat uttryck som är både tryckvänligt och köpstarkt.",
+      note: "Märket alla redan känner igen: rent, tidlöst och lätt att trycka – och det säljer långt efter veckan.",
     },
     {
       slogan: "Åsa har hallkoll",
@@ -41,7 +41,7 @@ export const CLUB_CASE = {
       story: "Fredagens öppna hall får en varm ordvits och en dörr på vid gavel: alla åldrar och hela Åsa är välkomna.",
       brand: 9,
       sales: 8,
-      note: "Välkomnande och lätt att bära även efter veckan, men säljer något sämre än Halloween just nu.",
+      note: "Välkomnande och lätt att bära även efter veckan, men säljer något sämre än klubbmärket.",
     },
     {
       slogan: "Läskigt bra i Åsa",
@@ -49,7 +49,7 @@ export const CLUB_CASE = {
       story: "En fotbollspumpa gör Halloween och knattefotbollen till samma glada motiv, utan att bli otäckt för de yngsta.",
       brand: 8,
       sales: 8,
-      note: "Snäll Halloweenhumor för familjer, men pingis och innebandy får mindre att känna igen sig i.",
+      note: "Snäll Halloweenhumor för familjer, men känns gammal efter den 31 oktober och pingis och innebandy får mindre att känna igen sig i.",
     },
     {
       slogan: "Åsa förenar sedan 1919",
@@ -88,30 +88,30 @@ export const CLUB_CASE = {
   content: {
     instagram: {
       caption:
-        "Åsa har klubbanda – nu med ett litet spöke! 👻 T-shirt 349 kr, hoodie 599 kr, keps 249 kr och mugg 179 kr. Trycks på beställning hos Intersport, och varje köp stöttar Åsa IF. För hela vårt fotbolls-, pingis- och innebandygäng. Länk i bio 🎃",
-      hashtags: ["ÅsaIF", "ÅsaHarKlubbanda", "Klubbandan", "Halloween", "Klubbmerch", "Föreningsliv", "Åsa"],
+        "Åsa har klubbanda – och nu syns den. Vår sköld i gult och svart, stort fram på T-shirt 349 kr och hoodie 599 kr, och på keps 249 kr och mugg 179 kr. Trycks på beställning hos Intersport, och varje köp stöttar Åsa IF. För hela vårt fotbolls-, pingis- och innebandygäng. Länk i bio 💛🖤",
+      hashtags: ["ÅsaIF", "ÅsaHarKlubbanda", "Klubbmärket", "Säsongsavslutning", "Klubbmerch", "Föreningsliv", "Åsa"],
     },
     facebook: {
-      post: `Till Halloween får vår klubbanda sällskap av ett litet spöke – med motivet ”Åsa har klubbanda” samlar vi knattefotbollens familjer, pingisgänget och innebandyvännerna under samma ordvits! 👻 Välj T-shirt för 349 kr, hoodie för 599 kr, keps för 249 kr eller mugg för 179 kr. Allt trycks på beställning, och varje köp stöttar vår förening. Hitta familjens klubbanda i Åsa IF:s butik hos Intersport: ${utm("facebook", "social")}`,
+      post: `Knattefotbollens sista helg på Åsavallen – och klubbandan ska synas! Motivet ”Åsa har klubbanda” är helt enkelt vår sköld, stort fram. Samma märke för knattefamiljerna, pingisgänget och innebandyvännerna. Välj T-shirt för 349 kr, hoodie för 599 kr, keps för 249 kr eller mugg för 179 kr. Allt trycks på beställning, och varje köp stöttar vår förening. Hitta familjens favorit i Åsa IF:s butik hos Intersport: ${utm("facebook", "social")}`,
     },
     newsletter: {
-      subject: "Åsa har klubbanda – och ett litet Halloweenspöke!",
-      body: `Hej alla medlemmar!\n\nSpöken, pumpor och knattefotboll – Halloween närmar sig! Vårt motiv ”Åsa har klubbanda” låter stor, avskalad text möta ett litet spöke. En ordvits för hela föreningen, från pingisfamiljen till fotbolls- och innebandygänget.\n\nVälj T-shirt för 349 kr, hoodie för 599 kr, keps för 249 kr eller mugg för 179 kr. Allt trycks på beställning och varje köp stöttar Åsa IF.\n\nHitta din favorit i klubbens butik hos Intersport:\n${utm("nyhetsbrev", "email")}\n\nTack för att du bär vår gemenskap vidare!\nÅsa Idrottsförening sedan 1919`,
+      subject: "Åsa har klubbanda – bär märket till säsongsavslutningen",
+      body: `Hej alla medlemmar!\n\nKnattefotbollens sista helg är här och hela Åsa samlas på Åsavallen. Därför gör vi det enkelt: motivet ”Åsa har klubbanda” är Åsa IF:s sköld i gult och svart, stort fram. Märket som hela föreningen redan bär, från pingisfamiljen till fotbolls- och innebandygänget.\n\nVälj T-shirt för 349 kr, hoodie för 599 kr, keps för 249 kr eller mugg för 179 kr. Allt trycks på beställning och varje köp stöttar Åsa IF.\n\nHitta din favorit i klubbens butik hos Intersport:\n${utm("nyhetsbrev", "email")}\n\nTack för att du bär vår gemenskap vidare!\nÅsa Idrottsförening sedan 1919`,
     },
     banner: {
       headline: "Åsa har klubbanda",
-      subline: "Ett litet spöke. Stor gemenskap. Varje köp stöttar Åsa IF.",
-      altText: "Svart T-shirt med texten ”Åsa har klubbanda” i stor, avskalad typografi och ett litet spöke som enda bildaccent. Åsa IF:s Halloweenmotiv.",
+      subline: "Vårt märke, stort fram. Varje köp stöttar Åsa IF.",
+      altText: "Svart T-shirt med Åsa IF:s gula och svarta sköld stort fram. Åsa IF:s motiv ”Åsa har klubbanda”.",
     },
     tiktok: {
-      hook: "Vår klubbanda har blivit ett spöke! 👻",
+      hook: "Det här är vår klubbanda 💛🖤",
       script: [
-        "0–2 sek: Zooma in på motivets lilla spöke. Säg: ”Vår klubbanda har blivit ett spöke!”",
+        "0–2 sek: Zooma in på skölden på bröstet. Säg: ”Det här är vår klubbanda.”",
         "2–4 sek: Visa T-shirten, hoodien, kepsen och muggen. Text: ”Åsa har klubbanda”.",
-        "4–7 sek: Klipp mellan en fotboll, ett pingisrack och en innebandyklubba. Text: ”Tre sporter. Samma klubbanda.”",
+        "4–7 sek: Klipp mellan en fotboll, ett pingisrack och en innebandyklubba. Text: ”Tre sporter. Samma märke.”",
         "7–10 sek: Visa produkterna igen. Text: ”Trycks på beställning. Varje köp stöttar Åsa IF.” Avsluta med ”Länk i bio”.",
       ],
-      caption: "Läskigt bra klubbanda 👻 T-shirt, hoodie, keps och mugg – trycks på beställning i klubbens butik hos Intersport. Varje köp stöttar Åsa IF. Länk i bio",
+      caption: "Samma märke, hela Åsa 💛🖤 T-shirt, hoodie, keps och mugg – trycks på beställning i klubbens butik hos Intersport. Varje köp stöttar Åsa IF. Länk i bio",
     },
   } satisfies PackContent,
   shopUrl: `${SHOP}?drop=${DROP}`,
