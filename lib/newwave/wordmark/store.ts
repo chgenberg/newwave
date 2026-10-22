@@ -117,14 +117,15 @@ export async function removeTemplate(id: string) {
 /** Klubben som källan beskriver den, innan klubbens egna rättelser. */
 export async function baseClub(id: string): Promise<WordmarkClub | null> {
   const c = craftClub(id);
-  if (!c) return registryWordmarkClub(id);
+  if (!c) return (await registryWordmarkClub(id)) ?? (await import("@/lib/newwave/grasrot/shop")).grasrotWordmarkClub(id);
   const own = CLUBS[id] ? (await readBrand(id)).palette?.map((p) => p.hex) : undefined;
   return { id: c.id, name: c.name, colors: own?.length ? own : c.colors, logo: c.logo, logoDark: c.logoDark, founded: CLUBS[id]?.founded, sports: c.sports };
 }
 
 /**
  * Klubbens namn, färger, märke och grundandeår, som ordmärket ritas med: Crafts klubbar först (med färgerna kansliet
- * satt under Varumärke), annars klubbregistret – och överst det klubben själv rättat i klubbportalen.
+ * satt under Varumärke), annars klubbregistret, annars Gräsrot 360-föreningarna – och överst det klubben själv rättat i
+ * klubbportalen.
  */
 export async function wordmarkClub(id: string, known?: ClubPrefs): Promise<WordmarkClub | null> {
   const [club, prefs] = await Promise.all([baseClub(id), known ?? readPrefs(id)]);

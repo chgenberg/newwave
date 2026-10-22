@@ -5,6 +5,7 @@ import { craftOverview } from "@/lib/newwave/craft";
 const BASE = "/newwave/craft";
 const ITEMS: NavItem[] = [
   { href: BASE, label: "Klubbar", icon: "shield" },
+  { href: `${BASE}/grasrot`, label: "Gräsrot 360", icon: "spark" },
   { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
   { href: `${BASE}/material`, label: "Material", icon: "grid" },
   { href: `${BASE}/skapa`, label: "Skapa", icon: "send" },

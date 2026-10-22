@@ -5,7 +5,7 @@ import { deltaE, hexToRgb, rgbToHex, type Rgb } from "@/lib/scarf";
 import type { NwProduct } from "./catalog";
 import { colorName } from "./colors";
 import { embroider, METERS_PER_1000, ROW_MM, STITCHES_PER_MIN, stitchSvg } from "./embroidery";
-import { colorsOf, METHOD_INFO, type Method, type Names, type Placement, zoneLabel } from "./marking";
+import { colorsOf, METHOD_INFO, type Method, type Names, type Placement, zoneLabel, zonesFor } from "./marking";
 
 /**
  * Produktionsfilerna som hubben skickar till New Wave när materialet är godkänt: det format varje tryckeri,
@@ -56,13 +56,17 @@ const ink = (hex: string, detail?: string): JobInk => ({ hex, name: colorName(he
 type Art = { rgba: Buffer; w: number; h: number; dpi: number; widthMm: number; heightMm: number };
 
 /** Motivet beskuret till det som trycks och skalat till exakt tryckstorlek; stora ytor i 150 dpi som storformat. */
-async function fitArt(art: Buffer, widthMm: number, dpi = widthMm > 400 ? 150 : 300): Promise<Art> {
+/** Motivet i `maxWidthMm` bredd, smalare om det annars blir högre än `maxHeightMm`. */
+async function fitArt(art: Buffer, maxWidthMm: number, maxHeightMm = Infinity): Promise<Art> {
   const trimmed = await sharp(art)
     .ensureAlpha()
     .trim({ threshold: 1 })
     .png()
     .toBuffer()
     .catch(() => art);
+  const meta = await sharp(trimmed).metadata();
+  const widthMm = Math.min(maxWidthMm, meta.width && meta.height ? (maxHeightMm * meta.width) / meta.height : Infinity);
+  const dpi = widthMm > 400 ? 150 : 300;
   const w = Math.round((widthMm / MM_PER_IN) * dpi);
   const { data, info } = await sharp(trimmed).ensureAlpha().resize({ width: w }).raw().toBuffer({ resolveWithObject: true });
   return { rgba: data, w: info.width, h: info.height, dpi, widthMm, heightMm: (info.height / info.width) * widthMm };
@@ -544,7 +548,10 @@ const MAKERS: Record<Method, (c: Ctx) => Promise<MadeJob>> = { dtg, transfer, sc
 
 export async function makeJob(input: JobInput): Promise<MadeJob> {
   const m = input.placement.method;
-  const a = await fitArt(input.art, m === "sublimering" ? Math.min(input.placement.sizeCm * 10, MUG.w) : input.placement.sizeCm * 10);
+  // Bilaga 2-ytorna gäller tryckfilen också: motivet får varken bli bredare eller högre än ytan.
+  const box = zonesFor(input.product).find((z) => z.id === input.placement.zone)?.maxCm;
+  const widthMm = Math.min(input.placement.sizeCm * 10, m === "sublimering" ? MUG.w : Infinity, box ? box[0] * 10 : Infinity);
+  const a = await fitArt(input.art, widthMm, box ? box[1] * 10 : Infinity);
   const where = zoneLabel(input.product, input.placement.zone);
   return MAKERS[m]({
     ...input,

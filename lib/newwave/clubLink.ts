@@ -22,6 +22,10 @@ const PAGE: Record<LinkScope, RegExp> = {
   shop: /^\/newwave\/klubbar\/([a-z0-9-]{1,80})\/butik(?:\/[a-z0-9-]{1,120})?$/,
 };
 const INTERSPORT = /^\/intersport\/([a-z0-9-]{1,80})(?:\/[a-z0-9-]{1,120})?$/;
+/** Katalogens 3D-modeller, som produktsidorna och designstudion ritar. */
+const MODEL = /^\/newwave\/models\/P\d{3}\.glb$/;
+/** Det butiken visar ur Gräsrot 360-leveransen: herobilden, produktbilderna och märkena som trycks i 3D – inte tryckfilerna eller paketet. */
+const GRASROT_SHOP = /^(?:herobild\.jpg|mockup-[a-z]+-[a-z-]+\.jpg|(?:klubbmarke|ordmarke)-(?:original|solid|negativ)\.png)$/;
 
 async function sign(scope: LinkScope, id: string) {
   const secret = process.env.ADMIN_PASSWORD || process.env.DEMO_PASSWORD;
@@ -51,9 +55,10 @@ export async function clubLink(id: string, scope: LinkScope = "club") {
   return `${SITE}/newwave/klubbar/${id}${scope === "shop" ? "/butik" : ""}${k ? `?${CLUB_PARAM}=${k}` : ""}`;
 }
 
-/** Bilderna båda sidorna visar: ordmärken och mockups för klubben, klubbens märke och fotot i butiken. */
+/** Bilderna båda sidorna visar: ordmärken och mockups för klubben, klubbens märke, fotot i butiken och 3D-modellerna. */
 function images(id: string, p: string, q: URLSearchParams) {
-  if (p === `/api/v1/newwave/registry/${id}/logo.png` || p === `/api/v1/newwave/registry/${id}/bild.jpg`) return true;
+  if (p === `/api/v1/newwave/registry/${id}/logo.png` || p === `/api/v1/newwave/registry/${id}/bild.jpg` || MODEL.test(p)) return true;
+  if (p.startsWith(`/api/v1/newwave/grasrot/${id}/`)) return GRASROT_SHOP.test(p.slice(`/api/v1/newwave/grasrot/${id}/`.length));
   if (p.startsWith(`/api/v1/newwave/clubshop/${id}/foto/`)) return /^foto-\d{13}\.jpg$/.test(p.slice(`/api/v1/newwave/clubshop/${id}/foto/`.length));
   if (p.startsWith(`/api/v1/newwave/clubshop/${id}/kollektion/`)) return /^[0-9a-f-]{36}\.(jpg|png)$/.test(p.slice(`/api/v1/newwave/clubshop/${id}/kollektion/`.length));
   if (p.startsWith(`/api/v1/brand/${id}/`)) return /^[a-z0-9-]+\.(png|svg)$/.test(p.slice(`/api/v1/brand/${id}/`.length));

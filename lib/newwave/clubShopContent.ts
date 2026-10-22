@@ -6,6 +6,8 @@ import { z } from "zod";
 import { ACCESS_COOKIE, hasAccess } from "@/lib/access";
 import { hasClubLink, LINK_COOKIE } from "./clubLink";
 import { registryPhoto } from "./clubRegistry";
+import { grasrotClub } from "./grasrot/clubs";
+import { grasrotBase } from "./grasrot/urls";
 import { genitive } from "./newsletterHtml";
 import { readData, updateJson } from "./workspace";
 
@@ -115,10 +117,17 @@ const removePhoto = (id: string, file: string) => rm(path.join(PHOTO_DIR, id, fi
 
 export const readPhoto = (id: string, file: string) => (ID.test(id) && PHOTO_FILE.test(file) ? readFile(path.join(PHOTO_DIR, id, file)).catch(() => null) : Promise.resolve(null));
 
-/** Fotot överst i butiken: klubbens eget, annars bilden från webbplatsen. */
+/** Bilden butiken visar när klubben inte laddat upp någon: herobilden för Gräsrot 360-föreningarna, annars bilden från webbplatsen. */
+export async function standardPhoto(id: string): Promise<{ url: string; label: string } | null> {
+  if (grasrotClub(id)) return { url: `${grasrotBase(id)}/herobild.jpg`, label: "herobilden från Gräsrot 360" };
+  const url = await registryPhoto(id);
+  return url ? { url, label: "bilden från klubbens webbplats" } : null;
+}
+
+/** Fotot överst i butiken: klubbens eget, annars standardbilden – om klubben inte valt bort den. */
 export async function shopPhoto(id: string, c: ShopContent) {
   if (c.photo) return `/api/v1/newwave/clubshop/${id}/foto/${c.photo}`;
-  return c.photoOff ? undefined : registryPhoto(id);
+  return c.photoOff ? undefined : (await standardPhoto(id))?.url;
 }
 
 /** Butikens texter, med klubbens egna där de finns. */

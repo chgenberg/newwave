@@ -13,7 +13,6 @@ export function ProductTile({ item, clubId, v, href, eager }: { item: ShopItem; 
         <span className="absolute inset-0 grid place-items-center p-[14%] opacity-0 transition duration-500 group-hover:opacity-100" style={{ background: item.product.garmentHex }}>
           <img src={printArt(item.product, spec, clubId, v, 800)} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
         </span>
-        {item.flock ? <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11.5px] font-semibold">Namn och nummer</span> : null}
       </span>
       <span className="mt-3 block truncate text-[15px] font-semibold">{item.name}</span>
       <span className="mt-0.5 flex items-baseline justify-between gap-2 text-[13.5px]">

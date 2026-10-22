@@ -91,7 +91,9 @@ export function TextsEditor({ clubId, shop, fields, current, submit: label, save
 }
 
 /** Fotot överst i butiken: eget, från klubbens webbplats eller inget. */
-export function PhotoEditor({ clubId, shop, photo, own, site, color }: { clubId: string; shop: string; photo?: string; own: boolean; site: boolean; color: string }) {
+/** Fotot överst i butiken; `standard` är bilden butiken visar utan eget foto, t.ex. "bilden från klubbens webbplats". */
+export function PhotoEditor({ clubId, shop, photo, own, standard, color }: { clubId: string; shop: string; photo?: string; own: boolean; standard?: string; color: string }) {
+  const Standard = standard && standard[0].toUpperCase() + standard.slice(1);
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -121,7 +123,7 @@ export function PhotoEditor({ clubId, shop, photo, own, site, color }: { clubId:
         {status.kind === "busy" ? <span className="absolute inset-0 grid place-items-center bg-black/40 text-[14px] font-medium text-white">Laddar upp …</span> : null}
       </div>
       <div className="grid content-start gap-3">
-        <p className="text-[14px] text-[#4A4740]">{own ? "Klubbens eget foto." : photo ? "Bilden från klubbens webbplats." : "Ingen bild."} Lagbilder och läktarbilder blir bäst, gärna liggande och minst 1600 pixlar brett.</p>
+        <p className="text-[14px] text-[#4A4740]">{own ? "Klubbens eget foto." : photo && Standard ? `${Standard}.` : "Ingen bild."} Lagbilder och läktarbilder blir bäst, gärna liggande och minst 1600 pixlar brett.</p>
         <input
           ref={input}
           type="file"
@@ -137,9 +139,9 @@ export function PhotoEditor({ clubId, shop, photo, own, site, color }: { clubId:
           <button type="button" disabled={status.kind === "busy"} onClick={() => input.current?.click()} className={BTN}>
             Ladda upp ett foto
           </button>
-          {site && (own || !photo) ? (
-            <button type="button" disabled={status.kind === "busy"} onClick={() => run(() => save(clubId, { photo: "hemsidan" }), "Butiken visar bilden från webbplatsen.")} className={GHOST}>
-              Bilden från webbplatsen
+          {Standard && (own || !photo) ? (
+            <button type="button" disabled={status.kind === "busy"} onClick={() => run(() => save(clubId, { photo: "hemsidan" }), `Butiken visar ${standard}.`)} className={GHOST}>
+              {Standard}
             </button>
           ) : null}
           {photo ? (

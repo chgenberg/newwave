@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { CollectionSections } from "@/components/newwave/clubshop/CollectionView";
 import { ProductTile } from "@/components/newwave/clubshop/ProductTile";
 import { DELIVERY_DAYS, FLOCK_PRICE } from "@/components/newwave/clubshop/pricing";
+import { G360_SECTION, G360Section } from "@/components/newwave/grasrot/ShopCollection";
 import { loadCollection } from "@/lib/newwave/clubCollection";
 import { loadClubShop, mockupUrl, shopPath, wordmarkSpec } from "@/lib/newwave/clubShop";
 import { shopPhoto, shopTexts } from "@/lib/newwave/clubShopContent";
+import { shopProducts } from "@/lib/newwave/grasrot/shop";
 import { luminance } from "@/lib/newwave/theme";
 import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 
@@ -24,7 +26,7 @@ export default async function ClubShopHome({ params }: { params: Promise<{ id: s
   if (!shop) notFound();
   const { club, groups, ranked, v } = shop;
   const texts = shopTexts(club, shop.content);
-  const [photo, { drops }] = await Promise.all([shopPhoto(id, shop.content), loadCollection(id, shop.content.hidden)]);
+  const [photo, { drops }, g360] = await Promise.all([shopPhoto(id, shop.content), loadCollection(id, shop.content.hidden), shopProducts(id)]);
   const main = club.colors[0] ?? "#111111";
   const on = luminance(main) > 0.4 ? "#111111" : "#FFFFFF";
   const lead = ranked[0];
@@ -74,15 +76,16 @@ export default async function ClubShopHome({ params }: { params: Promise<{ id: s
       </ul>
 
       <div id="sortiment" className="mx-auto max-w-[1320px] scroll-mt-20 px-4 sm:px-6">
-        {groups.length + drops.length > 2 ? (
+        {groups.length + drops.length + (g360 ? 1 : 0) > 2 ? (
           <nav aria-label="Stilar" className="mt-10 flex gap-2 overflow-x-auto pb-1">
-            {[...(drops.length ? [{ id: "kollektion", name: "Veckans kollektion" }] : []), ...groups].map((g) => (
+            {[...(g360 ? [G360_SECTION] : []), ...(drops.length ? [{ id: "kollektion", name: "Veckans kollektion" }] : []), ...groups].map((g) => (
               <a key={g.id} href={`#${g.id}`} className="inline-flex h-10 shrink-0 items-center rounded-full border border-[#DCDAD4] px-4 text-[14px] font-medium transition hover:border-[var(--shop)] hover:bg-[var(--shop)] hover:text-[var(--shop-on)]">
                 {g.name}
               </a>
             ))}
           </nav>
         ) : null}
+        {g360 ? <G360Section id={id} home={shopPath(id)} products={g360.products} featured={g360.featured} /> : null}
         <CollectionSections drops={drops} href={(it) => `${shopPath(id)}/${it.id}`} />
         {groups.map((g, gi) => (
           <section key={g.id} id={g.id} aria-labelledby={`${g.id}-rubrik`} className="scroll-mt-20 pt-10">

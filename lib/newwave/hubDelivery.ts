@@ -9,7 +9,7 @@ import { nwProduct } from "./catalog";
 import { CLUB_CASE } from "./clubCase";
 import { colorName } from "./colors";
 import { knitScarf } from "./knitFile";
-import { defaultDesign, type Design, type Placement } from "./marking";
+import { defaultDesign, type Design, fitDesign, type Placement } from "./marking";
 import { fileSlug, isDarkHex, makeJob, type MadeJob, type OutFile } from "./printFiles";
 import { mockupJpeg } from "./serverMockup";
 import { SITE } from "./site";
@@ -109,7 +109,7 @@ const sku = (clubId: string, productId: string, approvalId: string, n: number) =
 async function productJobs(club: Club, a: Pick<Approval, "id" | "printFiles" | "previewUrl">, item: ApprovalProduct): Promise<HubJob[]> {
   const p = nwProduct(item.id);
   if (!p) return [];
-  const design: Design = item.custom?.design ?? defaultDesign(p);
+  const design: Design = item.custom ? fitDesign(p, item.custom.design) : defaultDesign(p);
   const color = item.custom?.color ?? p.garmentHex;
   const dark = isDarkHex(color);
   const logoUrl = design.logo ? (dark ? (design.logoDark ?? design.logo) : design.logo) : a.printFiles ? (dark ? a.printFiles.dark : a.printFiles.light) : (item.printUrl ?? a.previewUrl);

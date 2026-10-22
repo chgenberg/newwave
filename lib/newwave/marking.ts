@@ -1,3 +1,4 @@
+import type { Bilaga2Zone, Technique } from "./bilaga2";
 import type { NwProduct } from "./catalog";
 import { isHex } from "./colors";
 import { cleanSpec, type WordmarkSpec } from "./wordmark/spec";
@@ -24,7 +25,7 @@ export type Design = {
   /** Antal tryckfärger (1–4). Fyrfärgsmetoder är alltid fyra, gravyr alltid en ton. */
   colors: number;
   shape: Shape;
-  /** Placeringszon (se zonesFor) eller "egen" när någon dragit trycket på produkten. */
+  /** Placeringszon (se zonesFor) eller "egen" när någon dragit trycket på en produkt utan Bilaga 2-ytor. */
   zone: string;
   point?: Vec3;
   normal?: Vec3;
@@ -91,15 +92,26 @@ export function markingPrice(d: Design, qty: number) {
   };
 }
 
-/** Kamerariktning mot produkten och förskjutning i andelar av modellens storlek; modellerna har framsidan mot +Z. */
-export type Zone = { id: string; label: string; dir: Vec3; offset: [number, number]; sizeCm?: number };
+/**
+ * Kamerariktning mot produkten och förskjutning i andelar av modellens storlek; modellerna har framsidan mot +Z.
+ * Bilaga 2-ytorna har också största motivet i cm (bredd, höjd) och metoderna ytan tillåter.
+ */
+export type Zone = { id: string; label: string; dir: Vec3; offset: [number, number]; sizeCm?: number; maxCm?: [number, number]; methods?: Method[] };
 
 const Z = (id: string, label: string, dir: Vec3, offset: [number, number] = [0, 0], sizeCm?: number): Zone => ({ id, label, dir, offset, sizeCm });
 
-const ZONES: Record<NwProduct["kind"], Zone[]> = {
-  top: [Z("brost", "Mitt på bröstet", [0, 0, 1], [0, 0.18]), Z("vanster", "Vänster bröst", [0, 0, 1], [0.12, 0.22], 9), Z("rygg", "Ryggen", [0, 0, -1], [0, 0.15]), Z("arm", "Ärmen", [1, 0, 0], [0, 0.25], 8)],
-  cap: [Z("front", "Framsida", [0, 0, 1], [0, 0.12]), Z("sida", "Sidan", [1, 0, 0], [0, 0.1]), Z("bak", "Baksida", [0, 0, -1], [0, 0.05])],
-  beanie: [Z("front", "Framsida", [0, 0, 1], [0, -0.15]), Z("sida", "Sidan", [1, 0, 0], [0, -0.15])],
+const METHOD_OF: Partial<Record<Technique, Method>> = { screentryck: "screentryck", transfer: "transfer", brodyr: "brodyr", digitaltryck: "digitaltryck", lasergravyr: "gravyr" };
+const fromBilaga2 = (z: Bilaga2Zone): Zone => ({
+  ...Z(z.id, z.label, z.dir, z.offset, z.startCm),
+  maxCm: [z.widthMm / 10, z.heightMm / 10],
+  methods: z.techniques.flatMap((t) => METHOD_OF[t] ?? []),
+});
+
+/** Kläderna och termosflaskan trycks bara i Bilaga 2:s ytor; trycket går inte att dra till en egen placering. */
+export const isLocked = (p: Pick<NwProduct, "bilaga2">) => Boolean(p.bilaga2);
+
+/** Zonerna för produkterna som Bilaga 2 inte gäller. */
+const ZONES: Partial<Record<NwProduct["kind"], Zone[]>> = {
   bag: [Z("front", "Framsida", [0, 0, 1], [0, 0]), Z("ovre", "Övre framsida", [0, 0, 1], [0, 0.2]), Z("sida", "Sidan", [1, 0, 0], [0, 0])],
   drink: [Z("front", "Framsida", [0, 0, 1], [0, 0]), Z("bak", "Baksida", [0, 0, -1], [0, 0])],
   pen: [Z("skaft", "Skaftet", [0, 0, 1], [0, 0])],
@@ -113,10 +125,7 @@ const ZONES: Record<NwProduct["kind"], Zone[]> = {
   booth: [Z("front", "Framsidan", [0, 0, 1], [0, 0]), Z("topp", "Ovankant", [0, 0, 1], [0, 0.3])],
 };
 
-const METHODS_FOR: Record<NwProduct["kind"], Method[]> = {
-  top: ["dtg", "brodyr", "screentryck", "transfer"],
-  cap: ["brodyr", "transfer", "screentryck"],
-  beanie: ["brodyr", "transfer"],
+const METHODS_FOR: Partial<Record<NwProduct["kind"], Method[]>> = {
   bag: ["screentryck", "transfer", "brodyr", "digitaltryck"],
   drink: ["gravyr", "screentryck", "digitaltryck"],
   pen: ["gravyr", "screentryck", "digitaltryck"],
@@ -132,11 +141,22 @@ const METHODS_FOR: Record<NwProduct["kind"], Method[]> = {
 
 const methodId = (label: string) => (METHODS as readonly string[]).find((m) => m === label.toLowerCase()) as Method | undefined;
 
-/** Produktens egen standardmetod först; keramikmuggen går inte att gravera. */
+/** Produktens egen standardmetod först; keramikmuggen går inte att gravera. Bilaga 2-produkter har bara ytornas metoder. */
 export function methodsFor(p: NwProduct): Method[] {
   const own = methodId(p.printArea.method);
-  const list = own ? [own, ...METHODS_FOR[p.kind].filter((m) => m !== own)] : METHODS_FOR[p.kind];
+  if (p.bilaga2) {
+    const all = [...new Set(zonesFor(p).flatMap((z) => z.methods ?? []))];
+    return own && all.includes(own) ? [own, ...all.filter((m) => m !== own)] : all;
+  }
+  const kind = METHODS_FOR[p.kind] ?? [];
+  const list = own ? [own, ...kind.filter((m) => m !== own)] : kind;
   return own === "sublimering" ? list.filter((m) => m !== "gravyr") : list;
+}
+
+/** Metoderna zonen tillåter, i produktens ordning. */
+export function zoneMethods(p: NwProduct, zone: string): Method[] {
+  const allowed = zonesFor(p).find((z) => z.id === zone)?.methods;
+  return allowed ? methodsFor(p).filter((m) => allowed.includes(m)) : methodsFor(p);
 }
 
 const facesUp = (dir: Vec3) => dir[1] === 1 && dir[2] === 0;
@@ -149,7 +169,7 @@ function mainZone(p: NwProduct, zones: Zone[]) {
 
 /** Placeringszonerna, med katalogens finjusterade huvudplacering. Produkter som ligger ner får ovansidan först. */
 export function zonesFor(p: NwProduct): Zone[] {
-  const base = ZONES[p.kind];
+  const base = p.bilaga2 ? p.bilaga2.map(fromBilaga2) : (ZONES[p.kind] ?? []);
   const zones = facesUp(p.zone.dir) && !base.some((z) => facesUp(z.dir)) ? [Z("ovan", "Ovansidan", [0, 1, 0]), ...base] : base;
   const main = mainZone(p, zones);
   const sorted = [...zones.filter((z) => z.id === main), ...zones.filter((z) => z.id !== main)];
@@ -159,6 +179,39 @@ export function zonesFor(p: NwProduct): Zone[] {
 /** Största verkliga måttet i cm; 3D-modellerna normaliseras till det. */
 export const sizeCmFor = (p: NwProduct) => (/reflex/i.test(p.name) ? 7 : p.sizeCm);
 export const maxSizeCm = (p: NwProduct) => Math.max(4, Math.round(sizeCmFor(p) * 0.45));
+
+/** Största tryckbredden i zonen för ett motiv med bildförhållandet `aspect` (bredd/höjd); Bilaga 2-ytorna begränsar både bredd och höjd. */
+export function maxCmIn(p: NwProduct, zone: string, aspect = 1) {
+  const max = zonesFor(p).find((z) => z.id === zone)?.maxCm;
+  return max ? Math.max(2, Math.floor(Math.min(max[0], max[1] * aspect))) : maxSizeCm(p);
+}
+
+/** Zonerna namntrycket får sitta i: namnen trycks med transfer. */
+export const nameZones = (p: NwProduct) => zonesFor(p).filter((z) => !z.methods || z.methods.includes("transfer"));
+
+/**
+ * Placeringen inom produktens regler: en känd zon (eller en egen placering där det går), en metod som zonen tillåter och
+ * en storlek som ryms i zonen. `aspect` är motivets bredd/höjd när det är känt.
+ */
+export function fitPlacement<T extends Placement>(p: NwProduct, pl: T, aspect = 1): T {
+  const zones = zonesFor(p);
+  const free = !p.bilaga2 && pl.zone === "egen" && Boolean(pl.point && pl.normal);
+  const zone = free ? "egen" : (zones.find((z) => z.id === pl.zone) ?? zones[0]).id;
+  const allowed = free ? methodsFor(p) : zoneMethods(p, zone);
+  const method = allowed.includes(pl.method) ? pl.method : allowed[0];
+  const sizeCm = Math.min(maxCmIn(p, zone, aspect), Math.max(2, Math.round(Number(pl.sizeCm) || p.printCm)));
+  return { ...pl, zone, point: free ? pl.point : undefined, normal: free ? pl.normal : undefined, method, colors: colorsOf({ method, colors: pl.colors }), sizeCm };
+}
+
+/** Namntrycket inom produktens regler, som fitPlacement; inget namntryck där ingen yta tillåter transfer (kepsen). */
+export function fitNames(p: NwProduct, n: Names): Names | undefined {
+  const zones = nameZones(p);
+  if (!zones.length) return undefined;
+  const free = !p.bilaga2 && n.zone === "egen" && Boolean(n.point && n.normal);
+  const zone = free ? "egen" : (zones.find((z) => z.id === n.zone) ?? zones.find((z) => z.id === "rygg") ?? zones[0]).id;
+  const sizeCm = Math.min(maxCmIn(p, zone, 4), Math.max(2, Math.round(Number(n.sizeCm) || 8)));
+  return { ...n, zone, point: free ? n.point : undefined, normal: free ? n.normal : undefined, sizeCm };
+}
 
 type Spot = { zone: string; sizeCm: number };
 
@@ -183,10 +236,13 @@ export function freeZone(p: NwProduct, placed: Spot[], prefer?: string) {
   return zones.find((z) => z.id === prefer && fits(z)) ?? zones.find(fits) ?? zones.find((z) => !used.has(z.id)) ?? zones[0];
 }
 
+/** Standarddesignen i huvudzonen; med `method` i första zonen som tillåter metoden. */
 export function defaultDesign(p: NwProduct, method?: Method): Design {
-  const methods = methodsFor(p);
-  const m = method && methods.includes(method) ? method : methods[0];
-  return { method: m, colors: METHOD_INFO[m].fixedColors ?? 1, shape: "original", zone: zonesFor(p)[0].id, sizeCm: Math.min(maxSizeCm(p), Math.max(2, Math.round(p.printCm))) };
+  const zones = zonesFor(p);
+  const zone = (method && zones.find((z) => zoneMethods(p, z.id).includes(method))) || zones[0];
+  const allowed = zoneMethods(p, zone.id);
+  const m = method && allowed.includes(method) ? method : allowed[0];
+  return { method: m, colors: METHOD_INFO[m].fixedColors ?? 1, shape: "original", zone: zone.id, sizeCm: Math.min(maxCmIn(p, zone.id), Math.max(2, Math.round(p.printCm))) };
 }
 
 export const zoneLabel = (p: NwProduct, id: string) => (id === "egen" ? "Egen placering" : (zonesFor(p).find((z) => z.id === id)?.label ?? id));
@@ -239,7 +295,7 @@ export function estimate(p: NwProduct, d: Design | undefined, today: Date): Deli
 /** När datumet inte hinns: den snabbaste metoden för produkten som hinner, om någon. */
 export function fasterOption(p: NwProduct, d: Design | undefined, needBy: string, today: Date): Delivery | null {
   const current = d?.method ?? methodsFor(p)[0];
-  const options = methodsFor(p)
+  const options = (d ? zoneMethods(p, d.zone) : methodsFor(p))
     .filter((m) => m !== current)
     .map((m) => ({ method: m, days: workdays(d, m) }))
     .sort((a, b) => a.days - b.days)
@@ -256,26 +312,32 @@ export const ART_URL = /^(\/api\/v1\/files\/[0-9a-f-]{36}\.(png|jpg|svg)|\/api\/
 
 const vec = (v: unknown) => (Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n)) ? (v as Vec3) : undefined);
 const art = (v: unknown) => (typeof v === "string" && ART_URL.test(v) ? v : undefined);
-const clampSize = (p: NwProduct, v: unknown, fallback: number) => Math.min(maxSizeCm(p), Math.max(2, Math.round(Number(v) || fallback)));
-
 function cleanPlacement(p: NwProduct, raw: unknown): Placement | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const d = raw as Partial<Design>;
   const method = methodsFor(p).find((m) => m === d.method);
   if (!method) return undefined;
-  const zone = typeof d.zone === "string" && (d.zone === "egen" || zonesFor(p).some((z) => z.id === d.zone)) ? d.zone : zonesFor(p)[0].id;
-  return {
+  const zone = typeof d.zone === "string" ? d.zone : "";
+  return fitPlacement(p, {
     method,
-    colors: colorsOf({ method, colors: Number(d.colors) || 1 }),
+    colors: Number(d.colors) || 1,
     shape: SHAPES.find((s) => s === d.shape) ?? "original",
     zone,
-    point: zone === "egen" ? vec(d.point) : undefined,
-    normal: zone === "egen" ? vec(d.normal) : undefined,
-    sizeCm: clampSize(p, d.sizeCm, p.printCm),
-  };
+    point: vec(d.point),
+    normal: vec(d.normal),
+    sizeCm: Number(d.sizeCm) || p.printCm,
+  }, Infinity);
 }
 
-/** Serverns vakt: behåll bara kända värden från en design som skickats från webbläsaren. */
+/**
+ * En sparad design inom dagens regler, så att äldre designer aldrig blir tryckfiler utanför Bilaga 2:s ytor. Servern
+ * känner inte motivets proportioner här; ytans höjd håller tryckfilen (makeJob).
+ */
+export function fitDesign(p: NwProduct, d: Design): Design {
+  return { ...fitPlacement(p, d, Infinity), extra: d.extra?.map((x) => fitPlacement(p, x, Infinity)), names: d.names && fitNames(p, d.names) };
+}
+
+/** Serverns vakt: behåll bara kända värden från en design som skickats från webbläsaren, inom fitDesign:s regler. */
 export function sanitizeDesign(p: NwProduct, raw: unknown): Design | undefined {
   const main = cleanPlacement(p, raw);
   if (!main) return undefined;
@@ -283,7 +345,7 @@ export function sanitizeDesign(p: NwProduct, raw: unknown): Design | undefined {
   const extra = (Array.isArray(d.extra) ? d.extra : []).slice(0, 3).map((x) => cleanPlacement(p, x)).filter((x): x is Placement => Boolean(x));
   const n = d.names;
   const list = n && Array.isArray(n.list) ? n.list.map((s) => String(s).trim().slice(0, 30)).filter(Boolean).slice(0, 2000) : [];
-  const names = list.length && n ? { list, zone: String(n.zone ?? "rygg").slice(0, 20), sizeCm: clampSize(p, n.sizeCm, 8), point: vec(n.point), normal: vec(n.normal) } : undefined;
+  const names = list.length && n ? fitNames(p, { list, zone: String(n.zone ?? "rygg"), sizeCm: Number(n.sizeCm) || 8, point: vec(n.point), normal: vec(n.normal) }) : undefined;
   const wordmark = cleanSpec(d.wordmark);
   return { ...main, logo: wordmark ? undefined : art(d.logo), logoDark: wordmark ? undefined : art(d.logoDark), wordmark, extra: extra.length ? extra : undefined, names };
 }

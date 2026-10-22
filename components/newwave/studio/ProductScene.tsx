@@ -42,6 +42,8 @@ export type SceneApi = {
   nudge: (key: string, dx: number, dy: number) => void;
   /** Turn the camera back to the selected print. */
   frame: (key: string) => void;
+  /** The zone among `zones` whose print position lies nearest a point on the product. */
+  zoneAt: (point: [number, number, number], zones: Zone[]) => string | null;
   /** Turn the camera to the front, the back or a three-quarter view of the product. */
   view: (side: View) => void;
   /** One slow turn around the product, recorded as a video clip; null when the browser cannot record. */
@@ -252,6 +254,17 @@ function Product(props: Props & { object: THREE.Object3D }) {
       frame: (key) => {
         turnTo(key);
       },
+      zoneAt: (at, among) => {
+        const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+        const point = new THREE.Vector3(...at);
+        let best: { id: string; d: number } | null = null;
+        for (const z of among) {
+          const hit = zoneRay(z, size).intersectObjects(meshes, false)[0];
+          const d = hit ? hit.point.distanceTo(point) : Infinity;
+          if (d < (best?.d ?? Infinity)) best = { id: z.id, d };
+        }
+        return best?.id ?? null;
+      },
       view: (side) => {
         turnToward(new THREE.Vector3(...VIEW_DIR[side]));
       },
@@ -361,7 +374,7 @@ function Product(props: Props & { object: THREE.Object3D }) {
         return shot;
       },
     });
-  }, [onReady, camera, gl, scene, radius, mainKey, get, meshes, onPlace, turnTo, turnToward, layerKeys]);
+  }, [onReady, camera, gl, scene, radius, mainKey, get, root, meshes, onPlace, turnTo, turnToward, layerKeys]);
 
   // Selecting another print turns the product so that print faces the camera.
   const shownKey = useRef(active);
@@ -429,6 +442,16 @@ function Product(props: Props & { object: THREE.Object3D }) {
   );
 }
 
+/** A ray shot at the model from the zone's direction, shifted by the zone's offset in fractions of the model's size. */
+function zoneRay(z: Zone, size: THREE.Vector3) {
+  const dir = new THREE.Vector3(...z.dir).normalize();
+  const origin = dir.clone().multiplyScalar(3);
+  const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
+  const side = new THREE.Vector3().crossVectors(up, dir).normalize();
+  origin.addScaledVector(side, z.offset[0] * size.x).addScaledVector(up, z.offset[1] * (Math.abs(dir.y) > 0.9 ? size.z : size.y));
+  return new THREE.Raycaster(origin, dir.clone().negate());
+}
+
 function LogoDecal({
   layer,
   root,
@@ -460,21 +483,12 @@ function LogoDecal({
 
   /** Where the print goes: a clicked/dragged point, or a ray shot at the model from the zone's direction. */
   const placement = useMemo<{ mesh: THREE.Mesh; point: THREE.Vector3; normal: THREE.Vector3 } | null>(() => {
-    const box = new THREE.Box3().setFromObject(root);
-    const size = box.getSize(new THREE.Vector3());
-    const ray = new THREE.Raycaster();
+    let ray: THREE.Raycaster;
     if (zone === "egen" && point && normal) {
-      const p = new THREE.Vector3(...point);
       const n = new THREE.Vector3(...normal).normalize();
-      ray.set(p.clone().addScaledVector(n, 0.5), n.clone().negate());
+      ray = new THREE.Raycaster(new THREE.Vector3(...point).addScaledVector(n, 0.5), n.clone().negate());
     } else {
-      const z = zones.find((x) => x.id === zone) ?? zones[0];
-      const dir = new THREE.Vector3(...z.dir).normalize();
-      const origin = dir.clone().multiplyScalar(3);
-      const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
-      const side = new THREE.Vector3().crossVectors(up, dir).normalize();
-      origin.addScaledVector(side, z.offset[0] * size.x).addScaledVector(up, z.offset[1] * (Math.abs(dir.y) > 0.9 ? size.z : size.y));
-      ray.set(origin, dir.clone().negate());
+      ray = zoneRay(zones.find((x) => x.id === zone) ?? zones[0], new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()));
     }
     const hit = ray.intersectObjects(meshes, false)[0];
     if (!hit?.face) return null;

@@ -10,18 +10,24 @@ import {
   type Design,
   estimate,
   fasterOption,
+  fitDesign,
+  fitNames,
+  fitPlacement,
   fmtWeekday,
   freeZone,
+  isLocked,
   markingPrice,
-  maxSizeCm,
+  maxCmIn,
   METHOD_INFO,
-  methodsFor,
   NAME_UNIT,
+  nameZones,
   type Placement,
   SHAPE_LABEL,
   SHAPES,
   type Shape,
   sizeCmFor,
+  type Zone,
+  zoneMethods,
   zonesClash,
   zonesFor,
 } from "@/lib/newwave/marking";
@@ -53,7 +59,7 @@ const shortcuts = (MOD: string): [string[], string][] => [
   [[MOD, "Z"], "Ångra"],
   [["⇧", MOD, "Z"], "Gör om"],
   [[MOD, "D"], "Duplicera trycket"],
-  [["←", "→", "↑", "↓"], "Flytta trycket (⇧ = längre)"],
+  [["←", "→", "↑", "↓"], "Flytta trycket (⇧ = längre); på kläder och termosflaskan: byt tryckyta"],
   [["+", "−"], "Större / mindre"],
   [["[", "]"], "Föregående / nästa tryck"],
   [["N"], "Ny tryckposition"],
@@ -147,10 +153,10 @@ export function DesignStudio({
 }) {
   const embedded = !onClose;
   const MOD = useModKey();
-  const [design, setDesignNow] = useState<Design>(initial);
+  const [design, setDesignNow] = useState<Design>(() => fitDesign(product, initial));
   const [history, setHistory] = useState<{ past: Design[]; future: Design[] }>({ past: [], future: [] });
   const lastChange = useRef(0);
-  const latest = useRef(initial);
+  const latest = useRef(design);
   /** Varje ändring går hit; snabba ändringar i följd (drag, reglage) blir ett ångra-steg. */
   const setDesign = (next: Design | ((d: Design) => Design)) => {
     const d = latest.current;
@@ -197,10 +203,14 @@ export function DesignStudio({
   const [saveError, setSaveError] = useState("");
   const api = useRef<SceneApi | null>(null);
   const zones = useMemo(() => zonesFor(product), [product]);
-  const methods = methodsFor(product);
+  const nameSpots = useMemo(() => nameZones(product), [product]);
+  /** Bilaga 2: trycket sitter bara i ytorna, med ytans metoder och mått. */
+  const locked = isLocked(product);
   const extraIndex = active.startsWith("x") ? Number(active.slice(1)) : -1;
   const onNames = active === "names" && Boolean(design.names);
+  const curKey = extraIndex >= 0 && design.extra?.[extraIndex] ? `x${extraIndex}` : "main";
   const cur: Placement = extraIndex >= 0 && design.extra?.[extraIndex] ? design.extra[extraIndex] : design;
+  const methods = zoneMethods(product, cur.zone);
   const info = METHOD_INFO[cur.method];
   const units = Math.max(qty ?? 1, design.names?.list.length ?? 0);
   const marking = markingPrice(design, units);
@@ -215,9 +225,38 @@ export function DesignStudio({
   const logo = logoFor(design.sizeCm);
   const customColor = !suggestions(brandColor).some((s) => s.hex.toUpperCase() === color);
   const set = (patch: Partial<Design>) => setDesign((d) => ({ ...d, ...patch }));
-  const setCur = (patch: Partial<Placement>) =>
-    setDesign((d) => (extraIndex >= 0 && d.extra?.[extraIndex] ? { ...d, extra: d.extra.map((p, i) => (i === extraIndex ? { ...p, ...patch } : p)) } : { ...d, ...patch }));
-  const setNames = (patch: Partial<NonNullable<Design["names"]>>) => setDesign((d) => (d.names ? { ...d, names: { ...d.names, ...patch } } : d));
+  const aspectOf = (key: string) => arts[key]?.aspect ?? 1;
+  const maxCm = (key: string, zone: string) => maxCmIn(product, zone, key === "names" ? 4 : aspectOf(key));
+  /** Ändrar ett tryck och håller det inom zonens metoder och mått. */
+  const setLayer = (key: string, patch: Partial<Placement>) =>
+    setDesign((d) => {
+      if (key === "names") return d.names ? { ...d, names: fitNames(product, { ...d.names, ...patch }) } : d;
+      const i = key.startsWith("x") ? Number(key.slice(1)) : -1;
+      if (i >= 0 && d.extra?.[i]) return { ...d, extra: d.extra.map((p, k) => (k === i ? fitPlacement(product, { ...p, ...patch }, aspectOf(key)) : p)) };
+      return fitPlacement(product, { ...d, ...patch }, aspectOf("main"));
+    });
+  const setCur = (patch: Partial<Placement>) => setLayer(curKey, patch);
+  const zoneRule = (id: string) => {
+    const box = zones.find((z) => z.id === id)?.maxCm;
+    const cm = (n: number) => n.toLocaleString("sv-SE");
+    return box ? `Enligt Bilaga 2: högst ${cm(box[0])} × ${cm(box[1])} cm, ${zoneMethods(product, id).map((m) => METHOD_INFO[m].label.toLowerCase()).join(" eller ")}.` : null;
+  };
+  const setNames = (patch: Partial<NonNullable<Design["names"]>>) => setLayer("names", patch);
+  /** Trycket som kameran vänds mot när dess nya läge är ritat. */
+  const frameAfter = useRef<string | null>(null);
+  /** Flyttar trycket till zonen; byter metod och storlek när zonen kräver det, och säger till. Från panelen vänds kameran dit. */
+  const moveTo = (key: string, z: Zone, face = true) => {
+    const d = latest.current;
+    const i = key.startsWith("x") ? Number(key.slice(1)) : -1;
+    const from: Placement | undefined = key === "names" ? undefined : i >= 0 ? d.extra?.[i] : d;
+    if (key === "names" ? d.names?.zone === z.id : from?.zone === z.id) return false;
+    setLayer(key, { zone: z.id, point: undefined, normal: undefined, ...(z.sizeCm && key !== "names" ? { sizeCm: z.sizeCm } : {}) });
+    if (face) frameAfter.current = key;
+    const allowed = zoneMethods(product, z.id);
+    const strict = Boolean(from && !allowed.includes(from.method));
+    if (strict) say(`${z.label}: ${allowed.map((m) => METHOD_INFO[m].label.toLowerCase()).join(" eller ")} enligt Bilaga 2`);
+    return strict;
+  };
   const zoneLabel = (id: string) => (id === "egen" ? "Egen" : (zones.find((z) => z.id === id)?.label ?? id));
   const activeLabel = onNames && design.names ? `Namn · ${zoneLabel(design.names.zone)}` : extraIndex >= 0 ? `Tryck ${extraIndex + 2} · ${zoneLabel(cur.zone)}` : `Tryck · ${zoneLabel(design.zone)}`;
 
@@ -232,7 +271,7 @@ export function DesignStudio({
   const clashNote = clash ? <p className="cz-warn">Krockar med {clash.label.toLowerCase()} – välj en annan placering eller gör trycket mindre.</p> : null;
   const addPosition = () => {
     const zone = freeZone(product, placed);
-    const next: Placement = { method: design.method, colors: design.colors, shape: "original", zone: zone.id, sizeCm: zone.sizeCm ?? design.sizeCm };
+    const next = fitPlacement(product, { method: design.method, colors: design.colors, shape: "original", zone: zone.id, sizeCm: zone.sizeCm ?? design.sizeCm });
     const extra = [...(design.extra ?? []), next];
     set({ extra });
     setActive(`x${extra.length - 1}`);
@@ -286,7 +325,7 @@ export function DesignStudio({
     if (onNames) return;
     if ((design.extra?.length ?? 0) >= 3) return say("Max fyra tryck per produkt");
     const zone = freeZone(product, placed);
-    const copy: Placement = { method: cur.method, colors: cur.colors, shape: cur.shape, sizeCm: cur.sizeCm, zone: zone.id };
+    const copy = fitPlacement(product, { method: cur.method, colors: cur.colors, shape: cur.shape, sizeCm: cur.sizeCm, zone: zone.id }, aspectOf(curKey));
     const extra = [...(design.extra ?? []), copy];
     set({ extra });
     setActive(`x${extra.length - 1}`);
@@ -294,9 +333,8 @@ export function DesignStudio({
   };
 
   const resize = (by: number) => {
-    const max = maxSizeCm(product);
-    if (onNames && design.names) return setNames({ sizeCm: Math.min(max, Math.max(2, design.names.sizeCm + by)) });
-    setCur({ sizeCm: Math.min(max, Math.max(2, cur.sizeCm + by)) });
+    if (onNames && design.names) return setNames({ sizeCm: Math.max(2, design.names.sizeCm + by) });
+    setCur({ sizeCm: Math.max(2, cur.sizeCm + by) });
   };
 
   const cycleMethod = () => {
@@ -314,7 +352,7 @@ export function DesignStudio({
   };
   const addNames = () => {
     const zone = freeZone(product, placed, "rygg");
-    set({ names: { list: [], zone: zone.id, sizeCm: Math.max(4, Math.min(maxSizeCm(product), Math.round(sizeCmFor(product) * 0.33))) } });
+    set({ names: fitNames(product, { list: [], zone: zone.id, sizeCm: Math.max(4, Math.round(sizeCmFor(product) * 0.33)) }) });
     setNamesText("");
     setActive("names");
   };
@@ -336,13 +374,22 @@ export function DesignStudio({
   useEffect(() => {
     let live = true;
     const specs = JSON.parse(specKey) as [Placement["method"], number, Shape, string][];
-    Promise.all(specs.map(([method, colors, shape, src]) => buildLogoArt(src, { method, colors, shape }, darkProduct ? "#111111" : "#FFFFFF"))).then(
-      (list) => live && setArts(Object.fromEntries(list.map((a, i) => [i === 0 ? "main" : `x${i - 1}`, a]))),
-    );
+    Promise.all(specs.map(([method, colors, shape, src]) => buildLogoArt(src, { method, colors, shape }, darkProduct ? "#111111" : "#FFFFFF"))).then((list) => {
+      if (!live) return;
+      const next: Record<string, LogoArt> = Object.fromEntries(list.map((a, i) => [i === 0 ? "main" : `x${i - 1}`, a]));
+      setArts(next);
+      // Ett högre motiv kan bli för högt för zonen i samma bredd.
+      const d = latest.current;
+      const fitted = { ...fitPlacement(product, d, next.main?.aspect ?? 1), extra: d.extra?.map((x, i) => fitPlacement(product, x, next[`x${i}`]?.aspect ?? 1)) };
+      if (fitted.sizeCm !== d.sizeCm || fitted.extra?.some((x, i) => x.sizeCm !== d.extra?.[i]?.sizeCm)) {
+        latest.current = fitted;
+        setDesignNow(fitted);
+      }
+    });
     return () => {
       live = false;
     };
-  }, [specKey, darkProduct]);
+  }, [specKey, darkProduct, product]);
   const art = arts.main ?? null;
 
   // En ny design trycks i loggans egna färger tills kunden väljer antal själv, så att den ser ut som loggan.
@@ -384,6 +431,13 @@ export function DesignStudio({
   ];
 
   const placeLayer = (key: string, p: { point: { x: number; y: number; z: number }; normal: { x: number; y: number; z: number } }) => {
+    if (locked) {
+      const among = key === "names" ? nameSpots : zones;
+      const id = api.current?.zoneAt([p.point.x, p.point.y, p.point.z], among);
+      const z = among.find((x) => x.id === id);
+      if (z) moveTo(key, z, false);
+      return;
+    }
     const at = { zone: "egen", point: [p.point.x, p.point.y, p.point.z] as [number, number, number], normal: [p.normal.x, p.normal.y, p.normal.z] as [number, number, number] };
     setDesign((d) => {
       if (key === "names") return d.names ? { ...d, names: { ...d.names, ...at } } : d;
@@ -472,6 +526,15 @@ export function DesignStudio({
       if (mod) return;
       if (e.key === "Backspace" || e.key === "Delete" || e.key === "\\") return run(removeActive);
       if (e.key === "?" || (e.shiftKey && e.key === "/")) return run(() => setHelp((h) => !h));
+      if (locked && e.key.startsWith("Arrow")) {
+        const among = active === "names" ? nameSpots : zones;
+        const at = among.findIndex((z) => z.id === (active === "names" ? design.names?.zone : cur.zone));
+        const by = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1;
+        return run(() => {
+          const z = among[(at + by + among.length) % among.length];
+          if (!moveTo(active, z)) say(z.label);
+        });
+      }
       const step = e.shiftKey ? 0.1 : 0.03;
       if (e.key === "ArrowLeft") return run(() => api.current?.nudge(active, -step, 0));
       if (e.key === "ArrowRight") return run(() => api.current?.nudge(active, step, 0));
@@ -518,6 +581,13 @@ export function DesignStudio({
   };
   // Flyttas trycket till andra sidan vänds produkten först när den nya tryckbilden är på plats.
   const faceAfter = useRef<View | null>(null);
+  useEffect(() => {
+    const key = frameAfter.current;
+    if (!key) return;
+    frameAfter.current = null;
+    const id = requestAnimationFrame(() => api.current?.frame(key));
+    return () => cancelAnimationFrame(id);
+  }, [design]);
   useEffect(() => {
     const v = faceAfter.current;
     if (!v || !art) return;
@@ -742,7 +812,7 @@ export function DesignStudio({
                       const to = how?.side === "back" ? zones.find((z) => z.id === "rygg") : how?.side === "front" && design.zone === "rygg" ? zones[0] : undefined;
                       const move = to && to.id !== design.zone ? to : undefined;
                       const moved = move ? { zone: move.id, point: undefined, normal: undefined, ...(move.sizeCm ? { sizeCm: move.sizeCm } : {}) } : {};
-                      set(wordmark ? { wordmark, logo: undefined, logoDark: undefined, ...moved } : { wordmark: undefined });
+                      setDesign((d) => fitPlacement(product, { ...d, ...(wordmark ? { wordmark, logo: undefined, logoDark: undefined, ...moved } : { wordmark: undefined }) }, aspectOf("main")));
                       if (move) faceAfter.current = how?.side === "back" ? "bak" : "fram";
                     }}
                     onCollection={onWordmarkCollection}
@@ -789,7 +859,7 @@ export function DesignStudio({
                       + Position
                     </button>
                   ) : null}
-                  {!design.names ? (
+                  {!design.names && nameSpots.length ? (
                     <button type="button" className="cz-tab-add" onClick={addNames}>
                       + Namn per plagg
                     </button>
@@ -824,8 +894,8 @@ export function DesignStudio({
                   <section className="cz-sec">
                     <p className="drawer-label">Placering</p>
                     <div className="cz-chips">
-                      {zones.map((z) => (
-                        <button key={z.id} type="button" aria-pressed={design.names!.zone === z.id} onClick={() => setNames({ zone: z.id, point: undefined, normal: undefined })}>
+                      {nameSpots.map((z) => (
+                        <button key={z.id} type="button" aria-pressed={design.names!.zone === z.id} onClick={() => moveTo("names", z)}>
                           {z.label}
                         </button>
                       ))}
@@ -835,6 +905,7 @@ export function DesignStudio({
                         </button>
                       ) : null}
                     </div>
+                    {locked ? <p className="cz-note">Namnen trycks med transfer, så de får sitta där Bilaga 2 tillåter transfer.</p> : null}
                     {clashNote}
                   </section>
                   <section className="cz-sec">
@@ -842,7 +913,7 @@ export function DesignStudio({
                       <span className="drawer-label">
                         Storlek <span>{design.names.sizeCm} cm bred</span>
                       </span>
-                      <input type="range" min={2} max={maxSizeCm(product)} value={design.names.sizeCm} onChange={(e) => setNames({ sizeCm: Number(e.target.value) })} />
+                      <input type="range" min={2} max={maxCm("names", design.names.zone)} value={design.names.sizeCm} onChange={(e) => setNames({ sizeCm: Number(e.target.value) })} />
                     </label>
                   </section>
                 </>
@@ -935,7 +1006,7 @@ export function DesignStudio({
                     <p className="drawer-label">Placering</p>
                     <div className="cz-chips">
                       {zones.map((z) => (
-                        <button key={z.id} type="button" aria-pressed={cur.zone === z.id} onClick={() => setCur({ zone: z.id, point: undefined, normal: undefined, ...(z.sizeCm ? { sizeCm: z.sizeCm } : {}) })}>
+                        <button key={z.id} type="button" aria-pressed={cur.zone === z.id} onClick={() => moveTo(curKey, z)}>
                           {z.label}
                         </button>
                       ))}
@@ -945,6 +1016,7 @@ export function DesignStudio({
                         </button>
                       ) : null}
                     </div>
+                    {locked ? <p className="cz-note">{zoneRule(cur.zone)}</p> : null}
                     {clashNote}
                   </section>
 
@@ -953,7 +1025,7 @@ export function DesignStudio({
                       <span className="drawer-label">
                         Storlek <span>{cur.sizeCm} cm bred</span>
                       </span>
-                      <input type="range" min={2} max={maxSizeCm(product)} value={cur.sizeCm} onChange={(e) => setCur({ sizeCm: Number(e.target.value) })} />
+                      <input type="range" min={2} max={maxCm(curKey, cur.zone)} value={cur.sizeCm} onChange={(e) => setCur({ sizeCm: Number(e.target.value) })} />
                     </label>
                   </section>
                 </>

@@ -1,3 +1,4 @@
+import { BILAGA2, type Bilaga2Zone, type Technique } from "./bilaga2";
 import { type Surface, type SurfaceInput, surface } from "./printSurface";
 
 /** New Waves tryckbara sortiment för klubbarna – foton och 3D-modeller från PACH. */
@@ -17,6 +18,8 @@ export type NwProduct = {
   priceSek: number;
   sizes: string[];
   printArea: { widthCm: number; heightCm: number; method: string };
+  /** Tryckytorna ur Bilaga 2; produkten trycks bara där. Saknas för produkter som bilagan inte gäller. */
+  bilaga2?: Bilaga2Zone[];
   seasons: Season[];
   use: string;
   photo: string;
@@ -51,6 +54,27 @@ const KIND: Record<Kind, { dir: Vec3; offset: [number, number]; sizeCm: number; 
   booth: { dir: [0, 0, 1], offset: [0, 0], sizeCm: 150, printCm: 60, method: "Digitaltryck", area: [80, 60] },
 };
 const TOP_DOWN = new Set(["P031", "P033", "P035"]);
+/** Kläderna och termosflaskan har Bilaga 2:s tryckytor: tröjor som T-shirten, jackor som hoodien och mössor som kepsen. */
+const without = (zones: Bilaga2Zone[], ...ids: string[]) => zones.filter((z) => !ids.includes(z.id));
+const BILAGA2_OF: Record<string, Bilaga2Zone[]> = {
+  P001: BILAGA2.tshirt,
+  P002: BILAGA2.tshirt,
+  P003: BILAGA2.tshirt,
+  P008: BILAGA2.tshirt,
+  P004: BILAGA2.hoodie,
+  P005: BILAGA2.hoodie,
+  P006: BILAGA2.hoodie,
+  P007: BILAGA2.hoodie,
+  P009: BILAGA2.hoodie,
+  P010: without(BILAGA2.hoodie, "arm", "arm-hoger"),
+  P037: without(BILAGA2.hoodie, "arm", "arm-hoger", "rygg"),
+  P011: BILAGA2.keps,
+  P012: BILAGA2.keps,
+  P013: BILAGA2.keps,
+  P019: BILAGA2.flaska,
+};
+const WORN: ReadonlySet<Kind> = new Set(["top", "cap", "beanie"]);
+const TECHNIQUE_LABEL: Record<Technique, string> = { screentryck: "Screentryck", transfer: "Transfer", brodyr: "Brodyr", digitaltryck: "Digitaltryck", lasergravyr: "Gravyr", vavt: "Vävt" };
 /** Hoodiens snören sitter där bröstzonen annars hamnar. */
 /** Handduksmodellens luddiga yta bryter sönder trycket. */
 const NO_MODEL = new Set(["P036"]);
@@ -74,6 +98,10 @@ function row(
 ): NwProduct {
   const leftChest = Boolean(place.leftChest);
   const k = { ...KIND[kind], ...TUNED[id] };
+  const bilaga2 = BILAGA2_OF[id];
+  if (!bilaga2 && WORN.has(kind)) throw new Error(`${id} saknar tryckytor ur Bilaga 2`);
+  const main = bilaga2 && ((leftChest && bilaga2.find((z) => z.id === "vanster")) || bilaga2[0]);
+  const mainMethods = main?.techniques.map((t) => TECHNIQUE_LABEL[t]);
   const wear = kind === "top" && id !== "P037";
   return {
     id: id.toLowerCase(),
@@ -85,7 +113,11 @@ function row(
     dark: garmentHex !== "#F4F3EF" && garmentHex !== "#C8B08C" && garmentHex !== "#9A9CA1",
     priceSek,
     sizes: wear ? (["P001", "P004", "P005", "P008"].includes(id) ? [...KIDS, ...WEAR] : WEAR) : ["One size"],
-    printArea: { widthCm: leftChest ? 9 : k.area[0], heightCm: leftChest ? 9 : k.area[1], method: id === "P022" ? "Sublimering" : k.method },
+    printArea:
+      main && mainMethods
+        ? { widthCm: main.widthMm / 10, heightCm: main.heightMm / 10, method: mainMethods.includes(k.method) ? k.method : mainMethods[0] }
+        : { widthCm: k.area[0], heightCm: k.area[1], method: id === "P022" ? "Sublimering" : k.method },
+    bilaga2,
     seasons,
     use,
     photo: `/newwave/products/${id}-${garmentHex.slice(1)}.jpg`,
@@ -106,8 +138,14 @@ function garment([x, y, w, h]: [number, number, number, number], leftChest = fal
   return { print, chest: { cx: x + w * 0.66, cy: y + h * 0.06 + h * 0.15, w: w * 0.3, h: h * 0.3, bend: 18, top: true } };
 }
 
-/** Ytan på fotot för designens zon; utan zon, eller för zoner som fotot inte visar, produktens huvudtryck. */
-export const printOf = (p: Pick<NwProduct, "print" | "chest" | "center">, zone?: string) => (zone === "vanster" ? p.chest : zone === "brost" ? p.center : undefined) ?? p.print;
+/** Ytan på fotot för designens zon; utan zon, eller för zoner som fotot inte visar, produktens huvudtryck. Höger bröst är vänster bröst spegelvänt. */
+export function printOf(p: Pick<NwProduct, "print" | "chest" | "center">, zone?: string): Surface {
+  // Plagg utan bröstyta (jackorna, piké) har vänster bröst som huvudtryck; fotot är centrerat på plagget.
+  const chest = p.chest ?? p.print;
+  const mid = p.center?.cx ?? (p.chest ? p.print.cx : 0.5);
+  if (zone === "hoger") return { ...chest, cx: 2 * mid - chest.cx, ry: -chest.ry, rz: -chest.rz };
+  return (zone === "vanster" ? chest : zone === "brost" ? p.center : undefined) ?? p.print;
+}
 
 const SOFT: ReadonlySet<Kind> = new Set(["top", "beanie", "bag", "textile"]);
 /** Tyg som veckar sig, där trycket följer vecken. */

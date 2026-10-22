@@ -1,12 +1,14 @@
 import { kr } from "@/components/newwave/clubshop/pricing";
 import { AssortmentEditor, PhotoEditor, type TextField, TextsEditor } from "@/components/newwave/clubs/ClubShopEditors";
 import { KpiTiles, RecentOrders, Section, TopItems, VisitsChart } from "@/components/newwave/clubs/DashboardParts";
+import { G360_SECTION, G360Tile } from "@/components/newwave/grasrot/ShopCollection";
 import { intersportClub } from "@/lib/intersport";
 import { sellables } from "@/lib/newwave/clubCollection";
-import { registryPhoto } from "@/lib/newwave/clubRegistry";
 import { type loadClubShop, shopPath } from "@/lib/newwave/clubShop";
-import { shopPhoto, shopTexts, TEXT_MAX } from "@/lib/newwave/clubShopContent";
+import { shopPhoto, shopTexts, standardPhoto, TEXT_MAX } from "@/lib/newwave/clubShopContent";
 import { clubShopStats } from "@/lib/newwave/clubShopStats";
+import { shopProducts } from "@/lib/newwave/grasrot/shop";
+import { SHOP_PREFIX } from "@/lib/newwave/grasrot/urls";
 
 /**
  * Statistiken och det klubben ändrar i butiken. Samma delar i varje klubbs dashboard och i Åsa IF:s, så att det klubben
@@ -43,7 +45,7 @@ export async function StatsSections({ shop }: { shop: ClubShop }) {
 export async function WebshopSections({ shop, lead }: { shop: ClubShop; lead?: { id: string; label: string; node: React.ReactNode } }) {
   const { club, content } = shop;
   const id = club.id;
-  const [photo, site, isp, items] = await Promise.all([shopPhoto(id, content), registryPhoto(id), intersportClub(id), sellables(shop)]);
+  const [photo, standard, isp, items, g360] = await Promise.all([shopPhoto(id, content), standardPhoto(id), intersportClub(id), sellables(shop), shopProducts(id)]);
   const home = shopPath(id);
   const defaults = shopTexts({ name: club.name, tagline: isp?.tagline }, { hidden: [] });
   const ownText = "Lämna tomt för förslaget, som syns i rutan.";
@@ -59,7 +61,7 @@ export async function WebshopSections({ shop, lead }: { shop: ClubShop; lead?: {
     { key: "about", label: "Om oss", hint: "Sidan Om oss i butiken. Lämna tomt för en kort standardtext.", max: TEXT_MAX.about, placeholder: "Vilka ni är, vad pengarna från butiken går till …", area: true },
   ];
   const values = (fields: TextField[]) => Object.fromEntries(fields.map((f) => [f.key, content[f.key]]));
-  const chips = [...(lead ? [[lead.id, lead.label]] : []), ["texter", "Texter"], ["kontakt", "Om oss och kontakt"], ["foto", "Foto"], ["sortiment", "Sortiment"]];
+  const chips = [...(lead ? [[lead.id, lead.label]] : []), ...(g360 ? [[G360_SECTION.id, G360_SECTION.name]] : []), ["texter", "Texter"], ["kontakt", "Om oss och kontakt"], ["foto", "Foto"], ["sortiment", "Sortiment"]];
 
   return (
     <>
@@ -73,6 +75,26 @@ export async function WebshopSections({ shop, lead }: { shop: ClubShop; lead?: {
 
       <div className="mt-10">
         {lead?.node}
+
+        {g360 ? (
+          <Section id={G360_SECTION.id} title={G360_SECTION.name} text="Gräsrot 360 med New Wave Group: klubbmärket eller ordmärket på produkterna i Bilaga 2. Ligger överst i butiken, i 3D och i alla leverantörens färger.">
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-6 min-[700px]:grid-cols-3 min-[1000px]:grid-cols-5">
+              {g360.products.map((p) => (
+                <li key={p.id} className="min-w-0">
+                  <G360Tile id={id} product={p} color={g360.featured[p.id]} href={`${home}/${SHOP_PREFIX}${p.id}`} />
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px] font-medium">
+              <a href={`${home}#${G360_SECTION.id}`} className="underline underline-offset-4">
+                Se kollektionen i butiken →
+              </a>
+              <a href={`/newwave/craft/grasrot/${id}`} className="underline underline-offset-4">
+                Tryckfiler, herobild och produktionsunderlag →
+              </a>
+            </div>
+          </Section>
+        ) : null}
 
         <Section id="texter" title="Texterna överst" text="Det supportrarna läser först i butiken och hos Intersport.">
           <div className={CARD}>
@@ -88,7 +110,7 @@ export async function WebshopSections({ shop, lead }: { shop: ClubShop; lead?: {
 
         <Section id="foto" title="Fotot i butiken" text="Bakom rubriken överst i butiken.">
           <div className={CARD}>
-            <PhotoEditor clubId={id} shop={home} photo={photo} own={Boolean(content.photo)} site={Boolean(site)} color={club.colors[0] ?? "#111111"} />
+            <PhotoEditor clubId={id} shop={home} photo={photo} own={Boolean(content.photo)} standard={standard?.label} color={club.colors[0] ?? "#111111"} />
           </div>
         </Section>
 

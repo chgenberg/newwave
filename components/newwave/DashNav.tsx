@@ -82,7 +82,7 @@ export function DashRail({ base, home = base, items, label, overview = [], badge
 export function DashCrumb({ base, home, items, overview = [] }: Pick<Props, "base" | "home" | "items" | "overview">) {
   const active = useActive(base, overview, home);
   const item = items.find((i) => active(i.href));
-  return item ? <span className="min-w-0 truncate text-[14px] font-medium text-[#111] min-[380px]:max-w-[60%] min-[380px]:shrink-0">{item.label}</span> : null;
+  return item ? <span className="min-w-0 truncate text-[14px] font-medium text-[#111] min-[380px]:max-w-[60%] min-[380px]:shrink-0 min-[900px]:max-w-none">{item.label}</span> : null;
 }
 
 export function DashBottomBar({ base, home = base, items, label, overview = [], badge, badges }: Props) {

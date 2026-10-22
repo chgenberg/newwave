@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { nwProduct } from "@/lib/newwave/catalog";
-import { maxSizeCm, METHOD_INFO, methodsFor } from "@/lib/newwave/marking";
+import { defaultDesign, maxCmIn, METHOD_INFO, methodsFor } from "@/lib/newwave/marking";
 import { type SocialKind, SMALL_PRINT_CM, type WordmarkSpec, wordmarkExportUrl, wordmarkSocialUrl, wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import type { LabClub } from "./WordmarkLab";
 
@@ -32,8 +32,8 @@ export function WordmarkDetail({ spec, name, club, onClose }: { spec: WordmarkSp
   const product = nwProduct(garment)!;
   const methods = EXPORTS.filter((m) => methodsFor(product).includes(m));
   const [method, setMethod] = useState<string>("screentryck");
-  const m = methods.includes(method as (typeof EXPORTS)[number]) ? method : methods[0];
-  const max = maxSizeCm(product);
+  const m = methods.find((x) => x === method) ?? methods[0];
+  const max = maxCmIn(product, defaultDesign(product, m).zone, Infinity);
   const [cm, setCm] = useState(25);
   const size = Math.min(cm, max);
   const opts = { method: m, product: garment, cm: size, garment: product.garmentHex };

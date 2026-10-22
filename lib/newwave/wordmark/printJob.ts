@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import type { NwProduct } from "@/lib/newwave/catalog";
 import { colorName } from "@/lib/newwave/colors";
-import { type Design, markingPrice, METHOD_INFO, type Method, zonesFor } from "@/lib/newwave/marking";
+import { defaultDesign, type Design, fitPlacement, markingPrice, METHOD_INFO, type Method } from "@/lib/newwave/marking";
 import { fileSlug, isDarkHex, type MadeJob, makeJob } from "@/lib/newwave/printFiles";
 import { paletteFor } from "./render";
 import { wordmarkFile } from "./serve";
@@ -41,7 +41,9 @@ async function make(q: WordmarkQuery, product: NwProduct, method: Method, sizeCm
   if (!png || !svg || !club) return null;
   const info = METHOD_INFO[method];
   const colors = info.fixedColors ?? Math.min(info.maxColors, Math.max(1, inkCount(svg.data.toString("utf8"), club.colors, dark)));
-  const placement = { method, colors, shape: "original" as const, zone: zonesFor(product)[0].id, sizeCm };
+  const box = /viewBox="[-\d.]+ [-\d.]+ ([\d.]+) ([\d.]+)"/.exec(svg.data.toString("utf8"));
+  const aspect = box ? Number(box[1]) / Number(box[2]) : 1;
+  const placement = fitPlacement(product, { method, colors, shape: "original" as const, zone: defaultDesign(product, method).zone, sizeCm }, aspect);
   const slug = `${fileSlug(club.name)}-${q.template}`;
   const job = await makeJob({ club: club.name, palette: [...club.colors], product, color: garment, placement, art: png.data, slug });
   const prices = QTYS.map((qty) => {
