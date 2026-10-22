@@ -15,6 +15,7 @@ const caps = (slot: TextSlot, font: string, color: ColorSlot, box: Box, tracking
   text(slot, font, color, box, { case: "upper", tracking, ...o });
 const shape = (kind: Extract<Layer, { kind: "shape" }>["shape"], colors: ColorSlot[], box: Box, o: ShapeOpts = {}) => ({ kind: "shape" as const, shape: kind, colors, box, ...o });
 const icon = (box: Box) => ({ kind: "icon" as const, box });
+const CHECKER_BRIDGE = '<path d="M122.13 432.74L122.13 473.57C124.89 472.39 127.64 471.3 130.39 470.31L134.52 468.82L138.65 467.45C144.16 465.63 149.66 463.98 155.17 462.48L155.17 428.38C144.16 429.58 133.14 430.91 122.13 432.74" fill="{primary}"/><path d="M155.17 496.59L159.3 494.76L163.43 493.1C166.18 492.02 168.94 490.82 171.69 489.84C177.2 487.91 182.7 485.8 188.21 484.21L188.21 454.77C182.7 455.77 177.2 457.08 171.69 458.28C168.94 458.89 166.18 459.64 163.43 460.31L159.3 461.34L155.17 462.48ZM155.17 496.59" fill="{secondary}"/><path d="M188.21 425.34L188.21 454.77C199.22 452.53 210.23 450.8 221.25 449.31L221.25 423.2C210.23 423.78 199.22 424.46 188.21 425.34" fill="{primary}"/><path d="M221.25 475.43C232.26 473.05 243.27 471.2 254.29 469.81L254.29 445.81C243.27 446.68 232.26 447.83 221.25 449.31ZM221.25 475.43" fill="{secondary}"/><path d="M254.29 421.82L254.29 445.81C265.3 444.95 276.31 444.34 287.32 443.98L287.32 421.1C276.31 421.24 265.3 421.48 254.29 421.82" fill="{primary}"/><path d="M287.32 466.88C298.34 466.38 309.35 466.21 320.36 466.45L320.36 443.72C309.35 443.57 298.34 443.68 287.32 443.98ZM287.32 466.88" fill="{secondary}"/><path d="M320.36 421L320.36 443.72C331.38 443.92 342.39 444.37 353.4 445.11L353.4 421.54C342.39 421.25 331.38 421.07 320.36 421" fill="{primary}"/><path d="M353.4 468.68C364.42 469.89 375.43 471.56 386.44 473.8L386.44 448.3C375.43 446.9 364.42 445.86 353.4 445.11ZM353.4 468.68" fill="{secondary}"/><path d="M386.44 422.8L386.44 448.3C397.46 449.69 408.47 451.43 419.48 453.57L419.48 424.87C408.47 424.03 397.46 423.34 386.44 422.8" fill="{primary}"/><path d="M419.48 482.27C424.99 483.96 430.49 485.85 436 487.96L440.13 489.51C441.51 490.02 442.88 490.54 444.26 491.15L452.52 494.65L452.52 461.27L444.26 459.1C441.51 458.34 438.75 457.78 436 457.11C430.49 455.8 424.99 454.62 419.48 453.57ZM419.48 482.27" fill="{secondary}"/><path d="M452.52 427.9L452.52 461.27C463.53 464.38 474.55 467.83 485.56 472.46L485.56 432.3C474.55 430.48 463.53 429.12 452.52 427.9" fill="{primary}"/>';
 /** Konturer innerst först: en spalt i plaggets färg och en kant i andrafärgen är grunden i varsitybokstäver. */
 const gap = (inner: number, outer: number, color: ColorSlot = "secondary") => [
   { color: "paper" as const, width: inner },
@@ -36,6 +37,22 @@ const RAW: TemplateInput[] = [
       text("name2", "role:script", "primary", { x: 90, y: 78, w: 820, h: 250 }, { rotate: -7, maxLines: 2 }),
       shape("checker", ["secondary", "primary"], { x: 230, y: 360, w: 540, h: 80 }, { count: 11, rows: 2, arc: 12 }),
       icon({ x: 380, y: 465, w: 240, h: 220 }),
+    ],
+  },
+  {
+    // New Wave Groups dynamiska ordmärke för Gräsrot 360 (Bilaga 1): Casey Bold och Espiritu ersatta av Holtwood One SC
+    // och Lobster, som får ritas på servern. Korta namn stannar vid Kullaviks bokstavshöjd, långa krymper till bredden.
+    id: "grasrot-360",
+    name: "Gräsrot 360",
+    style: "Skrivstil",
+    height: 746,
+    fit: { ideal: [3, 10], max: 14 },
+    layers: [
+      caps("name1", "holtwood-one-sc", "primary", { x: 290, y: 0, w: 420, h: 97 }, [0.8, 0.35], { size: 80, clear: 16 }),
+      text("name2", "lobster", "secondary", { x: 0, y: 53, w: 1000, h: 337 }, { rotate: -8, condense: 1.15, size: 280 }),
+      // Rutbandet ur Bilaga 1: lodräta kolumner som välver sig som en bro, vilket checker-formens båge inte kan.
+      { kind: "art" as const, box: { x: 139, y: 377, w: 746, h: 155 }, viewBox: [122.13, 421, 363.43, 75.59] as [number, number, number, number], svg: CHECKER_BRIDGE },
+      icon({ x: 398, y: 516, w: 230, h: 230 }),
     ],
   },
   {

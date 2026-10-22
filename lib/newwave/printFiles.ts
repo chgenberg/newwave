@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { Potrace } from "potrace";
-import { deltaE, hexToRgb, nearestPantone, rgbToHex, type Rgb } from "@/lib/scarf";
+import { nearestPantone } from "@/lib/pantone";
+import { deltaE, hexToRgb, rgbToHex, type Rgb } from "@/lib/scarf";
 import type { NwProduct } from "./catalog";
 import { colorName } from "./colors";
 import { embroider, METERS_PER_1000, ROW_MM, STITCHES_PER_MIN, stitchSvg } from "./embroidery";

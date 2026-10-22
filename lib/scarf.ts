@@ -1,3 +1,5 @@
+import { nearestPantone } from "./pantone";
+
 /** Seger's knitted scarf on the OPEK 365: a tube on a 240-needle cylinder, front = needles 1–120, back = 121–240. */
 export const SCARF = {
   needles: 240,
@@ -74,35 +76,6 @@ export function indexOfNear(palette: string[], hex: string, fallback = 0) {
     if (d < bestD) [best, bestD] = [i, d];
   });
   return best;
-}
-
-/** Common Pantone Solid Coated references as sRGB approximations. Seger matches yarn from the Pantone code. */
-const PANTONE: [string, string][] = [
-  ["White", "#FFFFFF"], ["Black 6 C", "#101820"], ["Black C", "#2D2926"], ["Cool Gray 11 C", "#53565A"], ["Cool Gray 7 C", "#97999B"],
-  ["Cool Gray 3 C", "#C8C9C7"], ["7527 C", "#D6D2C4"], ["432 C", "#333F48"], ["7547 C", "#131E29"],
-  ["281 C", "#00205B"], ["282 C", "#041E42"], ["289 C", "#0C2340"], ["2955 C", "#003865"], ["541 C", "#003C71"], ["7686 C", "#1D4F91"],
-  ["286 C", "#0033A0"], ["293 C", "#003DA5"], ["2945 C", "#004C97"], ["2935 C", "#0057B8"], ["300 C", "#005EB8"], ["3005 C", "#0077C8"],
-  ["2727 C", "#307FE2"], ["279 C", "#418FDE"], ["2925 C", "#009CDE"], ["299 C", "#00A3E0"], ["2985 C", "#59CBE8"], ["7690 C", "#00507F"],
-  ["186 C", "#C8102E"], ["485 C", "#DA291C"], ["032 C", "#EF3340"], ["1795 C", "#D22630"], ["199 C", "#D50032"], ["200 C", "#BA0C2F"],
-  ["201 C", "#9D2235"], ["202 C", "#862633"], ["7621 C", "#AB2328"], ["1805 C", "#AF272F"], ["7427 C", "#97233F"], ["7421 C", "#651D32"],
-  ["220 C", "#A50050"], ["484 C", "#9A3324"], ["4625 C", "#4F2C1D"],
-  ["021 C", "#FE5000"], ["1655 C", "#FC4C02"], ["165 C", "#FF671F"], ["151 C", "#FF8200"], ["158 C", "#E87722"],
-  ["108 C", "#FEDB00"], ["109 C", "#FFD100"], ["116 C", "#FFCD00"], ["7548 C", "#FFC600"], ["123 C", "#FFC72C"], ["7406 C", "#F1C400"], ["7409 C", "#F0B323"],
-  ["375 C", "#97D700"], ["368 C", "#78BE20"], ["7741 C", "#44883E"], ["347 C", "#009A44"], ["356 C", "#007A33"], ["349 C", "#046A38"],
-  ["342 C", "#006747"], ["3425 C", "#006341"],
-  ["2685 C", "#330072"], ["268 C", "#582C83"], ["259 C", "#6D2077"],
-  ["7506 C", "#EFDBB2"], ["4685 C", "#E0C6AD"], ["475 C", "#F1C6A7"], ["7513 C", "#E1B087"], ["7515 C", "#C4956C"], ["7517 C", "#9A5B2F"],
-  ["7522 C", "#B05C52"], ["4705 C", "#7C4D3A"], ["476 C", "#4E3629"], ["7533 C", "#4B3D2A"], ["7530 C", "#A39382"],
-];
-
-export function nearestPantone(hex: string) {
-  let best = PANTONE[0];
-  let bestD = Infinity;
-  for (const p of PANTONE) {
-    const d = deltaE(hex, p[1]);
-    if (d < bestD) [best, bestD] = [p, d];
-  }
-  return { code: best[0] === "White" ? "White" : `PMS ${best[0]}`, hex: best[1], deltaE: Math.round(bestD * 10) / 10 };
 }
 
 /** Demo riktpriser per halsduk exkl. moms, sorted by minimum quantity. Seger confirms the real price with the proof. */

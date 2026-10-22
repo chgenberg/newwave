@@ -51,6 +51,10 @@ const TextLayer = z.object({
   warp: z.object({ kind: z.enum(WARPS), amount: num(-1, 1) }).optional(),
   /** Bredden på bokstäverna, under 1 = smalare och högre, som collegebokstäver. */
   condense: num(0.4, 1.6).optional(),
+  /** Största teckenstorlek i dukens enheter, så att ett kort namn får samma bokstavshöjd som ett normallångt i stället för att fylla rutan. */
+  size: num(10, 3000).optional(),
+  /** Minsta luft i dukens enheter till textlagren efter det här; raden flyttas upp i stället för att gå in i dem – som en kort versalrad över skrivstilens höga bokstäver. */
+  clear: num(1, 200).optional(),
   ...bend,
 });
 

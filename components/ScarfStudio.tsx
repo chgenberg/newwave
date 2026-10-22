@@ -8,7 +8,8 @@ import { LogoMark } from "@/components/newwave/Logo";
 import { loadImage } from "@/lib/compose";
 import { copyFor } from "@/lib/copy";
 import { sek } from "@/lib/demoCatalog";
-import { SCARF, SCARF_ORDER, checkGrid, clubScarfPalette, deltaE, indexOfNear, nearestPantone, scarfUnitPrice, type ScarfCheck } from "@/lib/scarf";
+import { nearestPantone } from "@/lib/pantone";
+import { SCARF, SCARF_ORDER, checkGrid, clubScarfPalette, deltaE, indexOfNear, scarfUnitPrice, type ScarfCheck } from "@/lib/scarf";
 import { DEFAULT_ROSTER, TEMPLATES, cellsToBase64, composeScarf, portraitYarns, renderKnit, renderPatternCanvas, type ComposeInput, type SideSpec, type Stroke, type Template } from "@/lib/scarfCompose";
 import type { Club } from "@/lib/types";
 

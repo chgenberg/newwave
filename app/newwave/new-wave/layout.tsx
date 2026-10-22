@@ -7,6 +7,7 @@ const ITEMS: NavItem[] = [
   { href: BASE, label: "Hubben", icon: "home" },
   { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },
   { href: `${BASE}/tryckfiler`, label: "Tryckfiler", icon: "layers" },
+  { href: `${BASE}/grasrot`, label: "Gräsrot 360", icon: "spark" },
   { href: `${BASE}/aterforsaljare`, label: "Återförsäljare", icon: "store" },
   { href: `${BASE}/klubbar`, label: "Klubbar", icon: "shield" },
 ];

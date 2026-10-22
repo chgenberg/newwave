@@ -282,10 +282,10 @@ function setLines(font: Font, lines: string[], layer: TextLayerT, chars: number)
 }
 
 /** Skalar och flyttar banorna så att de fyller rutan utan att gå utanför den. */
-function fitInto(cmds: Cmd[], box: { x: number; y: number; w: number; h: number }, align: TextLayerT["align"], valign: TextLayerT["valign"]) {
+function fitInto(cmds: Cmd[], box: { x: number; y: number; w: number; h: number }, align: TextLayerT["align"], valign: TextLayerT["valign"], size = Infinity) {
   const b = bboxOf(cmds);
   if (!b) return { cmds, scale: 0 };
-  const scale = Math.min(box.w / Math.max(1, b.x1 - b.x0), box.h / Math.max(1, b.y1 - b.y0));
+  const scale = Math.min(box.w / Math.max(1, b.x1 - b.x0), box.h / Math.max(1, b.y1 - b.y0), size / EM);
   const w = (b.x1 - b.x0) * scale;
   const left = align === "left" ? box.x : align === "right" ? box.x + box.w - w : box.x + (box.w - w) / 2;
   const room = box.h - (b.y1 - b.y0) * scale;
@@ -304,31 +304,66 @@ export async function textShape(layer: TextLayerT, text: string) {
   return b && b.x1 > b.x0 && b.y1 > b.y0 ? { d: toD(cmds), x: b.x0, y: b.y0, w: b.x1 - b.x0, h: b.y1 - b.y0 } : null;
 }
 
+function bezier(ctrl: Pt[], t: number): Pt {
+  const q = ctrl.length === 3 ? [(1 - t) ** 2, 2 * (1 - t) * t, t ** 2] : [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3];
+  return [q.reduce((s, k, j) => s + k * ctrl[j][0], 0), q.reduce((s, k, j) => s + k * ctrl[j][1], 0)];
+}
+
 /** Rutan kring själva kurvorna, inte deras styrpunkter – bboxOf räcker för att placera, men inte för att mäta proportioner. */
 function tightBox(cmds: Cmd[]): Box | null {
   const pts: Pt[] = [];
   let at: Pt = [0, 0];
   for (const c of cmds) {
-    if (c.t === "Q" || c.t === "C") {
-      const ctrl = [at, ...c.p];
-      for (let i = 1; i <= 8; i++) {
-        const t = i / 8;
-        const q = ctrl.length === 3 ? [(1 - t) ** 2, 2 * (1 - t) * t, t ** 2] : [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3];
-        pts.push([q.reduce((s, k, j) => s + k * ctrl[j][0], 0), q.reduce((s, k, j) => s + k * ctrl[j][1], 0)]);
-      }
-    } else pts.push(...c.p);
+    if (c.t === "Q" || c.t === "C") for (let i = 1; i <= 8; i++) pts.push(bezier([at, ...c.p], i / 8));
+    else pts.push(...c.p);
     if (c.p.length) at = c.p[c.p.length - 1];
   }
   return bboxOf([{ t: "L", p: pts }]);
 }
 
+/** Punkter längs konturerna med högst en enhets mellanrum – nog för att läsa av silhuetten kolumn för kolumn. */
+function outlinePoints(cmds: Cmd[]): Pt[] {
+  const pts: Pt[] = [];
+  let [at, start]: Pt[] = [[0, 0], [0, 0]];
+  const line = (to: Pt) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(to[0] - at[0], to[1] - at[1])));
+    for (let i = 1; i <= n; i++) pts.push([at[0] + ((to[0] - at[0]) * i) / n, at[1] + ((to[1] - at[1]) * i) / n]);
+    at = to;
+  };
+  for (const c of cmds) {
+    if (c.t === "M") [at, start] = [c.p[0], c.p[0]];
+    else if (c.t === "Z") line(start);
+    else if (c.t === "L") line(c.p[0]);
+    else {
+      const ctrl = [at, ...c.p];
+      for (let i = 1; i <= 16; i++) line(bezier(ctrl, i / 16));
+    }
+  }
+  return pts;
+}
+
+/** Hur långt en rad måste upp för att hålla `gap` till texten under den, även snett över. */
+function clearance(upper: Cmd[], lower: Cmd[], gap: number): number {
+  const bottom = new Map<number, number>();
+  const top = new Map<number, number>();
+  for (const [x, y] of outlinePoints(upper)) bottom.set(Math.round(x), Math.max(bottom.get(Math.round(x)) ?? -Infinity, y));
+  for (const [x, y] of outlinePoints(lower)) top.set(Math.round(x), Math.min(top.get(Math.round(x)) ?? Infinity, y));
+  let need = 0;
+  for (const [x, b] of bottom)
+    for (let dx = -gap; dx <= gap; dx++) {
+      const t = top.get(x + dx);
+      if (t !== undefined) need = Math.max(need, b + gap - t);
+    }
+  return need;
+}
+
 async function setText(font: Font, layer: TextLayerT, text: string) {
   const shown = caseOf(layer, text);
   const chars = [...shown].length;
-  let best = fitInto(setLines(font, [shown], layer, chars), layer.box, layer.align, layer.valign);
+  let best = fitInto(setLines(font, [shown], layer, chars), layer.box, layer.align, layer.valign, layer.size);
   const split = layer.maxLines > 1 ? balance(shown) : null;
   if (split) {
-    const two = fitInto(setLines(font, split, layer, chars), layer.box, layer.align, layer.valign);
+    const two = fitInto(setLines(font, split, layer, chars), layer.box, layer.align, layer.valign, layer.size);
     if (two.scale > best.scale * 1.18) best = two;
   }
   return best;
@@ -597,12 +632,20 @@ export async function renderWordmark(template: Template, club: WordmarkClub, inp
   const notes: Note[] = [];
   let box: Box | null = null;
 
+  const set = new Map<Layer, Cmd[]>();
+  for (const layer of template.layers as Layer[]) if (layer.kind === "text" && texts[layer.slot].trim()) set.set(layer, await textLayer(layer, texts[layer.slot].trim(), notes));
+  const lines = [...set];
+  for (const [i, [layer, cmds]] of lines.entries()) {
+    if (layer.kind !== "text" || !layer.clear) continue;
+    const up = clearance(cmds, lines.slice(i + 1).flatMap(([, c]) => c), layer.clear);
+    if (up > 0) set.set(layer, map(cmds, ([x, y]) => [x, y - up]));
+  }
+
   for (const layer of template.layers as Layer[]) {
     const parts: string[] = [];
     if (layer.kind === "text") {
-      const text = texts[layer.slot].trim();
-      if (!text) continue;
-      const cmds = await textLayer(layer, text, notes);
+      const cmds = set.get(layer);
+      if (!cmds) continue;
       if (textFill(colors, layer.color) !== colors[layer.color] && !notes.some((n) => n.kind === "weak-color"))
         notes.push({ kind: "weak-color", level: "info", text: "Andrafärgen syns för svagt för bokstäver på plagget – texten blir svart, färgen används i konturer och dekor." });
       const b = bboxOf(cmds);
