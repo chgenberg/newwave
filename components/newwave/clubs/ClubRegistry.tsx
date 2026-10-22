@@ -447,9 +447,14 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
           )}
 
           {c.status === "found" && (
-            <Link href={`/newwave/klubbar/${c.id}`} className="mt-3 inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]">
-              Ordmärken och förhandsvisning för klubben →
-            </Link>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href={`/newwave/klubbar/${c.id}`} className="inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]">
+                Ordmärken och förhandsvisning för klubben →
+              </Link>
+              <Link href={`/newwave/klubbar/${c.id}/butik`} className="inline-flex h-9 items-center rounded-full border border-[#111] px-4 text-[13px] font-medium transition hover:bg-[#111] hover:text-white">
+                Klubbens butik →
+              </Link>
+            </div>
           )}
 
           {d?.description && <p className="mt-4 text-[13.5px] leading-relaxed text-[#4A4740]">{d.description}</p>}

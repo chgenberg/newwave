@@ -24,6 +24,12 @@ export async function accessToken(password: string, scope: AccessScope = "access
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Om cookien bär demolösenordet; utan lösenord är sajten öppen för alla. */
+export async function hasAccess(cookie: string | undefined) {
+  const password = process.env.DEMO_PASSWORD;
+  return !password || cookie === (await accessToken(password));
+}
+
 export async function isAdmin(cookie: string | undefined) {
   const password = process.env.ADMIN_PASSWORD;
   return Boolean(password && cookie === (await accessToken(password, "admin")));

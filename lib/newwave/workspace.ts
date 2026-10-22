@@ -48,6 +48,27 @@ export async function writeData(rel: string, data: string, opts: Opts = {}) {
   }
 }
 
+const queues = new Map<string, Promise<unknown>>();
+
+/** Läser, ändrar och skriver en JSON-fil i tur och ordning, så att två anrop samtidigt inte skriver över varandra. */
+export async function updateJson<T>(rel: string, fallback: T, change: (cur: T) => T, opts: Opts = {}): Promise<T> {
+  const key = `${opts.shared ? "" : ((await workspaceId()) ?? "")}:${rel}`;
+  const run = (queues.get(key) ?? Promise.resolve()).then(async () => {
+    let cur = fallback;
+    try {
+      cur = JSON.parse((await readData(rel, opts)) ?? "null") ?? fallback;
+    } catch {}
+    const next = change(cur);
+    await writeData(rel, JSON.stringify(next), opts);
+    return next;
+  });
+  const tail: Promise<unknown> = run.catch(() => undefined).then(() => {
+    if (queues.get(key) === tail) queues.delete(key);
+  });
+  queues.set(key, tail);
+  return run;
+}
+
 /** Tar bort besökarens kopia, så att demon börjar om från grunddatan. */
 export async function resetWorkspace() {
   const id = await workspaceId();

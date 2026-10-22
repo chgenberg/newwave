@@ -1,8 +1,27 @@
 import { z } from "zod";
+import { CLUBS } from "@/lib/club";
 import type { Customized } from "@/lib/newwave/marking";
+import { wordmarkClub } from "@/lib/newwave/wordmark/store";
 import { readData, writeData } from "@/lib/newwave/workspace";
 
 export const MOCK_API_KEY = process.env.INTERSPORT_API_KEY || "demo-intersport-key";
+
+/** Klubbshoppen hos Intersport i demot, eller en vara i den. */
+export const intersportPath = (clubId: string, item?: string) => `/intersport/${clubId}${item ? `/${item}` : ""}`;
+
+/** Klubben som har en klubbshop hos Intersport: demots egna klubbar och klubbarna i klubbregistret. */
+export async function intersportClub(id: string) {
+  const own = CLUBS[id];
+  const reg = await wordmarkClub(id);
+  if (!own && !reg) return null;
+  return {
+    id,
+    name: own?.name ?? reg!.name,
+    logo: own ? `/api/v1/brand/${id}/${own.brand.crest.farg}` : reg!.logo,
+    color: reg?.colors[0] ?? own!.palette[0].hex,
+    tagline: own?.tagline,
+  };
+}
 
 export const ProductSchema = z.object({
   sku: z.string().min(3),

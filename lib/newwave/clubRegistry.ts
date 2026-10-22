@@ -145,6 +145,13 @@ export async function registryWordmarkClub(id: string) {
   };
 }
 
+/** Bilden från klubbens webbplats, om skrapningen hittade någon. */
+export async function registryPhoto(id: string) {
+  if (!CLUB_ID.test(id)) return undefined;
+  const s = JSON.parse(await readFile(path.join(CLUBS_DIR, "sites", `${id}.json`), "utf8").catch(() => "null"));
+  return s?.status === "found" && s.hero ? registryAsset(id, s.at, "bild.jpg") : undefined;
+}
+
 type Source = { id: string; name: string; county: string; municipality: string; org: string; sport: string; orgNr: string; surplus: number; envelopes: number };
 let sources: Map<string, Source> | null = null;
 const loadSources = async () => new Map((JSON.parse(await readFile(path.join(CLUBS_DIR, "clubs.json"), "utf8").catch(() => "[]")) as Source[]).map((c) => [c.id, c]));
