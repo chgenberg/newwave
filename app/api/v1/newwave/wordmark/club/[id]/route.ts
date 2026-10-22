@@ -1,6 +1,6 @@
 import { PrefsPatch, readPrefs, writePrefs } from "@/lib/newwave/wordmark/clubPrefs";
 import { clubQuality } from "@/lib/newwave/wordmark/quality";
-import { allTemplates, baseClub } from "@/lib/newwave/wordmark/store";
+import { allTemplates, baseClub, publishTemplates, TemplateTaken } from "@/lib/newwave/wordmark/store";
 import { splitName } from "@/lib/newwave/wordmark/names";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -23,6 +23,11 @@ export async function PUT(req: Request, ctx: Ctx) {
   if (patch.favorites) {
     const known = new Set((await allTemplates()).filter((t) => !t.hidden).map((t) => t.id));
     patch.favorites = patch.favorites.filter((f) => known.has(f));
+    try {
+      await publishTemplates(patch.favorites);
+    } catch (e) {
+      return Response.json({ error: e instanceof TemplateTaken ? e.message : "Kunde inte publicera designen." }, { status: 409 });
+    }
   }
   const prefs = await writePrefs(id, patch);
   const quality = await clubQuality(id);

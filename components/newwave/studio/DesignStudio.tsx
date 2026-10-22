@@ -29,7 +29,7 @@ import { sek } from "@/lib/newwave/reseller";
 import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt, logoColors } from "./logoArt";
 import { fallbackKind, type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
-import { readLogoFile } from "./readLogoFile";
+import { readLogoUpload } from "./readLogoFile";
 import { WordmarkPicker } from "./WordmarkPicker";
 
 export type Proof = { label: string; image: string };
@@ -548,7 +548,7 @@ export function DesignStudio({
     setDropping(null);
     if (!file) return;
     try {
-      await fetchLogo({ dataUrl: await readLogoFile(file), name: file.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80) });
+      await fetchLogo({ dataUrl: await readLogoUpload(file), name: file.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80) });
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Kunde inte läsa filen.");
     }

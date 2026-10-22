@@ -55,6 +55,7 @@ export async function clubLink(id: string, scope: LinkScope = "club") {
 function images(id: string, p: string, q: URLSearchParams) {
   if (p === `/api/v1/newwave/registry/${id}/logo.png` || p === `/api/v1/newwave/registry/${id}/bild.jpg`) return true;
   if (p.startsWith(`/api/v1/newwave/clubshop/${id}/foto/`)) return /^foto-\d{13}\.jpg$/.test(p.slice(`/api/v1/newwave/clubshop/${id}/foto/`.length));
+  if (p.startsWith(`/api/v1/newwave/clubshop/${id}/kollektion/`)) return /^[0-9a-f-]{36}\.(jpg|png)$/.test(p.slice(`/api/v1/newwave/clubshop/${id}/kollektion/`.length));
   if (p.startsWith(`/api/v1/brand/${id}/`)) return /^[a-z0-9-]+\.(png|svg)$/.test(p.slice(`/api/v1/brand/${id}/`.length));
   if (p === "/api/v1/newwave/wordmark") return q.get("c") === id;
   if (p === "/api/v1/newwave/mockup") {

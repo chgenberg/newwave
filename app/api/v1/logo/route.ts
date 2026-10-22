@@ -5,7 +5,8 @@ export const maxDuration = 60;
 
 const Body = z.union([
   z.object({ url: z.string().min(3).max(500) }),
-  z.object({ dataUrl: z.string().regex(/^data:image\/(png|jpeg|svg\+xml|webp)[^,]*;base64,/).max(8_000_000), name: z.string().max(80).optional() }),
+  // Browsers sometimes send an SVG without a file type; the content decides how it is read.
+  z.object({ dataUrl: z.string().regex(/^data:(?:image\/(?:png|jpeg|svg\+xml|webp)|application\/octet-stream)?[^,]*;base64,/).max(8_000_000), name: z.string().max(80).optional() }),
 ]);
 
 export async function POST(req: Request) {

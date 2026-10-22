@@ -124,7 +124,7 @@ export function PublishTab({ clubId, kit, items, onStart, onSent }: { clubId: st
           </ul>
           {published ? (
             <Done title={`${published} ${published === 1 ? "produkt" : "produkter"} ligger nu i butiken`} text="Medlemmarna kan köpa direkt. När någon beställer går ordern till New Wave, som trycker och skickar.">
-              <Link href="/newwave/klubb/butik" className={SOLID}>
+              <Link href="/newwave/klubb/webshop" className={SOLID}>
                 Se butiken →
               </Link>
               <Link href={`/intersport/${clubId}`} className={GHOST}>
@@ -191,7 +191,7 @@ function AllClubs({ current, skip, onPick }: { current: string; skip: WorkspaceC
 
   useEffect(() => {
     let live = true;
-    const p = new URLSearchParams({ show: "logo", sort: q ? "name" : "size", limit: String(limit) });
+    const p = new URLSearchParams({ sort: q ? "name" : "size", limit: String(limit) });
     if (q) p.set("q", q);
     fetch(`/api/v1/newwave/registry?${p}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))

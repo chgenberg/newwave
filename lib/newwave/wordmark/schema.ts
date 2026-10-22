@@ -9,11 +9,11 @@ import { isFontRef } from "./fonts";
 export const COLOR_SLOTS = ["primary", "secondary", "ink", "paper", "on"] as const;
 export type ColorSlot = (typeof COLOR_SLOTS)[number];
 /**
- * name1/name2 = namnet delat, tagline = "Sedan 1919" eller sporterna, monogram = förkortningen eller första bokstaven,
+ * name = hela namnet på en rad (IFK Göteborg), name1/name2 = namnet delat, tagline = "Sedan 1919" eller sporterna, monogram = förkortningen eller första bokstaven,
  * sport = huvudsporten eller lagets namn, est/year = "Est." och grundandeåret, player/number = namn och nummer på ryggen,
  * jubilee/span = "100 år" och "1926–2026" för klubbens nästa jubileum. Fält utan underlag (inget grundandeår) är tomma.
  */
-export const TEXT_SLOTS = ["name1", "name2", "tagline", "monogram", "sport", "est", "year", "player", "number", "jubilee", "span"] as const;
+export const TEXT_SLOTS = ["name", "name1", "name2", "tagline", "monogram", "sport", "est", "year", "player", "number", "jubilee", "span"] as const;
 export type TextSlot = (typeof TEXT_SLOTS)[number];
 export const SHAPES = ["checker", "stripes", "stars", "rule", "diamond", "banner", "ring", "disc", "swash", "shield", "pill", "plate", "laurel", "burst", "pennant", "tail", "bars"] as const;
 export type ShapeKind = (typeof SHAPES)[number];
@@ -79,6 +79,24 @@ export type Layer = z.infer<typeof LayerSchema>;
 export type TextLayerT = z.infer<typeof TextLayer>;
 export type ShapeLayerT = z.infer<typeof ShapeLayer>;
 
+/**
+ * Hur mallen kom till: vad en AI-modell läste eller föreslog, vad som mättes fram utan AI och vad en människa ändrade –
+ * så att den som trycker kan se vad AI gjort och att rätten att använda designen är bekräftad.
+ */
+export const MadeSchema = z.object({
+  file: z.string().max(80).optional(),
+  ai: z.object({ task: z.enum(["read", "draw"]), model: z.string().max(40), at: z.string().max(30), memory: z.boolean().optional(), lessons: z.number().int().min(0).max(40).optional() }).optional(),
+  fonts: z.array(z.object({ text: z.string().max(60), font: z.string().max(40), score: z.number().int().min(0).max(100) })).max(8).optional(),
+  likeness: z.number().int().min(0).max(100).optional(),
+  /** Craft ändrade agentens tolkning av filen. */
+  corrected: z.boolean().optional(),
+  /** Senast ändrad för hand i designstudion. */
+  edited: z.string().max(30).optional(),
+  /** När rätten att använda designen bekräftades, och varumärket agenten kände igen i den. */
+  rights: z.object({ at: z.string().max(30), mark: z.string().max(120).optional() }).optional(),
+});
+export type Made = z.infer<typeof MadeSchema>;
+
 export const TemplateSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,40}$/),
   name: z.string().min(1).max(40),
@@ -94,6 +112,7 @@ export const TemplateSchema = z.object({
   /** Små versioner som bara används automatiskt och inte listas bland ordmärkena. */
   hidden: z.boolean().optional(),
   source: z.enum(["inbyggd", "import", "agent"]).default("inbyggd"),
+  made: MadeSchema.optional(),
 });
 export type Template = z.infer<typeof TemplateSchema>;
 export type TemplateInput = z.input<typeof TemplateSchema>;

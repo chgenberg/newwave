@@ -1,4 +1,5 @@
 import { readJson } from "@/lib/demoLimit";
+import { sellables } from "@/lib/newwave/clubCollection";
 import { loadClubShop } from "@/lib/newwave/clubShop";
 import { ContentPatch, writeContent } from "@/lib/newwave/clubShopContent";
 
@@ -17,7 +18,7 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   const patch = parsed.data;
   if (patch.hidden) {
-    const known = new Set(shop.assortment.flatMap((g) => g.items.map((i) => i.id)));
+    const known = new Set((await sellables(shop)).map((s) => s.id));
     patch.hidden = patch.hidden.filter((h) => known.has(h));
   }
   return Response.json({ content: await writeContent(id, patch) });

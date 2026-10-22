@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-img-element -- ordmärken och mockups ritas per klubb */
 import { notFound } from "next/navigation";
+import { CollectionSections } from "@/components/newwave/clubshop/CollectionView";
 import { ProductTile } from "@/components/newwave/clubshop/ProductTile";
 import { DELIVERY_DAYS, FLOCK_PRICE } from "@/components/newwave/clubshop/pricing";
+import { loadCollection } from "@/lib/newwave/clubCollection";
 import { loadClubShop, mockupUrl, shopPath, wordmarkSpec } from "@/lib/newwave/clubShop";
 import { shopPhoto, shopTexts } from "@/lib/newwave/clubShopContent";
 import { luminance } from "@/lib/newwave/theme";
@@ -22,7 +24,7 @@ export default async function ClubShopHome({ params }: { params: Promise<{ id: s
   if (!shop) notFound();
   const { club, groups, ranked, v } = shop;
   const texts = shopTexts(club, shop.content);
-  const photo = await shopPhoto(id, shop.content);
+  const [photo, { drops }] = await Promise.all([shopPhoto(id, shop.content), loadCollection(id, shop.content.hidden)]);
   const main = club.colors[0] ?? "#111111";
   const on = luminance(main) > 0.4 ? "#111111" : "#FFFFFF";
   const lead = ranked[0];
@@ -72,15 +74,16 @@ export default async function ClubShopHome({ params }: { params: Promise<{ id: s
       </ul>
 
       <div id="sortiment" className="mx-auto max-w-[1320px] scroll-mt-20 px-4 sm:px-6">
-        {groups.length > 2 ? (
+        {groups.length + drops.length > 2 ? (
           <nav aria-label="Stilar" className="mt-10 flex gap-2 overflow-x-auto pb-1">
-            {groups.map((g) => (
+            {[...(drops.length ? [{ id: "kollektion", name: "Veckans kollektion" }] : []), ...groups].map((g) => (
               <a key={g.id} href={`#${g.id}`} className="inline-flex h-10 shrink-0 items-center rounded-full border border-[#DCDAD4] px-4 text-[14px] font-medium transition hover:border-[var(--shop)] hover:bg-[var(--shop)] hover:text-[var(--shop-on)]">
                 {g.name}
               </a>
             ))}
           </nav>
         ) : null}
+        <CollectionSections drops={drops} href={(it) => `${shopPath(id)}/${it.id}`} />
         {groups.map((g, gi) => (
           <section key={g.id} id={g.id} aria-labelledby={`${g.id}-rubrik`} className="scroll-mt-20 pt-10">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--shop-line)] pb-3">

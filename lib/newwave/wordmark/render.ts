@@ -5,7 +5,7 @@ import sharp from "sharp";
 import { readAsset } from "@/lib/newwave/asset";
 import { cleanArt } from "./art";
 import { FONTS, fontFor } from "./fonts";
-import { monogramFor, nextJubilee, splitName, taglineFor } from "./names";
+import { monogramFor, nextJubilee, shortName, splitName, taglineFor } from "./names";
 import type { ColorSlot, Layer, ShapeLayerT, Template, TextLayerT, TextSlot } from "./schema";
 import type { WordmarkNames, WordmarkVariant } from "./spec";
 
@@ -29,8 +29,16 @@ export type WordmarkInput = {
   worn?: boolean;
   /** Lagren tonar in ett i taget, för webben och sociala medier. */
   animate?: boolean;
+  /** Hela mallens duk, 1000 enheter bred, i stället för beskuret till innehållet – så att designstudion kan lägga lagren ovanpå. */
+  canvas?: boolean;
+  /** Texterna rakt av, före klubbens – för att rita en import med originalets egna texter. */
+  texts?: Partial<Record<TextSlot, string>>;
 };
-export type Rendered = { svg: string; width: number; height: number };
+/** Det kontrollen såg när märket ritades för klubben – och det den rättade själv. */
+export type NoteKind = "shortened" | "small" | "weak-color" | "no-logo";
+export type Note = { kind: NoteKind; level: "varning" | "info"; text: string };
+export type ClubCheck = { id: string; name: string; notes: Note[] };
+export type Rendered = { svg: string; width: number; height: number; notes: Note[] };
 
 type Pt = [number, number];
 type Cmd = { t: "M" | "L" | "Q" | "C" | "Z"; p: Pt[] };
@@ -156,6 +164,8 @@ const contrast = (a: string, b: string) => {
   return (x + 0.05) / (y + 0.05);
 };
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+/** Två färger skiljer sig när ljusheten gör det – eller kulören, som turkos och orange med samma ljushet. */
+const apart = (a: string, b: string) => contrast(a, b) >= 1.3 || Math.hypot(...hexRgb(a).map((c, i) => c - hexRgb(b)[i])) >= 0.45;
 
 /**
  * Klubbens färger anpassade till plagget. Huvudfärgen måste synas tydligt mot tyget; andrafärgen får vara svagare
@@ -167,7 +177,7 @@ export function paletteFor(colors: readonly string[], variant: WordmarkVariant):
   const paper = variant === "dark" ? "#111111" : "#FFFFFF";
   const ink = variant === "dark" ? "#FFFFFF" : "#111111";
   const primary = valid.find((c) => contrast(c, paper) >= 2) ?? ink;
-  const secondary = valid.find((c) => c !== primary && contrast(c, paper) >= 1.1 && contrast(c, primary) >= 1.3) ?? neutral(primary, variant);
+  const secondary = valid.find((c) => c !== primary && contrast(c, paper) >= 1.1 && apart(c, primary)) ?? neutral(primary, variant);
   const on = contrast("#FFFFFF", primary) >= contrast("#111111", primary) ? "#FFFFFF" : "#111111";
   return { primary, secondary, ink, paper, on };
 }
@@ -189,7 +199,7 @@ function neutral(primary: string, variant: WordmarkVariant) {
 }
 
 /** Text måste gå att läsa: en svag andrafärg (gult på vitt) räcker till kontur och ornament men inte till bokstäverna. */
-function textFill(colors: Record<ColorSlot, string>, slot: ColorSlot) {
+export function textFill(colors: Record<ColorSlot, string>, slot: ColorSlot) {
   return slot === "secondary" && contrast(colors.secondary, colors.paper) < 2.5 ? colors.ink : colors[slot];
 }
 
@@ -283,9 +293,37 @@ function fitInto(cmds: Cmd[], box: { x: number; y: number; w: number; h: number 
   return { cmds: map(cmds, ([x, y]) => [left + (x - b.x0) * scale, top + (y - b.y0) * scale]), scale };
 }
 
-async function textLayer(layer: TextLayerT, text: string) {
+const caseOf = (layer: TextLayerT, text: string) => (layer.case === "upper" ? text.toLocaleUpperCase("sv-SE") : layer.case === "lower" ? text.toLocaleLowerCase("sv-SE") : text);
+
+/** Textens form på en rad, före rutan: banan och dess ungefärliga ruta i em-enheter – för typsnittsmatchningen. */
+export async function textShape(layer: TextLayerT, text: string) {
   const font = await loadFont(fontFor(layer.font));
-  const shown = layer.case === "upper" ? text.toLocaleUpperCase("sv-SE") : layer.case === "lower" ? text.toLocaleLowerCase("sv-SE") : text;
+  const shown = caseOf(layer, text);
+  const cmds = setLines(font, [shown], layer, [...shown].length);
+  const b = tightBox(cmds);
+  return b && b.x1 > b.x0 && b.y1 > b.y0 ? { d: toD(cmds), x: b.x0, y: b.y0, w: b.x1 - b.x0, h: b.y1 - b.y0 } : null;
+}
+
+/** Rutan kring själva kurvorna, inte deras styrpunkter – bboxOf räcker för att placera, men inte för att mäta proportioner. */
+function tightBox(cmds: Cmd[]): Box | null {
+  const pts: Pt[] = [];
+  let at: Pt = [0, 0];
+  for (const c of cmds) {
+    if (c.t === "Q" || c.t === "C") {
+      const ctrl = [at, ...c.p];
+      for (let i = 1; i <= 8; i++) {
+        const t = i / 8;
+        const q = ctrl.length === 3 ? [(1 - t) ** 2, 2 * (1 - t) * t, t ** 2] : [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3];
+        pts.push([q.reduce((s, k, j) => s + k * ctrl[j][0], 0), q.reduce((s, k, j) => s + k * ctrl[j][1], 0)]);
+      }
+    } else pts.push(...c.p);
+    if (c.p.length) at = c.p[c.p.length - 1];
+  }
+  return bboxOf([{ t: "L", p: pts }]);
+}
+
+async function setText(font: Font, layer: TextLayerT, text: string) {
+  const shown = caseOf(layer, text);
   const chars = [...shown].length;
   let best = fitInto(setLines(font, [shown], layer, chars), layer.box, layer.align, layer.valign);
   const split = layer.maxLines > 1 ? balance(shown) : null;
@@ -293,6 +331,32 @@ async function textLayer(layer: TextLayerT, text: string) {
     const two = fitInto(setLines(font, split, layer, chars), layer.box, layer.align, layer.valign);
     if (two.scale > best.scale * 1.18) best = two;
   }
+  return best;
+}
+
+/** Ett namn av vanlig längd per plats – måttet på hur stor texten är tänkt att bli i mallen. */
+const USUAL: Partial<Record<TextSlot, string>> = { name: "IFK Göteborg", name1: "IFK", name2: "Göteborg", monogram: "IFK" };
+/** Under så här stor del av den tänkta storleken blir namnet svårläst; under KEEP provas namnet utan föreningsord. */
+const SMALL = 0.55;
+const KEEP = 0.75;
+
+async function textLayer(layer: TextLayerT, text: string, notes: Note[]) {
+  const font = await loadFont(fontFor(layer.font));
+  let best = await setText(font, layer, text);
+  const usual = USUAL[layer.slot];
+  if (!usual) return best.cmds;
+  const size = (await setText(font, layer, usual)).scale;
+  let share = best.scale / size;
+  const short = share < KEEP && (layer.slot === "name" || layer.slot === "name2") ? shortName(text) : text;
+  if (short !== text) {
+    const tried = await setText(font, layer, short);
+    if (tried.scale > best.scale * 1.2) {
+      notes.push({ kind: "shortened", level: "info", text: `”${text}” kortades till ”${short}” för att få plats.` });
+      best = tried;
+      share = tried.scale / size;
+    }
+  }
+  if (share < SMALL) notes.push({ kind: "small", level: "varning", text: `”${text}” blir ${Math.round(share * 100)} % av den tänkta storleken – korta namnet för klubben.` });
   return best.cmds;
 }
 
@@ -507,6 +571,7 @@ export function textsFor(club: WordmarkClub, input: Pick<WordmarkInput, "name1" 
   const year = club.founded ? String(club.founded) : "";
   const jubilee = club.founded ? nextJubilee(club.founded, now) : null;
   return {
+    name: spoken,
     ...parts,
     tagline: taglineFor(club),
     monogram: monogramFor(parts, spoken),
@@ -525,10 +590,11 @@ export const lacksText = (template: Pick<Template, "needs">, texts: Record<TextS
 
 export async function renderWordmark(template: Template, club: WordmarkClub, input: WordmarkInput): Promise<Rendered> {
   const colors = paletteFor(club.colors, input.variant);
-  const texts = textsFor(club, input);
+  const texts = { ...textsFor(club, input), ...input.texts };
   const crest = input.icon && template.layers.some((l) => l.kind === "icon") ? await crestImage(club, isDarkVariant(club.colors, input.variant)) : null;
   const out: string[] = [];
   const defs: string[] = [];
+  const notes: Note[] = [];
   let box: Box | null = null;
 
   for (const layer of template.layers as Layer[]) {
@@ -536,7 +602,9 @@ export async function renderWordmark(template: Template, club: WordmarkClub, inp
     if (layer.kind === "text") {
       const text = texts[layer.slot].trim();
       if (!text) continue;
-      const cmds = await textLayer(layer, text);
+      const cmds = await textLayer(layer, text, notes);
+      if (textFill(colors, layer.color) !== colors[layer.color] && !notes.some((n) => n.kind === "weak-color"))
+        notes.push({ kind: "weak-color", level: "info", text: "Andrafärgen syns för svagt för bokstäver på plagget – texten blir svart, färgen används i konturer och dekor." });
       const b = bboxOf(cmds);
       const id = `t${defs.length}`;
       defs.push(`<path id="${id}" d="${toD(cmds)}"/>`);
@@ -565,7 +633,10 @@ export async function renderWordmark(template: Template, club: WordmarkClub, inp
         box = union(box, bboxOf(part.cmds));
       }
     } else if (layer.kind === "icon") {
-      if (!crest) continue;
+      if (!crest) {
+        if (input.icon) notes.push({ kind: "no-logo", level: "varning", text: "Klubbmärket saknas – rutan för märket blir tom." });
+        continue;
+      }
       const s = Math.min(layer.box.w / crest.w, layer.box.h / crest.h);
       const [w, h] = [crest.w * s, crest.h * s];
       const [x, y] = [layer.box.x + (layer.box.w - w) / 2, layer.box.y + (layer.box.h - h) / 2];
@@ -582,8 +653,8 @@ export async function renderWordmark(template: Template, club: WordmarkClub, inp
     if (parts.length) out.push(parts.join(""));
   }
 
-  const b = box ?? { x0: 0, y0: 0, x1: 1000, y1: template.height };
-  const pad = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.03;
+  const b = input.canvas || !box ? { x0: 0, y0: 0, x1: 1000, y1: template.height } : box;
+  const pad = input.canvas ? 0 : Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.03;
   const [vx, vy, vw, vh] = [b.x0 - pad, b.y0 - pad, b.x1 - b.x0 + pad * 2, b.y1 - b.y0 + pad * 2];
   if (input.worn) defs.push(wornFilter("worn", [vx, vy, vw, vh]));
   const layers = input.animate ? out.map((o, i) => `<g class="nw-in" style="animation-delay:${(0.15 + i * 0.16).toFixed(2)}s">${o}</g>`).join("") : out.join("");
@@ -595,6 +666,7 @@ export async function renderWordmark(template: Template, club: WordmarkClub, inp
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${r2(vx)} ${r2(vy)} ${r2(vw)} ${r2(vh)}" width="${r2(vw)}" height="${r2(vh)}">${body}</svg>`,
     width: vw,
     height: vh,
+    notes,
   };
 }
 

@@ -5,13 +5,26 @@ const TYPES = new Set([
 
 export type NameParts = { name1: string; name2: string };
 
+/** IF, men också sammanslagna former som IF/FK. */
+const isType = (word: string) => word.toUpperCase().split("/").every((w) => TYPES.has(w));
+
 export function splitName(name: string): NameParts {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  const kinds = words.filter((w) => TYPES.has(w.toUpperCase()));
-  const rest = words.filter((w) => !TYPES.has(w.toUpperCase()));
+  const kinds = words.filter(isType);
+  const rest = words.filter((w) => !isType(w));
   if (kinds.length && rest.length) return { name1: kinds.join(" "), name2: rest.join(" ") };
   if (words.length > 1) return { name1: words[0], name2: words.slice(1).join(" ") };
   return { name1: "", name2: words[0] ?? "" };
+}
+
+/** Ord som bara säger vad föreningen är eller vilken sektion det gäller – Ishockeyförening, Fotbollsklubb, Fotboll. */
+const KIND_WORD = /^([a-zåäö]*(förening|klubb|sällskap|allians)|fotboll|ishockey|hockey|handboll|innebandy|bandy|basket|friidrott|volleyboll)$/i;
+
+/** Namnet utan föreningsorden, "Hammarby Ishockeyförening" → "Hammarby"; oförändrat när inget annat skulle bli kvar. */
+export function shortName(text: string) {
+  const words = text.trim().split(/\s+/);
+  const kept = words.filter((w) => !KIND_WORD.test(w));
+  return kept.length && kept.length < words.length ? kept.join(" ") : text;
 }
 
 /** Förkortningar som räcker som monogram på egen hand; IF, FF och BK säger inte vilken klubb det är. */
@@ -24,7 +37,7 @@ const OWN = new Set(["AIK", "BOIS", "GAIS", "IFK"]);
 export function monogramFor(parts: NameParts, name: string) {
   if (OWN.has(parts.name1.toUpperCase())) return parts.name1;
   const words = name.trim().split(/\s+/).filter(Boolean);
-  const initials = words.map((w) => (TYPES.has(w.toUpperCase()) ? w.toUpperCase() : ([...w][0] ?? "").toUpperCase())).join("");
+  const initials = words.map((w) => (isType(w) ? w.toUpperCase() : ([...w][0] ?? "").toUpperCase())).join("");
   return words.length > 1 && [...initials].length <= 4 ? initials : ([...parts.name2][0] ?? "").toUpperCase();
 }
 

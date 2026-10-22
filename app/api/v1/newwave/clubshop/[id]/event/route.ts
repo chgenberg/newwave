@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { DELIVERY, MAX_QTY } from "@/components/newwave/clubshop/pricing";
 import { clientIp, createLimiter, readJson } from "@/lib/demoLimit";
+import { sellables } from "@/lib/newwave/clubCollection";
 import { loadClubShop } from "@/lib/newwave/clubShop";
 import { EVENTS, recordEvent, recordOrder } from "@/lib/newwave/clubShopStats";
 
@@ -30,11 +31,11 @@ export async function POST(req: Request, ctx: Ctx) {
   const shop = await loadClubShop(id);
   if (!shop) return none;
   const e = body.data;
+  const items = new Map((await sellables(shop)).map((s) => [s.id, s]));
   if (e.type === "order") {
-    await recordOrder(id, shop.assortment, { ...e, delivery: e.delivery as (typeof DELIVERY)[number]["id"] });
+    await recordOrder(id, items, { ...e, delivery: e.delivery as (typeof DELIVERY)[number]["id"] });
     return none;
   }
-  const known = e.item && shop.assortment.some((g) => g.items.some((i) => i.id === e.item));
-  await recordEvent(id, e.type, known ? e.item : undefined);
+  await recordEvent(id, e.type, e.item && items.has(e.item) ? e.item : undefined);
   return none;
 }

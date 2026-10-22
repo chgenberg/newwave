@@ -1,5 +1,5 @@
 import { type DeliveryId, FLOCK_PRICE, shipping } from "@/components/newwave/clubshop/pricing";
-import { findItem, type ShopGroup } from "./clubShop";
+import type { Sellable } from "./clubCollection";
 import { readData, updateJson } from "./workspace";
 
 /**
@@ -46,7 +46,7 @@ function bump(id: string, change: (s: ClubStats, today: Counts) => void) {
   );
 }
 
-/** `item` räknas bara för varor i klubbens sortiment. */
+/** `item` räknas bara för varor klubben säljer. */
 export function recordEvent(id: string, type: ShopEvent, item?: string) {
   return bump(id, (s, today) => {
     const f = FIELD[type];
@@ -55,13 +55,13 @@ export function recordEvent(id: string, type: ShopEvent, item?: string) {
   });
 }
 
-/** Priserna räknas här av varorna i sortimentet, inte av det webbläsaren skickar. */
-export async function recordOrder(id: string, groups: ShopGroup[], order: { number: string; delivery: DeliveryId; lines: { item: string; qty: number; flock: boolean }[] }) {
+/** Priserna räknas här av det klubben säljer, inte av det webbläsaren skickar. */
+export async function recordOrder(id: string, items: Map<string, Sellable>, order: { number: string; delivery: DeliveryId; lines: { item: string; qty: number; flock: boolean }[] }) {
   const lines: OrderLine[] = order.lines.flatMap((l) => {
-    const it = findItem(groups, l.item);
+    const it = items.get(l.item);
     if (!it) return [];
     const flock = l.flock && it.flock;
-    return [{ item: it.id, name: it.name, qty: l.qty, flock, priceSek: it.product.priceSek + (flock ? FLOCK_PRICE : 0) }];
+    return [{ item: it.id, name: it.name, qty: l.qty, flock, priceSek: it.priceSek + (flock ? FLOCK_PRICE : 0) }];
   });
   if (!lines.length) return null;
   const subtotal = lines.reduce((n, l) => n + l.priceSek * l.qty, 0);

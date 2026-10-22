@@ -148,7 +148,7 @@ const TTL = 5 * 60_000;
 
 /** Alla klubbar kontrolleras på några sekunder; resultatet återanvänds tills klubbarnas val, mallarna eller registret ändras. */
 async function checkAll() {
-  const [registry, prefs, templates] = await Promise.all([queryClubs({ q: "", county: "", sport: "", show: "site", sort: "size", offset: 0, limit: 100_000 }), allPrefs(), listed()]);
+  const [registry, prefs, templates] = await Promise.all([queryClubs({ q: "", county: "", sport: "", sort: "size", offset: 0, limit: 100_000 }), allPrefs(), listed()]);
   const key = JSON.stringify([registry?.stats.builtAt, prefs, templates.map((t) => [t.id, t.fit])]);
   if (memo?.key === key && Date.now() - memo.at < TTL) return { prefs, checked: await memo.checked };
   memo = { key, at: Date.now(), checked: run(registry?.items ?? [], prefs, templates) };

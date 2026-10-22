@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { toFile } from "openai";
 import { type Content, visionJson } from "@/lib/brandVision";
 import { cleanText } from "@/lib/demoLimit";
-import { IMAGE_MODEL, IMAGE_QUALITY, openai } from "@/lib/openai";
+import { IMAGE_MODEL, IMAGE_QUALITY, openai, TEXT_MODEL } from "@/lib/openai";
 import { saveFile } from "@/lib/store";
 import { FONT_ROLES } from "./fonts";
 import { splitName } from "./names";
@@ -116,7 +116,7 @@ const brief = (t: Template) => ({ name: t.name, style: t.style, height: t.height
 const SYSTEM = `Du är formgivare av ordmärken för idrottsklubbar och översätter referensbilder till mallar för en motor som ritar exakt vektorgrafik.
 
 Duken är 1000 enheter bred, y nedåt. Varje lager har en ruta (x, y, w, h). Text skalas så att den fyller rutan utan att gå utanför, så ett kort namn blir högt och ett långt smalare. Välj därför rutor efter det längsta namn mallen är gjord för.
-Slottar: name1 = föreningsförkortningen eller första ordet (IF, IFK, MIAMI), name2 = huvudnamnet (Åsa, Göteborg, Dolphins), tagline = "Sedan 1919" eller sporterna, monogram = förkortningen eller första bokstaven (det stora H:et på en Harvardtröja), sport = huvudsporten (FOTBOLL som UNIVERSITY under märket), est och year = "Est." och grundandeåret, t.ex. på var sin sida om märket; de är tomma när året saknas, så mallen måste se hel ut utan dem. player och number = namn och nummer på ryggen; jubilee och span = "100 år" och "1926–2026" – använd dem bara när referensen är en rygg eller ett jubileum.
+Slottar: name = hela namnet på en rad (IFK GÖTEBORG), name1 = föreningsförkortningen eller första ordet (IF, IFK, MIAMI), name2 = huvudnamnet (Åsa, Göteborg, Dolphins), tagline = "Sedan 1919" eller sporterna, monogram = förkortningen eller första bokstaven (det stora H:et på en Harvardtröja), sport = huvudsporten (FOTBOLL som UNIVERSITY under märket), est och year = "Est." och grundandeåret, t.ex. på var sin sida om märket; de är tomma när året saknas, så mallen måste se hel ut utan dem. player och number = namn och nummer på ryggen; jubilee och span = "100 år" och "1926–2026" – använd dem bara när referensen är en rygg eller ett jubileum.
 Färgslottar: primary = klubbens huvudfärg, secondary = andrafärgen, ink = svart/vitt mot plagget, paper = plaggets färg (för konturer som skär ut), on = text som ligger på en yta i primary.
 Typsnittsroller: ${FONT_ROLES.join(", ")}. Välj den roll som liknar referensens typsnitt mest.
 Former (kind shape): checker = rutband, stripes = ränder, stars = stjärnor (count), rule = tunn linje, diamond = romb, banner = banderoll bakom text, ring = ring (count 2 = dubbel), disc = fylld cirkel, swash = svans under skrivstil, shield = sköld bakom innehållet, pill = kapselram runt ett namn (rows 2 = dubbel), plate = fylld kapsel, laurel = lagerkrans runt märket, burst = solstrålar bakom märket, pennant = vimpel, tail = basebollsvans med plats för text, bars = tjock och tunn balk. Lager ritas i ordning – lägg bakgrundsformer först.
@@ -185,6 +185,7 @@ export async function proposeTemplates(images: Buffer[], note: string, popular: 
   }
   const out = await visionJson<{ proposals: ProposalRaw[] }>(SYSTEM, content, { name: "wordmark_templates", schema: SCHEMA }, 120_000);
   let dropped = 0;
+  const made = { ai: { task: "draw" as const, model: TEXT_MODEL, at: new Date().toISOString() } };
   const templates = out.proposals.slice(0, 3).flatMap((p, i) => {
     const layers = p.layers.slice(0, 40).flatMap((l) => toLayer(l) ?? []);
     dropped += p.layers.length - layers.length;
@@ -197,6 +198,7 @@ export async function proposeTemplates(images: Buffer[], note: string, popular: 
       layers,
       fit: { ideal: [lo, Math.max(lo, Math.round(num(p.ideal_max, 1, 40)))], max: Math.max(lo, Math.round(num(p.max_chars, 1, 60))) },
       source: "agent",
+      made,
     });
     if (!r.success || !r.data.layers.some((l) => l.kind === "text" && l.slot !== "tagline")) {
       dropped++;

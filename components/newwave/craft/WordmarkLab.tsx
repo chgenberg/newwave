@@ -1,31 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { importSvg } from "@/lib/newwave/wordmark/importSvg";
 import type { TemplateInput } from "@/lib/newwave/wordmark/schema";
 import { type WordmarkVariant, wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { readLogoFile } from "../studio/readLogoFile";
+import { Draft, type FromImport, IMG, ImportPanel, post, type SavedTemplate, tile } from "./DesignImport";
 import { Fold } from "./Fold";
 import { Toast } from "./SearchBox";
 import { WordmarkClubs } from "./WordmarkClubs";
 import { WordmarkDetail } from "./WordmarkDetail";
 import { WordmarkQueue } from "./WordmarkQueue";
+import { WordmarkStudio } from "./WordmarkStudio";
 
 type Stat = { picks: number; orders: number; favorites: number; score: number; weak: boolean };
 type Listed = { id: string; name: string; style: string; source: string; stats?: Stat };
 type Sort = "fit" | "popular";
 type ClubInfo = { prefs: { favorites: string[]; approved?: { at: string; by: string } }; issues: { id: string; level: "fel" | "varning" | "info"; text: string }[] };
 export type LabClub = { id: string; name: string };
-
-const tile = (v: WordmarkVariant) => `relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[12px] ${v === "dark" ? "bg-[#1C1C1E]" : "bg-[var(--nw-soft)]"}`;
-const IMG = "absolute inset-0 h-full w-full object-contain p-[9%]";
-
-async function post<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const json = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(json.error ?? "Något gick fel.");
-  return json;
-}
 
 /** Med en klubb kommer mallarna i ordning efter hur väl de passar klubbens namn; `popular` sorterar efter klubbarnas val. */
 const fetchList = async (club: string | undefined, sort: Sort): Promise<Listed[]> => {
@@ -34,37 +25,6 @@ const fetchList = async (club: string | undefined, sort: Sort): Promise<Listed[]
   const json = (await res.json().catch(() => null)) as { templates: Listed[] } | null;
   return json?.templates ?? [];
 };
-
-/** En osparad mall ritad av servern för en klubb. */
-function Draft({ template, club, variant }: { template: TemplateInput; club: LabClub; variant: WordmarkVariant }) {
-  const [src, setSrc] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-  const key = JSON.stringify(template);
-  useEffect(() => {
-    let url: string | null = null;
-    let live = true;
-    fetch("/api/v1/newwave/wordmark/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ template: JSON.parse(key), club: club.id, variant }) })
-      .then(async (r) => {
-        if (!r.ok) throw new Error();
-        url = URL.createObjectURL(await r.blob());
-        if (live) setSrc(url);
-      })
-      .catch(() => live && setFailed(true));
-    return () => {
-      live = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [key, club.id, variant]);
-  return (
-    <figure className="min-w-0">
-      <div className={tile(variant)}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- osparad mall */}
-        {src ? <img src={src} alt={`Förhandsvisning med ${club.name}`} className={IMG} /> : <span className="text-[12px] text-[var(--nw-muted)]">{failed ? "Gick inte att rita" : "Ritar…"}</span>}
-      </div>
-      <figcaption className="mt-1 truncate text-[12px] text-[var(--nw-muted)]">{club.name}</figcaption>
-    </figure>
-  );
-}
 
 const PRESSED = "nw-chip h-8 px-3 aria-pressed:border-[var(--nw-ink)] aria-pressed:bg-[var(--nw-ink)] aria-pressed:text-white";
 
@@ -135,6 +95,7 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   const [sort, setSort] = useState<Sort>("fit");
   const [detail, setDetail] = useState<Listed | null>(null);
   const [info, setInfo] = useState<{ id: string; data: ClubInfo | null } | null>(null);
+  const [editing, setEditing] = useState<{ template: TemplateInput; source: "import" | "agent"; from?: FromImport } | null>(null);
   const closeToast = useCallback(() => setToast(null), []);
   const closeDetail = useCallback(() => setDetail(null), []);
 
@@ -171,9 +132,17 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   };
 
   const save = async (template: TemplateInput, source: "import" | "agent") => {
-    const { template: saved } = await post<{ template: Listed }>("/api/v1/newwave/wordmark/templates", { template, source });
+    const { template: saved } = await post<{ template: Listed & SavedTemplate }>("/api/v1/newwave/wordmark/templates", { template, source });
     await load();
     setToast(`"${saved.name}" finns nu bland ordmärkena i Designa`);
+    return saved;
+  };
+  /** En sparad design öppnas som en kopia; originalet finns kvar tills någon tar bort det. */
+  const edit = async (t: Listed) => {
+    const res = await fetch(`/api/v1/newwave/wordmark/templates?id=${encodeURIComponent(t.id)}`);
+    const json = (await res.json().catch(() => null)) as { template?: TemplateInput } | null;
+    if (!json?.template) return setToast(`Kunde inte öppna "${t.name}"`);
+    setEditing({ template: { ...json.template, name: `${t.name} – kopia`.slice(0, 40) }, source: t.source === "agent" ? "agent" : "import" });
   };
   const remove = async (t: Listed) => {
     const res = await fetch(`/api/v1/newwave/wordmark/templates?id=${encodeURIComponent(t.id)}`, { method: "DELETE" });
@@ -187,17 +156,17 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   const spec = (template: string) => ({ template, icon: true, ornament: true, worn });
   return (
     <div className="mt-6 flex flex-col gap-3">
-      <Fold title="Lägg till mall från Illustrator" summary="SVG">
-        <ImportPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "import")} />
+      <Fold title="Gör en design för flera klubbar" summary="SVG, AI, PNG · läsagenten">
+        <ImportPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "import")} onEdit={(template, from) => setEditing({ template, source: "import", from })} />
       </Fold>
       <Fold title="Inspirationsbank" summary="AI">
-        <AgentPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "agent")} />
+        <AgentPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "agent")} onEdit={(template) => setEditing({ template, source: "agent" })} />
       </Fold>
       <Fold title="Granskningskö" summary="Kontroller per klubb">
         <WordmarkQueue onFocus={pickFocus} />
       </Fold>
 
-      <WordmarkClubs value={focus} onPick={setFocus} />
+      <WordmarkClubs selected={focus ? [focus] : []} onToggle={(c) => setFocus(focus?.id === c.id ? null : c)} />
 
       <section id="nw-wm-gallery" className="mt-5 scroll-mt-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -243,6 +212,9 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
                     {t.name} <span className="font-normal text-[var(--nw-muted)]">· {t.style}</span>
                   </p>
                   <span className="flex shrink-0 gap-2.5 text-[12px]">
+                    <button type="button" onClick={() => void edit(t)} className="text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
+                      Redigera
+                    </button>
                     <button type="button" onClick={() => setDetail(t)} className="text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
                       Tryckfiler
                     </button>
@@ -265,6 +237,9 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
                     {t.source !== "inbyggd" ? <span className="ml-2 rounded-full bg-[var(--nw-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--nw-muted)]">{t.source === "agent" ? "Från agenten" : "Importerad"}</span> : null}
                   </p>
                   <StatLine s={t.stats} top={topIds.has(t.id)} />
+                  <button type="button" onClick={() => void edit(t)} className="shrink-0 text-[12.5px] text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
+                    Redigera i studion
+                  </button>
                   {t.source !== "inbyggd" ? (
                     <button type="button" onClick={() => void remove(t)} className="shrink-0 text-[12.5px] text-[var(--nw-muted)] underline underline-offset-4 hover:text-[var(--nw-ink)]">
                       Ta bort
@@ -288,101 +263,13 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
         )}
       </section>
       {detail && focus ? <WordmarkDetail spec={spec(detail.id)} name={detail.name} club={focus} onClose={closeDetail} /> : null}
+      {editing ? <WordmarkStudio initial={editing.template} from={editing.from} clubs={focus && !clubs.some((c) => c.id === focus.id) ? [focus, ...clubs] : clubs} onSave={(t) => save(t, editing.source)} onClose={() => setEditing(null)} /> : null}
       <Toast message={toast} onClose={closeToast} />
     </div>
   );
 }
 
-const GUIDE = [
-  "Skriv texten med levande text – konvertera den inte till banor. Typsnittet får vara vilket som helst; vi väljer ett licensierat i samma stil.",
-  "Lägg Namn 1 (t.ex. MIAMI) i ett lager som heter name1 och Namn 2 (Dolphins) i name2. Raden \"Sedan 1919\" kan heta tagline, sporten sport och grundandeåret year.",
-  "Rutband, ränder och annan dekor i ett lager som heter ornament. Rita en platshållare för klubbmärket i ett lager som heter icon.",
-  "Färglägg med klubbens färger. Vill du styra vilken som är vilken: lägg två små rutor som heter primary och secondary – de ritas inte.",
-  "Text på en böjd bana blir en båge och fortsätter böja sig för längre och kortare namn.",
-  "Arkiv → Exportera → Exportera som → SVG. Välj Teckensnitt: SVG och Objekt-ID: Lagernamn.",
-];
-
-function ImportPanel({ clubs, variant, onSave }: { clubs: LabClub[]; variant: WordmarkVariant; onSave: (t: TemplateInput) => Promise<void> }) {
-  const [draft, setDraft] = useState<{ template: TemplateInput; notes: string[]; sample: string } | null>(null);
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const read = async (file: File | undefined) => {
-    if (!file) return;
-    setError("");
-    setDraft(null);
-    try {
-      if (!/\.svg$/i.test(file.name) && file.type !== "image/svg+xml") throw new Error(/\.ai$/i.test(file.name) ? "AI-filer går inte att läsa direkt – exportera som SVG enligt guiden." : "Välj en SVG-fil.");
-      const r = await importSvg(await file.text(), file.name);
-      setDraft({ template: r.template, notes: r.notes, sample: [r.sample.name1, r.sample.name2].filter(Boolean).join(" · ") });
-      setName(r.template.name);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Kunde inte läsa filen.");
-    }
-  };
-  const keep = async () => {
-    if (!draft) return;
-    setBusy(true);
-    setError("");
-    try {
-      await onSave({ ...draft.template, name: name.trim().slice(0, 40) || draft.template.name });
-      setDraft(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Kunde inte spara.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="text-[13px] font-semibold text-[var(--nw-ink)]">Så exporterar du från Illustrator</p>
-        <ol className="mt-2 flex list-decimal flex-col gap-1.5 pl-5 text-[13.5px] leading-snug text-[var(--nw-muted)]">
-          {GUIDE.map((g) => (
-            <li key={g}>{g}</li>
-          ))}
-        </ol>
-      </div>
-      <label className="nw-chip h-10 w-fit cursor-pointer border-dashed px-4 hover:border-[var(--nw-ink)]">
-        <input type="file" accept=".svg,image/svg+xml,.ai" className="sr-only" onChange={(e) => void read(e.target.files?.[0]).finally(() => (e.target.value = ""))} />
-        Välj SVG-fil
-      </label>
-      {error ? <p className="text-[13.5px] text-[#B42318]">{error}</p> : null}
-      {draft ? (
-        <div className="nw-fade flex flex-col gap-3">
-          <p className="text-[13px] text-[var(--nw-muted)]">
-            {draft.template.layers.length} lager{draft.sample ? ` · i filen: ${draft.sample}` : ""}
-          </p>
-          {draft.notes.length ? (
-            <ul className="flex flex-col gap-1 text-[13px] text-[#8A5300]">
-              {draft.notes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="grid grid-cols-3 gap-2">
-            {clubs.map((c) => (
-              <Draft key={c.id} template={draft.template} club={c} variant={variant} />
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} aria-label="Mallens namn" className="nw-input h-10 w-[220px]" />
-            <button type="button" disabled={busy} onClick={() => void keep()} className="nw-btn h-10 disabled:opacity-50">
-              {busy ? "Sparar…" : "Lägg till mall"}
-            </button>
-            <button type="button" onClick={() => setDraft(null)} className="nw-btn nw-btn-ghost h-10">
-              Avbryt
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function AgentPanel({ clubs, variant, onSave }: { clubs: LabClub[]; variant: WordmarkVariant; onSave: (t: TemplateInput) => Promise<void> }) {
+function AgentPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub[]; variant: WordmarkVariant; onSave: (t: TemplateInput) => Promise<unknown>; onEdit: (t: TemplateInput) => void }) {
   const [refs, setRefs] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [proposals, setProposals] = useState<TemplateInput[]>([]);
@@ -491,6 +378,9 @@ function AgentPanel({ clubs, variant, onSave }: { clubs: LabClub[]; variant: Wor
             <div className="flex gap-2">
               <button type="button" onClick={() => void accept(t)} className="nw-btn h-9 px-4 text-[13px]">
                 Lägg till
+              </button>
+              <button type="button" onClick={() => onEdit(t)} className="nw-chip h-9 px-4 text-[13px]">
+                Redigera
               </button>
               <button type="button" onClick={() => setProposals((p) => p.filter((x) => x !== t))} className="nw-btn nw-btn-ghost h-9 px-4 text-[13px]">
                 Skippa

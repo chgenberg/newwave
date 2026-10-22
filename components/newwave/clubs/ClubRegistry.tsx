@@ -7,19 +7,12 @@ import { registryAsset } from "@/lib/newwave/clubAssets";
 import type { ClubDetail, ClubItem } from "@/lib/newwave/clubRegistry";
 
 type Facet = { name: string; n: number };
-type Stats = { clubs: number; done: number; found: number; logos: number; missing: number; builtAt: string; running: boolean };
+type Stats = { clubs: number; counties: number; sports: number; builtAt: string };
 type Page = { total: number; items: ClubItem[]; facets: { counties: Facet[]; sports: Facet[] }; stats: Stats };
 
 const API = "/api/v1/newwave/registry";
 const PAGE = 60;
 const num = new Intl.NumberFormat("sv-SE");
-const SHOW = [
-  { id: "all", label: "Alla" },
-  { id: "logo", label: "Med logga" },
-  { id: "site", label: "Med webbplats" },
-  { id: "missing", label: "Hittades inte" },
-  { id: "queued", label: "I kö" },
-] as const;
 const SORT = [
   { id: "size", label: "Störst överskott" },
   { id: "name", label: "A–Ö" },
@@ -53,17 +46,11 @@ function backdrop(c: ClubItem) {
   return primary ? mix(primary, 255, 0.9) : "#F2F1EE";
 }
 
-function initials(name: string) {
-  const words = name.replace(/[^\p{L}\d\s-]/gu, "").split(/[\s-]+/).filter((w) => w.length > 2 || /^\p{Lu}+$/u.test(w));
-  return (words.slice(0, 2).map((w) => w[0]).join("") || name.slice(0, 2)).toUpperCase();
-}
-
 export function ClubRegistry() {
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [county, setCounty] = useState("");
   const [sport, setSport] = useState("");
-  const [show, setShow] = useState<(typeof SHOW)[number]["id"]>("all");
   const [sort, setSort] = useState<(typeof SORT)[number]["id"]>("size");
   const [data, setData] = useState<Page | null>(null);
   const [items, setItems] = useState<ClubItem[]>([]);
@@ -81,12 +68,12 @@ export function ClubRegistry() {
   }, [text]);
 
   const params = useMemo(() => {
-    const p = new URLSearchParams({ show, sort, limit: String(PAGE) });
+    const p = new URLSearchParams({ sort, limit: String(PAGE) });
     if (q) p.set("q", q);
     if (county) p.set("county", county);
     if (sport) p.set("sport", sport);
     return p.toString();
-  }, [q, county, sport, show, sort]);
+  }, [q, county, sport, sort]);
 
   /** Nya filter börjar om från första sidan; rullningen ber om nästa sida för samma filter. */
   const offset = want.params === params ? want.offset : 0;
@@ -116,7 +103,7 @@ export function ClubRegistry() {
   useEffect(() => {
     let live = true;
     const refresh = async () => {
-      const res = await fetch(`${API}?show=logo&sort=recent&limit=48`, { cache: "no-store" }).catch(() => null);
+      const res = await fetch(`${API}?sort=recent&limit=48`, { cache: "no-store" }).catch(() => null);
       const body = res?.ok ? await res.json() : null;
       if (!live || !body) return;
       setWall(body.items);
@@ -140,7 +127,7 @@ export function ClubRegistry() {
   }, [more, loading, items.length, params]);
 
   const stats = data?.stats;
-  const filtered = Boolean(q || county || sport || show !== "all");
+  const filtered = Boolean(q || county || sport);
 
   return (
     <div className="mx-auto w-full max-w-[1480px]">
@@ -148,21 +135,16 @@ export function ClubRegistry() {
         <LogoWall items={wall} onPick={setOpen} />
         <div className="relative">
           <p className="nw-mono text-[12px] uppercase tracking-[0.08em] text-white/55">Klubbregistret · Sveriges föreningar</p>
-          <h1 className="mt-2 max-w-[760px] text-[30px] font-semibold leading-[1.08] tracking-[-0.02em] min-[900px]:text-[46px]">Varje förening, med logga, färger och kanaler.</h1>
+          <h1 className="mt-2 max-w-[760px] text-[30px] font-semibold leading-[1.08] tracking-[-0.02em] min-[900px]:text-[46px]">Varje klubb, med klubbmärke, färger och kanaler.</h1>
           <p className="mt-3 max-w-[640px] text-[14.5px] leading-relaxed text-white/70">
-            Vi letar upp föreningens webbplats och hämtar klubbmärket, profilfärgerna, typsnitten, sociala kanaler och klubbshop. Listan växer medan skrapningen pågår.
+            Vi har letat upp klubbens webbplats och hämtat klubbmärket, profilfärgerna, typsnitten, sociala kanaler och klubbshop. Här finns idrottsklubbarna med eget klubbmärke.
           </p>
           <div className="mt-6 grid grid-cols-2 gap-2.5 min-[700px]:grid-cols-4">
-            <Stat label="Föreningar" value={stats?.clubs} />
-            <Stat label="Webbplats hittad" value={stats?.found} sub={stats?.done ? `${Math.round((stats.found / stats.done) * 100)} % av genomsökta` : undefined} />
-            <Stat label="Med klubbmärke" value={stats?.logos} />
-            <Stat label="Kvar att söka" value={stats ? stats.clubs - stats.done : undefined} sub={stats?.running ? "Skrapningen pågår" : stats && stats.done < stats.clubs ? "Pausad" : "Klar"} live={stats?.running} />
+            <Stat label="Klubbar" value={stats?.clubs} />
+            <Stat label="Län" value={stats?.counties} />
+            <Stat label="Idrotter" value={stats?.sports} />
+            <Stat label="Uppdaterat" value={stats ? new Date(stats.builtAt).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) : undefined} />
           </div>
-          {stats && (
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label="Genomsökta föreningar" aria-valuemin={0} aria-valuemax={stats.clubs} aria-valuenow={stats.done}>
-              <div className="h-full rounded-full bg-[linear-gradient(90deg,#7DD3FC,#A7F3D0)] transition-[width] duration-700" style={{ width: `${(stats.done / Math.max(1, stats.clubs)) * 100}%` }} />
-            </div>
-          )}
         </div>
       </section>
 
@@ -218,12 +200,7 @@ export function ClubRegistry() {
             </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]" role="group" aria-label="Visa">
-            {SHOW.map((s) => (
-              <button key={s.id} type="button" onClick={() => setShow(s.id)} aria-pressed={show === s.id} className={`h-9 shrink-0 rounded-full px-3.5 text-[13px] font-medium transition ${show === s.id ? "bg-[#111] text-white" : "text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]"}`}>
-                {s.label}
-              </button>
-            ))}
+          <div className="mt-2 flex items-center gap-1.5 pb-1">
             <span className="ml-auto shrink-0 pl-3 text-[13px] text-[#6F6B63]">{data ? `${num.format(data.total)} träffar` : ""}</span>
             {filtered && (
               <button
@@ -232,7 +209,6 @@ export function ClubRegistry() {
                   setText("");
                   setCounty("");
                   setSport("");
-                  setShow("all");
                 }}
                 className="shrink-0 rounded-full px-3 text-[13px] text-[#6F6B63] underline-offset-2 hover:underline"
               >
@@ -260,17 +236,11 @@ export function ClubRegistry() {
   );
 }
 
-function Stat({ label, value, sub, live }: { label: string; value?: number; sub?: string; live?: boolean }) {
+function Stat({ label, value }: { label: string; value?: number | string }) {
   return (
     <div className="rounded-2xl bg-[#1C1C1C] px-4 py-3 ring-1 ring-white/10">
       <p className="text-[12px] text-white/60">{label}</p>
-      <p className="mt-0.5 text-[24px] font-semibold tabular-nums tracking-[-0.02em] min-[900px]:text-[30px]">{value === undefined ? "–" : num.format(value)}</p>
-      {sub && (
-        <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-white/55">
-          {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#A7F3D0]" />}
-          {sub}
-        </p>
-      )}
+      <p className="mt-0.5 text-[24px] font-semibold tabular-nums tracking-[-0.02em] min-[900px]:text-[30px]">{value === undefined ? "–" : typeof value === "number" ? num.format(value) : value}</p>
     </div>
   );
 }
@@ -324,18 +294,12 @@ function FacetBars({ title, facets, value, onPick }: { title: string; facets: Fa
 }
 
 function Card({ club: c, onOpen }: { club: ClubItem; onOpen: () => void }) {
-  const status = c.status === "queued" ? "I kö" : c.status === "found" ? "" : "Ingen webbplats hittad";
   return (
     <button type="button" onClick={onOpen} className="group block w-full overflow-hidden rounded-[20px] bg-white text-left shadow-[0_0_0_1px_rgba(17,17,17,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(17,17,17,0.1),0_18px_40px_-24px_rgba(17,17,17,0.45)]">
-      <div className="relative aspect-[4/3]" style={{ background: c.logo ? backdrop(c) : "#F2F1EE" }}>
-        {c.logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={asset(c, "logo.png")} alt={`${c.name} – klubbmärke`} loading="lazy" className="absolute inset-0 m-auto max-h-[68%] max-w-[72%] object-contain transition duration-300 group-hover:scale-[1.05]" />
-        ) : (
-          <span className={`absolute inset-0 grid place-items-center text-[30px] font-semibold tracking-[-0.02em] ${c.status === "queued" ? "text-[#CFCBC3]" : "text-[#B4AFA6]"}`}>{initials(c.name)}</span>
-        )}
+      <div className="relative aspect-[4/3]" style={{ background: backdrop(c) }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={asset(c, "logo.png")} alt={`${c.name} – klubbmärke`} loading="lazy" className="absolute inset-0 m-auto max-h-[68%] max-w-[72%] object-contain transition duration-300 group-hover:scale-[1.05]" />
         {c.platform && <span className="nw-mono absolute left-2 top-2 rounded-full bg-white/85 px-2 py-0.5 text-[10px] text-[#111] backdrop-blur">{c.platform}</span>}
-        {status && <span className="absolute bottom-2 left-2 rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] text-[#6F6B63]">{status}</span>}
         {c.colors && c.colors.length > 0 && (
           <span className="absolute inset-x-0 bottom-0 flex h-1.5">
             {c.colors.map((hex) => (
@@ -347,7 +311,7 @@ function Card({ club: c, onOpen }: { club: ClubItem; onOpen: () => void }) {
       <div className="px-3 pb-3 pt-2.5">
         <p className="truncate text-[13.5px] font-semibold leading-tight">{c.name}</p>
         <p className="mt-0.5 truncate text-[12px] text-[#6F6B63]">{[c.municipality, c.sport].filter(Boolean).join(" · ") || c.org}</p>
-        <p className="nw-mono mt-1 h-[15px] truncate text-[10.5px] text-[#8A867E]">{c.host ?? ""}</p>
+        <p className="nw-mono mt-1 h-[15px] truncate text-[10.5px] text-[#8A867E]">{c.host}</p>
       </div>
     </button>
   );
@@ -420,16 +384,10 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
         <div className="px-5 pb-8">
           <div className="relative -mt-12 flex gap-2.5">
             <LogoTile club={c} bg={c.onDark ? "#1D1D1F" : "#FFFFFF"} />
-            {c.logo && c.colors?.[0] && <LogoTile club={c} bg={c.colors[0]} />}
+            {c.colors?.[0] && <LogoTile club={c} bg={c.colors[0]} />}
           </div>
           <h2 className="mt-4 text-[24px] font-semibold leading-tight tracking-[-0.02em]">{c.name}</h2>
           <p className="mt-1 text-[13.5px] text-[#6F6B63]">{[c.municipality, c.county && `${c.county} län`, c.sport].filter(Boolean).join(" · ")}</p>
-
-          {c.status !== "found" && (
-            <p className="mt-4 rounded-2xl bg-[#F2F1EE] p-3.5 text-[13.5px] text-[#4A4740]">
-              {c.status === "queued" ? "Föreningen står i kö och söks upp inom kort." : "Vi hittade ingen egen webbplats för föreningen. Den söks igen i nästa omgång."}
-            </p>
-          )}
 
           {d?.url && (
             <div className="mt-4 flex flex-wrap gap-1.5">
@@ -446,16 +404,14 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
             </div>
           )}
 
-          {c.status === "found" && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href={`/newwave/klubbar/${c.id}`} className="inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]">
-                Ordmärken och förhandsvisning för klubben →
-              </Link>
-              <Link href={`/newwave/klubbar/${c.id}/butik`} className="inline-flex h-9 items-center rounded-full border border-[#111] px-4 text-[13px] font-medium transition hover:bg-[#111] hover:text-white">
-                Klubbens butik →
-              </Link>
-            </div>
-          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href={`/newwave/klubbar/${c.id}`} className="inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]">
+              Ordmärken och förhandsvisning för klubben →
+            </Link>
+            <Link href={`/newwave/klubbar/${c.id}/butik`} className="inline-flex h-9 items-center rounded-full border border-[#111] px-4 text-[13px] font-medium transition hover:bg-[#111] hover:text-white">
+              Klubbens butik →
+            </Link>
+          </div>
 
           {d?.description && <p className="mt-4 text-[13.5px] leading-relaxed text-[#4A4740]">{d.description}</p>}
 
@@ -521,9 +477,10 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
             </Section>
           )}
 
-          {d?.status === "found" && (
+          {d && (
             <p className="mt-6 text-[11.5px] leading-relaxed text-[#8A867E]">
-              {d.logoInfo ? `Klubbmärket hämtades från ${d.logoInfo.source}${d.logoInfo.vector ? " (vektor)" : ""}. ` : "Inget klubbmärke hittades på webbplatsen. "}
+              Klubbmärket hämtades från {d.logoInfo.source}
+              {d.logoInfo.vector ? " (vektor)" : ""}. 
               Säkerhet att webbplatsen är föreningens: {d.confidence} %.{d.at ? ` Hämtad ${new Date(d.at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.` : ""}
             </p>
           )}
@@ -535,13 +492,9 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
 
 function LogoTile({ club, bg }: { club: ClubItem; bg: string }) {
   return (
-    <div className="flex h-[104px] w-[132px] items-center justify-center rounded-2xl p-3.5 shadow-[0_0_0_1px_rgba(17,17,17,0.08),0_12px_30px_-18px_rgba(17,17,17,0.5)]" style={{ background: club.logo ? bg : "#F2F1EE" }}>
-      {club.logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={asset(club, "logo.png")} alt={`${club.name} – klubbmärke`} className="max-h-full max-w-full object-contain" />
-      ) : (
-        <span className="text-[28px] font-semibold text-[#B4AFA6]">{initials(club.name)}</span>
-      )}
+    <div className="flex h-[104px] w-[132px] items-center justify-center rounded-2xl p-3.5 shadow-[0_0_0_1px_rgba(17,17,17,0.08),0_12px_30px_-18px_rgba(17,17,17,0.5)]" style={{ background: bg }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={asset(club, "logo.png")} alt={`${club.name} – klubbmärke`} className="max-h-full max-w-full object-contain" />
     </div>
   );
 }

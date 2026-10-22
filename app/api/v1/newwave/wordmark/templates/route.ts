@@ -2,7 +2,7 @@ import { z } from "zod";
 import { lacksText, textsFor } from "@/lib/newwave/wordmark/render";
 import { fitScore } from "@/lib/newwave/wordmark/schema";
 import { templateStats } from "@/lib/newwave/wordmark/stats";
-import { allTemplates, removeTemplate, saveTemplate, wordmarkClub } from "@/lib/newwave/wordmark/store";
+import { allTemplates, findTemplate, removeTemplate, saveTemplate, wordmarkClub } from "@/lib/newwave/wordmark/store";
 
 /**
  * Ordmärkena som går att välja. Med en klubb kommer de som passar namnlängden bäst först och mallar som kräver text
@@ -11,6 +11,11 @@ import { allTemplates, removeTemplate, saveTemplate, wordmarkClub } from "@/lib/
  */
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
+  const id = params.get("id");
+  if (id) {
+    const template = await findTemplate(id);
+    return template ? Response.json({ template }) : Response.json({ error: "Mallen finns inte." }, { status: 404 });
+  }
   const [club, stats] = await Promise.all([wordmarkClub(params.get("c") ?? ""), templateStats()]);
   const texts = club ? textsFor(club, {}) : null;
   const names = texts ? { name1: texts.name1, name2: texts.name2 } : null;

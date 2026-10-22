@@ -67,7 +67,7 @@ export function ApprovalActions({
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
           {shopCount ? (
-            <Link href="/newwave/klubb/butik" className="nw-btn nw-club-btn">
+            <Link href="/newwave/klubb/webshop" className="nw-btn nw-club-btn">
               Se i butiken
             </Link>
           ) : null}

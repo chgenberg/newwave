@@ -1,7 +1,6 @@
-/* eslint-disable @next/next/no-img-element -- mockups ritas per klubb */
+/* eslint-disable @next/next/no-img-element -- mockups och kollektionens bilder */
 import Link from "next/link";
 import { kr } from "@/components/newwave/clubshop/pricing";
-import { mockupUrl, type ShopItem, wordmarkSpec } from "@/lib/newwave/clubShop";
 import type { ClubShopStats, Counts } from "@/lib/newwave/clubShopStats";
 
 const DATE = new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short" });
@@ -83,7 +82,7 @@ export function VisitsChart({ stats }: { stats: ClubShopStats }) {
 }
 
 /** Varorna som visats, klickats och sålts mest. */
-export function TopItems({ stats, items, clubId, v, home }: { stats: ClubShopStats; items: ShopItem[]; clubId: string; v: string; home: string }) {
+export function TopItems({ stats, items }: { stats: ClubShopStats; items: { id: string; name: string; image: string; href: string }[] }) {
   const byId = new Map(items.map((it) => [it.id, it]));
   const score = (c: ClubShopStats["items"][string]) => c.orders * 5 + c.clicks * 2 + c.views;
   const top = Object.entries(stats.items)
@@ -100,8 +99,8 @@ export function TopItems({ stats, items, clubId, v, home }: { stats: ClubShopSta
         <ul className="mt-2 divide-y divide-[#ECEAE5]">
           {top.map(({ it, c }) => (
             <li key={it.id} className="flex items-center gap-3 py-2">
-              <img src={mockupUrl(it.product, wordmarkSpec(it.template.id, it.worn), clubId, v, 480)} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-[10px] bg-[#F3F2EF] object-cover" />
-              <Link href={`${home}/${it.id}`} className="min-w-0 flex-1 truncate text-[14px] font-medium hover:underline">
+              <img src={it.image} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-[10px] bg-[#F3F2EF] object-cover" />
+              <Link href={it.href} className="min-w-0 flex-1 truncate text-[14px] font-medium hover:underline">
                 {it.name}
               </Link>
               <span className="shrink-0 text-right text-[12.5px] text-[#6F6B63]">

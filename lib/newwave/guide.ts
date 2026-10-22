@@ -12,7 +12,7 @@ export const GUIDES: Record<PortalId, { role: string; steps: GuideStep[]; next: 
     steps: [
       { label: "Granska veckans material", href: "/newwave/klubb/material/veckan" },
       { label: "Designa en egen tröja", href: "/newwave/klubb/designa" },
-      { label: "Se klubbens butik", href: "/newwave/klubb/butik" },
+      { label: "Se klubbens butik", href: "/newwave/klubb/webshop" },
     ],
     next: { text: "Craft ser alla klubbar och skickar kampanjer hit.", label: "Öppna Craft", href: "/newwave/craft" },
   },
@@ -75,7 +75,7 @@ export const PAGE_HELP: PageHelp[] = [
     ],
   },
   {
-    path: "/newwave/klubb/butik",
+    path: "/newwave/klubb/webshop",
     title: "Så väljs produkterna",
     text: "Agenten väljer produkter efter tillfällets säsong och aktivitet: mössa och termos till vintern, keps och picknickfilt till sommaren. Vill ni göra en egen? Tryck Designa på en produkt, så lägger ni den i butiken direkt.",
   },

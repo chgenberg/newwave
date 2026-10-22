@@ -3,7 +3,10 @@
 //   node scripts/scrape-clubs.mjs import <leadslista.xlsx>   läser listan till .data/newwave/clubs/clubs.json
 //   node scripts/scrape-clubs.mjs run [--workers=4] [--limit=N] [--only=id,id] [--retry=missing,error] [--before=2026-10-21T15:34]
 //   node scripts/scrape-clubs.mjs index                       bygger om index.json för sidan
+//   node scripts/scrape-clubs.mjs publish <mapp>              packar registret till produktion; sedan
+//     tar -czf clubs.tar.gz -C <mapp> . && gh release create clubs-<datum> clubs.tar.gz, och taggen i Dockerfile (CLUBS_RELEASE)
 // Körningen kan avbrytas och startas om; färdiga klubbar hoppas över.
+import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -956,37 +959,200 @@ async function processClub(club) {
 
 /* ---------- Index för sidan ---------- */
 
+/** Paraplyorganisationer vars föreningar är klubbar som tränar och tävlar; pensionärs-, patient- och hembygdsföreningar visas inte. */
+const CLUB_ORGS = new Set([
+  "Riksidrottsförbundet",
+  "",
+  "Svenska Pistolskytteförbundet",
+  "Sveriges Schackförbund",
+  "Svenska Bridgeförbundet",
+  "Förbundet Svensk Bridge",
+  "Sveriges Sportfiske- och Fiskevårdsförbund",
+  "Svenska Frisksportförbundet",
+  "KFUM Sverige",
+  "KFUK/KFUM Riksförbund",
+  "Förbundet Aktiv Ungdom",
+  "Svenska Kennelklubben",
+  "Svenska Båtunionen",
+  "Sveriges Motorcyklisters Centralorganisa",
+  "Sveriges MotorCyklister",
+]);
+/** Lag och träningsgrupper står i listan som "Klubb (Lag: P-05)" – de är en del av en klubb, inte en egen. */
+const TEAM = /\((lag|grupp|sektion|team)\b|\((?!\d{4}\))[^)]*\d[^)]*\)|,\s*[pfhd]\s?\d/i;
+const GONE = /upph[öo]rt|slutat|nedlagd|vilande|inaktiverad|dublett/i;
+/** Förbund och distrikt står ibland med i listan men är inte klubbar. */
+const FEDERATION = /förbund(et)?\b|riksförbund|distrikt/i;
+
+const word = (w) => `(?<!\\p{L})(?:${w})(?!\\p{L})`;
+/** Ord som bara en idrottsklubbs webbplats har i rubriken eller beskrivningen. */
+const SPORTY = new RegExp(
+  word(
+    "if|ik|fk|bk|sk|hk|ok|ff|fc|bc|kk|gk|ck|tk|aif|gif|ifk|ibk|ibf|bbk|btk|goif|mc|mck|team|club|united|bandy|karate|judo|boxning|friidrott|curling|rugby|bridge|schack|badminton|taekwondo|parkour|motocross|sällskap\\p{L}*|sim\\p{L}*|kanot\\p{L}*|rodd\\p{L}*|basket\\p{L}*|volley\\p{L}*|cheer\\p{L}*|matcher|träning\\p{L}*|tävling\\p{L}*|" +
+      ["klubb", "förening", "idrott", "sport", "fotboll", "hockey", "handboll", "innebandy", "golf", "ryttar", "ridsport", "ridskol", "skytt", "tennis", "bowling", "orientering", "brott", "dans", "gymnast", "cykel", "skid", "segel", "segling", "hund", "fiske", "motor", "kamp", "båt", "flyg", "skate", "fäkt", "klätt", "boule", "bangolf", "biljard", "dart", "dyk", "löp", "triathlon", "skridsko", "konståk", "trav", "jakt", "pistol", "enduro", "speedway", "rally", "karting"].map((w) => `\\p{L}*${w}\\p{L}*`).join("|"),
+  ),
+  "iu",
+);
+/** Domäner till salu, parkerade sidor och samfälligheter. */
+const PARKED = /samfällighet|for sale|till salu|godaddy|hugedomains|dynadot|sedo|dan\.com|domain names|domain broker|buy this domain|köp domänen|inaktiv sida|webbhotell/i;
+/** Företag, kommuner och byar – fel webbplats när inget i texten låter som idrott. */
+const BUSINESS = new RegExp(word("ab|kommun|bryggeri|camping|stugor|hotell|vandrarhem|restaurang|café|cafe|fönster|machinery|maskiner|släp|for rent|houses|byn|by med|guide|hitta lokala|eurodance|craftsmanship|församling|körsällskap|\\p{L}*domän\\p{L}*|\\p{L}*fastighet\\p{L}*|\\p{L}*butik\\p{L}*|\\p{L}*advokat\\p{L}*|\\p{L}*kyrka\\p{L}*|\\p{L}*tillverk\\p{L}*|\\p{L}*scout\\p{L}*|\\p{L}*bygd\\p{L}*"), "iu");
+/** Föreningar som inte är idrottsklubbar. */
+const NOT_SPORT = /scout|hembygd|byalag|samhällsförening|intresseförening|försvarsutbildarna|^svenska .*klubben$|^pro\b|pensionär|körsällskap|riksförbund|hjärt|lung/i;
+const COMMON = /^(if|ik|fk|bk|sk|hk|ok|ff|aif|gif|ifk|ibk|ibf)$|klubb|forening|sallskap|idrott/;
+/** Ord i klubbens namn som varken är orten eller ett föreningsord, som "björklöven" i IF Björklöven. */
+const ownWords = (c) => (fold(c.name).match(/[a-z0-9]{4,}/g) ?? []).filter((w) => !COMMON.test(w) && !fold(c.municipality).includes(w.replace(/s$/, "")));
+
+/**
+ * Klubbens egen webbplats: rubriken, beskrivningen eller adressen låter som en idrottsklubb, eller bär klubbens eget namn
+ * utan att vara ett företag, en kommun eller en domän till salu. Annars är webbplatsen – och märket därifrån – fel.
+ */
+function clubSite(c, s) {
+  const text = [s.title, s.siteName, s.description, s.host.replace(/[.-]/g, " ")].filter(Boolean).join(" · ");
+  if (PARKED.test(text)) return false;
+  if (SPORTY.test(text)) return true;
+  if (BUSINESS.test(text)) return false;
+  const label = fold(s.host.replace(/^www\./, "").split(".")[0]);
+  const first = fold(c.name).match(/[a-z0-9]+/)?.[0] ?? "";
+  // Adresser som knivstais.se och kalixmk.se: ortens namn och klubbens förkortning.
+  const suffix = label.slice(first.length);
+  if (first.length >= 3 && label.startsWith(first) && suffix.length >= 1 && suffix.length <= 6 && !/^(sweden|sverige|info|online|city|turism|nu|se)$/.test(suffix)) return true;
+  const abbreviations = c.name.match(/(?<!\p{L})\p{Lu}{2,5}(?!\p{L})/gu) ?? [];
+  if (abbreviations.some((a) => new RegExp(word(a), "iu").test(text))) return true;
+  return ownWords(c).some((w) => fold(text).includes(w));
+}
+
+/** Sidan visar bara klubbar med eget klubbmärke från klubbens egen webbplats. */
+const listed = (c, s) => s?.status === "found" && Boolean(s.logo) && CLUB_ORGS.has(c.org) && !TEAM.test(c.name) && !GONE.test(c.name) && !FEDERATION.test(c.name) && !NOT_SPORT.test(c.name) && clubSite(c, s);
+
+/** Webbplatsen, med föreningens egen sida på plattformar som laget.se där många klubbar delar domän. */
+function siteOf(url) {
+  const u = new URL(url);
+  const first = u.pathname.split("/").find(Boolean);
+  return u.hostname.replace(/^www\./, "") + (first ? `/${first.toLowerCase()}` : "");
+}
+const GENERIC_WORDS = new Set("if ik fk bk sk hk ok kf ff bc ifk aif gif ibk ibf goif idrottsförening idrottsklubb sportklubb bollklubb fotboll fotbollsklubb innebandy innebandyklubb handboll handbollsklubb hockey ishockey bandy golfklubb ridklubb skytteförening skyttegille tennisklubb bowlingklubb orientering orienteringsklubb simklubb friidrott ungdom förening klubb sektion herr damer damfotboll korpen motions".split(" "));
+const nameWords = (name) => new Set((name.toLowerCase().match(/[a-zåäöéü]{3,}/g) ?? []).filter((w) => !GENERIC_WORDS.has(w)).map((w) => w.replace(/s$/, "")));
+
+/**
+ * Samma bild som klubbmärke på olika klubbars webbplatser är plattformens ikon, en parkerad domän eller ett märke som
+ * hamnat hos fel klubb – utom när klubbarna delar namn, som sektionerna i samma förening.
+ */
+async function sharedLogos(candidates) {
+  const byImage = new Map();
+  for (const { c, s } of candidates) {
+    const data = await readFile(path.join(LOGOS, `${c.id}.png`)).catch(() => null);
+    if (!data) continue;
+    const key = createHash("sha1").update(data).digest("hex");
+    byImage.set(key, [...(byImage.get(key) ?? []), { c, s }]);
+  }
+  const wrong = new Set();
+  for (const group of byImage.values()) {
+    if (group.length < 2 || new Set(group.map(({ s }) => siteOf(s.url))).size < 2) continue;
+    const [first, ...rest] = group.map(({ c }) => nameWords(c.name));
+    if (![...first].some((w) => rest.every((r) => r.has(w)))) for (const { c } of group) wrong.add(c.id);
+  }
+  return wrong;
+}
+
+/**
+ * Tre eller fler klubbar på samma webbplats är ortens, förbundets eller seriens sajt. Där står bara klubbar kvar vars
+ * namn börjar som en annans på sajten, som sektionerna "IK Ymer Orientering" och "IK Ymer Fotboll".
+ */
+function sharedSites(candidates) {
+  const bySite = new Map();
+  for (const x of candidates) bySite.set(siteOf(x.s.url), [...(bySite.get(siteOf(x.s.url)) ?? []), x]);
+  const wrong = new Set();
+  for (const group of bySite.values()) {
+    if (group.length < 3) continue;
+    const heads = group.map(({ c }) => fold(c.name).split(/[^a-z0-9]+/).filter(Boolean).slice(0, 2).join(" "));
+    group.forEach(({ c }, i) => {
+      if (!heads[i].includes(" ") || heads.filter((h) => h === heads[i]).length < 2) wrong.add(c.id);
+    });
+  }
+  return wrong;
+}
+
 async function buildIndex() {
   const clubs = JSON.parse(await readFile(path.join(ROOT, "clubs.json"), "utf8"));
   const files = new Set(existsSync(SITES) ? await readdir(SITES) : []);
-  const items = [];
+  const candidates = [];
   for (const c of clubs) {
     const s = files.has(`${c.id}.json`) ? JSON.parse(await readFile(path.join(SITES, `${c.id}.json`), "utf8").catch(() => "null")) : null;
-    const item = { id: c.id, name: c.name, county: c.county, municipality: c.municipality, sport: c.sport, org: c.org, surplus: c.surplus, status: s?.status ?? "queued" };
-    if (s?.status === "found") {
-      Object.assign(item, {
-        url: s.url,
-        host: s.host,
-        platform: s.platform,
-        confidence: s.confidence,
-        logo: Boolean(s.logo),
-        onDark: Boolean(s.logo?.onDark),
-        hero: s.hero,
-        colors: s.colors.map((x) => x.hex),
-        socials: Object.keys(s.socials ?? {}),
-        founded: s.founded,
-        at: s.at,
-      });
-    } else if (s) item.at = s.at;
-    items.push(item);
+    if (listed(c, s)) candidates.push({ c, s });
   }
-  await writeJson(path.join(ROOT, "index.json"), { builtAt: new Date().toISOString(), running: Boolean(running), items });
+  const wrong = new Set([...(await sharedLogos(candidates)), ...sharedSites(candidates)]);
+  const items = [];
+  for (const { c, s } of candidates) {
+    if (wrong.has(c.id)) continue;
+    items.push({
+      id: c.id,
+      name: c.name,
+      county: c.county,
+      municipality: c.municipality,
+      sport: c.sport,
+      org: c.org,
+      surplus: c.surplus,
+      url: s.url,
+      host: s.host,
+      platform: s.platform,
+      confidence: s.confidence,
+      onDark: Boolean(s.logo.onDark),
+      hero: s.hero,
+      colors: s.colors.map((x) => x.hex),
+      socials: Object.keys(s.socials ?? {}),
+      founded: s.founded,
+      at: s.at,
+    });
+  }
+  await writeJson(path.join(ROOT, "index.json"), { builtAt: new Date().toISOString(), items });
   return items;
+}
+
+/* ---------- Paket till produktion ---------- */
+
+/** E-post och telefonnummer i löptext. */
+const CONTACT = /[\w.+-]+@[\w-]+(\.[\w-]+)+|(\+46|\b0)[\d\s-]{6,}\d/g;
+/** Fält som inte lämnar datorn: kontaktuppgifter och sökspåret. */
+const UNPUBLISHED = ["emails", "phones", "query", "engine", "tried", "candidates", "ms"];
+
+/**
+ * Packar de listade klubbarna till `dir` med samma mappar som registret, utan kontaktuppgifter och med mindre bilder.
+ * Produktionen hämtar paketet som release-tillgång (se Dockerfile) och läser det när `.data` saknar registret.
+ */
+async function publish(dir) {
+  if (!dir) throw new Error("Ange en mapp: publish <mapp>");
+  const index = JSON.parse(await readFile(path.join(ROOT, "index.json"), "utf8"));
+  // Leadslistans siffror stannar på datorn; ordningen bär storleken så att sorteringen på storlek står kvar.
+  const items = index.items.sort((a, b) => b.surplus - a.surplus).map((c) => ({ ...c, surplus: 0 }));
+  const ids = new Set(items.map((c) => c.id));
+  const out = (...p) => path.join(dir, ...p);
+  await Promise.all(["sites", "logos", "images"].map((d) => mkdir(out(d), { recursive: true })));
+  const clubs = JSON.parse(await readFile(path.join(ROOT, "clubs.json"), "utf8"));
+  await writeJson(out("clubs.json"), clubs.filter((c) => ids.has(c.id)).map((c) => ({ ...c, mailDomain: undefined, surplus: 0, envelopes: 0 })));
+  await writeJson(out("index.json"), { builtAt: index.builtAt, items });
+  let n = 0;
+  const queue = [...items];
+  await Promise.all(
+    Array.from({ length: 6 }, async () => {
+      for (let c = queue.shift(); c; c = queue.shift()) {
+        const s = JSON.parse(await readFile(path.join(SITES, `${c.id}.json`), "utf8"));
+        for (const k of UNPUBLISHED) delete s[k];
+        if (!/^https?:/i.test(s.shop ?? "")) delete s.shop;
+        for (const k of ["title", "siteName", "description"]) if (s[k]) s[k] = s[k].replace(CONTACT, "").replace(/\s{2,}/g, " ").trim();
+        await writeJson(out("sites", `${c.id}.json`), s);
+        const logo = sharp(path.join(LOGOS, `${c.id}.png`)).resize({ width: 1024, height: 1024, fit: "inside", withoutEnlargement: true });
+        await logo.png({ palette: true, quality: 95, effort: 8 }).toFile(out("logos", `${c.id}.png`));
+        if (c.hero && existsSync(path.join(IMAGES, `${c.id}.jpg`)))
+          await sharp(path.join(IMAGES, `${c.id}.jpg`)).resize({ width: 1400, withoutEnlargement: true }).jpeg({ quality: 72, mozjpeg: true }).toFile(out("images", `${c.id}.jpg`));
+        if (++n % 500 === 0) log(`${n}/${items.length}`);
+      }
+    }),
+  );
+  log(`${items.length} klubbar packade i ${dir}`);
 }
 
 /* ---------- Körning ---------- */
 
-let running = false;
 
 async function run() {
   const clubs = JSON.parse(await readFile(path.join(ROOT, "clubs.json"), "utf8"));
@@ -1006,7 +1172,6 @@ async function run() {
     .slice(0, Number(flag("limit", "0")) || undefined);
   const workers = Number(flag("workers", "4"));
   log(`${queue.length} klubbar i kö (${done.size} klara sedan tidigare), ${workers} arbetare`);
-  running = true;
   const stats = { found: 0, missing: 0, error: 0, logo: 0 };
   let n = 0;
   let indexAt = 0;
@@ -1034,7 +1199,6 @@ async function run() {
       }
     }),
   );
-  running = false;
   await buildIndex();
   await current?.browser.close().catch(() => {});
   await bingPage?.context().browser()?.close().catch(() => {});
@@ -1045,5 +1209,6 @@ const cmd = args[0];
 if (cmd === "import") await importXlsx(args[1]);
 else if (cmd === "run") await run();
 else if (cmd === "index") log(`${(await buildIndex()).length} klubbar i index.json`);
-else console.log("Använd: import <fil.xlsx> | run [--workers=4] [--limit=N] [--only=id] [--retry=missing,error] [--before=tid] | index");
+else if (cmd === "publish") await publish(args[1]);
+else console.log("Använd: import <fil.xlsx> | run [--workers=4] [--limit=N] [--only=id] [--retry=missing,error] [--before=tid] | index | publish <mapp>");
 process.exit(0);

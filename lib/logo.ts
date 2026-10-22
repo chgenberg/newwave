@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { NewsError, assertPublicUrl, fetchHtml } from "./news";
 import { renderLogos } from "./render";
 import { saveFile } from "./store";
@@ -109,19 +109,54 @@ async function fetchImage(raw: string): Promise<Buffer> {
 
 const withXmlns = (svg: string) => (/\sxmlns=/.test(svg.match(/<svg\b[^>]*>/i)?.[0] ?? "") ? svg : svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"'));
 
-type Raster = { data: Buffer; width: number; height: number; vector?: boolean };
+/** The SVG source, or null for raster images. Exporters may put long comments or a doctype before the root element. */
+function svgSource(buf: Buffer) {
+  if (/^(?:\x89PNG|\xFF\xD8|RIFF|GIF8)/.test(buf.subarray(0, 4).toString("latin1"))) return null;
+  const text = buf.toString("utf8").replace(/^\uFEFF/, "");
+  return /<svg[\s>]/i.test(text.slice(0, 200_000)) ? withXmlns(text) : null;
+}
 
-async function rasterize(buf: Buffer): Promise<Raster> {
-  const isSvg = /<svg[\s>]/i.test(buf.subarray(0, 2000).toString("utf8"));
-  const input = isSvg ? Buffer.from(withXmlns(buf.toString("utf8"))) : buf;
-  const meta = await sharp(input, isSvg ? { density: 72 } : {}).metadata();
-  const density = isSvg ? Math.min(2400, Math.max(72, Math.round((72 * 1400) / Math.max(meta.width ?? 100, meta.height ?? 100)))) : undefined;
-  const { data, info } = await sharp(input, density ? { density } : {})
-    .resize(1400, 1400, { fit: "inside", withoutEnlargement: !isSvg })
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return { data, width: info.width, height: info.height, vector: isSvg };
+/** Text that is not outlined is drawn with whatever font the server has, never the club's own typeface. */
+const hasLiveText = (svg: string) => [...svg.matchAll(/<text\b[\s\S]*?<\/text>/gi)].some((m) => m[0].replace(/<[^>]*>/g, "").trim());
+
+type Raster = { data: Buffer; width: number; height: number };
+
+const PREVIEW_SIDE = 1400;
+/** Long side of a logo drawn from a vector, so that it holds up in print. */
+const VECTOR_SIDE = 2400;
+/** librsvg draws in tiles, so only the cropped part is held in memory – the page itself may be huge. */
+const MAX_RENDER_SIDE = 60_000;
+
+const raw = async (img: Sharp): Promise<Raster> => {
+  const { data, info } = await img.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height };
+};
+
+const UNITS: Record<string, number> = { "": 1, px: 1, pt: 4 / 3, pc: 16, mm: 96 / 25.4, cm: 96 / 2.54, in: 96 };
+
+/** Size of the SVG in its own user units: the viewBox, else width/height in absolute units, else what librsvg makes of it. */
+async function userSize(svg: string): Promise<[number, number]> {
+  const open = svg.match(/<svg\b[^>]*>/i)![0];
+  const vb = attr(open, "viewBox").trim().split(/[\s,]+/).map(Number);
+  if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) return [vb[2], vb[3]];
+  const len = (v: string) => {
+    const m = /^([\d.]+)\s*(px|pt|pc|mm|cm|in)?$/i.exec(v.trim());
+    return m ? Number(m[1]) * UNITS[(m[2] ?? "").toLowerCase()] : NaN;
+  };
+  const w = len(attr(open, "width")), h = len(attr(open, "height"));
+  if (w > 0 && h > 0) return [w, h];
+  const meta = await sharp(Buffer.from(svg)).metadata();
+  return [meta.width ?? 100, meta.height ?? 100];
+}
+
+/** The SVG with its root set to exactly `side` px on the long side. librsvg scales physical units (mm, pt) non-linearly with density, so the size is set here instead. */
+function sizedSvg(svg: string, [uw, uh]: [number, number], side: number) {
+  const s = side / Math.max(uw, uh);
+  const root = svg.match(/<svg\b[^>]*>/i)![0];
+  let open = root.replace(/\s(?:width|height)\s*=\s*(["'])[^"']*\1/gi, "");
+  if (!/\sviewBox\s*=/i.test(open)) open = open.replace(/^<svg\b/i, `<svg viewBox="0 0 ${uw} ${uh}"`);
+  open = open.replace(/^<svg\b/i, `<svg width="${(uw * s).toFixed(2)}" height="${(uh * s).toFixed(2)}"`);
+  return Buffer.from(svg.replace(root, () => open));
 }
 
 const smoothstep = (a: number, b: number, x: number) => {
@@ -237,16 +272,30 @@ function recolorNeutral(r: Raster, test: (lum: number, sat: number) => boolean, 
 
 const toPng = (r: Raster) => sharp(r.data, { raw: { width: r.width, height: r.height, channels: 4 } }).png().toBuffer();
 
-async function prepare(buf: Buffer) {
-  const r = await rasterize(buf);
-  if (!knockOutBackground(r)) throw new LogoError("Ser ut som ett foto");
+/**
+ * Finds the logo, removes a flat background and crops to it. A vector is first drawn small to find the logo,
+ * then drawn again so that the cropped logo itself is VECTOR_SIDE px – also when it sits small on a large artboard.
+ */
+async function prepare(buf: Buffer): Promise<Raster> {
+  const svg = svgSource(buf);
+  if (svg && hasLiveText(svg)) throw new LogoError("SVG-filen innehåller text som inte är omvandlad till konturer, så typsnittet skulle bli fel. Spara om filen med texten som konturer (i Illustrator: Text → Skapa konturer) och ladda upp den igen.");
+  const size = svg ? await userSize(svg) : null;
+  const r = await raw(svg && size ? sharp(sizedSvg(svg, size, PREVIEW_SIDE)) : sharp(buf).resize(PREVIEW_SIDE, PREVIEW_SIDE, { fit: "inside", withoutEnlargement: true }));
+  if (!knockOutBackground(r)) throw new LogoError("Bilden ser ut som ett foto, inte en logga.");
   const b = bounds(r);
-  if (!b || Math.max(b.w, b.h) < (r.vector ? 32 : 120) || b.h < 16 || b.w / b.h > 14 || b.h / b.w > 4 || b.fill < 0.03) throw new LogoError("Hittade ingen tydlig logga i bilden");
+  if (!b || Math.max(b.w, b.h) < (svg ? 32 : 120) || b.h < 16 || b.w / b.h > 14 || b.h / b.w > 4 || b.fill < 0.03) throw new LogoError("Hittade ingen tydlig logga i bilden");
   const pad = Math.round(Math.max(b.w, b.h) * 0.02);
   const left = Math.max(0, b.x - pad), top = Math.max(0, b.y - pad);
   const width = Math.min(r.width - left, b.w + 2 * pad), height = Math.min(r.height - top, b.h + 2 * pad);
-  const { data, info } = await sharp(await toPng(r)).extract({ left, top, width, height }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  return { data, width: info.width, height: info.height };
+  if (!svg || !size) return raw(sharp(await toPng(r)).extract({ left, top, width, height }));
+
+  const k = Math.min(VECTOR_SIDE / Math.max(width, height), MAX_RENDER_SIDE / Math.max(r.width, r.height));
+  const page = sizedSvg(svg, size, Math.max(r.width, r.height) * k);
+  const { width: pw = 1, height: ph = 1 } = await sharp(page, { limitInputPixels: false }).metadata();
+  const x = Math.min(Math.floor(left * k), pw - 1), y = Math.min(Math.floor(top * k), ph - 1);
+  const logo = await raw(sharp(page, { limitInputPixels: false }).extract({ left: x, top: y, width: Math.min(Math.ceil(width * k), pw - x), height: Math.min(Math.ceil(height * k), ph - y) }));
+  knockOutBackground(logo);
+  return logo;
 }
 
 async function finish(r: Raster, meta: { name: string; site: string; source: string }): Promise<LogoResult> {
@@ -303,8 +352,8 @@ export async function logoFromUrl(raw: string): Promise<LogoResult> {
 }
 
 export async function logoFromFile(buf: Buffer, name: string): Promise<LogoResult> {
-  const r = await prepare(buf).catch(() => {
-    throw new LogoError("Kunde inte läsa loggan. Använd PNG, JPG eller SVG.");
+  const r = await prepare(buf).catch((e) => {
+    throw e instanceof LogoError ? e : new LogoError("Kunde inte läsa loggan. Använd PNG, JPG, WebP eller SVG.");
   });
   return finish(r, { name, site: "", source: "uppladdad fil" });
 }

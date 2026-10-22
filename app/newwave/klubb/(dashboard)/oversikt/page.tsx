@@ -44,7 +44,7 @@ export default async function ClubDashboard() {
   const stats = [
     { label: "Väntar", value: String(pending.length), href: undefined },
     { label: "Nästa", value: next?.date ? fmtDay(next.date) : "–", href: undefined },
-    { label: "I butiken", value: String(products.length), href: "/newwave/klubb/butik" },
+    { label: "I butiken", value: String(products.length), href: "/newwave/klubb/webshop" },
   ];
 
   return (

@@ -1,6 +1,7 @@
 node_modules
 .next
 .data
+registry
 .env*
 .git
 *.log

@@ -7,7 +7,7 @@ import { lacksText, textsFor, type WordmarkClub } from "./wordmark/render";
 import { fitScore, type Template } from "./wordmark/schema";
 import { type WordmarkSpec, wordmarkUrl } from "./wordmark/spec";
 import { type TemplateStat, templateStats } from "./wordmark/stats";
-import { allTemplates, wordmarkClub } from "./wordmark/store";
+import { allTemplates, featuredTemplates, wordmarkClub } from "./wordmark/store";
 
 /**
  * Klubbens demobutik: katalogens produkter med klubbens ordmärken, utan AI. Sortimentet är klubbens favoriter (eller
@@ -16,14 +16,18 @@ import { allTemplates, wordmarkClub } from "./wordmark/store";
 
 export const shopPath = (clubId: string) => `/newwave/klubbar/${clubId}/butik`;
 
-/** Mallarna som passar klubben, bäst först: klubbens favoriter, sedan namnets längd och vad andra valt. */
-export function rankTemplates(templates: Template[], club: WordmarkClub, favorites: string[], stats: Record<string, TemplateStat>) {
+/**
+ * Mallarna som passar klubben, bäst först: klubbens favoriter i klubbens ordning, sedan designerna Craft tilldelat alla
+ * klubbar, sedan namnets längd och vad andra valt.
+ */
+export function rankTemplates(templates: Template[], club: WordmarkClub, favorites: string[], featured: string[], stats: Record<string, TemplateStat>) {
   const texts = textsFor(club, {});
   const chars = [...texts.name2].length;
-  const favs = new Set(favorites);
+  const order = (list: string[]) => (t: Template) => (list.includes(t.id) ? list.indexOf(t.id) : Infinity);
+  const [fav, feat] = [order(favorites), order(featured)];
   return templates
     .filter((t) => !t.hidden && t.style !== "Rygg" && !lacksText(t, texts))
-    .sort((a, b) => Number(favs.has(b.id)) - Number(favs.has(a.id)) || fitScore(b, chars) - fitScore(a, chars) || (stats[b.id]?.score ?? 0) - (stats[a.id]?.score ?? 0));
+    .sort((a, b) => fav(a) - fav(b) || feat(a) - feat(b) || fitScore(b, chars) - fitScore(a, chars) || (stats[b.id]?.score ?? 0) - (stats[a.id]?.score ?? 0));
 }
 
 export const wordmarkSpec = (template: string, worn?: boolean): WordmarkSpec => ({ template, icon: true, ornament: true, ...(worn ? { worn: true } : {}) });
@@ -69,7 +73,7 @@ export function clubAssortment(club: WordmarkClub, ranked: Template[], favorites
   const picks: ShopGroup = {
     id: "utvalt",
     name: favs ? "Klubbens favoriter" : `Utvalt för ${club.name}`,
-    blurb: favs ? "Ordmärkena som klubben själv valt ut." : "Ordmärkena som passar klubbens namn bäst.",
+    blurb: favs ? "Ordmärkena som klubben själv valt ut." : "Ordmärkena som passar klubben bäst.",
     items: PICKS.flatMap((p, i) => (ranked[i] ? item("utvalt", p, ranked[i].id) : [])),
   };
   const collections = COLLECTIONS.map((c) => ({ id: c.id, name: c.name, blurb: c.blurb, items: c.items.flatMap((it) => item(c.id, it.product, it.template, c.worn)) }));
@@ -85,8 +89,8 @@ export const findItem = (groups: ShopGroup[], id: string) => groups.flatMap((g) 
 export async function loadClubShop(id: string) {
   const club = await wordmarkClub(id);
   if (!club) return null;
-  const [prefs, templates, stats, content] = await Promise.all([readPrefs(id), allTemplates(), templateStats(), readContent(id)]);
-  const ranked = rankTemplates(templates, club, prefs.favorites, stats);
+  const [prefs, templates, featured, stats, content] = await Promise.all([readPrefs(id), allTemplates(), featuredTemplates(), templateStats(), readContent(id)]);
+  const ranked = rankTemplates(templates, club, prefs.favorites, featured, stats);
   const assortment = clubAssortment(club, ranked, prefs.favorites);
   const hidden = new Set(content.hidden);
   const groups = assortment.map((g) => ({ ...g, items: g.items.filter((i) => !hidden.has(i.id)) })).filter((g) => g.items.length);

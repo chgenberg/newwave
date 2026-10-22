@@ -23,7 +23,7 @@ export type WordmarkSpec = {
 export type WordmarkVariant = "light" | "dark" | "club";
 
 /** Höjs när motorn eller de inbyggda mallarna ritar annorlunda; står i adressen så att alla cacher släpper den gamla bilden. */
-export const WORDMARK_VERSION = 3;
+export const WORDMARK_VERSION = 4;
 export const WORDMARK_PATH = "/api/v1/newwave/wordmark";
 export const WORDMARK_SIZES = [240, 480, 800, 1200, 2400, 3543] as const;
 const TEMPLATE_ID = /^[a-z0-9-]{2,40}$/;
