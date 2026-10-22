@@ -727,7 +727,7 @@ function FallbackProduct(props: Props) {
 export function ProductScene(props: Props) {
   const [touched, setTouched] = useState(false);
   return (
-    <Canvas gl={{ preserveDrawingBuffer: true, antialias: true }} dpr={[1, 2]} camera={{ position: [0, 0.25, 2.3], fov: 35, near: 0.01, far: 50 }} onPointerDown={() => setTouched(true)}>
+    <Canvas gl={{ preserveDrawingBuffer: true, antialias: true, toneMapping: THREE.NeutralToneMapping }} dpr={[1, 2]} camera={{ position: [0, 0.25, 2.3], fov: 35, near: 0.01, far: 50 }} onPointerDown={() => setTouched(true)}>
       <Studio />
       <Suspense fallback={null}>
         <Loaded {...props} />

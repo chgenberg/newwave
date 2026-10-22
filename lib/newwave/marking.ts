@@ -1,5 +1,6 @@
 import type { NwProduct } from "./catalog";
 import { isHex } from "./colors";
+import { cleanSpec, type WordmarkSpec } from "./wordmark/spec";
 
 /**
  * Märkning: metoder, placeringar, priser och leveranstid för designstudion och offerterna.
@@ -32,13 +33,15 @@ export type Design = {
   /** Egen logga eller eget motiv; saknas = det som studion öppnades med. */
   logo?: string;
   logoDark?: string;
+  /** Ett ordmärke i stället för loggan; varje klubb får det med sitt eget namn, sina färger och sitt märke. */
+  wordmark?: WordmarkSpec;
   /** Fler tryckpositioner, var och en med egen metod, placering och storlek. */
   extra?: Placement[];
   /** Ett namn per plagg, tryckt på en egen position. */
   names?: Names;
 };
 
-export type Placement = Omit<Design, "extra" | "names" | "logo" | "logoDark">;
+export type Placement = Omit<Design, "extra" | "names" | "logo" | "logoDark" | "wordmark">;
 export type Names = { list: string[]; zone: string; sizeCm: number; point?: Vec3; normal?: Vec3 };
 
 /** Det som sparas när någon anpassat en produkt: designen, produktfärgen och bilden från studion. */
@@ -281,7 +284,8 @@ export function sanitizeDesign(p: NwProduct, raw: unknown): Design | undefined {
   const n = d.names;
   const list = n && Array.isArray(n.list) ? n.list.map((s) => String(s).trim().slice(0, 30)).filter(Boolean).slice(0, 2000) : [];
   const names = list.length && n ? { list, zone: String(n.zone ?? "rygg").slice(0, 20), sizeCm: clampSize(p, n.sizeCm, 8), point: vec(n.point), normal: vec(n.normal) } : undefined;
-  return { ...main, logo: art(d.logo), logoDark: art(d.logoDark), extra: extra.length ? extra : undefined, names };
+  const wordmark = cleanSpec(d.wordmark);
+  return { ...main, logo: wordmark ? undefined : art(d.logo), logoDark: wordmark ? undefined : art(d.logoDark), wordmark, extra: extra.length ? extra : undefined, names };
 }
 
 export const sanitizeColor = (p: NwProduct, v: unknown) => (isHex(v) ? v.toUpperCase() : p.garmentHex);

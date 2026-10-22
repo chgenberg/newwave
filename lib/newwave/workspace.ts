@@ -6,7 +6,8 @@ import { isWorkspaceId, WS_COOKIE, WS_MAX_AGE } from "./workspaceId";
 /**
  * Varje besökare får en egen kopia av demodatan. Läsning tar besökarens fil om den finns, annars grunddatan;
  * skrivning hamnar bara i besökarens kopia. Anrop utan cookie (webhooks, externa API-anrop) använder grunddatan.
- * `rel` är alltid en sökväg som anroparen byggt av rensade id:n.
+ * `rel` är alltid en sökväg som anroparen byggt av rensade id:n. Med `shared` gäller grunddatan för alla, t.ex. det
+ * klubbar svarat via sin personliga länk.
  */
 
 const ROOT = path.join(process.cwd(), ".data");
@@ -22,8 +23,10 @@ export async function workspaceId() {
   }
 }
 
-export async function readData(rel: string): Promise<string | null> {
-  const id = await workspaceId();
+type Opts = { shared?: boolean };
+
+export async function readData(rel: string, opts: Opts = {}): Promise<string | null> {
+  const id = opts.shared ? null : await workspaceId();
   for (const base of id ? [path.join(WS_ROOT, id), ROOT] : [ROOT]) {
     try {
       return await readFile(path.join(base, rel), "utf8");
@@ -32,8 +35,8 @@ export async function readData(rel: string): Promise<string | null> {
   return null;
 }
 
-export async function writeData(rel: string, data: string) {
-  const id = await workspaceId();
+export async function writeData(rel: string, data: string, opts: Opts = {}) {
+  const id = opts.shared ? null : await workspaceId();
   const base = id ? path.join(WS_ROOT, id) : ROOT;
   if (id && !(await stat(base).catch(() => null))) void prune();
   const file = path.join(base, rel);

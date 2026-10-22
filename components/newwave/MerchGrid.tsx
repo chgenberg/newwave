@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import type { ComponentProps } from "react";
 import { type Saved, type SaveTarget, StudioButton } from "@/components/newwave/studio/StudioButton";
 import type { Customized } from "@/lib/newwave/marking";
 
@@ -14,6 +15,7 @@ export function MerchGrid({
   art,
   products,
   target,
+  wordmarkClub,
   onSaved,
 }: {
   title: string;
@@ -22,6 +24,7 @@ export function MerchGrid({
   art?: { light: string; dark: string };
   products: MerchItem[];
   target?: Extract<SaveTarget, { kind: "approval" }>;
+  wordmarkClub?: ComponentProps<typeof StudioButton>["wordmarkClub"];
   onSaved?: (productId: string, s: Saved) => void;
 }) {
   return (
@@ -40,6 +43,7 @@ export function MerchGrid({
             initial={p.custom?.design}
             color={p.custom?.color}
             target={target}
+            wordmarkClub={wordmarkClub}
             onSaved={onSaved && ((s) => onSaved(p.id, s))}
             className="group relative block w-full overflow-hidden rounded-xl bg-white text-left focus-visible:outline-2 focus-visible:outline-[var(--club)]"
           >

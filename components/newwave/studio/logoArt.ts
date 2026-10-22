@@ -357,15 +357,10 @@ function methodFinish(method: Look, ctx: CanvasRenderingContext2D, mask: HTMLCan
     return;
   }
   if (method === "screentryck" || method === "digitaltryck") {
-    // Ink sits in the fabric: the weave shows through, stronger for the thin digital ink.
-    ctx.globalAlpha = method === "digitaltryck" ? 0.5 : 0.28;
+    // Ink sits in the fabric: a hint of the weave, kept faint so the club colours print at full strength.
+    ctx.globalAlpha = method === "digitaltryck" ? 0.14 : 0.1;
     ctx.fillStyle = ctx.createPattern(weave(10), "repeat")!;
     ctx.fillRect(0, 0, w, h);
-    if (method === "digitaltryck") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.globalAlpha = 0.24;
-      ctx.fillRect(0, 0, w, h);
-    }
   } else if (method === "transfer") {
     // A smooth film: one crisp gloss band across it.
     const g = ctx.createLinearGradient(0, 0, w, h);

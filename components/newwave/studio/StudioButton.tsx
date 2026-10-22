@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { nwProduct } from "@/lib/newwave/catalog";
 import { type Customized, defaultDesign, type Design } from "@/lib/newwave/marking";
@@ -57,6 +57,7 @@ export function StudioButton({
   qty,
   needBy,
   brandColor,
+  wordmarkClub,
   target,
   onSaved,
   price,
@@ -72,6 +73,8 @@ export function StudioButton({
   qty?: number;
   needBy?: string;
   brandColor?: string;
+  /** Klubben vars ordmärken studion visar; utan den går ett sparat ordmärke inte att se eller byta. */
+  wordmarkClub?: ComponentProps<typeof DesignStudio>["wordmarkClub"];
   target?: SaveTarget;
   onSaved?: (s: Saved) => void | Promise<void>;
   price?: (d: Design, units: number) => [string, string][];
@@ -148,6 +151,7 @@ export function StudioButton({
               needBy={needBy}
               art={art}
               brandColor={brandColor}
+              wordmarkClub={wordmarkClub}
               price={price ?? (target ? shopPrice : undefined)}
               saveLabel={saveLabel ?? (target?.kind === "new-shop" ? "Lägg i butiken" : "Spara design")}
               onSave={save}

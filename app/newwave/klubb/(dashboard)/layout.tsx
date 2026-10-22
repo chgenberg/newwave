@@ -11,6 +11,7 @@ const ITEMS: NavItem[] = [
   { href: `${BASE}/material`, label: "Material", icon: "spark" },
   { href: `${BASE}/butik`, label: "Butik", icon: "bag" },
   { href: `${BASE}/varumarke`, label: "Varumärke", icon: "drop" },
+  { href: `${BASE}/ordmarken`, label: "Ordmärken", icon: "layers" },
   { href: `${BASE}/support`, label: "Support", icon: "chat" },
 ];
 

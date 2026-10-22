@@ -6,7 +6,10 @@ import { colorName } from "@/lib/newwave/colors";
 import { craftOverview } from "@/lib/newwave/craft";
 import { updateState } from "@/lib/newwave/craftState";
 import { ART_URL, type Customized, sanitizeColor, sanitizeDesign } from "@/lib/newwave/marking";
+import { genitive } from "@/lib/newwave/newsletterHtml";
+import { isDarkHex } from "@/lib/newwave/printFiles";
 import { addFeed, customizeApproval } from "@/lib/newwave/store";
+import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { publicOrigin } from "@/lib/origin";
 import { fileUrl } from "@/lib/schemas";
 
@@ -67,17 +70,17 @@ export async function POST(req: Request) {
     return Response.json({ ok: true });
   }
 
-  const print = design.logo ?? art;
+  const print = design.wordmark ? wordmarkUrl(design.wordmark, club.id, isDarkHex(c.color) ? "dark" : "light", 3543, "png", design.sizeCm) : (design.logo ?? art);
   if (!print) return Response.json({ error: "Tryckfil saknas" }, { status: 400 });
   const day = new Date().toISOString().slice(0, 10);
   const [added] = await addProducts(club.id, [
     {
       sku: `CRAFT-POD-${product.id.toUpperCase()}-EGEN-${Date.now().toString(36).toUpperCase()}`,
       title: `${club.name} – Egen design – ${product.name} ${colorName(c.color).toLowerCase()}`,
-      description: `${product.name} med ${club.shortName}s tryck, gjord i designstudion.`,
+      description: `${product.name} med ${genitive(club.shortName)} tryck, gjord i designstudion.`,
       priceSek: product.priceSek,
       sizes: product.sizes,
-      images: [{ url: mockupUrl, alt: `${product.name} med ${club.shortName}s tryck`, kind: "mockup" }],
+      images: [{ url: mockupUrl, alt: `${product.name} med ${genitive(club.shortName)} tryck`, kind: "mockup" }],
       printFileUrl: `${publicOrigin(req)}${print}`,
       fulfilment: "print-on-demand",
       dropId: `egen-${day}`,

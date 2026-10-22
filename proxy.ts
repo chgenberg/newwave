@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ACCESS_COOKIE, accessToken, isOpen, LOGIN_PATH } from "@/lib/access";
+import { isBlockedBot } from "@/lib/bots";
+import { CLUB_COOKIE, CLUB_MAX_AGE, clubAccess } from "@/lib/newwave/clubLink";
 import { ALIAS_HOSTS, SITE } from "@/lib/newwave/site";
 import { DEMO_PARAM, isWorkspaceId, WS_COOKIE, WS_MAX_AGE } from "@/lib/newwave/workspaceId";
 import { isVisitorId, newVisitorId, VISITOR_COOKIE, VISITOR_MAX_AGE } from "@/lib/visits";
@@ -19,14 +21,21 @@ export async function proxy(request: NextRequest) {
     target.search = request.nextUrl.search;
     return NextResponse.redirect(target, 308);
   }
-  if (!(await authorized(request))) {
+  if (process.env.NODE_ENV === "production" && isBlockedBot(request.nextUrl.pathname, request.headers.get("user-agent"))) {
+    return new NextResponse("Inte tillgänglig.", { status: 403, headers: { "X-Robots-Tag": "noindex, nofollow" } });
+  }
+  const insider = await authorized(request);
+  /** Klubbar med en personlig länk når bara sin egen sida, och utan egen demomiljö – deras svar ska Craft se. */
+  const club = insider ? null : await clubAccess(request.nextUrl, request.method, request.cookies.get(CLUB_COOKIE)?.value);
+  if (!insider && !club) {
     if (request.nextUrl.pathname.startsWith("/api/")) return NextResponse.json({ error: "Logga in med lösenordet först." }, { status: 401 });
     const login = new URL(LOGIN_PATH, request.url);
     const next = request.nextUrl.pathname + request.nextUrl.search;
     if (next !== "/" && next !== "/newwave") login.searchParams.set("till", next);
     return NextResponse.redirect(login);
   }
-  const res = workspace(request);
+  const res = club ? NextResponse.next() : workspace(request);
+  if (club?.cookie) res.cookies.set(CLUB_COOKIE, club.cookie, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: CLUB_MAX_AGE, path: "/" });
   /** Besöksloggens id sätts redan med sidan, så att webbläsarens första anrop till loggen har det. */
   if (!request.nextUrl.pathname.startsWith("/api/") && !isVisitorId(request.cookies.get(VISITOR_COOKIE)?.value)) {
     res.cookies.set(VISITOR_COOKIE, newVisitorId(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: VISITOR_MAX_AGE, path: "/" });

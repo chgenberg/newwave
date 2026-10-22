@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { NoCopy } from "@/components/NoCopy";
 import { VisitTracker } from "@/components/VisitTracker";
 import "./globals.css";
 
@@ -18,12 +19,16 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+/** Text och bilder går inte att markera, kopiera eller spara i produktion; under utveckling går det som vanligt. */
+const PROTECT = process.env.NODE_ENV === "production";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="sv" className={`${inter.variable} ${brand.variable}`}>
+    <html lang="sv" className={`${inter.variable} ${brand.variable}`} data-protect={PROTECT ? "" : undefined}>
       <body className="min-h-screen bg-white font-sans text-[#1D1D1F] antialiased">
         {children}
         <VisitTracker />
+        {PROTECT ? <NoCopy /> : null}
       </body>
     </html>
   );

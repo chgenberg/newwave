@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type BrandKit, isOwnKit } from "@/lib/newwave/brandKit";
+import type { ClubItem } from "@/lib/newwave/clubRegistry";
+import { registryAsset } from "@/lib/newwave/clubAssets";
 import { type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { designSummary } from "@/lib/newwave/marking";
 import { photoMockup } from "@/lib/newwave/photoMockup";
@@ -12,7 +14,7 @@ import { call, upload } from "../shop/api";
 import { PLACEHOLDER } from "../shop/cart";
 import { ProductMock } from "../shop/ProductMock";
 import type { WorkspaceClub } from "./roles";
-import { Empty, GHOST, H, type Item, LEAD, logoOf, PAGE, SOLID } from "./Tabs";
+import { Empty, GHOST, H, type Item, LEAD, logoOf, PAGE, SOLID, wordmarkLogos } from "./Tabs";
 
 const FIELD = "h-11 w-full min-w-0 rounded-xl border border-[rgba(17,17,17,0.14)] bg-white px-3 text-[14.5px] outline-none transition focus:border-[#111]";
 const LABEL = "grid gap-1.5 text-[13px] font-semibold";
@@ -147,25 +149,118 @@ export function PublishTab({ clubId, kit, items, onStart, onSent }: { clubId: st
 
 // --- Craft ---------------------------------------------------------------------------------------
 
+/** En klubb i klubbregistret som förhandsvisning: skrapat klubbmärke och profilfärger. */
+const registryClub = (c: ClubItem): WorkspaceClub & { onDark?: boolean } => {
+  const logo = registryAsset(c.id, c.at, "logo.png");
+  return { id: c.id, name: c.name, city: c.municipality, logo, logoDark: logo, colors: c.colors?.length ? c.colors.slice(0, 4) : ["#111111"], live: false, onDark: c.onDark };
+};
+
+/** Läser tillbaka en sparad registerklubb; loggan måste peka på registrets egen fil. */
+export function readRegistryClub(raw: unknown): WorkspaceClub | null {
+  const r = raw as Partial<WorkspaceClub> | null;
+  if (!r || typeof r.id !== "string" || !/^[a-z0-9-]{1,80}$/.test(r.id) || typeof r.name !== "string" || typeof r.logo !== "string" || !r.logo.startsWith(`/api/v1/newwave/registry/${r.id}/logo.png`)) return null;
+  const colors = Array.isArray(r.colors) ? r.colors.filter((x): x is string => typeof x === "string" && /^#[0-9a-f]{6}$/i.test(x)).slice(0, 4) : [];
+  return { id: r.id, name: r.name.slice(0, 120), city: typeof r.city === "string" ? r.city.slice(0, 80) : "", logo: r.logo, logoDark: r.logo, colors: colors.length ? colors : ["#111111"], live: false };
+}
+
+function ClubButton({ club, dark, active, onClick }: { club: WorkspaceClub; dark?: boolean; active: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} className="flex w-full items-center gap-2 rounded-2xl bg-white p-2 text-left shadow-[inset_0_0_0_1px_var(--line)] transition aria-pressed:shadow-[inset_0_0_0_2px_var(--ink)]">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full p-1 ${dark ? "bg-[#1C1C1E]" : "bg-[#F2F2EF]"}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={club.logo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+      </span>
+      <span className="min-w-0 truncate text-[12.5px] font-semibold">{club.name}</span>
+    </button>
+  );
+}
+
+const STEP = 40;
+
+/** Alla klubbar i klubbregistret som har klubbmärke; listan växer medan skrapningen pågår. */
+function AllClubs({ current, skip, onPick }: { current: string; skip: WorkspaceClub[]; onPick: (c: WorkspaceClub) => void }) {
+  const [text, setText] = useState("");
+  const [q, setQ] = useState("");
+  const [limit, setLimit] = useState(STEP);
+  const [page, setPage] = useState<{ total: number; items: ClubItem[] } | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setQ(text.trim()), 250);
+    return () => clearTimeout(t);
+  }, [text]);
+
+  useEffect(() => {
+    let live = true;
+    const p = new URLSearchParams({ show: "logo", sort: q ? "name" : "size", limit: String(limit) });
+    if (q) p.set("q", q);
+    fetch(`/api/v1/newwave/registry?${p}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => live && body && setPage(body))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [q, limit]);
+
+  const names = new Set(skip.map((c) => c.name.toLowerCase()));
+  const items = page?.items.filter((c) => !names.has(c.name.toLowerCase())) ?? [];
+  return (
+    <div className="mt-3">
+      <label className="block">
+        <span className="sr-only">Sök klubb</span>
+        <input
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setLimit(STEP);
+          }}
+          placeholder="Sök klubb eller ort"
+          className="h-10 w-full rounded-full bg-white px-4 text-[13.5px] shadow-[inset_0_0_0_1px_var(--line)] outline-none focus:shadow-[inset_0_0_0_2px_var(--ink)]"
+        />
+      </label>
+      <p className="mt-2 text-[12px] text-[var(--mute)]">{page ? `${new Intl.NumberFormat("sv-SE").format(page.total)} klubbar med logga och färger` : "Hämtar klubbar…"}</p>
+      <ul className="mt-2 grid grid-cols-2 gap-2">
+        {items.map((c) => {
+          const club = registryClub(c);
+          return (
+            <li key={c.id}>
+              <ClubButton club={club} dark={club.onDark} active={c.id === current} onClick={() => onPick(club)} />
+            </li>
+          );
+        })}
+      </ul>
+      {page && page.items.length < page.total ? (
+        <button type="button" onClick={() => setLimit((l) => l + STEP)} className="mt-2 h-10 w-full rounded-2xl text-[13px] font-semibold text-[var(--mute)] shadow-[inset_0_0_0_1px_var(--line)] transition hover:text-[var(--ink)]">
+          Visa fler
+        </button>
+      ) : null}
+      {page && !page.total ? <p className="py-3 text-[13px] text-[var(--mute)]">Ingen klubb med logga matchar sökningen än.</p> : null}
+    </div>
+  );
+}
+
 /** Craft väljer vilken klubb studion förhandsvisar med; varje klubb får ändå sin egen logga. */
-export function ClubPreview({ clubs, current, onPick }: { clubs: WorkspaceClub[]; current: string; onPick: (id: string) => void }) {
+export function ClubPreview({ clubs, current, onPick }: { clubs: WorkspaceClub[]; current: WorkspaceClub; onPick: (c: WorkspaceClub) => void }) {
+  const [all, setAll] = useState(false);
+  const list = all || clubs.some((c) => c.id === current.id) ? clubs : [current, ...clubs];
   return (
     <div>
       <p className="drawer-label">Förhandsvisa med</p>
       <p className="mb-3 text-[13px] leading-snug text-[var(--mute)]">Ni designar en gång. Varje klubb får kollektionen med sin egen logga och sina färger.</p>
       <ul className="grid grid-cols-2 gap-2">
-        {clubs.map((c) => (
+        {list.map((c) => (
           <li key={c.id}>
-            <button type="button" onClick={() => onPick(c.id)} aria-pressed={c.id === current} className="flex w-full items-center gap-2 rounded-2xl bg-white p-2 text-left shadow-[inset_0_0_0_1px_var(--line)] transition aria-pressed:shadow-[inset_0_0_0_2px_var(--ink)]">
-              <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#F2F2EF] p-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.logo} alt="" className="max-h-full max-w-full object-contain" />
-              </span>
-              <span className="min-w-0 truncate text-[12.5px] font-semibold">{c.name}</span>
-            </button>
+            <ClubButton club={c} active={c.id === current.id} onClick={() => onPick(c)} />
           </li>
         ))}
       </ul>
+      <button type="button" onClick={() => setAll((v) => !v)} aria-expanded={all} className="mt-2 flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl text-[13px] font-semibold shadow-[inset_0_0_0_1px_var(--line)] transition hover:shadow-[inset_0_0_0_1.5px_var(--ink)]">
+        {all ? "Dölj alla klubbar" : "Visa alla klubbar"}
+        <span aria-hidden className={`transition ${all ? "rotate-180" : ""}`}>
+          ↓
+        </span>
+      </button>
+      {all ? <AllClubs current={current.id} skip={clubs} onPick={onPick} /> : null}
     </div>
   );
 }
@@ -242,7 +337,7 @@ export function ClubsTab({ clubs, items, onStart, onSent }: { clubs: WorkspaceCl
           return (
             <li key={c.id}>
               <button type="button" onClick={() => toggle(c.id)} aria-pressed={on} className={`group block w-full overflow-hidden rounded-[20px] bg-[#F4F4F2] text-left transition ${on ? "shadow-[0_0_0_2px_#111]" : "opacity-55 hover:opacity-80"}`}>
-                <ProductMock product={product} logo={c.logo} logoDark={c.logoDark} zone={item.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
+                <ProductMock product={product} {...(wordmarkLogos(item.design, c.id) ?? { logo: c.logo, logoDark: c.logoDark })} zone={item.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
                 <span className="flex items-center justify-between gap-2 bg-white px-3 py-2.5">
                   <span className="min-w-0">
                     <span className="block truncate text-[13.5px] font-semibold">{c.name}</span>

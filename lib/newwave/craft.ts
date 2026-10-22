@@ -2,12 +2,15 @@ import { listProducts } from "@/lib/intersport";
 import { nwProduct } from "./catalog";
 import { colorName } from "./colors";
 import type { Customized } from "./marking";
+import { genitive } from "./newsletterHtml";
+import { isDarkHex } from "./printFiles";
 import { ASA_IF } from "./club";
 import { type Campaign, type ClubSettings, type CraftRules, type LogItem, DEFAULT_RULES, logItem, readState, updateState } from "./craftState";
 import { ONBOARD_STEPS } from "./craftQuery";
 import { clubScenes } from "./scenes";
 import { serverMockup } from "./serverMockup";
 import { addFeed, createApproval, listApprovals, readBrand, type ApprovalStatus } from "./store";
+import { wordmarkUrl } from "./wordmark/spec";
 import { workspaceId } from "./workspace";
 
 export type CraftClub = {
@@ -254,10 +257,10 @@ const priceOf = (id: string) => nwProduct(id)?.priceSek ?? 299;
 
 // --- Utskick -------------------------------------------------------------------
 
-/** Lägger kampanjen som godkännande hos klubbarna som har varumärkeskit i hubben och returnerar deras godkännande-id. */
 /**
- * Lägger kampanjen hos varje klubb i hubben. En kampanj från designstudion får klubbens logga på produkterna
- * och färdiga butiksprodukter, så att ett godkännande lägger ut dem i klubbens butik hos Intersport.
+ * Lägger kampanjen hos varje klubb i hubben och returnerar godkännande-id:n. En kampanj från designstudion får klubbens
+ * logga – eller designens ordmärke med klubbens namn, färger och märke – på produkterna och färdiga butiksprodukter,
+ * så att ett godkännande lägger ut dem i klubbens butik hos Intersport.
  */
 export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<string, string>> {
   const products = c.products.map(nwProduct).filter((p) => p !== undefined);
@@ -270,8 +273,12 @@ export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<
     const made = await Promise.all(
       products.map(async (p) => {
         const custom = c.designs?.[p.id];
-        const print = studio && (p.dark ? studio.dark : studio.light);
-        return { p, custom, print, mockupUrl: (custom && print && (await serverMockup(p, print, 1000, custom.design.zone).catch(() => null))) || p.photo };
+        const wordmark = custom?.design.wordmark;
+        // Tryckfilen följer plaggets valda färg; mockupen ritas på produktfotot i standardfärgen.
+        const artFor = (dark: boolean) => (wordmark ? wordmarkUrl(wordmark, clubId, dark ? "dark" : "light", 3543, "png", custom?.design.sizeCm) : dark ? studio?.dark : studio?.light);
+        const print = studio && artFor(custom ? isDarkHex(custom.color) : p.dark);
+        const shown = studio && artFor(p.dark);
+        return { p, custom, print, mockupUrl: (custom && shown && (await serverMockup(p, shown, 1000, custom.design.zone).catch(() => null))) || p.photo };
       }),
     );
     const a = await createApproval(clubId, {
@@ -290,10 +297,10 @@ export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<
                     {
                       sku: `CRAFT-POD-${p.id.toUpperCase()}-${c.id.toUpperCase()}`,
                       title: `${club.name} – ${c.title} – ${p.name} ${colorName(custom.color).toLowerCase()}`,
-                      description: `${p.name} med ${club.name}s logga, från Crafts kampanj "${c.title}".`,
+                      description: `${p.name} med ${genitive(club.name)} ${custom.design.wordmark ? "ordmärke" : "logga"}, från Crafts kampanj "${c.title}".`,
                       priceSek: p.priceSek,
                       sizes: p.sizes,
-                      images: [{ url: mockupUrl, alt: `${p.name} med ${club.name}s logga`, kind: "mockup" as const }],
+                      images: [{ url: mockupUrl, alt: `${p.name} med ${genitive(club.name)} logga`, kind: "mockup" as const }],
                       printFileUrl: `${origin}${print}`,
                       fulfilment: "print-on-demand" as const,
                       dropId: `kampanj-${c.id}`,

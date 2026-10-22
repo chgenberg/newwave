@@ -69,6 +69,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                   color: p.custom?.color,
                   brandColor: CLUB.palette[0]?.hex,
                   target: { kind: "shop", clubId: ASA_IF.id, shopProductId: p.id },
+                  wordmarkClub: ASA_IF,
                 }
               : undefined
           }

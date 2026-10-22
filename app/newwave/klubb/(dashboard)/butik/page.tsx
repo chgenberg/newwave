@@ -80,6 +80,7 @@ export default async function ShopPage() {
                       initial={p.custom?.design}
                       color={p.custom?.color}
                       target={{ kind: "shop", clubId: ASA_IF.id, shopProductId: p.id }}
+                      wordmarkClub={ASA_IF}
                     />
                   ) : null}
                 </li>
@@ -117,6 +118,7 @@ export default async function ShopPage() {
                         productId={p.id}
                         art={{ light: `/api/v1/brand/${ASA_IF.id}/skold-farg.png`, dark: `/api/v1/brand/${ASA_IF.id}/skold-vit.png`, label: "klubbens märke" }}
                         target={{ kind: "new-shop", clubId: ASA_IF.id }}
+                        wordmarkClub={ASA_IF}
                         label="Designa"
                       />
                     </div>

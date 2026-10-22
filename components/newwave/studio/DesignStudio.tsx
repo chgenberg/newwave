@@ -26,9 +26,11 @@ import {
   zonesFor,
 } from "@/lib/newwave/marking";
 import { sek } from "@/lib/newwave/reseller";
+import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { buildLogoArt, buildNameArt, inkContrast, isDark, type LogoArt, logoColors } from "./logoArt";
 import { fallbackKind, type Layer, ProductScene, type SceneApi, type View } from "./ProductScene";
 import { readLogoFile } from "./readLogoFile";
+import { WordmarkPicker } from "./WordmarkPicker";
 
 export type Proof = { label: string; image: string };
 export type StudioResult = { design: Design; color: string; preview: string; proofs: Proof[] };
@@ -111,6 +113,8 @@ export function DesignStudio({
   onClose,
   picker,
   brand,
+  wordmarkClub,
+  onWordmarkCollection,
   aside,
   fill,
   saveLabel = "Spara design",
@@ -131,6 +135,10 @@ export function DesignStudio({
   picker?: ReactNode;
   /** Varumärkesverktyget (brandbook, webbadress, färger och logga) när studion används fristående. */
   brand?: ReactNode;
+  /** Klubben som ordmärkena förhandsvisas med; utan den visas inga ordmärken. */
+  wordmarkClub?: { id: string; name: string; logo?: string };
+  /** Ett mallpaket med ordmärken för hela sortimentet. */
+  onWordmarkCollection?: (id: string) => void;
   /** Högerkolumn bredvid produkten, t.ex. fler produkter i samma design. */
   aside?: ReactNode;
   /** Fyll föräldern i stället för fönsterhöjden. */
@@ -197,7 +205,14 @@ export function DesignStudio({
   const units = Math.max(qty ?? 1, design.names?.list.length ?? 0);
   const marking = markingPrice(design, units);
   const darkProduct = isDark(color);
-  const logo = design.logo ? (darkProduct && design.logoDark) || design.logo : (darkProduct && base.dark) || base.light;
+  // Ordmärket ritas per tryckstorlek: små tryck (bröst, ärm) får mallens lilla version.
+  const logoFor = (sizeCm: number) =>
+    design.wordmark && wordmarkClub
+      ? wordmarkUrl(design.wordmark, wordmarkClub.id, darkProduct ? "dark" : "light", 1200, "png", sizeCm)
+      : design.logo
+        ? (darkProduct && design.logoDark) || design.logo
+        : (darkProduct && base.dark) || base.light;
+  const logo = logoFor(design.sizeCm);
   const customColor = !suggestions(brandColor).some((s) => s.hex.toUpperCase() === color);
   const set = (patch: Partial<Design>) => setDesign((d) => ({ ...d, ...patch }));
   const setCur = (patch: Partial<Placement>) =>
@@ -317,17 +332,17 @@ export function DesignStudio({
   }, [product.model]);
 
   // Tryckbilden ändras bara med motiv, metod, antal färger, form och ljus/mörk produkt – inte med varje färgval.
-  const specKey = JSON.stringify([design, ...(design.extra ?? [])].map((p) => [p.method, p.colors, p.shape]));
+  const specKey = JSON.stringify([design, ...(design.extra ?? [])].map((p) => [p.method, p.colors, p.shape, logoFor(p.sizeCm)]));
   useEffect(() => {
     let live = true;
-    const specs = JSON.parse(specKey) as [Placement["method"], number, Shape][];
-    Promise.all(specs.map(([method, colors, shape]) => buildLogoArt(logo, { method, colors, shape }, darkProduct ? "#111111" : "#FFFFFF"))).then(
+    const specs = JSON.parse(specKey) as [Placement["method"], number, Shape, string][];
+    Promise.all(specs.map(([method, colors, shape, src]) => buildLogoArt(src, { method, colors, shape }, darkProduct ? "#111111" : "#FFFFFF"))).then(
       (list) => live && setArts(Object.fromEntries(list.map((a, i) => [i === 0 ? "main" : `x${i - 1}`, a]))),
     );
     return () => {
       live = false;
     };
-  }, [logo, specKey, darkProduct]);
+  }, [specKey, darkProduct]);
   const art = arts.main ?? null;
 
   // En ny design trycks i loggans egna färger tills kunden väljer antal själv, så att den ser ut som loggan.
@@ -501,6 +516,15 @@ export function DesignStudio({
     setView(v);
     api.current?.view(v);
   };
+  // Flyttas trycket till andra sidan vänds produkten först när den nya tryckbilden är på plats.
+  const faceAfter = useRef<View | null>(null);
+  useEffect(() => {
+    const v = faceAfter.current;
+    if (!v || !art) return;
+    faceAfter.current = null;
+    setView(v);
+    api.current?.view(v);
+  }, [art]);
 
   const [dropping, setDropping] = useState<"panel" | "stage" | null>(null);
   const [uploadError, setUploadError] = useState("");
@@ -513,7 +537,7 @@ export function DesignStudio({
       const res = await fetch("/api/v1/logo", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       const data = (await res.json().catch(() => ({}))) as { light?: string; dark?: string; error?: string };
       if (!res.ok || !data.light) throw new Error(data.error ?? "Kunde inte hämta loggan.");
-      set({ logo: data.light, logoDark: data.dark });
+      set({ logo: data.light, logoDark: data.dark, wordmark: undefined });
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Kunde inte läsa filen.");
     } finally {
@@ -708,6 +732,24 @@ export function DesignStudio({
                 </section>
               ) : null}
 
+              {wordmarkClub ? (
+                <section className="cz-sec" data-sec="wordmark">
+                  <WordmarkPicker
+                    club={wordmarkClub}
+                    value={design.wordmark}
+                    dark={darkProduct}
+                    onChange={(wordmark, how) => {
+                      const to = how?.side === "back" ? zones.find((z) => z.id === "rygg") : how?.side === "front" && design.zone === "rygg" ? zones[0] : undefined;
+                      const move = to && to.id !== design.zone ? to : undefined;
+                      const moved = move ? { zone: move.id, point: undefined, normal: undefined, ...(move.sizeCm ? { sizeCm: move.sizeCm } : {}) } : {};
+                      set(wordmark ? { wordmark, logo: undefined, logoDark: undefined, ...moved } : { wordmark: undefined });
+                      if (move) faceAfter.current = how?.side === "back" ? "bak" : "fram";
+                    }}
+                    onCollection={onWordmarkCollection}
+                  />
+                </section>
+              ) : null}
+
               <section className="cz-sec">
                 <p className="drawer-label">Tryckpositioner</p>
                 <div className="cz-tabs" role="tablist">
@@ -821,7 +863,7 @@ export function DesignStudio({
                       <span className={`cz-logo-thumb${darkProduct ? " is-dark" : ""}`}>{art ? <img src={art.canvas.toDataURL()} alt="Motivet som det trycks" /> : null}</span>
                       <span className="cz-drop-text">
                         <b>{fetching ? "Hämtar loggan…" : dropping === "panel" ? "Släpp loggan här" : "Ladda upp egen logga"}</b>
-                        <small>{design.logo ? "Egen logga" : `Just nu: ${base.label}`}. PNG, JPG, WebP eller SVG – vi tar bort bakgrunden och gör en ljus och en mörk variant.</small>
+                        <small>{design.wordmark ? "Just nu: ordmärke" : design.logo ? "Egen logga" : `Just nu: ${base.label}`}. PNG, JPG, WebP eller SVG – vi tar bort bakgrunden och gör en ljus och en mörk variant.</small>
                       </span>
                     </label>
                     {uploadError ? <p className="brandbar-err">{uploadError}</p> : null}
@@ -837,8 +879,8 @@ export function DesignStudio({
                         >
                           <input value={logoSite} onChange={(e) => setLogoSite(e.target.value)} placeholder="eller hämta från webbadress" aria-label="Webbadress för logga" disabled={fetching} />
                         </form>
-                        {design.logo ? (
-                          <button type="button" className="cz-link" onClick={() => set({ logo: undefined, logoDark: undefined })}>
+                        {design.logo || design.wordmark ? (
+                          <button type="button" className="cz-link" onClick={() => set({ logo: undefined, logoDark: undefined, wordmark: undefined })}>
                             Återställ till {base.label}
                           </button>
                         ) : null}

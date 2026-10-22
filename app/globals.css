@@ -110,3 +110,22 @@ html {
   font-weight: 900;
   letter-spacing: -0.01em;
 }
+
+/* Skyddet i produktion (se NoCopy): ingen markering, inga bilder att dra ut och inget att skriva ut. */
+html[data-protect] body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html[data-protect] :is(input, textarea, select, [contenteditable="true"]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+html[data-protect] img {
+  -webkit-user-drag: none;
+}
+@media print {
+  html[data-protect] body {
+    display: none;
+  }
+}

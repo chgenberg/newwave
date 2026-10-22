@@ -9,8 +9,8 @@ export const ACCESS_MAX_AGE = 60 * 60 * 24 * 30;
 export const LOGIN_PATH = "/newwave/las";
 export const STATS_PATH = "/newwave/besok";
 
-/** Öppna utan lösenord: inloggningen, besöksloggen och adresser som andra system hämtar från. */
-const OPEN = [LOGIN_PATH, "/api/v1/besok", "/api/mock-intersport", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
+/** Öppna utan lösenord: inloggningen, besöksloggen, robots.txt och adresser som andra system hämtar från. */
+const OPEN = [LOGIN_PATH, "/robots.txt", "/api/v1/besok", "/api/mock-intersport", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
 
 /** Bilderna i public: bildoptimeringen hämtar dem internt utan besökarens cookie, och delningsbilden ska synas i chattar. Filmerna kräver lösenordet. */
 const PUBLIC_IMAGE = /^\/(?!api\/)[^?#]+\.(?:jpe?g|png|webp|avif|gif|svg|ico)$/i;

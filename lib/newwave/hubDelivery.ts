@@ -13,6 +13,8 @@ import { fileSlug, isDarkHex, makeJob, type MadeJob, type OutFile } from "./prin
 import { mockupJpeg } from "./serverMockup";
 import { SITE } from "./site";
 import { type Approval, type ApprovalProduct, type Knit, readBrand } from "./store";
+import { wordmarkUrl } from "./wordmark/spec";
+import { track } from "./wordmark/stats";
 import { readData, writeData } from "./workspace";
 
 /**
@@ -109,19 +111,26 @@ async function productJobs(club: Club, a: Pick<Approval, "id" | "printFiles" | "
   const design: Design = item.custom?.design ?? defaultDesign(p);
   const color = item.custom?.color ?? p.garmentHex;
   const dark = isDarkHex(color);
-  const artUrl = design.logo ? (dark ? (design.logoDark ?? design.logo) : design.logo) : a.printFiles ? (dark ? a.printFiles.dark : a.printFiles.light) : (item.printUrl ?? a.previewUrl);
-  const art = artUrl ? await readAsset(artUrl) : null;
-  if (!art) return [];
-  const artSha = sha(art);
+  const logoUrl = design.logo ? (dark ? (design.logoDark ?? design.logo) : design.logo) : a.printFiles ? (dark ? a.printFiles.dark : a.printFiles.light) : (item.printUrl ?? a.previewUrl);
+  // Ett ordmärke ritas per tryckposition, så att små tryck (bröst, ärm) får mallens lilla version.
+  const artUrlFor = (sizeCm: number) => (design.wordmark ? wordmarkUrl(design.wordmark, club.id, dark ? "dark" : "light", 3543, "png", sizeCm) : logoUrl);
   const spots: Placement[] = [design, ...(design.extra ?? [])].map(({ method, colors, shape, zone, sizeCm }) => ({ method, colors, shape, zone, sizeCm }));
+  const arts = await Promise.all(spots.map(async (s) => {
+    const url = artUrlFor(s.sizeCm);
+    const art = url ? await readAsset(url) : null;
+    return art && url ? { url, art } : null;
+  }));
+  if (arts.some((x) => !x)) return [];
   return Promise.all(
     spots.map(async (placement, i) => {
+      const { url: artUrl, art } = arts[i]!;
+      const artSha = sha(art);
       const names = i === 0 ? design.names : undefined;
       const base = `${fileSlug(p.name)}${spots.length > 1 ? `-tryck${i + 1}` : ""}`;
       const key = sha(JSON.stringify({ v: VERSION, p: p.id, color, placement, names, artSha, club: club.name, palette: club.palette })).slice(0, 20);
       const job = await stored(key, async () => ({
         ...(await makeJob({ club: club.name, palette: club.palette, product: p, color, placement, names, art, slug: base })),
-        mockup: (await mockupJpeg({ ...p, dark }, artUrl!, 900, placement.zone)) ?? undefined,
+        mockup: (await mockupJpeg({ ...p, dark }, artUrl, 900, placement.zone)) ?? undefined,
       }));
       return {
         ...job,
@@ -254,8 +263,12 @@ async function save(d: HubDelivery) {
 
 /** Kallas när klubben godkänt: gör filerna och lägger leveransen överst hos New Wave. */
 export async function deliverApproval(clubId: string, a: Approval): Promise<HubDelivery | null> {
+  const first = !(await deliveryFor(clubId, a.id));
   const d = await build(clubId, { ...a, approvedAt: a.decidedAt ?? new Date().toISOString() });
-  return d ? save(d) : null;
+  if (!d) return null;
+  // Ett nytt godkännande bygger om filerna men är ingen ny beställning.
+  if (first) for (const p of a.products ?? []) if (p.custom?.design.wordmark) await track(p.custom.design.wordmark.template, "orders");
+  return save(d);
 }
 export const deliveryStats = (d: HubDelivery) => ({
   products: new Set(d.jobs.map((j) => j.productId)).size,

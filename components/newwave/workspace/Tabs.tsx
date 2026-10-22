@@ -8,6 +8,7 @@ import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday } from "@
 import { type OccasionId, occasion } from "@/lib/newwave/occasions";
 import { sek } from "@/lib/newwave/reseller";
 import { luminance } from "@/lib/newwave/theme";
+import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { PLACEHOLDER } from "../shop/cart";
 import { ProductMock } from "../shop/ProductMock";
 import { ShopFrame, ShopHome } from "../shop/Storefront";
@@ -21,7 +22,11 @@ export const LEAD = "mt-1 max-w-[56ch] text-[14px] leading-relaxed text-[#6F6B63
 export const GHOST = "inline-flex h-10 items-center rounded-full border border-[rgba(17,17,17,0.14)] px-4 text-[13px] font-semibold transition hover:border-[#111]";
 export const SOLID = "inline-flex h-11 items-center gap-2 rounded-full bg-[var(--shop)] px-5 text-[14px] font-semibold text-[var(--shop-on)] transition hover:opacity-90 active:scale-[0.97]";
 
-export const logoOf = (kit: BrandKit, d: Design) => ({ logo: d.logo ?? kit.logo ?? PLACEHOLDER.light, logoDark: d.logo ? d.logoDark : (kit.logoDark ?? (kit.logo ? undefined : PLACEHOLDER.dark)) });
+/** Designens ordmärke ritat med en klubbs namn, färger och märke. */
+export const wordmarkLogos = (d: Design, clubId: string) => (d.wordmark ? { logo: wordmarkUrl(d.wordmark, clubId, "light", 1200, "png", d.sizeCm), logoDark: wordmarkUrl(d.wordmark, clubId, "dark", 1200, "png", d.sizeCm) } : null);
+
+export const logoOf = (kit: BrandKit, d: Design, clubId?: string) =>
+  (clubId && wordmarkLogos(d, clubId)) || { logo: d.logo ?? kit.logo ?? PLACEHOLDER.light, logoDark: d.logo ? d.logoDark : (kit.logoDark ?? (kit.logo ? undefined : PLACEHOLDER.dark)) };
 
 export function Empty({ onStart }: { onStart: () => void }) {
   return (
@@ -38,7 +43,7 @@ export function Empty({ onStart }: { onStart: () => void }) {
 /** Återförsäljarens tillfällen: samma kollektioner som kunderna sätter ihop i butikens eventverktyg. */
 type Occasions = { offered: OccasionId[]; current: OccasionId | null; onPick: (id: OccasionId) => void; slug: string };
 
-export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next, occasions }: { kit: BrandKit; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void; next: { label: string; go: () => void }; occasions?: Occasions }) {
+export function CollectionTab({ kit, club, items, onEdit, onRemove, onStart, next, occasions }: { kit: BrandKit; club?: string; items: Item[]; onEdit: (id: string) => void; onRemove: (id: string) => void; onStart: () => void; next: { label: string; go: () => void }; occasions?: Occasions }) {
   const total = items.reduce((sum, i) => sum + (nwProduct(i.id)?.priceSek ?? 0), 0);
   const current = occasions?.current ? occasion(occasions.current) : undefined;
   return (
@@ -67,7 +72,7 @@ export function CollectionTab({ kit, items, onEdit, onRemove, onStart, next, occ
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={i.preview} alt={p.name} className="aspect-square w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                     ) : (
-                      <ProductMock product={p} {...logoOf(kit, i.design)} zone={i.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
+                      <ProductMock product={p} {...logoOf(kit, i.design, club)} zone={i.design.zone} className="transition duration-500 group-hover:scale-[1.03]" />
                     )}
                   </button>
                   <div className="flex items-start justify-between gap-2 bg-white px-3.5 py-3">

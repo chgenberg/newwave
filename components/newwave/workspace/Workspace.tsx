@@ -5,14 +5,15 @@ import { type BrandKit, DEFAULT_KIT, kitAccent, readKit } from "@/lib/newwave/br
 import { CATEGORIES, NW_CATALOG, type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { defaultDesign, sanitizeDesign } from "@/lib/newwave/marking";
 import { type OccasionId, isOccasion, occasion as occasionOf } from "@/lib/newwave/occasions";
+import { collectionDesign, findCollection } from "@/lib/newwave/wordmark/collections";
 import { HubSwitch } from "../HubSwitch";
 import { LogoMark } from "../Logo";
 import { PLACEHOLDER } from "../shop/cart";
 import { ProductMock } from "../shop/ProductMock";
 import { DesignStudio, type StudioResult } from "../studio/DesignStudio";
 import { BrandTools } from "./BrandTools";
-import { ClubPreview, ClubsTab, PublishTab, QuoteTab } from "./Destinations";
-import { type Role, clubKit, storageKey } from "./roles";
+import { ClubPreview, ClubsTab, PublishTab, QuoteTab, readRegistryClub } from "./Destinations";
+import { type Role, type WorkspaceClub, clubKit, storageKey } from "./roles";
 import { CollectionTab, type Item, ProductionTab, ShopTab } from "./Tabs";
 
 /** Fliken efter kollektionen: dit designen tar vägen för den som designar. */
@@ -119,6 +120,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
 
   const [kit, setKit] = useState<BrandKit>(base);
   const [previewClub, setPreviewClub] = useState(role.kind === "craft" ? role.clubs[0]?.id : undefined);
+  const [registryPick, setRegistryPick] = useState<WorkspaceClub | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [productId, setProductId] = useState(start);
   const [tab, setTab] = useState("design");
@@ -128,14 +130,18 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { kit?: unknown; items?: unknown; productId?: unknown; tab?: unknown; club?: unknown; occasion?: unknown } | null;
+      const saved = JSON.parse(localStorage.getItem(key) ?? "null") as { kit?: unknown; items?: unknown; productId?: unknown; tab?: unknown; club?: unknown; registry?: unknown; occasion?: unknown } | null;
       /* eslint-disable react-hooks/set-state-in-effect -- localStorage går bara att läsa efter mount */
       const stored = readKit(saved?.kit, base);
       setKit(base.source.kind === "profil" && (stored.source.kind === "profil" || stored.source.kind === "standard") ? base : stored);
       setItems(readItems(saved?.items, can));
       if (typeof saved?.productId === "string" && can(saved.productId) && nwProduct(saved.productId)) setProductId(saved.productId);
       if (typeof saved?.tab === "string" && tabs.some((t) => t.id === saved.tab)) setTab(saved.tab);
-      if (role.kind === "craft" && typeof saved?.club === "string" && role.clubs.some((c) => c.id === saved.club)) setPreviewClub(saved.club);
+      const registry = readRegistryClub(saved?.registry);
+      if (role.kind === "craft" && typeof saved?.club === "string" && (role.clubs.some((c) => c.id === saved.club) || registry?.id === saved.club)) {
+        setPreviewClub(saved.club);
+        if (registry?.id === saved.club) setRegistryPick(registry);
+      }
       if (isOccasion(saved?.occasion) && occasions.includes(saved.occasion)) setOccasion(saved.occasion);
     } catch {}
     setLoaded(true);
@@ -146,11 +152,11 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem(key, JSON.stringify({ kit, items: items.map(({ id, color, design, sent }) => ({ id, color, design, sent })), productId, tab, club: previewClub, occasion }));
+      localStorage.setItem(key, JSON.stringify({ kit, items: items.map(({ id, color, design, sent }) => ({ id, color, design, sent })), productId, tab, club: previewClub, registry: registryPick, occasion }));
     } catch {}
-  }, [loaded, key, kit, items, productId, tab, previewClub, occasion]);
+  }, [loaded, key, kit, items, productId, tab, previewClub, registryPick, occasion]);
 
-  const club = role.kind === "craft" ? (role.clubs.find((c) => c.id === previewClub) ?? role.clubs[0]) : undefined;
+  const club = role.kind === "craft" ? (role.clubs.find((c) => c.id === previewClub) ?? (registryPick?.id === previewClub ? registryPick : undefined) ?? role.clubs[0]) : undefined;
   const design = club ? clubKit(club) : kit;
   const product = nwProduct(productId) ?? products[0];
   const item = items.find((i) => i.id === product.id);
@@ -188,10 +194,26 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
     setOccasion(id);
     setTab("kollektion");
   };
+  /** Ett mallpaket med ordmärken: paketets produkter får varsin mall i samma stil, resten av kollektionen ligger kvar. */
+  const fromWordmarks = (id: string) => {
+    const c = findCollection(id);
+    if (!c) return;
+    const made = c.items.flatMap((it) => {
+      const p = can(it.product) ? nwProduct(it.product) : undefined;
+      return p ? [{ id: p.id, color: p.garmentHex, design: collectionDesign(c, it.template, p) }] : [];
+    });
+    setItems((list) => [...list.filter((i) => !made.some((m) => m.id === i.id)), ...made]);
+    setOccasion(null);
+    setTab("kollektion");
+  };
   const begin = occasions.length ? () => setTab("kollektion") : collect;
+  const pickClub = (c: WorkspaceClub) => {
+    setPreviewClub(c.id);
+    if (role.kind === "craft" && !role.clubs.some((x) => x.id === c.id)) setRegistryPick(c);
+  };
   const markSent = (ids: string[]) => setItems((list) => list.map((i) => (ids.includes(i.id) ? { ...i, sent: true } : i)));
 
-  const brand = club && role.kind === "craft" ? <ClubPreview clubs={role.clubs} current={club.id} onPick={setPreviewClub} /> : <BrandTools kit={kit} home={base.source.kind === "profil" ? base : undefined} onChange={setKit} />;
+  const brand = club && role.kind === "craft" ? <ClubPreview clubs={role.clubs} current={club} onPick={pickClub} /> : <BrandTools kit={kit} home={base.source.kind === "profil" ? base : undefined} onChange={setKit} />;
 
   const panel =
     tab === "design" ? (
@@ -206,6 +228,8 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
         onSave={save}
         picker={<Picker products={products} current={product.id} onPick={pick} />}
         brand={brand}
+        wordmarkClub={club ? { id: club.id, name: club.name, logo: club.logo } : undefined}
+        onWordmarkCollection={club ? fromWordmarks : undefined}
         aside={<Also kit={design} also={also} items={items} collectLabel={occasions.length ? "Skapa kollektion för ett event" : "Skapa kollektion"} onPick={pick} onCollect={begin} />}
         fill
       />
@@ -214,6 +238,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
         {tab === "kollektion" ? (
           <CollectionTab
             kit={design}
+            club={club?.id}
             items={items}
             onEdit={pick}
             onRemove={(id) => setItems((list) => list.filter((i) => i.id !== id))}

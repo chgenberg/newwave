@@ -57,7 +57,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ id: s
 
       {a.previewUrl || a.products?.length ? (
         <div className="mt-6">
-          <MerchGrid title={a.title} printUrl={a.previewUrl} art={a.printFiles} products={a.products ?? []} target={{ kind: "approval", clubId: ASA_IF.id, approvalId: a.id }} />
+          <MerchGrid title={a.title} printUrl={a.previewUrl} art={a.printFiles} products={a.products ?? []} target={{ kind: "approval", clubId: ASA_IF.id, approvalId: a.id }} wordmarkClub={ASA_IF} />
         </div>
       ) : null}
 
