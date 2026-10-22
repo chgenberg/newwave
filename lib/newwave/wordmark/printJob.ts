@@ -1,11 +1,12 @@
 import JSZip from "jszip";
 import type { NwProduct } from "@/lib/newwave/catalog";
 import { colorName } from "@/lib/newwave/colors";
-import { defaultDesign, type Design, fitPlacement, markingPrice, METHOD_INFO, type Method } from "@/lib/newwave/marking";
+import { artZone, type Design, fitPlacement, markingPrice, METHOD_INFO, type Method } from "@/lib/newwave/marking";
 import { fileSlug, isDarkHex, type MadeJob, makeJob } from "@/lib/newwave/printFiles";
 import { paletteFor } from "./render";
 import { wordmarkFile } from "./serve";
 import type { WordmarkQuery } from "./spec";
+import { isBackTemplate } from "./templates";
 import { wordmarkClub } from "./store";
 
 /**
@@ -43,7 +44,7 @@ async function make(q: WordmarkQuery, product: NwProduct, method: Method, sizeCm
   const colors = info.fixedColors ?? Math.min(info.maxColors, Math.max(1, inkCount(svg.data.toString("utf8"), club.colors, dark)));
   const box = /viewBox="[-\d.]+ [-\d.]+ ([\d.]+) ([\d.]+)"/.exec(svg.data.toString("utf8"));
   const aspect = box ? Number(box[1]) / Number(box[2]) : 1;
-  const placement = fitPlacement(product, { method, colors, shape: "original" as const, zone: defaultDesign(product, method).zone, sizeCm }, aspect);
+  const placement = fitPlacement(product, { method, colors, shape: "original" as const, zone: artZone(product, method, isBackTemplate(q.template)), sizeCm }, aspect);
   const slug = `${fileSlug(club.name)}-${q.template}`;
   const job = await makeJob({ club: club.name, palette: [...club.colors], product, color: garment, placement, art: png.data, slug });
   const prices = QTYS.map((qty) => {
@@ -71,6 +72,7 @@ export async function wordmarkZip(w: WordmarkJob, product: NwProduct, garment: s
   const spec = [
     `${w.club} – ordmärke ${job.methodLabel.toLowerCase()} på ${product.name.toLowerCase()} (${colorName(garment).toLowerCase()})`,
     "",
+    `Placering: ${job.placement}`,
     ...job.facts.map((f) => `${f.label}: ${f.value}`),
     "",
     ...(job.inks.length ? ["Färger:", ...job.inks.map((i) => `  ${i.name.padEnd(10)} ${i.hex}  ${i.pantone}${i.detail ? `  (${i.detail})` : ""}`), ""] : []),

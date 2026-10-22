@@ -18,7 +18,7 @@ const FORMATS_FOR: Record<Method, { format: FileFormat; mode?: ColorMode }[]> = 
   screentryck: [{ format: "pdf", mode: "spot" }, { format: "eps", mode: "spot" }],
   transfer: [{ format: "pdf", mode: "spot" }, { format: "png" }],
   brodyr: [{ format: "pdf", mode: "spot" }, { format: "eps", mode: "spot" }],
-  digitaltryck: [{ format: "pdf", mode: "cmyk" }, { format: "png" }],
+  digitaltryck: [{ format: "pdf", mode: "cmyk" }, { format: "pdf", mode: "spot" }, { format: "png" }],
   lasergravyr: [{ format: "pdf", mode: "spot" }, { format: "eps", mode: "spot" }],
   vavt: [{ format: "pdf", mode: "spot" }, { format: "eps", mode: "spot" }, { format: "png" }],
 };
@@ -27,7 +27,7 @@ const VARIANT_USE: Record<Method, string> = {
   screentryck: "schablon per färg",
   transfer: "tryckt transfer, vitt underlag på mörka plagg",
   brodyr: "underlag för punchning; tråden matchas mot Pantone-koden",
-  digitaltryck: "fyrfärg",
+  digitaltryck: "fyrfärg; vitt trycks som egen färg (White i dekorfärgsfilen)",
   lasergravyr: "svart = graveras, stålet tas fram",
   vavt: "garnfärger enligt Pantone",
 };
@@ -90,6 +90,8 @@ async function inksOf(id: string, job: Job) {
   return [...seen].map(([name, detail]) => ({ name, detail }));
 }
 
+const ART_LABEL: Record<Placement["art"], string> = { klubbmarke: "Klubbmärke", ordmarke: "Ordmärke", halsduk: "Halsduksdesign" };
+
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 /** Produktionsbladet som A4-PDF. */
@@ -122,7 +124,7 @@ th { font-size: 8pt; color: #666; font-weight: normal; text-transform: uppercase
 figcaption { font-size: 7.5pt; color: #444; margin-top: 2px; } code { font-size: 8pt; }
 .place td:first-child { width: 18%; } .place td:nth-child(3) { width: 21%; } .place td:last-child { width: 34%; } .place code { font-size: 7pt; white-space: nowrap; } .stopp { color: #B42318; } .varning { color: #8A5A00; }
 </style></head><body>
-<p class="kicker">Gräsrot 360 · Produktionsunderlag · ${new Date().toISOString().slice(0, 10)}</p>
+<p class="kicker">Gräsrot 360 · Produktionsunderlag · ${new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" })}</p>
 <h1>${esc(club.name)} – ${esc(product.name)}</h1>
 <p class="muted">${esc(product.supplier)}${product.article ? ` · art.nr ${esc(product.article)}` : ""}${product.url ? ` · ${esc(product.url)}` : ""}</p>
 
@@ -137,7 +139,7 @@ figcaption { font-size: 7.5pt; color: #444; margin-top: 2px; } code { font-size:
 ${rows
   .map(
     ({ job, files: names }) =>
-      `<tr><td>${job.colors.map((c) => esc(c.name)).join(", ")}</td><td>${esc(zone(job.placement.zone).label)}</td><td>${METHOD_TEXT[job.placement.method]}<br><span class="muted">${VARIANT_USE[job.placement.method]}</span></td><td>${job.placement.art === "halsduk" ? "Halsduksdesign" : job.placement.art === "ordmarke" ? "Ordmärke" : "Klubbmärke"}, ${job.placement.variant}</td><td>${job.widthMm} × ${job.heightMm} mm${names.some((n) => n.endsWith(".png")) ? `<br><span class="muted">PNG ${PNG_DPI} dpi</span>` : ""}</td><td>${names.map((n) => `<code>${esc(n)}</code>`).join("<br>")}</td></tr>`,
+      `<tr><td>${job.colors.map((c) => esc(c.name)).join(", ")}</td><td>${esc(zone(job.placement.zone).label)}</td><td>${METHOD_TEXT[job.placement.method]}<br><span class="muted">${VARIANT_USE[job.placement.method]}</span></td><td>${ART_LABEL[job.placement.art]}, ${job.placement.variant}</td><td>${job.widthMm} × ${job.heightMm} mm${names.some((n) => n.endsWith(".png")) ? `<br><span class="muted">PNG ${PNG_DPI} dpi</span>` : ""}</td><td>${names.map((n) => `<code>${esc(n)}</code>`).join("<br>")}</td></tr>`,
   )
   .join("")}
 </table>
@@ -173,7 +175,7 @@ export async function productionOrder(id: string): Promise<string> {
       const inks = (await inksOf(id, job)).map((i) => i.name).join(", ");
       const zone = p.zones.find((z) => z.id === job.placement.zone)!;
       lines.push(
-        [p.name, p.supplier, p.article ?? "", job.colors.map((c) => c.name).join(", "), zone.label, METHOD_TEXT[job.placement.method], job.placement.art, job.placement.variant, job.widthMm, job.heightMm, inks, filesOf(job).map((f) => f.name).join(" ")]
+        [p.name, p.supplier, p.article ?? "", job.colors.map((c) => c.name).join(", "), zone.label, METHOD_TEXT[job.placement.method], ART_LABEL[job.placement.art], job.placement.variant, job.widthMm, job.heightMm, inks, filesOf(job).map((f) => f.name).join(" ")]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(";"),
       );

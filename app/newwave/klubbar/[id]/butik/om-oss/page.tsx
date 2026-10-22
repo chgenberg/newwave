@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DELIVERY_DAYS, FLOCK_PRICE } from "@/components/newwave/clubshop/pricing";
 import { intersportPath } from "@/lib/intersport";
 import { clubDetail } from "@/lib/newwave/clubRegistry";
+import { grasrotClub } from "@/lib/newwave/grasrot/clubs";
 import { shopPath } from "@/lib/newwave/clubShop";
 import { canEditShop, readContent } from "@/lib/newwave/clubShopContent";
 import { genitive } from "@/lib/newwave/newsletterHtml";
@@ -24,12 +25,14 @@ export default async function ClubShopAbout({ params }: Props) {
   const { id } = await params;
   const [club, content, detail, editor] = await Promise.all([wordmarkClub(id), readContent(id), clubDetail(id), canEditShop(id)]);
   if (!club) notFound();
+  const grasrot = grasrotClub(id);
+  const site = detail?.url || grasrot?.site;
   const facts = [
-    ["Ort", detail?.municipality],
-    ["Idrott", detail?.sport ?? club.sports?.[0]],
+    ["Ort", detail?.municipality ?? grasrot?.city],
+    ["Idrott", detail?.sport ?? grasrot?.sport ?? club.sports?.[0]],
     ["Grundad", club.founded ? String(club.founded) : undefined],
   ].filter((f): f is [string, string] => Boolean(f[1]));
-  const links = [...(detail?.url ? [{ href: detail.url, label: "Klubbens webbplats" }] : []), ...Object.entries(detail?.socialLinks ?? {}).map(([k, href]) => ({ href, label: SOCIAL[k] ?? k }))];
+  const links = [...(site ? [{ href: site, label: "Klubbens webbplats" }] : []), ...Object.entries(detail?.socialLinks ?? {}).map(([k, href]) => ({ href, label: SOCIAL[k] ?? k }))];
   const steps = [
     { title: "Välj här", text: `Hela sortimentet med ${genitive(club.name)} namn, färger och märke.` },
     { title: "Köp hos Intersport", text: `Storlek, namn och nummer för ${FLOCK_PRICE} kr, betalning och leverans hem, till ombud eller butik.` },

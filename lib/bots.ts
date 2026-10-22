@@ -19,5 +19,8 @@ const BLOCKED = new RegExp(
 /** Det crawlers ska få läsa (robots.txt) och andra system som hämtar härifrån: webhooks och New Waves produktionsfiler. */
 const ALLOWED = ["/robots.txt", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
 
+/** Next bildoptimerare hämtar bilderna från sidan själv, utan user-agent. */
+const IMAGE = /^\/(?!api\/)[^?#]+\.(?:jpe?g|png|webp|avif|gif|svg|ico)$/i;
+
 export const isBlockedBot = (path: string, userAgent: string | null) =>
-  !ALLOWED.some((p) => path.startsWith(p)) && (!userAgent?.trim() || BLOCKED.test(userAgent));
+  !ALLOWED.some((p) => path.startsWith(p)) && (userAgent?.trim() ? BLOCKED.test(userAgent) : !IMAGE.test(path));

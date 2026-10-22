@@ -74,6 +74,8 @@ export async function shopProducts(id: string): Promise<{ products: ShopProduct[
 }
 
 /** Föreningen som butiken och ordmärkena ser den, när den inte finns i klubbregistret: namnet, ordmärkets färger och klubbmärket. */
+export const grasrotClubName = (id: string) => grasrotClub(id)?.name ?? null;
+
 export async function grasrotWordmarkClub(id: string): Promise<WordmarkClub | null> {
   const club = grasrotClub(id);
   const wordmark = club && emblemSet(id) ? await grasrotWordmark(id, "original") : null;

@@ -155,8 +155,9 @@ async function checkAll() {
   return { prefs, checked: await memo.checked };
 }
 
-async function run(registry: { id: string; surplus: number }[], prefs: Record<string, ClubPrefs>, templates: Template[]) {
-  const ids = [...CRAFT_CLUBS.map((c) => ({ id: c.id, size: Number.MAX_SAFE_INTEGER })), ...registry.map((c) => ({ id: c.id, size: c.surplus }))];
+/** `registry` kommer störst först. */
+async function run(registry: { id: string }[], prefs: Record<string, ClubPrefs>, templates: Template[]) {
+  const ids = [...CRAFT_CLUBS.map((c) => ({ id: c.id, size: Number.MAX_SAFE_INTEGER })), ...registry.map((c, i) => ({ id: c.id, size: registry.length - i }))];
   const checked: Checked[] = [];
   const batch = 24;
   for (let i = 0; i < ids.length; i += batch) {

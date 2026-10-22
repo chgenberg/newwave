@@ -269,7 +269,12 @@ export function DesignStudio({
   const activeSpot = spots.find((s) => s.key === active);
   const clash = activeSpot ? spots.find((s) => s.key !== active && zonesClash(product, activeSpot, s)) : undefined;
   const clashNote = clash ? <p className="cz-warn">Krockar med {clash.label.toLowerCase()} – välj en annan placering eller gör trycket mindre.</p> : null;
+  /** Bilaga 2-produkter har fasta tryckytor; när alla är använda finns ingen plats för ett tryck till. */
+  const full = locked && zones.every((z) => placed.some((s) => s.zone === z.id));
+  const canAdd = (design.extra?.length ?? 0) < 3 && !full;
+  const noRoom = () => say(full ? "Alla tryckytor enligt Bilaga 2 är använda" : "Max fyra tryck per produkt");
   const addPosition = () => {
+    if (!canAdd) return noRoom();
     const zone = freeZone(product, placed);
     const next = fitPlacement(product, { method: design.method, colors: design.colors, shape: "original", zone: zone.id, sizeCm: zone.sizeCm ?? design.sizeCm });
     const extra = [...(design.extra ?? []), next];
@@ -323,7 +328,7 @@ export function DesignStudio({
 
   const duplicate = () => {
     if (onNames) return;
-    if ((design.extra?.length ?? 0) >= 3) return say("Max fyra tryck per produkt");
+    if (!canAdd) return noRoom();
     const zone = freeZone(product, placed);
     const copy = fitPlacement(product, { method: cur.method, colors: cur.colors, shape: cur.shape, sizeCm: cur.sizeCm, zone: zone.id }, aspectOf(curKey));
     const extra = [...(design.extra ?? []), copy];
@@ -433,7 +438,7 @@ export function DesignStudio({
   const placeLayer = (key: string, p: { point: { x: number; y: number; z: number }; normal: { x: number; y: number; z: number } }) => {
     if (locked) {
       const among = key === "names" ? nameSpots : zones;
-      const id = api.current?.zoneAt([p.point.x, p.point.y, p.point.z], among);
+      const id = api.current?.zoneAt([p.point.x, p.point.y, p.point.z], [p.normal.x, p.normal.y, p.normal.z], among);
       const z = among.find((x) => x.id === id);
       if (z) moveTo(key, z, false);
       return;
@@ -549,7 +554,7 @@ export function DesignStudio({
           setActive(layerKeys[(i + (e.key === "]" ? 1 : n - 1)) % n]);
         });
       }
-      if (k === "n") return run(() => ((design.extra?.length ?? 0) >= 3 ? say("Max fyra tryck per produkt") : addPosition()));
+      if (k === "n") return run(addPosition);
       if (k === "m") return run(cycleMethod);
       if (k === "f") return run(cycleShape);
       if (k === "r") return run(() => api.current?.frame(active));
@@ -854,7 +859,7 @@ export function DesignStudio({
                       </button>
                     </span>
                   ) : null}
-                  {(design.extra?.length ?? 0) < 3 ? (
+                  {canAdd ? (
                     <button type="button" className="cz-tab-add" onClick={addPosition}>
                       + Position
                     </button>

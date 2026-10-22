@@ -6,7 +6,7 @@
  */
 type Pt = [number, number];
 /** Övre vänstra, övre högra, nedre högra och nedre vänstra hörnet, sett som loggan ska läsas. */
-type Quad = [Pt, Pt, Pt, Pt];
+export type Quad = [Pt, Pt, Pt, Pt];
 
 export type Surface = {
   cx: number;

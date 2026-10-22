@@ -107,7 +107,7 @@ export function createSuggestions(data: CraftData, calendar: CalendarItem[], now
   const planned = (c: CalendarItem) => data.campaigns.some((x) => x.occasion === c.occasion && Math.abs(ageDays(x.sendAt ?? x.createdAt, new Date(`${c.date}T12:00:00Z`).getTime())) <= 45);
   const gaps = calendar.filter((c) => ageDays(c.date, now) <= -10 && ageDays(c.date, now) >= -75 && !planned(c));
   const soon = data.campaigns.filter((c) => c.scheduled && c.sendAt && ageDays(c.sendAt, now) >= -14);
-  const active = data.rows.filter((r) => r.status !== "inaktiv").length;
+  const active = data.rows.filter((r) => r.status === "aktiv").length;
 
   return keep(data, [
     ...gaps.slice(0, 2).map((g) => ({

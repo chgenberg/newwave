@@ -1,7 +1,8 @@
 import { nwProduct } from "@/lib/newwave/catalog";
-import { defaultDesign, maxCmIn, type Method, methodsFor } from "@/lib/newwave/marking";
+import { artZone, maxCmIn, type Method, methodsFor } from "@/lib/newwave/marking";
 import { EXPORT_METHODS, wordmarkJob, wordmarkZip } from "@/lib/newwave/wordmark/printJob";
 import { parseWordmarkQuery } from "@/lib/newwave/wordmark/spec";
+import { isBackTemplate } from "@/lib/newwave/wordmark/templates";
 
 export const maxDuration = 120;
 
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const product = nwProduct(params.get("p") ?? "p001");
   const method = params.get("m") as Method;
   if (!q || !product || !EXPORT_METHODS.includes(method) || !methodsFor(product).includes(method)) return Response.json({ error: "Ogiltig förfrågan." }, { status: 400 });
-  const sizeCm = Math.min(maxCmIn(product, defaultDesign(product, method).zone, Infinity), Math.max(3, Math.round(Number(params.get("cm")) || 25)));
+  const sizeCm = Math.min(maxCmIn(product, artZone(product, method, isBackTemplate(q.template)), Infinity), Math.max(3, Math.round(Number(params.get("cm")) || 25)));
   const g = params.get("g") ?? "";
   const garment = /^#[0-9a-f]{6}$/i.test(g) ? g.toUpperCase() : product.garmentHex;
   const w = await wordmarkJob(q, product, method, sizeCm, garment);
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
     const { job } = w;
     return Response.json({
       method: job.methodLabel,
+      placement: job.placement,
       sizeMm: job.sizeMm.map(Math.round),
       inks: job.inks,
       facts: job.facts,

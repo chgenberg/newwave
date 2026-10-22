@@ -21,7 +21,6 @@ export type ClubItem = {
   municipality: string;
   sport: string;
   org: string;
-  surplus: number;
   url: string;
   host: string;
   platform?: string;
@@ -34,9 +33,11 @@ export type ClubItem = {
   at?: string;
 };
 
+/** Leadlistans siffror stannar på servern; de används bara för att ordna arbetet, aldrig i svaren. */
+type IndexItem = ClubItem & { surplus: number };
+
 export type ClubDetail = ClubItem & {
   orgNr: string;
-  envelopes: number;
   title?: string;
   siteName?: string;
   description?: string;
@@ -44,12 +45,10 @@ export type ClubDetail = ClubItem & {
   colorInfo?: { hex: string; source: string }[];
   fonts?: { heading: string; body: string };
   socialLinks?: Record<string, string>;
-  emails?: string[];
-  phones?: string[];
   shop?: string;
 };
 
-type Index = { builtAt: string; items: ClubItem[] };
+type Index = { builtAt: string; items: IndexItem[] };
 
 let cache: { mtime: number; index: Index; ids: Set<string> } | null = null;
 
@@ -93,7 +92,7 @@ export async function queryClubs(q: ClubQuery) {
   const base = index.items.filter(text);
   const inCounty = base.filter((c) => !q.county || c.county === q.county);
   const items = inCounty.filter((c) => !q.sport || c.sport === q.sport);
-  const order: Record<ClubQuery["sort"], (a: ClubItem, b: ClubItem) => number> = {
+  const order: Record<ClubQuery["sort"], (a: IndexItem, b: IndexItem) => number> = {
     size: (a, b) => b.surplus - a.surplus,
     name: (a, b) => a.name.localeCompare(b.name, "sv"),
     recent: (a, b) => (b.at ?? "").localeCompare(a.at ?? ""),
@@ -102,7 +101,10 @@ export async function queryClubs(q: ClubQuery) {
   const all = index.items;
   return {
     total: items.length,
-    items: [...items].sort(order[q.sort]).slice(q.offset, q.offset + q.limit),
+    items: [...items]
+      .sort(order[q.sort])
+      .slice(q.offset, q.offset + q.limit)
+      .map((c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "surplus")) as ClubItem),
     facets: { counties: count(base.filter((c) => !q.sport || c.sport === q.sport), "county"), sports: count(inCounty, "sport").slice(0, 40) },
     stats: { clubs: all.length, counties: new Set(all.map((c) => c.county).filter(Boolean)).size, sports: new Set(all.map((c) => c.sport).filter(Boolean)).size, builtAt: index.builtAt },
   };
@@ -151,6 +153,10 @@ type Source = { id: string; name: string; county: string; municipality: string; 
 let sources: Map<string, Source> | null = null;
 const loadSources = async () => new Map((JSON.parse(await readFile(path.join(CLUBS_DIR, "clubs.json"), "utf8").catch(() => "[]")) as Source[]).map((c) => [c.id, c]));
 
+const CONTACT = /(?:(?:tel(?:efon)?|mobil|e-?post|e-?mail|mail)\.?:?\s*)?(?:[\w.+-]+@[\w-]+(?:\.[\w-]+)+|(?:\+\d{2,3}|(?<!\d)0)\s?\d{1,3}(?:[\s-]*\d){5,9}(?!\d))/gi;
+/** Webbplatsernas texter utan e-postadresser och telefonnummer; kontaktuppgifterna visas aldrig. */
+const noContacts = (text?: string) => text?.replace(CONTACT, "").replace(/\s*([,;|·–-]\s*)+$/, "").replace(/\s{2,}/g, " ").trim() || undefined;
+
 export async function clubDetail(id: string): Promise<ClubDetail | null> {
   if (!(await isListed(id))) return null;
   sources ??= await loadSources();
@@ -165,16 +171,14 @@ export async function clubDetail(id: string): Promise<ClubDetail | null> {
     sport: c.sport,
     org: c.org,
     orgNr: c.orgNr,
-    surplus: c.surplus,
-    envelopes: c.envelopes,
     at: s.at,
     url: web(s.url) ?? "",
     host: s.host,
     platform: s.platform,
     confidence: s.confidence,
-    title: s.title,
+    title: noContacts(s.title),
     siteName: s.siteName,
-    description: s.description,
+    description: noContacts(s.description),
     onDark: Boolean(s.logo?.onDark),
     hero: s.hero,
     colors: s.colors.map((x: { hex: string }) => x.hex),
@@ -183,8 +187,6 @@ export async function clubDetail(id: string): Promise<ClubDetail | null> {
     fonts: s.fonts,
     socialLinks: Object.fromEntries(Object.entries((s.socials ?? {}) as Record<string, unknown>).flatMap(([k, v]) => (web(v) ? [[k, web(v)!]] : []))),
     socials: Object.keys(s.socials ?? {}),
-    emails: s.emails,
-    phones: s.phones,
     shop: web(s.shop),
     founded: s.founded,
   };

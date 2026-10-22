@@ -236,6 +236,11 @@ export function freeZone(p: NwProduct, placed: Spot[], prefer?: string) {
   return zones.find((z) => z.id === prefer && fits(z)) ?? zones.find(fits) ?? zones.find((z) => !used.has(z.id)) ?? zones[0];
 }
 
+/** Ytan ett motiv trycks i: ryggen för ett ryggmotiv när produkten har en rygg som tillåter metoden, annars standardytan. */
+export function artZone(p: NwProduct, method: Method, back = false) {
+  return back && zonesFor(p).some((z) => z.id === "rygg") && zoneMethods(p, "rygg").includes(method) ? "rygg" : defaultDesign(p, method).zone;
+}
+
 /** Standarddesignen i huvudzonen; med `method` i första zonen som tillåter metoden. */
 export function defaultDesign(p: NwProduct, method?: Method): Design {
   const zones = zonesFor(p);
@@ -342,7 +347,16 @@ export function sanitizeDesign(p: NwProduct, raw: unknown): Design | undefined {
   const main = cleanPlacement(p, raw);
   if (!main) return undefined;
   const d = raw as Partial<Design>;
-  const extra = (Array.isArray(d.extra) ? d.extra : []).slice(0, 3).map((x) => cleanPlacement(p, x)).filter((x): x is Placement => Boolean(x));
+  // Bilaga 2-ytorna rymmer ett tryck var; ett andra tryck i samma yta skulle ligga ovanpå det första.
+  const used = new Set([main.zone]);
+  const extra = (Array.isArray(d.extra) ? d.extra : [])
+    .slice(0, 3)
+    .map((x) => cleanPlacement(p, x))
+    .filter((x): x is Placement => {
+      if (!x || (isLocked(p) && used.has(x.zone))) return false;
+      used.add(x.zone);
+      return true;
+    });
   const n = d.names;
   const list = n && Array.isArray(n.list) ? n.list.map((s) => String(s).trim().slice(0, 30)).filter(Boolean).slice(0, 2000) : [];
   const names = list.length && n ? fitNames(p, { list, zone: String(n.zone ?? "rygg"), sizeCm: Number(n.sizeCm) || 8, point: vec(n.point), normal: vec(n.normal) }) : undefined;

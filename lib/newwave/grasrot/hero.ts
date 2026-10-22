@@ -1,9 +1,10 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { toFile } from "openai";
 import sharp from "sharp";
 import { IMAGE_MODEL, openai } from "@/lib/openai";
 import { grasrotClub } from "./clubs";
+import { heroMarks, marksFile, stampMarks } from "./heroMarks";
 import { productMockup } from "./mockup";
 import { featuredColor, GRASROT_PRODUCTS, type ProductColor, type ProductId } from "./products";
 import { grasrotWordmark } from "./wordmark";
@@ -11,8 +12,8 @@ import { grasrotWordmark } from "./wordmark";
 /**
  * Herobilden: föreningens produkter på klubbstugans veranda under sommarfesten. Bildmodellen fotograferar scenen med
  * webbshopens produktbilder som förlaga, så att plaggfärgerna och trycket är desamma som i butiken. Bilden tas en gång
- * per förening med scripts/grasrot-hero.ts och märkena granskas innan den committas; tryckfilerna och produktbilderna
- * ritas aldrig av bildmodellen.
+ * per förening med scripts/grasrot-hero.ts. Bildmodellens klubbmärken byts sedan mot tryckfilernas (se heroMarks.ts);
+ * tryckfilerna och produktbilderna ritas aldrig av bildmodellen.
  */
 
 export const HERO_SIZE: [number, number] = [1920, 1080];
@@ -26,11 +27,24 @@ async function heroColors(id: string): Promise<HeroInfo["colors"] | null> {
   return Object.fromEntries(GRASROT_PRODUCTS.map((p) => [p.id, featuredColor(p, wordmark.colors[0])]));
 }
 
+const stamped = new Map<string, Promise<Buffer>>();
+
 /** Herobilden som JPEG i 1920 × 1080, och vilka färger produkterna har; null tills föreningens bild är tagen. */
 export async function heroImage(id: string): Promise<{ jpg: Buffer; info: HeroInfo } | null> {
-  const [jpg, colors] = await Promise.all([readFile(heroFile(id)).catch(() => null), heroColors(id)]);
-  return jpg && colors ? { jpg, info: { colors } } : null;
+  const [photo, marks, colors] = await Promise.all([stat(heroFile(id)).catch(() => null), stat(marksFile(id)).catch(() => null), heroColors(id)]);
+  if (!photo || !colors) return null;
+  const key = `${id}:${photo.mtimeMs}:${marks?.mtimeMs ?? 0}`;
+  let jpg = stamped.get(key);
+  if (!jpg) {
+    jpg = Promise.all([readFile(heroFile(id)), heroMarks(id)]).then(([src, list]) => stampMarks(src, id, GRASROT_PRODUCTS, colors, list));
+    jpg.catch(() => stamped.get(key) === jpg && stamped.delete(key));
+    stamped.set(key, jpg);
+  }
+  return { jpg: await jpg, info: { colors } };
 }
+
+/** Bildmodellens foto, innan märkena byts. */
+export const heroPhoto = (id: string) => readFile(heroFile(id)).catch(() => null);
 
 const WHERE: Record<ProductId, string> = {
   hoodie: "hangs on a wooden hanger from the veranda beam, front facing the camera",

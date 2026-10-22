@@ -546,6 +546,7 @@ const RAW: TemplateInput[] = [
 ];
 
 export const TEMPLATES: Template[] = RAW.map((t) => TemplateSchema.parse(t));
+export const isBackTemplate = (id: string) => TEMPLATES.find((t) => t.id === id)?.style === "Rygg";
 
 const SMALL: Record<string, string> = { Skrivstil: "liten-skript", Emblem: "liten-emblem", Hockey: "liten-emblem", Jubileum: "liten-emblem" };
 /** Mallens version för små tryck: egen om mallen har en, annars stilens. */

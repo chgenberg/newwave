@@ -1,17 +1,19 @@
 import sharp from "sharp";
 import { pathString } from "@/lib/newwave/vector/path";
 import { type Flat, type Shape, toSvg } from "@/lib/newwave/vector/svg";
-import { grasrotClub } from "./clubs";
+import { genitive } from "@/lib/newwave/newsletterHtml";
+import { type GrasrotClub, grasrotClub } from "./clubs";
 import { emblemSet, NEGATIVE_INK } from "./emblem";
 import { heroImage } from "./hero";
 import { productMockup } from "./mockup";
-import { featuredColor, GRASROT_PRODUCTS, METHOD_TEXT } from "./products";
+import { featuredColor, GRASROT_PRODUCTS, type ProductColor, type ProductId } from "./products";
 import { textFlat } from "./scarf";
 import { grasrotWordmark } from "./wordmark";
 
 /**
  * Underlaget för sociala medier: herobilden först och sedan varje produkt, i flödets 4:5 och storyns 9:16. Text och
  * märken är vektor och produkterna samma bilder som webbshopen, så att inläggen visar exakt det som går att köpa.
+ * Storyns text och märken ligger inom Instagrams säkra yta (y 250–1670), utanför profilraden och svarsfältet.
  */
 
 export const SOCIAL_FORMATS = { feed: { w: 1080, h: 1350, label: "Flöde 4:5" }, story: { w: 1080, h: 1920, label: "Story 9:16" } } as const;
@@ -19,6 +21,20 @@ export type SocialFormat = keyof typeof SOCIAL_FORMATS;
 export type Slide = { name: string; title: string; jpg: Buffer };
 
 const PAPER = "#FFFFFF";
+/** Leverantörernas färgnamn på svenska; kepsarnas namn är redan svenska. */
+const COLOR_SV: Record<string, string> = {
+  "Ash Grey Melange": "Gråmelerad",
+  Birch: "Naturvit",
+  Navy: "Marinblå",
+  Black: "Svart",
+  Charcoal: "Koksgrå",
+  White: "Vit",
+  Silver: "Silver",
+  "Dark Red": "Mörkröd",
+  "Dark Blue": "Mörkblå",
+  "Light Blue": "Ljusblå",
+};
+export const colorSv = (c: ProductColor) => COLOR_SV[c.name] ?? c.name;
 const paths = (shapes: Shape[]) => shapes.map((s) => `<path d="${pathString(s.segs, 1)}" fill="${s.fill}"${s.rule === "evenodd" ? ' fill-rule="evenodd"' : ""}/>`).join("");
 /** Vektorn inpassad i rutan, centrerad. */
 const place = (flat: Flat, x: number, y: number, w: number, h: number) =>
@@ -45,18 +61,18 @@ export async function socialSlides(id: string, format: SocialFormat, only?: stri
   const base = negativ.colors[0];
   const open = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
-  const heroH = story ? 760 : 620;
-  const markH = story ? 470 : 330;
-  const top = story ? 200 : 70;
+  const markH = story ? 380 : 330;
+  const top = story ? 270 : 70;
   const slides: Slide[] = [];
   if (!only || only === slideName(0, "herobild")) {
     const first = [
       open,
       `<rect width="${W}" height="${H}" fill="${base}"/>`,
       place(negativ.flat, 140, top, W - 280, markH),
-      image(hero.jpg, 0, top + markH + (story ? 90 : 50), W, heroH, true),
-      await text("Klubbkollektionen", "archivo-black", 90, H - (story ? 330 : 205), W - 180, story ? 78 : 64, NEGATIVE_INK),
-      await text(`Gräsrot 360 · ${club.name}`, "oswald-bold", 90, H - (story ? 220 : 120), W - 180, story ? 46 : 40, NEGATIVE_INK),
+      // Storyn visar hela fotot (1920 × 1080 blir 1080 × 608); flödet beskär det knappt.
+      image(hero.jpg, 0, top + markH + (story ? 80 : 50), W, story ? 608 : 620, !story),
+      await text("Klubbkollektionen", "archivo-black", 90, story ? 1400 : H - 205, W - 180, story ? 78 : 64, NEGATIVE_INK),
+      await text(`Nu i klubbshoppen · ${club.name}`, "oswald-bold", 90, story ? 1515 : H - 120, W - 180, story ? 46 : 40, NEGATIVE_INK),
       "</svg>",
     ].join("");
     slides.push({ name: slideName(0, "herobild"), title: "Herobild", jpg: await render(first) });
@@ -68,18 +84,17 @@ export async function socialSlides(id: string, format: SocialFormat, only?: stri
     const color = featuredColor(p, base);
     const mock = await productMockup(id, p, color, 90);
     if (!mock) continue;
-    const size = story ? 1000 : 920;
-    const y = story ? 300 : 150;
-    const design = p.design(color);
-    const sub = p.id === "halsduk" ? `110 × 15 cm · ${METHOD_TEXT[design.method]}` : `${color.name} · ${METHOD_TEXT[design.method]}`;
+    const size = story ? 960 : 920;
+    const y = story ? 400 : 150;
+    const sub = `${p.id === "halsduk" ? "Vävd · 110 × 15 cm" : colorSv(color)} · Beställ i klubbshoppen`;
     const svg = [
       open,
       `<rect width="${W}" height="${H}" fill="${PAPER}"/>`,
       image(mock, (W - size) / 2, y, size, size),
-      place(set.original, 60, story ? 110 : 40, 96, 96),
-      await text("Gräsrot 360", "oswald-bold", W - 380, story ? 140 : 70, 320, 34, base),
-      await text(p.short, "archivo-black", 90, y + size + (story ? 120 : 40), W - 180, story ? 96 : 76, base),
-      await text(sub, "oswald-bold", 90, y + size + (story ? 250 : 136), W - 180, story ? 44 : 36, "#5B5B57"),
+      place(set.original, 60, story ? 270 : 40, 96, 96),
+      await text("Gräsrot 360", "oswald-bold", W - 380, story ? 300 : 70, 320, 34, base),
+      await text(p.short, "archivo-black", 90, y + size + 40, W - 180, story ? 90 : 76, base),
+      await text(sub, "oswald-bold", 90, y + size + (story ? 150 : 136), W - 180, story ? 44 : 36, "#5B5B57"),
       `<rect x="0" y="${H - 14}" width="${W}" height="14" fill="${base}"/>`,
       "</svg>",
     ].join("");
@@ -87,3 +102,26 @@ export async function socialSlides(id: string, format: SocialFormat, only?: stri
   }
   return slides;
 }
+
+const PRODUCT_TEXT: Record<ProductId, (club: GrasrotClub) => string> = {
+  tshirt: (club) => `T-shirten med ${genitive(club.name)} ordmärke, screentryckt på bröstet. Loose fit i fem färger.`,
+  hoodie: (club) => `Hoodien med klubbmärket på bröstet – för kalla kvällar ${club.sport === "Innebandy" ? "i hallen" : "vid planen"}. Loose fit i fem färger.`,
+  keps: () => "Washed cap med broderat klubbmärke. Tio färger att välja mellan, några med kontrastskärm.",
+  flaska: () => "Termosflaskan på 500 ml med klubbmärket – tryckt på de ljusa flaskorna, lasergraverat på de mörka. Kaffet håller sig varmt hela matchen.",
+  halsduk: () => "Den vävda halsduken i klubbens färger, 110 × 15 cm. Läktarens viktigaste plagg.",
+};
+
+/** En färdig bildtext till varje inlägg, i samma ordning som bilderna. */
+export function captions(club: GrasrotClub): { slide: string; text: string }[] {
+  const tags = `#${club.name.replace(/\s+/g, "")} #Gräsrot360`;
+  const cta = "Beställ i klubbshoppen – länk i bion.";
+  return [
+    { slide: SOCIAL_SLIDES[0], text: `Sommarfest vid klubbstugan – och nu finns ${genitive(club.name)} klubbkollektion i klubbshoppen: t-shirt, hoodie, keps, termosflaska och halsduk. Varje köp stöttar föreningen. ${cta} ${tags}` },
+    ...GRASROT_PRODUCTS.map((p, i) => ({ slide: SOCIAL_SLIDES[i + 1], text: `${PRODUCT_TEXT[p.id](club)} ${cta} ${tags}` })),
+  ];
+}
+
+export const captionText = (club: GrasrotClub) =>
+  `${club.name} – bildtexter till inläggen\n\n${captions(club)
+    .map((c) => `${c.slide}\n${c.text}`)
+    .join("\n\n")}\n`;

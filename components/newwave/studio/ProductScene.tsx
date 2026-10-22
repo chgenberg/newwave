@@ -43,7 +43,7 @@ export type SceneApi = {
   /** Turn the camera back to the selected print. */
   frame: (key: string) => void;
   /** The zone among `zones` whose print position lies nearest a point on the product. */
-  zoneAt: (point: [number, number, number], zones: Zone[]) => string | null;
+  zoneAt: (point: [number, number, number], normal: [number, number, number], zones: Zone[]) => string | null;
   /** Turn the camera to the front, the back or a three-quarter view of the product. */
   view: (side: View) => void;
   /** One slow turn around the product, recorded as a video clip; null when the browser cannot record. */
@@ -254,11 +254,14 @@ function Product(props: Props & { object: THREE.Object3D }) {
       frame: (key) => {
         turnTo(key);
       },
-      zoneAt: (at, among) => {
+      zoneAt: (at, normal, among) => {
         const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
         const point = new THREE.Vector3(...at);
+        const n = new THREE.Vector3(...normal);
+        // Bara zoner på sidan som klickades; annars kan ett klick vid kragen hamna på ryggen.
+        const facing = among.filter((z) => new THREE.Vector3(...z.dir).dot(n) > 0);
         let best: { id: string; d: number } | null = null;
-        for (const z of among) {
+        for (const z of facing.length ? facing : among) {
           const hit = zoneRay(z, size).intersectObjects(meshes, false)[0];
           const d = hit ? hit.point.distanceTo(point) : Infinity;
           if (d < (best?.d ?? Infinity)) best = { id: z.id, d };

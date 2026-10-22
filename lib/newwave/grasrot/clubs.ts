@@ -19,25 +19,27 @@ export type GrasrotClub = {
   site: string;
   /** Klubbens id i klubbregistret, där webbplatsen, färgerna och kanalerna skrapats. */
   registry?: string;
-  /** Var märket kom ifrån. */
-  source: { from: string; note?: string };
+  /** Var märket kom ifrån, och om det inte är föreningens rätta märke: varför och vad som behövs. */
+  source: { from: string; wrong?: string };
   /** Ordmärkets två rader, när den automatiska uppdelningen inte är den klubben använder. */
   words?: { caps: string; script: string };
   /** Kulörer som klubben eller New Wave Group angett; saknas = förslag från märket som klubben bekräftar. */
   colors?: GrasrotColor[];
+  /** Var de angivna kulörerna kommer ifrån, t.ex. Bilaga 1. */
+  colorsFrom?: string;
 };
 
 export const GRASROT_CLUBS: GrasrotClub[] = [
-  { id: "arbra-bk", name: "Arbrå BK", city: "Arbrå", sport: "Fotboll", site: "https://www.arbrabk.se", registry: "arbra-bk", source: { from: "svenskalag.se, 200 px" } },
-  { id: "byttorps-if", name: "Byttorps IF", city: "Borås", sport: "Fotboll", site: "https://byttorpsif.se", registry: "byttorps-if", source: { from: "laget.se, 300 px" } },
+  { id: "arbra-bk", name: "Arbrå BK", city: "Arbrå", sport: "Fotboll", site: "https://www.arbrabk.se", registry: "arbra-bk", source: { from: "svenskalag.se" } },
+  { id: "byttorps-if", name: "Byttorps IF", city: "Borås", sport: "Fotboll", site: "https://byttorpsif.se", registry: "byttorps-if", source: { from: "laget.se" } },
   {
     id: "farsta-ibk",
-    name: "Farsta IBK",
+    name: "Farsta Sharks IBK",
     city: "Stockholm",
     sport: "Innebandy",
     site: "https://www.farstaibk.se",
     registry: "farsta-ibk",
-    source: { from: "svenskalag.se, 200 px" },
+    source: { from: "svenskalag.se" },
     words: { caps: "Farsta", script: "Sharks" },
   },
   {
@@ -46,20 +48,20 @@ export const GRASROT_CLUBS: GrasrotClub[] = [
     city: "Malmö",
     sport: "Fotboll",
     site: "https://lillatorgff.se",
-    source: { from: "lillatorgff.se (lilla-torg-ff-logo-orginal.png), 784 px" },
+    source: { from: "lillatorgff.se" },
     words: { caps: "FF", script: "Lilla Torg" },
   },
-  { id: "hisingsbacka-fc", name: "Hisingsbacka FC", city: "Göteborg", sport: "Fotboll", site: "https://www.hbfc.se", registry: "hisingsbacka-fc", source: { from: "svenskalag.se, 200 px" } },
+  { id: "hisingsbacka-fc", name: "Hisingsbacka FC", city: "Göteborg", sport: "Fotboll", site: "https://www.hbfc.se", registry: "hisingsbacka-fc", source: { from: "svenskalag.se" } },
   {
     id: "if-hallby",
     name: "IF Hallby",
     city: "Jönköping",
     sport: "Fotboll",
     site: "https://hallbyfotboll.se",
-    source: { from: "hallbyfotboll.se, 1009 px", note: "Fotbollssektionens märke med texten FOTBOLL – huvudföreningens märke behövs" },
+    source: { from: "hallbyfotboll.se", wrong: "Fotbollssektionens märke med texten FOTBOLL – huvudföreningens originalmärke behövs för tryck" },
   },
-  { id: "if-warta", name: "IF Warta", city: "Göteborg", sport: "Fotboll", site: "https://ifwarta.se", registry: "if-warta", source: { from: "ifwarta.se, 271 px" } },
-  { id: "ik-ymer", name: "IK Ymer", city: "Borås", sport: "Fotboll", site: "https://ikymer.se", registry: "ik-ymer", source: { from: "ikymer.se, 343 px" } },
+  { id: "if-warta", name: "IF Warta", city: "Göteborg", sport: "Fotboll", site: "https://ifwarta.se", registry: "if-warta", source: { from: "ifwarta.se" } },
+  { id: "ik-ymer", name: "IK Ymer", city: "Borås", sport: "Fotboll", site: "https://ikymer.se", registry: "ik-ymer", source: { from: "ikymer.se" } },
   {
     id: "saro-kullavik-if",
     name: "Särö Kullavik IF",
@@ -68,12 +70,16 @@ export const GRASROT_CLUBS: GrasrotClub[] = [
     site: "https://www.skif.nu",
     source: { from: "New Wave Group, Gräsrot 360 – Bilaga 1 (vektor, original, solid och negativ)" },
     words: { caps: "Särö", script: "Kullavik" },
+    colorsFrom: "Bilaga 1",
     colors: [
       { hex: "#0E467B", pantone: "PANTONE 2738 C", cmyk: [100, 50, 0, 40] },
       { hex: "#23A355", pantone: "PANTONE 2419 C", cmyk: [85, 0, 85, 10] },
     ],
   },
-  { id: "asa-if", name: "Åsa IF", city: "Åsa", sport: "Fotboll", site: "https://asaif.com", registry: "asa-if", source: { from: "asaif.com, 991 px" } },
+  { id: "asa-if", name: "Åsa IF", city: "Åsa", sport: "Fotboll", site: "https://asaif.com", registry: "asa-if", source: { from: "asaif.com" } },
 ];
 
 export const grasrotClub = (id: string) => GRASROT_CLUBS.find((c) => c.id === id) ?? null;
+
+/** Varifrån kulören kommer, som den står i Craft-sidan och i paketet. */
+export const inkSource = (club: GrasrotClub, source: "profil" | "förslag") => (source === "förslag" ? "Förslag" : club.colorsFrom ? `Enligt ${club.colorsFrom}` : "Föreningens profil");

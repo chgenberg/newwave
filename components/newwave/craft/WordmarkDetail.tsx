@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { nwProduct } from "@/lib/newwave/catalog";
-import { defaultDesign, maxCmIn, METHOD_INFO, methodsFor } from "@/lib/newwave/marking";
+import { artZone, maxCmIn, METHOD_INFO, methodsFor } from "@/lib/newwave/marking";
 import { type SocialKind, SMALL_PRINT_CM, type WordmarkSpec, wordmarkExportUrl, wordmarkSocialUrl, wordmarkUrl } from "@/lib/newwave/wordmark/spec";
+import { isBackTemplate } from "@/lib/newwave/wordmark/templates";
 import type { LabClub } from "./WordmarkLab";
 
 type Ink = { hex: string; name: string; pantone: string; detail?: string };
-type Info = { method: string; sizeMm: number[]; inks: Ink[]; facts: { label: string; value: string }[]; notes: string[]; colors: number; prices: { qty: number; each: number; setup: number }[]; files: { name: string; label: string; format: string }[] };
+type Info = { method: string; placement: string; sizeMm: number[]; inks: Ink[]; facts: { label: string; value: string }[]; notes: string[]; colors: number; prices: { qty: number; each: number; setup: number }[]; files: { name: string; label: string; format: string }[] };
 
 const GARMENTS = [
   { product: "p001", label: "Vit t-shirt" },
@@ -33,9 +34,15 @@ export function WordmarkDetail({ spec, name, club, onClose }: { spec: WordmarkSp
   const methods = EXPORTS.filter((m) => methodsFor(product).includes(m));
   const [method, setMethod] = useState<string>("screentryck");
   const m = methods.find((x) => x === method) ?? methods[0];
-  const max = maxCmIn(product, defaultDesign(product, m).zone, Infinity);
+  const max = maxCmIn(product, artZone(product, m, isBackTemplate(spec.template)), Infinity);
   const [cm, setCm] = useState(25);
+  /** Det som står i fältet medan man skriver; bredden sätts först när fältet lämnas. */
+  const [draft, setDraft] = useState<string | null>(null);
   const size = Math.min(cm, max);
+  const commit = () => {
+    if (draft !== null) setCm(Math.max(3, Math.min(max, Number(draft.replace(",", ".")) || 3)));
+    setDraft(null);
+  };
   const opts = { method: m, product: garment, cm: size, garment: product.garmentHex };
   const infoUrl = wordmarkExportUrl(spec, club.id, { ...opts, info: true });
   const [info, setInfo] = useState<{ url: string; data: Info | null } | null>(null);
@@ -110,7 +117,16 @@ export function WordmarkDetail({ spec, name, club, onClose }: { spec: WordmarkSp
             </div>
             <label className="flex items-center gap-2 text-[13px] text-[var(--nw-muted)]">
               Bredd
-              <input type="number" min={3} max={max} value={size} onChange={(e) => setCm(Math.max(3, Math.min(max, Number(e.target.value) || 3)))} className="nw-input h-10 w-[76px]" />
+              <input
+                type="number"
+                min={3}
+                max={max}
+                value={draft ?? size}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => e.key === "Enter" && commit()}
+                className="nw-input h-10 w-[76px]"
+              />
               cm
             </label>
           </div>
@@ -138,7 +154,7 @@ export function WordmarkDetail({ spec, name, club, onClose }: { spec: WordmarkSp
                   <p className="text-[13px] text-[var(--nw-muted)]">Fyrfärg – inga separata färger.</p>
                 )}
                 <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12.5px]">
-                  {ready.facts.map((f) => (
+                  {[{ label: "Placering", value: ready.placement }, ...ready.facts].map((f) => (
                     <div key={f.label} className="contents">
                       <dt className="text-[var(--nw-muted)]">{f.label}</dt>
                       <dd className="text-[var(--nw-ink)]">{f.value}</dd>

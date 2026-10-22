@@ -3,23 +3,38 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GrasrotShop } from "@/components/newwave/grasrot/GrasrotShop";
-import { grasrotClub } from "@/lib/newwave/grasrot/clubs";
+import { CopyButton, PackageDownload } from "@/components/newwave/grasrot/PackageDownload";
+import { GRASROT_CLUBS, grasrotClub, inkSource } from "@/lib/newwave/grasrot/clubs";
 import { clubInks } from "@/lib/newwave/grasrot/colors";
 import { emblemSet, VARIANTS, type Variant } from "@/lib/newwave/grasrot/emblem";
 import { type Artwork, type Check, FILE_SET, FONT_CHECK, fileHref, fileName, printChecks, VARIANT_TEXT } from "@/lib/newwave/grasrot/files";
 import { heroImage } from "@/lib/newwave/grasrot/hero";
 import { GRASROT_PRODUCTS } from "@/lib/newwave/grasrot/products";
 import { shopProducts } from "@/lib/newwave/grasrot/shop";
-import { SOCIAL_FORMATS, SOCIAL_SLIDES, type SocialFormat } from "@/lib/newwave/grasrot/social";
+import { captions, colorSv, SOCIAL_FORMATS, SOCIAL_SLIDES, type SocialFormat } from "@/lib/newwave/grasrot/social";
 import type { ColorMode } from "@/lib/newwave/vector/write";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
-export const metadata: Metadata = { title: "Gräsrot 360 · Förening" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const club = grasrotClub((await params).id);
+  return { title: `Craft · Gräsrot 360 · ${club?.name ?? "Förening"}` };
+}
 
 const LABEL: Record<Variant, string> = { original: "Original", solid: "Solid", negativ: "Negativ" };
 const MODE: Record<ColorMode, string> = { spot: "Pantone", cmyk: "CMYK", rgb: "RGB" };
 const DOT: Record<Check["level"], string> = { ok: "bg-[#2E9E5B]", varning: "bg-[#E0A100]", stopp: "bg-[#D92D20]" };
+/** Leveransen i samma ordning som uppdraget: märke, kulörer, ordmärke, webbshop, herobild, sociala medier, produktion. */
+const SECTIONS = [
+  ["klubbmarke", "Klubbmärke"],
+  ["kulorer", "Kulörer"],
+  ["ordmarke", "Ordmärke"],
+  ["webbshop", "Webbshop"],
+  ["herobild", "Herobild"],
+  ["sociala-medier", "Sociala medier"],
+  ["produktion", "Produktion"],
+] as const;
+const section = "mt-10 scroll-mt-20";
 const link = "nw-hit font-medium text-[var(--nw-ink)] underline decoration-[var(--nw-line)] underline-offset-4 hover:decoration-[var(--nw-ink)]";
 
 function Tile({ id, name, artwork, variant, checks }: { id: string; name: string; artwork: Artwork; variant: Variant; checks: Check[] }) {
@@ -31,16 +46,19 @@ function Tile({ id, name, artwork, variant, checks }: { id: string; name: string
       </a>
     );
   };
+  const preview = (
+    <img src={fileHref(id, fileName(artwork, variant, "svg"))} alt={`${name} ${artwork === "ordmarke" ? "ordmärke" : "klubbmärke"}, ${LABEL[variant].toLowerCase()}`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-4" />
+  );
   return (
     <li className="flex min-w-0 flex-col rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-3">
-      <a
-        href={fileHref(id, fileName(artwork, variant, "svg"))}
-        target="_blank"
-        rel="noreferrer"
-        className={`relative block aspect-[4/3] overflow-hidden rounded-xl ${variant === "negativ" ? "bg-[var(--club)]" : "bg-[var(--nw-soft)]"}`}
-      >
-        <img src={fileHref(id, fileName(artwork, variant, "svg"))} alt={`${name} ${artwork === "ordmarke" ? "ordmärke" : "klubbmärke"}, ${LABEL[variant].toLowerCase()}`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-4" />
-      </a>
+      {/* Negativet är vitt på transparent och ser tomt ut öppnat för sig; det visas bara här, på klubbfärgen. */}
+      {variant === "negativ" ? (
+        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[var(--club)]">{preview}</div>
+      ) : (
+        <a href={fileHref(id, fileName(artwork, variant, "svg"))} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden rounded-xl bg-[var(--nw-soft)]">
+          {preview}
+        </a>
+      )}
       <p className="mt-3 text-[14px] font-semibold text-[var(--nw-ink)]">{LABEL[variant]}</p>
       <p className="text-[12.5px] text-[var(--nw-muted)]">{VARIANT_TEXT[variant].split(" – ")[1]}</p>
 
@@ -103,6 +121,8 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
   if (!shop) notFound();
   const { products, featured } = shop;
   const base = `/api/v1/newwave/grasrot/${id}`;
+  const at = GRASROT_CLUBS.findIndex((c) => c.id === id);
+  const [prev, next] = [GRASROT_CLUBS[(at + GRASROT_CLUBS.length - 1) % GRASROT_CLUBS.length], GRASROT_CLUBS[(at + 1) % GRASROT_CLUBS.length]];
 
   return (
     <div className="nw-page">
@@ -116,7 +136,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
       <p className="mt-2 flex gap-2 text-[14px] text-[var(--nw-ink)]">
         <span className={`mt-[7px] h-2 w-2 shrink-0 rounded-full ${DOT[quality]}`} aria-hidden />
         <span>
-          {set.quality.note}. <span className="text-[var(--nw-muted)]">Källa: {club.source.from}{club.source.note ? ` – ${club.source.note}` : ""}.</span>
+          {set.quality.note}. <span className="text-[var(--nw-muted)]">Källa: {club.source.from}.</span>
         </span>
       </p>
 
@@ -125,16 +145,22 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
           <p className="nw-club-heading text-[17px]">Hela leveransen i ett paket</p>
           <p className="mt-1 text-[13.5px] text-white/70">
             Klubbmärke och ordmärke ({FILE_SET.length} filer i Pantone, CMYK och RGB), kulörer som färgprover, webbshopens produktbilder i alla färger, herobilden, inlägg för sociala medier och produktionsunderlag per
-            leverantör – med en läs mig-fil. Första gången tar det en halv minut att bygga.
+            leverantör – med en läs mig-fil.
           </p>
         </div>
-        <a href={fileHref(id, "paket.zip")} download={`${id}-grasrot-360.zip`} className="nw-btn nw-club-btn shrink-0">
-          Ladda ner (zip)
-        </a>
+        <PackageDownload href={fileHref(id, "paket.zip")} name={`${id}-grasrot-360.zip`} />
       </div>
 
-      {artworks.map(({ artwork, title, text }) => (
-        <section key={artwork} className="mt-10">
+      <nav aria-label="Leveransen" className="mt-4 flex flex-wrap gap-2">
+        {SECTIONS.map(([anchor, label]) => (
+          <a key={anchor} href={`#${anchor}`} className="rounded-full border border-[var(--nw-line)] px-3 py-1 text-[13px] font-medium text-[var(--nw-ink)] hover:border-[var(--club)] hover:text-[var(--club)]">
+            {label}
+          </a>
+        ))}
+      </nav>
+
+      {artworks.slice(0, 1).map(({ artwork, title, text }) => (
+        <section key={artwork} id={artwork} className={section}>
           <h2 className="nw-club-heading text-[19px] text-[var(--club)]">{title}</h2>
           <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">{text}</p>
           <ul className="mt-4 grid gap-3 md:grid-cols-3">
@@ -145,7 +171,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
         </section>
       ))}
 
-      <section className="mt-10">
+      <section id="kulorer" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Kulörer</h2>
         <p className="mt-0.5 text-[13.5px] text-[var(--nw-muted)]">Färgerna i märket som tryckeriet behöver dem. Förslag bekräftas av föreningen innan serieproduktion.</p>
         <ul className="mt-4 divide-y divide-[var(--nw-line)] border-y border-[var(--nw-line)]">
@@ -158,25 +184,37 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
                 </p>
                 {i.note ? <p className="mt-0.5 text-[12.5px] text-[#8A5A00]">{i.note}</p> : null}
               </div>
-              <span className="shrink-0 rounded-full bg-[var(--nw-soft)] px-2.5 py-0.5 text-[12px] text-[var(--nw-ink)]">{i.source === "profil" ? "Föreningens profil" : "Förslag"}</span>
+              <span className="shrink-0 rounded-full bg-[var(--nw-soft)] px-2.5 py-0.5 text-[12px] text-[var(--nw-ink)]">{inkSource(club, i.source)}</span>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="mt-10">
+      {artworks.slice(1).map(({ artwork, title, text }) => (
+        <section key={artwork} id={artwork} className={section}>
+          <h2 className="nw-club-heading text-[19px] text-[var(--club)]">{title}</h2>
+          <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">{text}</p>
+          <ul className="mt-4 grid gap-3 md:grid-cols-3">
+            {VARIANTS.map((v) => (
+              <Tile key={v} id={id} name={club.name} artwork={artwork} variant={v} checks={checks[`${artwork}-${v}`]} />
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <section id="webbshop" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Webbshop – produkterna i Bilaga 2</h2>
         <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">
-          Ensamstående klubbmärke eller ordmärke på varje produkt, i leverantörens färger. Varianten följer plaggfärgen: original på ljust, vitt på mörkt, gravyr på lackade flaskor. Vrid produkten i 3D eller se fotot.
+          Ensamstående klubbmärke eller ordmärke på varje produkt, i leverantörens färger. T-shirtens ordmärke är i klubbens färger på ljusa plagg och vitt på mörka; hoodien och kepsen har märket i original på alla färger; flaskan trycks på ljusa och graveras på mörka. Vrid produkten i 3D eller se fotot.
         </p>
         <GrasrotShop id={id} products={products} featured={featured} />
       </section>
 
-      <section className="mt-10">
+      <section id="herobild" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Herobild</h2>
         <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">
           Produkterna på klubbstugans veranda under sommarfesten, i de färger ur sortimentet som ligger närmast föreningens
-          {hero ? `: ${GRASROT_PRODUCTS.filter((p) => p.id !== "halsduk" && hero.info.colors[p.id]).map((p) => `${p.short.toLowerCase()} i ${hero.info.colors[p.id].name}`).join(", ")}` : ""}. Fotot är taget av bildmodellen med webbshopens produktbilder som förlaga; tryckfilerna och produktbilderna är exakta.
+          {hero ? `: ${GRASROT_PRODUCTS.filter((p) => p.id !== "halsduk" && hero.info.colors[p.id]).map((p) => `${p.short.toLowerCase()} i ${colorSv(hero.info.colors[p.id]).toLowerCase()}`).join(", ")}` : ""}. Miljön är skapad av bildmodellen med webbshopens produktbilder som förlaga; klubbmärkena på produkterna är lagda från tryckfilerna.
         </p>
         <a href={`${base}/herobild.jpg`} target="_blank" rel="noreferrer" className="mt-4 block overflow-hidden rounded-[var(--nw-radius)] ring-1 ring-[var(--nw-line)]">
           <img src={`${base}/herobild.jpg`} alt={`${club.name}s produkter på klubbstugans veranda`} className="aspect-video w-full object-cover" />
@@ -186,9 +224,9 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
         </a>
       </section>
 
-      <section className="mt-10">
+      <section id="sociala-medier" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Sociala medier</h2>
-        <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">Herobilden följd av varje produkt, för flödet och för stories.</p>
+        <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">Herobilden följd av varje produkt, för flödet och för stories – med en färdig bildtext till varje inlägg. Klicka på en bild för full storlek.</p>
         {(Object.keys(SOCIAL_FORMATS) as SocialFormat[]).map((f) => (
           <div key={f} className="mt-4">
             <p className="text-[12.5px] font-medium text-[var(--nw-muted)]">
@@ -197,7 +235,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
             <ul className={`mt-2 grid gap-2 ${f === "feed" ? "grid-cols-3 md:grid-cols-6" : "grid-cols-3 sm:grid-cols-6"}`}>
               {SOCIAL_SLIDES.map((name) => (
                 <li key={name} className="min-w-0">
-                  <a href={`${base}/social-${f}-${name}.jpg?dl=1`} className="block overflow-hidden rounded-lg ring-1 ring-[var(--nw-line)]" aria-label={`Ladda ner ${name} (${SOCIAL_FORMATS[f].label})`}>
+                  <a href={`${base}/social-${f}-${name}.jpg`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg ring-1 ring-[var(--nw-line)]" aria-label={`Öppna ${name} (${SOCIAL_FORMATS[f].label})`}>
                     <img src={`${base}/social-${f}-${name}.jpg`} alt="" loading="lazy" className={`w-full object-cover ${f === "feed" ? "aspect-[4/5]" : "aspect-[9/16]"}`} />
                   </a>
                 </li>
@@ -205,9 +243,22 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
             </ul>
           </div>
         ))}
+        <p className="mt-6 text-[12.5px] font-medium text-[var(--nw-muted)]">Bildtexter</p>
+        <ol className="mt-2 divide-y divide-[var(--nw-line)] border-y border-[var(--nw-line)]">
+          {captions(club).map((c, i) => (
+            <li key={c.slide} className="flex items-start gap-3 py-2.5">
+              <span className="nw-mono w-6 shrink-0 pt-px text-[12px] text-[var(--nw-muted)]">{String(i + 1).padStart(2, "0")}</span>
+              <p className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-[var(--nw-ink)]">{c.text}</p>
+              <CopyButton text={c.text} />
+            </li>
+          ))}
+        </ol>
+        <a href={`${base}/bildtexter.txt?dl=1`} className={`${link} mt-2 inline-block text-[13px]`}>
+          Ladda ner bildtexterna (TXT)
+        </a>
       </section>
 
-      <section className="mt-10">
+      <section id="produktion" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Produktionsunderlag</h2>
         <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">
           Per produkt ett produktionsblad och filerna i det format metoden kräver, i exakt storlek: vektor med Pantone för screentryck, brodyr och gravyr, PNG i 300 dpi för transfer och digitaltryck.
@@ -228,6 +279,18 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
           Produktionsorder för alla produkter (CSV)
         </a>
       </section>
+
+      <nav aria-label="Föreningarna" className="mt-12 flex items-center justify-between gap-3 border-t border-[var(--nw-line)] pt-5 text-[14px]">
+        <Link href={`/newwave/craft/grasrot/${prev.id}`} className="min-w-0 truncate text-[var(--nw-muted)] hover:text-[var(--nw-ink)]">
+          ← {prev.name}
+        </Link>
+        <Link href="/newwave/craft/grasrot" className="shrink-0 text-[var(--nw-muted)] hover:text-[var(--nw-ink)]">
+          Alla föreningar
+        </Link>
+        <Link href={`/newwave/craft/grasrot/${next.id}`} className="min-w-0 truncate text-right font-medium text-[var(--nw-ink)] hover:underline">
+          {next.name} →
+        </Link>
+      </nav>
     </div>
   );
 }

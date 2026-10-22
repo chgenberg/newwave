@@ -1,26 +1,28 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import JSZip from "jszip";
 import type { ColorMode } from "@/lib/newwave/vector/write";
-import { type GrasrotClub, grasrotClub } from "./clubs";
+import { stored } from "./cache";
+import { type GrasrotClub, grasrotClub, inkSource } from "./clubs";
 import { type ClubInk, clubInks } from "./colors";
 import { emblemSet, VARIANTS } from "./emblem";
-import { ARTWORKS, FILE_SET, FONT_CHECK, printChecks, printFile, VARIANT_TEXT } from "./files";
+import { ARTWORKS, FILE_SET, FONT_CHECK, fileName, printChecks, printFile, VARIANT_TEXT } from "./files";
 import { heroImage } from "./hero";
 import { productMockup } from "./mockup";
 import { buildProductionFile, productionFiles, productionOrder, productionSheet } from "./production";
 import { GRASROT_PRODUCTS, METHOD_TEXT } from "./products";
-import { SOCIAL_FORMATS, type SocialFormat, socialSlides } from "./social";
+import { captionText, SOCIAL_FORMATS, SOCIAL_SLIDES, type SocialFormat, socialSlides } from "./social";
 
 /**
  * Hela leveransen till en förening som en zip: klubbmärket och ordmärket i alla varianter och färglägen, kulörerna,
  * webbshopens produktbilder i varje färg, herobilden, inläggen för sociala medier och produktionsunderlaget per
- * leverantör. Paketet byggs på en halv minut och sparas i produktion tills nästa version är ute.
+ * leverantör. Paketet byggs på en halv minut och sparas i produktion tills nästa version är ute. En fil som inte går
+ * att bygga stoppar inte paketet; den listas i LASMIG.txt.
  */
 
 const FOLDER: Record<ColorMode, string> = { spot: "pantone", cmyk: "cmyk", rgb: "rgb" };
 const SOCIAL_DIR: Record<SocialFormat, string> = { feed: "flode-4x5", story: "story-9x16" };
 const nn = (i: number) => String(i + 1).padStart(2, "0");
+/** Svensk tid; zip-formatet sparar tiden utan tidszon och JSZip skriver den i UTC. */
+const swedish = () => new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Stockholm" }) + " UTC");
 
 /** Adobe Swatch Exchange: kulörerna som dekorfärger med sina CMYK-värden, för Illustrator och InDesign. */
 export function swatches(inks: ClubInk[]): Buffer {
@@ -46,18 +48,19 @@ export function swatches(inks: ClubInk[]): Buffer {
   return Buffer.concat([head, ...blocks]);
 }
 
-function inkCsv(inks: ClubInk[]) {
-  const rows = [["Hex", "Pantone", "C", "M", "Y", "K", "Källa", "Anmärkning"], ...inks.map((i) => [i.hex, i.pantone, ...i.cmyk.map(String), i.source === "profil" ? "Föreningens profil" : "Förslag", i.note ?? ""])];
+function inkCsv(club: GrasrotClub, inks: ClubInk[]) {
+  const rows = [["Hex", "Pantone", "C", "M", "Y", "K", "Källa", "Anmärkning"], ...inks.map((i) => [i.hex, i.pantone, ...i.cmyk.map(String), inkSource(club, i.source), i.note ?? ""])];
   return `\uFEFF${rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\r\n")}\r\n`;
 }
 
 /** Läs mig-filen: vad som finns var, kulörerna och det som måste åtgärdas innan tryck. */
-async function readme(club: GrasrotClub, inks: ClubInk[]): Promise<string> {
+async function readme(club: GrasrotClub, inks: ClubInk[], failed: string[]): Promise<string> {
   const set = await emblemSet(club.id)!;
   const lines = [
     `${club.name} – Gräsrot 360`,
-    `Leverans från Next Wave, ${new Date().toISOString().slice(0, 10)}`,
+    `Leverans från Next Wave, ${swedish().toISOString().slice(0, 10)}`,
     "",
+    ...(failed.length ? ["SAKNAS I DEN HÄR LEVERANSEN – kunde inte byggas, hämta dem på nytt från Next Wave:", ...failed.map((f) => `  ${f}`), ""] : []),
     "MAPPAR",
     "  01-klubbmarke/, 02-ordmarke/  Märket och ordmärket i tre varianter:",
     "      pantone/  PDF och EPS med Pantone-dekorfärger – screentryck, transfer, brodyr och gravyr.",
@@ -66,8 +69,10 @@ async function readme(club: GrasrotClub, inks: ClubInk[]): Promise<string> {
     "      Vektorfilerna har texten konverterad till kurvor, är 100 mm breda och skalbara utan kvalitetsförlust.",
     "  03-kulorer/       Kulörerna som CSV och som färgprover (.ase) för Illustrator och InDesign.",
     "  04-webbshop/      Produkterna i Bilaga 2 med föreningens grafik, en bild per färg.",
-    "  05-herobild/      Produkterna på klubbstugans veranda under sommarfesten, 1920 × 1080.",
-    "  06-sociala-medier/ Herobilden följd av varje produkt: flöde 4:5 (1080 × 1350) och story 9:16 (1080 × 1920).",
+    "  05-herobild/      Produkterna på klubbstugans veranda under sommarfesten, 1920 × 1080. Miljön är skapad med",
+    "                    bildmodellen; klubbmärkena på produkterna är lagda från tryckfilerna.",
+    "  06-sociala-medier/ Herobilden följd av varje produkt: flöde 4:5 (1080 × 1350) och story 9:16 (1080 × 1920),",
+    "                    och bildtexter.txt med en färdig text till varje inlägg.",
     "  07-produktion/    Per produkt ett produktionsblad (PDF) och tryckfilerna i exakt storlek i metodens format,",
     "                    och produktionsorder.csv över alla placeringar.",
     "",
@@ -77,20 +82,21 @@ async function readme(club: GrasrotClub, inks: ClubInk[]): Promise<string> {
     "PRODUKTER",
     ...GRASROT_PRODUCTS.map((p) => {
       const d = p.design(p.colors[0]);
-      return `  ${p.short.padEnd(13)} ${p.name} (${p.supplier}) – ${d.art === "halsduk" ? "egen design" : d.art}, ${METHOD_TEXT[d.method].toLowerCase()}`;
+      const methods = [...new Set(p.colors.map((c) => METHOD_TEXT[p.design(c).method].toLowerCase()))].join(" eller ");
+      return `  ${p.short.padEnd(13)} ${p.name} (${p.supplier}) – ${d.art === "halsduk" ? "egen design" : d.art}, ${methods}`;
     }),
     "  Tryckytorna är Bilaga 2:s. Bilagan anger inga mått; måtten är uppmätta på bilagans ritning i storlek M",
     "  (kepsen: brodyrens standardyta). Bekräfta mot leverantörens mall.",
     "",
     "KLUBBMÄRKET",
-    `  Källa: ${club.source.from}${club.source.note ? ` – ${club.source.note}` : ""}`,
+    `  Källa: ${club.source.from}`,
     `  ${set.quality.note}`,
     "",
     "ORDMÄRKET",
     `  ${FONT_CHECK.text}`,
     "",
     "KULÖRER",
-    ...inks.map((i) => `  ${i.hex}  ${i.pantone.padEnd(18)} CMYK ${i.cmyk.join("/").padEnd(14)} ${i.source === "profil" ? "klubbens profil" : "förslag – bekräftas av klubben"}${i.note ? `\n      ! ${i.note}` : ""}`),
+    ...inks.map((i) => `  ${i.hex}  ${i.pantone.padEnd(18)} CMYK ${i.cmyk.join("/").padEnd(14)} ${i.source === "profil" ? inkSource(club, i.source).toLowerCase() : "förslag – bekräftas av klubben"}${i.note ? `\n      ! ${i.note}` : ""}`),
     "",
     "FÖRHANDSKONTROLL (Pantone-filerna)",
   ];
@@ -103,71 +109,60 @@ async function readme(club: GrasrotClub, inks: ClubInk[]): Promise<string> {
   return `${lines.join("\n")}\n`;
 }
 
-async function build(id: string, club: GrasrotClub): Promise<Buffer> {
+async function build(id: string, club: GrasrotClub): Promise<{ data: Buffer; failed: string[] }> {
   const zip = new JSZip();
   const root = zip.folder(`${id}-grasrot-360`)!;
+  const date = swedish();
+  const failed: string[] = [];
+  /** Lägger filen i paketet; går den inte att bygga listas den i LASMIG.txt i stället. */
+  const add = async (name: string, make: () => Promise<Buffer | string | null | undefined>) => {
+    try {
+      const data = await make();
+      if (data) root.file(name, data, { date });
+      else failed.push(name);
+    } catch (err) {
+      console.error("[grasrot] paketfil", id, name, err);
+      failed.push(name);
+    }
+  };
+
   const inks = await clubInks(id);
-  root.file("LASMIG.txt", await readme(club, inks));
-  for (const f of FILE_SET) {
-    const file = await printFile(id, f.artwork, f);
-    if (file) root.file(`${f.artwork === "klubbmarke" ? "01" : "02"}-${f.artwork}/${FOLDER[f.mode ?? "rgb"]}/${file.name}`, file.data);
-  }
-  root.file("03-kulorer/kulorer.csv", inkCsv(inks));
-  root.file(`03-kulorer/${id}-kulorer.ase`, swatches(inks));
+  for (const f of FILE_SET)
+    await add(`${f.artwork === "klubbmarke" ? "01" : "02"}-${f.artwork}/${FOLDER[f.mode ?? "rgb"]}/${id}-${fileName(f.artwork, f.variant, f.format, f.mode)}`, async () => (await printFile(id, f.artwork, f))?.data);
+  await add("03-kulorer/kulorer.csv", async () => inkCsv(club, inks));
+  await add(`03-kulorer/${id}-kulorer.ase`, async () => swatches(inks));
 
   for (const [i, p] of GRASROT_PRODUCTS.entries()) {
-    for (const c of p.colors) {
-      const jpg = await productMockup(id, p, c, 90);
-      if (jpg) root.file(`04-webbshop/${nn(i)}-${p.id}/${p.id}-${c.id}.jpg`, jpg);
-    }
+    for (const c of p.colors) await add(`04-webbshop/${nn(i)}-${p.id}/${p.id}-${c.id}.jpg`, () => stored(id, `mockup-${p.id}-${c.id}.jpg`, () => productMockup(id, p, c)));
     const dir = `07-produktion/${nn(i)}-${p.id}`;
-    const sheet = await productionSheet(id, p);
-    if (sheet) root.file(`${dir}/${p.id}-produktionsblad.pdf`, sheet);
-    for (const f of await productionFiles(id, p)) {
-      const file = await buildProductionFile(id, f);
-      if (file) root.file(`${dir}/${f.name}`, file.data);
-    }
+    await add(`${dir}/${p.id}-produktionsblad.pdf`, () => stored(id, `produktionsblad-${p.id}.pdf`, () => productionSheet(id, p)));
+    for (const f of await productionFiles(id, p)) await add(`${dir}/${f.name}`, () => stored(id, f.name, async () => (await buildProductionFile(id, f))?.data ?? null));
   }
-  root.file("07-produktion/produktionsorder.csv", await productionOrder(id));
+  await add("07-produktion/produktionsorder.csv", () => productionOrder(id));
 
-  const hero = await heroImage(id);
-  if (hero) root.file(`05-herobild/${id}-herobild.jpg`, hero.jpg);
+  await add(`05-herobild/${id}-herobild.jpg`, async () => (await heroImage(id))?.jpg);
   for (const format of Object.keys(SOCIAL_FORMATS) as SocialFormat[])
-    for (const s of (await socialSlides(id, format)) ?? []) root.file(`06-sociala-medier/${SOCIAL_DIR[format]}/${s.name}.jpg`, s.jpg);
+    for (const slide of SOCIAL_SLIDES)
+      await add(`06-sociala-medier/${SOCIAL_DIR[format]}/${slide}.jpg`, () => stored(id, `social-${format}-${slide}.jpg`, async () => (await socialSlides(id, format, slide))?.[0]?.jpg ?? null));
+  await add("06-sociala-medier/bildtexter.txt", async () => captionText(club));
 
-  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
+  root.file("LASMIG.txt", await readme(club, inks, failed), { date });
+  return { data: await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } }), failed };
 }
-
-const CACHE = path.join(process.cwd(), ".data", "newwave", "grasrot");
-/** Varje deploy bygger nya paket; utan commit-id (och under utveckling) byggs de om varje gång. */
-const SHA = process.env.RAILWAY_GIT_COMMIT_SHA;
-const VERSION = process.env.NODE_ENV === "production" && SHA ? SHA.slice(0, 12) : null;
-const running = new Map<string, Promise<Buffer>>();
 
 export async function grasrotPackage(id: string): Promise<{ data: Buffer; name: string } | null> {
   const club = grasrotClub(id);
   if (!club || !emblemSet(id)) return null;
-  const name = `${id}-grasrot-360.zip`;
-  const file = VERSION ? path.join(CACHE, `${id}-${VERSION}.zip`) : null;
-  if (file) {
-    const hit = await readFile(file).catch(() => null);
-    if (hit) return { data: hit, name };
-  }
-  let job = running.get(id);
-  const owner = !job;
-  if (!job) {
-    job = build(id, club);
-    running.set(id, job);
-  }
-  try {
-    const data = await job;
-    if (owner && file) {
-      await mkdir(CACHE, { recursive: true });
-      await writeFile(`${file}.tmp`, data);
-      await rename(`${file}.tmp`, file);
-    }
-    return { data, name };
-  } finally {
-    if (owner && running.get(id) === job) running.delete(id);
-  }
+  let complete = true;
+  const data = await stored(
+    id,
+    "paket.zip",
+    async () => {
+      const made = await build(id, club);
+      complete = !made.failed.length;
+      return made.data;
+    },
+    () => complete,
+  );
+  return data && { data, name: `${id}-grasrot-360.zip` };
 }

@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     q: (p.get("q") ?? "").slice(0, 80),
     county: (p.get("county") ?? "").slice(0, 40),
     sport: (p.get("sport") ?? "").slice(0, 60),
-    sort: pick(SORTS, p.get("sort"), "size"),
+    sort: pick(SORTS, p.get("sort"), "name"),
     offset: Math.max(0, Number(p.get("offset")) || 0),
     limit: Math.min(120, Math.max(1, Number(p.get("limit")) || 60)),
   });

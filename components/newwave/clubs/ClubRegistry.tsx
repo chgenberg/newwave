@@ -14,7 +14,6 @@ const API = "/api/v1/newwave/registry";
 const PAGE = 60;
 const num = new Intl.NumberFormat("sv-SE");
 const SORT = [
-  { id: "size", label: "Störst överskott" },
   { id: "name", label: "A–Ö" },
   { id: "recent", label: "Senast hämtade" },
   { id: "colors", label: "Efter färg" },
@@ -51,7 +50,7 @@ export function ClubRegistry() {
   const [q, setQ] = useState("");
   const [county, setCounty] = useState("");
   const [sport, setSport] = useState("");
-  const [sort, setSort] = useState<(typeof SORT)[number]["id"]>("size");
+  const [sort, setSort] = useState<(typeof SORT)[number]["id"]>("name");
   const [data, setData] = useState<Page | null>(null);
   const [items, setItems] = useState<ClubItem[]>([]);
   const [error, setError] = useState("");
@@ -351,8 +350,6 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
           ["Organisation", d.org],
           ["Organisationsnummer", d.orgNr],
           ["Grundad", d.founded ?? ""],
-          ["Överskott H20–V21", d.surplus ? `${num.format(d.surplus)} kr` : ""],
-          ["Kuvert H2025", d.envelopes ? num.format(d.envelopes) : ""],
         ] as [string, string][]
       ).filter(([, v]) => v)
     : [];
@@ -444,23 +441,6 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
                     </div>
                   ))}
               </div>
-            </Section>
-          )}
-
-          {d && ((d.emails?.length ?? 0) > 0 || (d.phones?.length ?? 0) > 0) && (
-            <Section title="Kontakt från webbplatsen">
-              <ul className="space-y-1 text-[13.5px]">
-                {d.emails?.map((e) => (
-                  <li key={e} className="truncate">
-                    {e}
-                  </li>
-                ))}
-                {d.phones?.map((p) => (
-                  <li key={p} className="tabular-nums">
-                    {p}
-                  </li>
-                ))}
-              </ul>
             </Section>
           )}
 

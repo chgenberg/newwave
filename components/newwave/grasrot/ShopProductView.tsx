@@ -12,7 +12,7 @@ export function ShopProductView({ id, product, featured, clubName, children }: {
   const cm = (mm: number) => (mm / 10).toLocaleString("sv-SE", { maximumFractionDigits: 1 });
   const details = [
     ["Produkt", `${product.name} · ${product.supplier}`],
-    ["Tryck", `${design.label} · ${design.methodText}`],
+    [product.id === "halsduk" ? "Tillverkning" : "Tryck", `${design.label} · ${design.methodText}`],
     ["Placering", `${design.zoneLabel}, ${cm(design.widthMm)} × ${cm(design.heightMm)} cm`],
     ["Kollektion", "Gräsrot 360 med New Wave Group"],
   ];

@@ -264,23 +264,6 @@ async function transfer(c: Ctx): Promise<MadeJob> {
   ];
   const facts: Fact[] = [c.size, { label: "Format", value: "PNG, 24 bitar med alfakanal" }, { label: "Film", value: "DTF, skrivs ut rättvänd" }, { label: "Vitt lager", value: "Skrivaren lägger vitt under allt" }];
   const notes = ["Pressas 15 s – värme och tryck enligt filmens datablad.", "Halvtransparenta pixlar blir fläckiga i vitt lager – kanterna är redan rena."];
-  if (c.names?.list.length) {
-    const text = isDarkHex(c.color) ? (c.palette.find((p) => !isDarkHex(p)) ?? "#FFFFFF") : (c.palette.find(isDarkHex) ?? "#111111");
-    const sheet = await namesSheet(c.names, text);
-    files.push(
-      { name: `${c.base}-namn-ark.png`, label: "Namnark", role: "tryck", format: "PNG", spec: `${sheet.spec} · ett namn per rad`, data: sheet.data },
-      {
-        name: `${c.base}-namn.csv`,
-        label: "Namnlista",
-        role: "data",
-        format: "CSV",
-        spec: `${c.names.list.length} namn · placering och storlek`,
-        data: Buffer.from(`\uFEFFNr;Namn;Placering;Bredd mm;Bokstavshöjd mm;Färg\n${c.names.list.map((n, i) => `${i + 1};${n.toUpperCase()};${zoneLabel(c.product, c.names!.zone)};${c.names!.sizeCm * 10};${Math.round(sheet.heightMm)};${text}`).join("\n")}`),
-      },
-    );
-    facts.push({ label: "Namn", value: `${c.names.list.length} st, ${zoneLabel(c.product, c.names.zone).toLowerCase()}` });
-    notes.push("Namnarket skärs per rad; ordningen följer namnlistan och plaggens packsedel.");
-  }
   files.push({ name: "korrektur.png", label: "Korrektur", role: "korrektur", format: "PNG", spec: "Motivet på plaggets färg", data: await proof(c.a.rgba, c.a.w, c.a.h, c.color) });
   return { method: "transfer", methodLabel: "Transfer (DTF)", receiver: "Transfertryck", placement: c.where, sizeMm: [c.a.widthMm, c.a.heightMm], inks: [], facts, notes, preview: "korrektur.png", files };
 }
@@ -553,14 +536,34 @@ export async function makeJob(input: JobInput): Promise<MadeJob> {
   const widthMm = Math.min(input.placement.sizeCm * 10, m === "sublimering" ? MUG.w : Infinity, box ? box[0] * 10 : Infinity);
   const a = await fitArt(input.art, widthMm, box ? box[1] * 10 : Infinity);
   const where = zoneLabel(input.product, input.placement.zone);
-  return MAKERS[m]({
+  const base = input.slug || slug(input.product.name);
+  const job = await MAKERS[m]({
     ...input,
     a,
-    base: input.slug || slug(input.product.name),
+    base,
     dark: isDarkHex(input.color),
     where,
     size: { label: "Tryckyta", value: `${mm1(a.widthMm)} × ${mm1(a.heightMm)} mm · ${a.dpi} dpi` },
   });
+  return input.names?.list.length ? withNames(job, input, input.names, base) : job;
+}
+
+/** Namnen trycks alltid som transfer, oavsett metod för huvudtrycket. */
+async function withNames(job: MadeJob, input: JobInput, names: Names, base: string): Promise<MadeJob> {
+  const text = isDarkHex(input.color) ? (input.palette.find((p) => !isDarkHex(p)) ?? "#FFFFFF") : (input.palette.find(isDarkHex) ?? "#111111");
+  const sheet = await namesSheet(names, text);
+  const where = zoneLabel(input.product, names.zone);
+  const csv = names.list.map((n, i) => `${i + 1};${n.toUpperCase()};${where};${names.sizeCm * 10};${Math.round(sheet.heightMm)};${text}`).join("\n");
+  return {
+    ...job,
+    files: [
+      ...job.files,
+      { name: `${base}-namn-ark.png`, label: "Namnark", role: "tryck", format: "PNG", spec: `${sheet.spec} · ett namn per rad · transfer (DTF)`, data: sheet.data },
+      { name: `${base}-namn.csv`, label: "Namnlista", role: "data", format: "CSV", spec: `${names.list.length} namn · placering och storlek`, data: Buffer.from(`\uFEFFNr;Namn;Placering;Bredd mm;Bokstavshöjd mm;Färg\n${csv}`) },
+    ],
+    facts: [...job.facts, { label: "Namn", value: `${names.list.length} st, ${where.toLowerCase()}, transfer (DTF)` }],
+    notes: [...job.notes, "Namnarket skärs per rad; ordningen följer namnlistan och plaggens packsedel."],
+  };
 }
 
 export const methodLabel = (m: Method | "stickning") => (m === "stickning" ? "Stickning" : METHOD_INFO[m].label);

@@ -1,4 +1,4 @@
-import { luminance } from "@/lib/newwave/theme";
+import { luminance, mix } from "@/lib/newwave/theme";
 import { pathBounds, unionBox } from "@/lib/newwave/vector/path";
 import { type Flat, flattenSvg, recolor } from "@/lib/newwave/vector/svg";
 import { splitName } from "@/lib/newwave/wordmark/names";
@@ -28,8 +28,9 @@ async function wordmarkColors(id: string, emblem: Flat): Promise<[string, string
     if (share < 0.02 || deltaE2000(hexToLab(hex), hexToLab("#FFFFFF")) < 10) continue;
     if (picked.every((p) => deltaE2000(hexToLab(p), hexToLab(hex)) >= 15)) picked.push(hex);
   }
-  // Den tydligaste färgen bär versalerna och bandets övre rad, som det blå i Särö Kullaviks ordmärke.
-  const [a = "#111111", b = "#111111"] = picked;
+  // Den tydligaste färgen bär versalerna och bandets övre rad, som det blå i Särö Kullaviks ordmärke. Ett märke med
+  // en enda färg (IF Hallby) får en mörkare ton av den i stället för svart, som inte finns i märket.
+  const [a = "#111111", b = mix(a, "#000000", 0.5)] = picked;
   return luminance(a) <= luminance(b) ? [a, b] : [b, a];
 }
 

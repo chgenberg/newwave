@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DELIVERY_DAYS, FLOCK_PRICE } from "@/components/newwave/clubshop/pricing";
 import { intersportPath } from "@/lib/intersport";
 import { clubDetail } from "@/lib/newwave/clubRegistry";
+import { grasrotClub } from "@/lib/newwave/grasrot/clubs";
 import { canEditShop, readContent } from "@/lib/newwave/clubShopContent";
 import { genitive } from "@/lib/newwave/newsletterHtml";
 import { wordmarkClub } from "@/lib/newwave/wordmark/store";
@@ -25,6 +26,7 @@ export default async function ClubShopContact({ params }: Props) {
   const [club, content, detail, editor] = await Promise.all([wordmarkClub(id), readContent(id), clubDetail(id), canEditShop(id)]);
   if (!club) notFound();
   const reachable = Boolean(content.email || content.phone);
+  const site = detail?.url || grasrotClub(id)?.site;
   const faq = [
     { q: "När kommer min beställning?", a: `Allt trycks på beställning och är hos dig inom ${DELIVERY_DAYS[0]}–${DELIVERY_DAYS[1]} arbetsdagar.` },
     { q: "Kan jag få namn och nummer på ryggen?", a: `Ja, det väljer du hos Intersport när du lägger varan i varukorgen. Det kostar ${FLOCK_PRICE} kr.` },
@@ -54,8 +56,8 @@ export default async function ClubShopContact({ params }: Props) {
                 {content.phone}
               </a>
             ) : null}
-            {!reachable && detail?.url ? (
-              <a href={detail.url} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-current/30 hover:border-current`}>
+            {!reachable && site ? (
+              <a href={site} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-current/30 hover:border-current`}>
                 Klubbens webbplats ↗
               </a>
             ) : null}

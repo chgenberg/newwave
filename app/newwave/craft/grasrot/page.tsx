@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GRASROT_CLUBS } from "@/lib/newwave/grasrot/clubs";
 import { emblemSet } from "@/lib/newwave/grasrot/emblem";
-import { fileHref, printChecks } from "@/lib/newwave/grasrot/files";
+import { FONT_CHECK, fileHref, printChecks } from "@/lib/newwave/grasrot/files";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
-export const metadata: Metadata = { title: "Gräsrot 360 · New Waves dashboard" };
+export const metadata: Metadata = { title: "Craft · Gräsrot 360" };
 
 const STATUS = {
   ok: { label: "Klar för tryck", className: "bg-[#E7F6EC] text-[#1E6B3A]" },
@@ -22,7 +22,8 @@ export default async function GrasrotPage() {
     GRASROT_CLUBS.map(async (club) => {
       try {
         const [set, emblem, wordmark] = await Promise.all([emblemSet(club.id)!, printChecks(club.id, "klubbmarke", "original"), printChecks(club.id, "ordmarke", "original")]);
-        const levels = [...(emblem ?? []), ...(wordmark ?? [])].map((c) => c.level);
+        // Typsnittsersättningen gäller alla ordmärken och står en gång på föreningens sida, inte som status per förening.
+        const levels = [...(emblem ?? []), ...(wordmark ?? [])].filter((c) => c.text !== FONT_CHECK.text).map((c) => c.level);
         const level = !set.quality.ready ? "original" : levels.includes("stopp") ? "stopp" : levels.includes("varning") ? "varning" : "ok";
         return { club, set, level } as const;
       } catch (err) {
@@ -31,7 +32,9 @@ export default async function GrasrotPage() {
       }
     }),
   );
-  const ready = rows.filter((r) => r.set?.quality.ready).length;
+  const count = (level: (typeof rows)[number]["level"]) => rows.filter((r) => r.level === level).length;
+  const waiting = count("original");
+  const review = count("varning");
 
   return (
     <div className="nw-page">
@@ -41,7 +44,9 @@ export default async function GrasrotPage() {
         produkterna i Bilaga 2 i 3D, en herobild från klubbstugan, inlägg för sociala medier och produktionsunderlag till leverantörerna.
       </p>
       <p className="mt-3 text-[13.5px] text-[var(--nw-muted)]">
-        {ready} av {rows.length} märken håller för tryck i dag. Övriga är provisoriska tills föreningens originalfil (AI, EPS, PDF eller SVG) kommit in.
+        {count("ok")} av {rows.length} är klara för tryck.
+        {review ? ` ${review} har en detalj att granska.` : ""}
+        {waiting ? ` ${waiting} väntar på föreningens originalmärke (AI, EPS, PDF eller SVG) – till dess används ett märke vektoriserat från webben.` : ""}
       </p>
 
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">

@@ -117,7 +117,12 @@ export async function removeTemplate(id: string) {
 /** Klubben som källan beskriver den, innan klubbens egna rättelser. */
 export async function baseClub(id: string): Promise<WordmarkClub | null> {
   const c = craftClub(id);
-  if (!c) return (await registryWordmarkClub(id)) ?? (await import("@/lib/newwave/grasrot/shop")).grasrotWordmarkClub(id);
+  if (!c) {
+    const [registry, grasrot] = await Promise.all([registryWordmarkClub(id), import("@/lib/newwave/grasrot/shop")]);
+    // Gräsrot 360-föreningarna heter som i Bilaga 1 ("Hisingsbacka FC", inte registrets "Hisingsbacka Fc").
+    const name = grasrot.grasrotClubName(id);
+    return registry ? { ...registry, ...(name && { name }) } : grasrot.grasrotWordmarkClub(id);
+  }
   const own = CLUBS[id] ? (await readBrand(id)).palette?.map((p) => p.hex) : undefined;
   return { id: c.id, name: c.name, colors: own?.length ? own : c.colors, logo: c.logo, logoDark: c.logoDark, founded: CLUBS[id]?.founded, sports: c.sports };
 }

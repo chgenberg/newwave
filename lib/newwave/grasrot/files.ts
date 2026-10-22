@@ -51,7 +51,8 @@ export function preflight(set: EmblemSet, artwork: PrintArt, variant: Variant, m
   const q = set.quality;
   checks.push({ level: q.kind === "vektor" ? (q.ready ? "ok" : "stopp") : q.ready ? "varning" : "stopp", text: q.note });
   for (const issue of set[artwork === "ordmarke" && variant === "original" ? "solid" : artwork === "halsduk" ? "negativ" : variant].issues) checks.push({ level: "stopp", text: issue });
-  if ((variant === "solid" || artwork === "ordmarke") && set.auto.solid) checks.push({ level: "varning", text: "Soliden är ett automatiskt förslag ur originalet – granska vad som trycks och vad som blir hål." });
+  if (set.auto.solid && variant === "solid") checks.push({ level: "varning", text: "Soliden är ett automatiskt förslag ur originalet – granska vad som trycks och vad som blir hål." });
+  if (set.auto.solid && artwork === "ordmarke" && variant !== "solid") checks.push({ level: "varning", text: "Märket i ordmärket är en automatisk solid ur originalet – granska vad som trycks och vad som blir hål." });
   if (variant === "negativ" && mode === "cmyk") checks.push({ level: "stopp", text: "Vitt går inte att trycka i CMYK – välj dekorfärg (White) för negativet." });
   if (variant === "original" && mode === "cmyk" && inks.some((i) => i.name === "White"))
     checks.push({ level: "varning", text: "De vita partierna trycks inte i CMYK – på färgade plagg behövs dekorfärgsfilen, där vitt är en egen färg." });
@@ -158,4 +159,4 @@ export const FILE_SET = ARTWORKS.flatMap((artwork) =>
   ]),
 );
 
-export const VARIANT_TEXT: Record<Variant, string> = { original: "Original – klubbens färger", solid: "Solid – en färg (svart) på ljust", negativ: "Negativ – vitt på mörkt" };
+export const VARIANT_TEXT: Record<Variant, string> = { original: "Original – klubbens färger", solid: "Solid – en färg (svart) på ljust", negativ: "Negativ – vitt på mörkt (filen är vit på transparent)" };
