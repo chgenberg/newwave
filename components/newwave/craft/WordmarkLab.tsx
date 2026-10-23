@@ -28,6 +28,13 @@ const fetchList = async (club: string | undefined, sort: Sort): Promise<Listed[]
 
 const PRESSED = "nw-chip h-8 px-3 aria-pressed:border-[var(--nw-ink)] aria-pressed:bg-[var(--nw-ink)] aria-pressed:text-white";
 
+const TOOLS = [
+  { id: "import", label: "Gör en design för flera klubbar", hint: "SVG, AI, PNG · läsagenten" },
+  { id: "agent", label: "Inspirationsbank", hint: "AI" },
+  { id: "queue", label: "Granskningskö", hint: "Kontroller per klubb" },
+] as const;
+type Tool = (typeof TOOLS)[number]["id"];
+
 /** Val, favoriter och beställningar; de mest valda märks, och de minst valda inbyggda föreslås för utfasning. */
 function StatLine({ s, top }: { s?: Stat; top: boolean }) {
   if (!s) return null;
@@ -93,6 +100,7 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   const [toast, setToast] = useState<string | null>(null);
   const [focus, setFocus] = useState<LabClub | null>(null);
   const [sort, setSort] = useState<Sort>("fit");
+  const [tool, setTool] = useState<Tool>("import");
   const [detail, setDetail] = useState<Listed | null>(null);
   const [info, setInfo] = useState<{ id: string; data: ClubInfo | null } | null>(null);
   const [editing, setEditing] = useState<{ template: TemplateInput; source: "import" | "agent"; from?: FromImport } | null>(null);
@@ -156,14 +164,25 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   const spec = (template: string) => ({ template, icon: true, ornament: true, worn });
   return (
     <div className="mt-6 flex flex-col gap-3">
-      <Fold title="Gör en design för flera klubbar" summary="SVG, AI, PNG · läsagenten">
-        <ImportPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "import")} onEdit={(template, from) => setEditing({ template, source: "import", from })} />
-      </Fold>
-      <Fold title="Inspirationsbank" summary="AI">
-        <AgentPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "agent")} onEdit={(template) => setEditing({ template, source: "agent" })} />
-      </Fold>
-      <Fold title="Granskningskö" summary="Kontroller per klubb">
-        <WordmarkQueue onFocus={pickFocus} />
+      {/* Alla tre verktygen ligger kvar monterade, så att uppladdningar och förslag finns kvar när man byter flik. */}
+      <Fold title="Skapa och granska ordmärken" summary="Flera klubbar · Inspirationsbank · Granskningskö">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Verktyg">
+          {TOOLS.map((t) => (
+            <button key={t.id} type="button" aria-pressed={tool === t.id} onClick={() => setTool(t.id)} className={PRESSED}>
+              {t.label}
+            </button>
+          ))}
+          <span className="ml-auto hidden text-[13px] text-[var(--nw-muted)] sm:inline">{TOOLS.find((t) => t.id === tool)?.hint}</span>
+        </div>
+        <div className="mt-4" hidden={tool !== "import"}>
+          <ImportPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "import")} onEdit={(template, from) => setEditing({ template, source: "import", from })} />
+        </div>
+        <div className="mt-4" hidden={tool !== "agent"}>
+          <AgentPanel clubs={clubs} variant={variant} onSave={(t) => save(t, "agent")} onEdit={(template) => setEditing({ template, source: "agent" })} />
+        </div>
+        <div className="mt-4" hidden={tool !== "queue"}>
+          <WordmarkQueue onFocus={pickFocus} />
+        </div>
       </Fold>
 
       <WordmarkClubs selected={focus ? [focus] : []} onToggle={(c) => setFocus(focus?.id === c.id ? null : c)} />
