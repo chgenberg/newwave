@@ -71,12 +71,11 @@ async function original(id: string): Promise<{ flat: Flat; quality: EmblemQualit
   const png = await readFile(path.join(dir, "emblem.png"));
   const meta = await sharp(png).metadata();
   const px = Math.max(meta.width ?? 0, meta.height ?? 0);
-  const wrong = grasrotClub(id)?.source.wrong;
   const quality: EmblemQuality = {
     kind: "bild",
     px,
-    ready: px >= SHARP_PX && !wrong,
-    note: wrong ? wrong : px >= SHARP_PX ? `Vektoriserad från en bild på ${px} px – granska kanterna mot originalet` : `Provisorisk: bara ${px} px fanns – klubbens originalfil (AI, EPS, PDF eller SVG) behövs för tryck`,
+    ready: px >= SHARP_PX,
+    note: px >= SHARP_PX ? `Vektoriserad från en bild på ${px} px – granska kanterna mot originalet` : `Provisorisk: bara ${px} px fanns – klubbens originalfil (AI, EPS, PDF eller SVG) behövs för tryck`,
   };
   const flat = await cached(cacheKey(id, "original", png), async () => {
     // Små bilder förstoras först; vektoriseringen kräver minst 300 px och ger mjukare kurvor av en större bild.

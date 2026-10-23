@@ -19,8 +19,8 @@ export type GrasrotClub = {
   site: string;
   /** Klubbens id i klubbregistret, där webbplatsen, färgerna och kanalerna skrapats. */
   registry?: string;
-  /** Var märket kom ifrån, och om det inte är föreningens rätta märke: varför och vad som behövs. */
-  source: { from: string; wrong?: string };
+  /** Var märket kom ifrån. */
+  source: { from: string };
   /** Ordmärkets två rader, när den automatiska uppdelningen inte är den klubben använder. */
   words?: { caps: string; script: string };
   /** Kulörer som klubben eller New Wave Group angett; saknas = förslag från märket som klubben bekräftar. */
@@ -58,7 +58,8 @@ export const GRASROT_CLUBS: GrasrotClub[] = [
     city: "Jönköping",
     sport: "Fotboll",
     site: "https://hallbyfotboll.se",
-    source: { from: "hallbyfotboll.se", wrong: "Fotbollssektionens märke med texten FOTBOLL – huvudföreningens originalmärke behövs för tryck" },
+    // Fotbollens märke utan sektionstexten FOTBOLL: samma sköld som handbollen bär, alltså föreningens.
+    source: { from: "hallbyfotboll.se, utan sektionstexten" },
   },
   { id: "if-warta", name: "IF Warta", city: "Göteborg", sport: "Fotboll", site: "https://ifwarta.se", registry: "if-warta", source: { from: "ifwarta.se" } },
   { id: "ik-ymer", name: "IK Ymer", city: "Borås", sport: "Fotboll", site: "https://ikymer.se", registry: "ik-ymer", source: { from: "ikymer.se" } },

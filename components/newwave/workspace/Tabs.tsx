@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { type BrandKit, kitAccent } from "@/lib/newwave/brandKit";
 import { NW_CATALOG, nwProduct } from "@/lib/newwave/catalog";
-import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday } from "@/lib/newwave/marking";
+import { METHOD_INFO, type Design, designSummary, estimate, fmtWeekday, zoneLabel } from "@/lib/newwave/marking";
 import { type OccasionId, occasion } from "@/lib/newwave/occasions";
 import { sek } from "@/lib/newwave/reseller";
 import { luminance } from "@/lib/newwave/theme";
@@ -222,7 +222,37 @@ export function ShopTab({ kit, items, onStart }: { kit: BrandKit; items: Item[];
   );
 }
 
-export function ProductionTab({ items, onStart }: { items: Item[]; onStart: () => void }) {
+/** Laddar ner tryckfilerna för en position; servern gör dem med samma motor som hubbens leveranser. */
+function PrintFiles({ kit, club, item, position, label }: { kit: BrandKit; club?: string; item: Item; position: number; label: string }) {
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  const download = async () => {
+    setState("busy");
+    try {
+      const res = await fetch("/api/v1/newwave/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product: item.id, color: item.color, design: item.design, position, name: kit.name, palette: kit.colors.map((c) => c.hex), club, art: logoOf(kit, item.design, club) }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "tryckfiler.zip";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(await res.blob());
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setState("idle");
+    } catch {
+      setState("error");
+    }
+  };
+  return (
+    <button type="button" onClick={download} disabled={state === "busy"} aria-label={`Tryckfiler för ${label}`} className="shrink-0 text-[12.5px] font-semibold underline decoration-[rgba(17,17,17,0.25)] underline-offset-2 transition hover:decoration-[#111] disabled:opacity-50">
+      {state === "busy" ? "Gör filerna…" : state === "error" ? "Försök igen" : "Tryckfiler (zip)"}
+    </button>
+  );
+}
+
+export function ProductionTab({ kit, club, items, onStart }: { kit: BrandKit; club?: string; items: Item[]; onStart: () => void }) {
   const [today] = useState(() => new Date());
   const rows = items.flatMap((i) => {
     const p = nwProduct(i.id);
@@ -232,25 +262,48 @@ export function ProductionTab({ items, onStart }: { items: Item[]; onStart: () =
     <div className={PAGE}>
       <p className="nw-kicker text-[#6F6B63]">New Wave trycker</p>
       <h2 className={H}>Produktion</h2>
-      <p className={LEAD}>Korrektur, tryck och frakt räknat i arbetsdagar från i dag. Varje produkt trycks med den metod ni valt i studion.</p>
+      <p className={LEAD}>Korrektur, tryck och frakt räknat i arbetsdagar från i dag. Varje position trycks med den metod ni valt i studion, och tryckfilerna går att ladda ner per position.</p>
       {rows.length ? (
         <ol className="mt-8 divide-y divide-[rgba(17,17,17,0.08)] overflow-hidden rounded-[20px] border border-[rgba(17,17,17,0.08)] bg-white">
-          {rows.map(({ i, p, d }) => (
-            <li key={i.id} className="flex items-center gap-4 px-4 py-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i.preview ?? p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-[#F4F4F2] object-cover" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-semibold">{p.name}</span>
-                <span className="block truncate text-[12.5px] text-[#6F6B63]">
-                  {METHOD_INFO[d.method].label} · {METHOD_INFO[d.method].blurb.toLowerCase()}
-                </span>
-              </span>
-              <span className="shrink-0 text-right">
-                <span className="block text-[14px] font-semibold">{fmtWeekday(d.date)}</span>
-                <span className="nw-mono block text-[12px] text-[#6F6B63]">{d.days} arbetsdagar</span>
-              </span>
-            </li>
-          ))}
+          {rows.map(({ i, p, d }) => {
+            const spots = [i.design, ...(i.design.extra ?? [])];
+            return (
+              <li key={i.id} className="px-4 py-3">
+                <div className="flex items-center gap-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={i.preview ?? p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-[#F4F4F2] object-cover" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold">{p.name}</span>
+                    <span className="block truncate text-[12.5px] text-[#6F6B63]">
+                      {METHOD_INFO[d.method].label} · {METHOD_INFO[d.method].blurb.toLowerCase()}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block text-[14px] font-semibold">{fmtWeekday(d.date)}</span>
+                    <span className="nw-mono block text-[12px] text-[#6F6B63]">{d.days} arbetsdagar</span>
+                  </span>
+                </div>
+                <ul className="mt-2 flex flex-col gap-1 pl-16">
+                  {spots.map((s, n) => {
+                    const label = `${spots.length > 1 ? `Tryck ${n + 1} · ` : ""}${zoneLabel(p, s.zone)}`;
+                    return (
+                      <li key={n} className="flex items-center justify-between gap-3 text-[13px]">
+                        <span className="min-w-0 truncate">
+                          <span className="font-medium">{label}</span>
+                          <span className="text-[#6F6B63]">
+                            {" "}
+                            · {s.sizeCm.toLocaleString("sv-SE")} cm · {METHOD_INFO[s.method].label.toLowerCase()}
+                            {n === 0 && i.design.names?.list.length ? ` · plus ${i.design.names.list.length} namn på ${zoneLabel(p, i.design.names.zone).toLowerCase()}` : ""}
+                          </span>
+                        </span>
+                        <PrintFiles kit={kit} club={club} item={i} position={n} label={`${p.name}, ${label.toLowerCase()}`} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
+          })}
         </ol>
       ) : (
         <Empty onStart={onStart} />

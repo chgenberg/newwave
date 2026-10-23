@@ -56,6 +56,8 @@ const KIND: Record<Kind, { dir: Vec3; offset: [number, number]; sizeCm: number; 
 const TOP_DOWN = new Set(["P031", "P033", "P035"]);
 /** Kläderna och termosflaskan har Bilaga 2:s tryckytor: tröjor som T-shirten, jackor som hoodien och mössor som kepsen. */
 const without = (zones: Bilaga2Zone[], ...ids: string[]) => zones.filter((z) => !ids.includes(z.id));
+/** Ytan krympt till plagget, när plagget är mindre än det Bilaga 2-ytan mättes på. */
+const within = (zones: Bilaga2Zone[], id: string, [w, h]: [number, number]) => zones.map((z) => (z.id === id ? { ...z, widthMm: Math.min(z.widthMm, w), heightMm: Math.min(z.heightMm, h) } : z));
 const BILAGA2_OF: Record<string, Bilaga2Zone[]> = {
   P001: BILAGA2.tshirt,
   P002: BILAGA2.tshirt,
@@ -67,7 +69,8 @@ const BILAGA2_OF: Record<string, Bilaga2Zone[]> = {
   P007: BILAGA2.hoodie,
   P009: BILAGA2.hoodie,
   P010: without(BILAGA2.hoodie, "arm", "arm-hoger"),
-  P037: without(BILAGA2.hoodie, "arm", "arm-hoger", "rygg"),
+  // Förklädets bröstlapp är smalare än hoodiens bröst: bara en mittyta som ryms på lappen.
+  P037: within(without(BILAGA2.hoodie, "arm", "arm-hoger", "rygg", "vanster", "hoger"), "brost", [160, 150]),
   P011: BILAGA2.keps,
   P012: BILAGA2.keps,
   P013: BILAGA2.keps,

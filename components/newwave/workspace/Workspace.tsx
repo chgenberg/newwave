@@ -247,7 +247,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
             occasions={role.kind === "shop" && occasions.length ? { offered: occasions, current: occasion, onPick: fromOccasion, slug: role.slug } : undefined}
           />
         ) : tab === "produktion" ? (
-          <ProductionTab items={items} onStart={begin} />
+          <ProductionTab kit={design} club={club?.id} items={items} onStart={begin} />
         ) : role.kind === "klubb" ? (
           <PublishTab clubId={role.clubId} kit={kit} items={items} onStart={begin} onSent={markSent} />
         ) : role.kind === "craft" ? (

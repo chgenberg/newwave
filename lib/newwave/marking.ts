@@ -180,11 +180,14 @@ export function zonesFor(p: NwProduct): Zone[] {
 export const sizeCmFor = (p: NwProduct) => (/reflex/i.test(p.name) ? 7 : p.sizeCm);
 export const maxSizeCm = (p: NwProduct) => Math.max(4, Math.round(sizeCmFor(p) * 0.45));
 
-/** Största tryckbredden i zonen för ett motiv med bildförhållandet `aspect` (bredd/höjd); Bilaga 2-ytorna begränsar både bredd och höjd. */
+/** Största tryckbredden i zonen för ett motiv med bildförhållandet `aspect` (bredd/höjd), på millimetern; Bilaga 2-ytorna begränsar både bredd och höjd. */
 export function maxCmIn(p: NwProduct, zone: string, aspect = 1) {
   const max = zonesFor(p).find((z) => z.id === zone)?.maxCm;
-  return max ? Math.max(2, Math.floor(Math.min(max[0], max[1] * aspect))) : maxSizeCm(p);
+  return max ? Math.max(2, Math.floor(Math.min(max[0], max[1] * aspect) * 10) / 10) : maxSizeCm(p);
 }
+
+/** Tryckbredden som text: hela cm, eller med en decimal när ytan slutar på en millimeter (4,8 cm). */
+export const cmText = (cm: number) => `${cm.toLocaleString("sv-SE")} cm`;
 
 /** Zonerna namntrycket får sitta i: namnen trycks med transfer. */
 export const nameZones = (p: NwProduct) => zonesFor(p).filter((z) => !z.methods || z.methods.includes("transfer"));
@@ -199,7 +202,7 @@ export function fitPlacement<T extends Placement>(p: NwProduct, pl: T, aspect = 
   const zone = free ? "egen" : (zones.find((z) => z.id === pl.zone) ?? zones[0]).id;
   const allowed = free ? methodsFor(p) : zoneMethods(p, zone);
   const method = allowed.includes(pl.method) ? pl.method : allowed[0];
-  const sizeCm = Math.min(maxCmIn(p, zone, aspect), Math.max(2, Math.round(Number(pl.sizeCm) || p.printCm)));
+  const sizeCm = Math.min(maxCmIn(p, zone, aspect), Math.max(2, Math.round((Number(pl.sizeCm) || p.printCm) * 10) / 10));
   return { ...pl, zone, point: free ? pl.point : undefined, normal: free ? pl.normal : undefined, method, colors: colorsOf({ method, colors: pl.colors }), sizeCm };
 }
 
@@ -253,7 +256,7 @@ export function defaultDesign(p: NwProduct, method?: Method): Design {
 export const zoneLabel = (p: NwProduct, id: string) => (id === "egen" ? "Egen placering" : (zonesFor(p).find((z) => z.id === id)?.label ?? id));
 
 const placementSummary = (p: NwProduct, d: Placement) =>
-  [METHOD_INFO[d.method].label, colorText(d), zoneLabel(p, d.zone), d.shape === "original" ? null : SHAPE_LABEL[d.shape], `${d.sizeCm} cm`].filter(Boolean).join(" · ");
+  [METHOD_INFO[d.method].label, colorText(d), zoneLabel(p, d.zone), d.shape === "original" ? null : SHAPE_LABEL[d.shape], cmText(d.sizeCm)].filter(Boolean).join(" · ");
 
 export function designSummary(p: NwProduct, d: Design) {
   const parts = [placementSummary(p, d), ...(d.extra ?? []).map((x) => `+ ${placementSummary(p, x)}`)];
@@ -268,10 +271,10 @@ export function placementRows(p: NwProduct, d: Design) {
     zone: zoneLabel(p, x.zone),
     method: METHOD_INFO[x.method].label,
     colors: colorText(x),
-    size: `${x.sizeCm} cm bred`,
+    size: `${cmText(x.sizeCm)} bred`,
     shape: SHAPE_LABEL[x.shape],
   }));
-  if (d.names?.list.length) rows.push({ label: "Namn", zone: zoneLabel(p, d.names.zone), method: "Transfer", colors: "1 färg", size: `${d.names.sizeCm} cm bred`, shape: `${d.names.list.length} namn` });
+  if (d.names?.list.length) rows.push({ label: "Namn", zone: zoneLabel(p, d.names.zone), method: "Transfer", colors: "1 färg", size: `${cmText(d.names.sizeCm)} bred`, shape: `${d.names.list.length} namn` });
   return rows;
 }
 

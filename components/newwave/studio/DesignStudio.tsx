@@ -5,6 +5,7 @@ import { type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef
 import type { NwProduct } from "@/lib/newwave/catalog";
 import { colorName, suggestions } from "@/lib/newwave/colors";
 import {
+  cmText,
   colorsOf,
   colorText,
   type Design,
@@ -157,6 +158,10 @@ export function DesignStudio({
   const [history, setHistory] = useState<{ past: Design[]; future: Design[] }>({ past: [], future: [] });
   const lastChange = useRef(0);
   const latest = useRef(design);
+  /** Produkten snurrar tills designen ändras första gången; sedan står den still mot trycket. */
+  const [edited, setEdited] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const say = (text: string, undo = false) => setToast({ id: Date.now(), text, undo });
   /** Varje ändring går hit; snabba ändringar i följd (drag, reglage) blir ett ångra-steg. */
   const setDesign = (next: Design | ((d: Design) => Design)) => {
     const d = latest.current;
@@ -167,9 +172,10 @@ export function DesignStudio({
     if (now - lastChange.current > 600) setHistory((h) => ({ past: [...h.past.slice(-79), d], future: [] }));
     lastChange.current = now;
     setDesignNow(value);
+    setEdited(true);
+    // En avisering från en tidigare åtgärd beskriver inte längre det som syns; en ny i samma åtgärd får stå kvar.
+    setToast((t) => (t && now - t.id > 400 ? null : t));
   };
-  const [toast, setToast] = useState<Toast | null>(null);
-  const say = (text: string, undo = false) => setToast({ id: Date.now(), text, undo });
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3600);
@@ -338,8 +344,13 @@ export function DesignStudio({
   };
 
   const resize = (by: number) => {
-    if (onNames && design.names) return setNames({ sizeCm: Math.max(2, design.names.sizeCm + by) });
-    setCur({ sizeCm: Math.max(2, cur.sizeCm + by) });
+    const names = onNames ? design.names : undefined;
+    const max = maxCm(names ? "names" : curKey, names ? names.zone : cur.zone);
+    const now = names ? names.sizeCm : cur.sizeCm;
+    if (by > 0 && now >= max) return say(`${zoneLabel(names ? names.zone : cur.zone)} rymmer högst ${cmText(max)}`);
+    const sizeCm = Math.min(max, Math.max(2, now + by));
+    if (names) return setNames({ sizeCm });
+    setCur({ sizeCm });
   };
 
   const cycleMethod = () => {
@@ -584,6 +595,16 @@ export function DesignStudio({
     setView(v);
     api.current?.view(v);
   };
+  // Ett nytt motiv (uppladdning, ordmärke, metod) ritas där det syns: kameran vänds mot det valda trycket.
+  const shownArt = useRef<LogoArt | null>(null);
+  useEffect(() => {
+    const before = shownArt.current;
+    shownArt.current = art;
+    if (!before || !art || before === art) return;
+    const id = requestAnimationFrame(() => api.current?.frame(active));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bara när motivet byts, inte när ett annat tryck väljs
+  }, [art]);
   // Flyttas trycket till andra sidan vänds produkten först när den nya tryckbilden är på plats.
   const faceAfter = useRef<View | null>(null);
   useEffect(() => {
@@ -676,6 +697,7 @@ export function DesignStudio({
               onReady={onReady}
               onSelect={setActive}
               onPlace={placeLayer}
+              still={edited}
             />
           )}
           <div className="cz-tools" role="toolbar" aria-label="Verktyg för valt tryck">
@@ -694,7 +716,7 @@ export function DesignStudio({
             <button type="button" title="Mindre (−)" aria-label="Mindre" onClick={() => resize(-1)}>
               −
             </button>
-            <span className="cz-tools-size">{onNames && design.names ? design.names.sizeCm : cur.sizeCm} cm</span>
+            <span className="cz-tools-size">{cmText(onNames && design.names ? design.names.sizeCm : cur.sizeCm)}</span>
             <button type="button" title="Större (+)" aria-label="Större" onClick={() => resize(1)}>
               +
             </button>
@@ -916,9 +938,9 @@ export function DesignStudio({
                   <section className="cz-sec">
                     <label className="insp-range">
                       <span className="drawer-label">
-                        Storlek <span>{design.names.sizeCm} cm bred</span>
+                        Storlek <span>{cmText(design.names.sizeCm)} bred</span>
                       </span>
-                      <input type="range" min={2} max={maxCm("names", design.names.zone)} value={design.names.sizeCm} onChange={(e) => setNames({ sizeCm: Number(e.target.value) })} />
+                      <input type="range" min={2} max={maxCm("names", design.names.zone)} step={maxCm("names", design.names.zone) % 1 ? 0.1 : 1} value={design.names.sizeCm} onChange={(e) => setNames({ sizeCm: Number(e.target.value) })} />
                     </label>
                   </section>
                 </>
@@ -1028,9 +1050,9 @@ export function DesignStudio({
                   <section className="cz-sec">
                     <label className="insp-range">
                       <span className="drawer-label">
-                        Storlek <span>{cur.sizeCm} cm bred</span>
+                        Storlek <span>{cmText(cur.sizeCm)} bred</span>
                       </span>
-                      <input type="range" min={2} max={maxCm(curKey, cur.zone)} value={cur.sizeCm} onChange={(e) => setCur({ sizeCm: Number(e.target.value) })} />
+                      <input type="range" min={2} max={maxCm(curKey, cur.zone)} step={maxCm(curKey, cur.zone) % 1 ? 0.1 : 1} value={cur.sizeCm} onChange={(e) => setCur({ sizeCm: Number(e.target.value) })} />
                     </label>
                   </section>
                 </>

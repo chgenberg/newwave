@@ -74,6 +74,8 @@ type Props = {
   onReady: (api: SceneApi) => void;
   /** Only to look at: no selection frame, prints can't be dragged, and it keeps turning until touched. */
   preview?: boolean;
+  /** The design has been changed: stop turning so the print stays in view. */
+  still?: boolean;
 };
 
 function Studio() {
@@ -749,7 +751,7 @@ export function ProductScene(props: Props) {
       <Suspense fallback={null}>
         <Loaded {...props} />
       </Suspense>
-      <OrbitControls makeDefault enablePan={false} autoRotate={!touched && (props.preview || (props.active === "main" && props.layers.length === 1))} autoRotateSpeed={1.4} enableDamping />
+      <OrbitControls makeDefault enablePan={false} autoRotate={!touched && !props.still && (props.preview || (props.active === "main" && props.layers.length === 1))} autoRotateSpeed={1.4} enableDamping />
     </Canvas>
   );
 }

@@ -15,7 +15,8 @@ import { grasrotWordmark } from "./wordmark";
  * per foto med scripts/grasrot-hero-marks.ts och sparas bredvid fotot.
  */
 
-export type HeroMark = { product: ProductId; cx: number; cy: number; w: number; h: number; rz: number };
+/** `erase`: en ruta utanför märket som också målas bort, när fotot visar mer än märket (en sektionstext under det). */
+export type HeroMark = { product: ProductId; cx: number; cy: number; w: number; h: number; rz: number; erase?: { cx: number; cy: number; w: number; h: number } };
 export const marksFile = (id: string) => path.join(process.cwd(), "assets", "grasrot", id, "herobild-marken.json");
 
 export async function heroMarks(id: string): Promise<HeroMark[]> {
@@ -42,8 +43,8 @@ export function markQuad(m: Pick<HeroMark, "cx" | "cy" | "w" | "h" | "rz">): Qua
   return [at(-m.w / 2, -m.h / 2), at(m.w / 2, -m.h / 2), at(m.w / 2, m.h / 2), at(-m.w / 2, m.h / 2)];
 }
 
-/** Separerbar boxoskärpa i tre pass av en gråskala `w` × `h`. */
-function blur(src: Float32Array, w: number, h: number, r: number) {
+/** Separerbar boxoskärpa i tre pass av en gråskala `w` × `h`; `ry` är radien på höjden. */
+function blur(src: Float32Array, w: number, h: number, r: number, ry = r) {
   let cur = src;
   for (let pass = 0; pass < 6; pass++) {
     const horizontal = pass % 2 === 0;
@@ -51,11 +52,12 @@ function blur(src: Float32Array, w: number, h: number, r: number) {
     const [lines, len] = horizontal ? [h, w] : [w, h];
     for (let line = 0; line < lines; line++) {
       const at = (i: number) => (horizontal ? line * w + Math.min(len - 1, Math.max(0, i)) : Math.min(len - 1, Math.max(0, i)) * w + line);
+      const k = horizontal ? r : ry;
       let acc = 0;
-      for (let i = -r; i <= r; i++) acc += cur[at(i)];
+      for (let i = -k; i <= k; i++) acc += cur[at(i)];
       for (let i = 0; i < len; i++) {
-        out[at(i)] = acc / (2 * r + 1);
-        acc += cur[at(i + r + 1)] - cur[at(i - r)];
+        out[at(i)] = acc / (2 * k + 1);
+        acc += cur[at(i + k + 1)] - cur[at(i - k)];
       }
     }
     cur = out;
@@ -84,8 +86,12 @@ function dilate(src: Float32Array, w: number, h: number, r: number) {
 const gauss = () => Math.sqrt(-2 * Math.log(Math.random() || 1e-9)) * Math.cos(2 * Math.PI * Math.random());
 
 /** Byter ett märke på fotot (RGBA, `W` brett) mot `flat`. */
-async function stamp(px: Uint8ClampedArray, W: number, H: number, m: HeroMark, flat: Flat, o: { dark: boolean; soft: boolean }) {
-  const S = Math.min(W, H, Math.round(Math.max(m.w, m.h) * 1.8));
+async function stamp(px: Uint8ClampedArray, W: number, H: number, m: HeroMark, flat: Flat, o: { dark: boolean; soft: boolean; upright: boolean; even: boolean }) {
+  // Utsnittet rymmer märket och det som målas bort, med omgivning runt om att hämta färgen från.
+  const e = m.erase;
+  const reach = e ? Math.max(Math.abs(e.cx - m.cx) + e.w / 2, Math.abs(e.cy - m.cy) + e.h / 2) : 0;
+  const big = Math.max(m.w, m.h, e ? Math.max(e.w, e.h) : 0);
+  const S = Math.min(W, H, Math.round(Math.max(Math.max(m.w, m.h) * 1.8, reach * 3)));
   const x0 = Math.max(0, Math.min(W - S, Math.round(m.cx - S / 2)));
   const y0 = Math.max(0, Math.min(H - S, Math.round(m.cy - S / 2)));
   const crop = new Uint8ClampedArray(S * S * 4);
@@ -99,23 +105,45 @@ async function stamp(px: Uint8ClampedArray, W: number, H: number, m: HeroMark, f
   const grow = Math.max(2, Math.round(Math.max(m.w, m.h) * 0.1));
   const raw = new Float32Array(S * S);
   for (let i = 0; i < raw.length; i++) raw[i] = 1 - sil[i * 4] / 255;
-  const mask = blur(dilate(raw, S, S, grow), S, S, Math.max(1, grow >> 2));
+  if (e) {
+    const [c, s] = [Math.cos((m.rz * Math.PI) / 180), Math.sin((m.rz * Math.PI) / 180)];
+    const [ex, ey] = [e.cx - x0, e.cy - y0];
+    for (let y = 0; y < S; y++)
+      for (let x = 0; x < S; x++) {
+        const [u, v] = [(x - ex) * c + (y - ey) * s, -(x - ex) * s + (y - ey) * c];
+        if (Math.abs(u) <= e.w / 2 && Math.abs(v) <= e.h / 2) raw[y * S + x] = 1;
+      }
+  }
+  const mask = blur(dilate(raw, S, S, grow), S, S, Math.max(1, e ? grow : grow >> 2));
 
   // Det gamla märket ersätts av omgivningen: normaliserad oskärpa av det som ligger utanför, plus fotots korn.
+  // Flaskan är smalare än märkets omgivning; där hämtas färgen längs flaskan, inte från bakgrunden bredvid.
+  const r = Math.max(4, Math.round(big * 0.22));
+  const [rx, ry] = o.upright ? [2, r * 3] : [r, r];
   const keep = mask.map((v) => 1 - v);
-  const wide = blur(keep, S, S, Math.max(4, Math.round(Math.max(m.w, m.h) * 0.22)));
+  // Halsdukens väv är enfärgad runt märket: bara pixlar som liknar väven får ge färg, inte vävda bokstäver och ränder bredvid.
+  if (o.even) {
+    const lum = (i: number) => 0.2126 * crop[i * 4] + 0.7152 * crop[i * 4 + 1] + 0.0722 * crop[i * 4 + 2];
+    const near = blur(keep, S, S, rx, ry);
+    const ring = keep.map((k, i) => (k > 0.99 && near[i] < 0.995 ? lum(i) : NaN)).filter((v) => !Number.isNaN(v)).sort((x, y) => x - y);
+    const median = ring[ring.length >> 1] ?? 0;
+    const spread = 2.5 * 1.4826 * ([...ring].map((v) => Math.abs(v - median)).sort((x, y) => x - y)[ring.length >> 1] ?? 0) + 6;
+    for (let i = 0; i < keep.length; i++) if (Math.abs(lum(i) - median) > spread) keep[i] = 0;
+  }
+  const wide = blur(keep, S, S, rx, ry);
   for (let c = 0; c < 3; c++) {
     const ch = new Float32Array(S * S);
     for (let i = 0; i < ch.length; i++) ch[i] = crop[i * 4 + c];
     const fine = blur(ch, S, S, 1);
     let [grain, n] = [0, 0];
+    // Kornet mäts där fyllningen hämtar sin färg, nära märket.
     for (let i = 0; i < ch.length; i++)
-      if (keep[i] > 0.99) {
+      if (keep[i] > 0.99 && wide[i] < 0.995) {
         grain += (ch[i] - fine[i]) ** 2;
         n++;
       }
     const sigma = n ? Math.sqrt(grain / n) : 0;
-    const fill = blur(ch.map((v, i) => v * keep[i]), S, S, Math.max(4, Math.round(Math.max(m.w, m.h) * 0.22)));
+    const fill = blur(ch.map((v, i) => v * keep[i]), S, S, rx, ry);
     for (let i = 0; i < ch.length; i++) {
       if (mask[i] <= 0) continue;
       const v = fill[i] / Math.max(1e-4, wide[i]) + gauss() * sigma;
@@ -138,7 +166,7 @@ export async function stampMarks(jpg: Buffer, id: string, products: GrasrotProdu
     const flat = color && (await markArt(id, product, color));
     if (!flat) continue;
     const dark = product.id === "halsduk" || color.dark;
-    await stamp(px, info.width, info.height, m, flat, { dark, soft: product.id !== "flaska" });
+    await stamp(px, info.width, info.height, m, flat, { dark, soft: product.id !== "flaska", upright: product.id === "flaska", even: product.id === "halsduk" });
   }
   return sharp(Buffer.from(px.buffer, px.byteOffset, px.length), { raw: { width: info.width, height: info.height, channels: 4 } })
     .removeAlpha()
