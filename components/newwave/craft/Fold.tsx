@@ -29,7 +29,7 @@ export function Fold({ title, summary, children, defaultOpen = false }: { title:
           <Chevron open={open} />
         </span>
       </button>
-      <div id={id} inert={!open} className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+      <div id={id} inert={!open} className={`grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="min-h-0 overflow-clip">
           <div className="border-t border-[var(--nw-line)] px-4 pb-5 pt-4 sm:px-5">{children}</div>
         </div>

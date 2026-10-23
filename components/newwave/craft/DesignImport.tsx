@@ -12,6 +12,7 @@ import type { ClubCheck, Note } from "@/lib/newwave/wordmark/render";
 import type { ColorSlot, Made, TemplateInput, TextSlot } from "@/lib/newwave/wordmark/schema";
 import { type WordmarkVariant, wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { AgentLoader } from "../shop/AgentLoader";
+import { ClubPicker } from "./ClubPicker";
 import { Provenance } from "./Provenance";
 import { WordmarkClubs } from "./WordmarkClubs";
 import { WordmarkDetail } from "./WordmarkDetail";
@@ -116,9 +117,10 @@ const COLOR_CHOICES: { value: ColorSlot | "auto"; label: string }[] = [
 type AgentRead = { described: Described; reading: Reading; loaded: Reading; club: string; notes: string[]; mark?: string; meta: Pick<ReadResult, "key" | "memory" | "at" | "model" | "lessons"> };
 const plain = (r: Reading) => JSON.stringify([r.roles, r.colors, Object.entries(r.styles ?? {}).map(([i, s]) => [i, s.font, s.upper]), r.texts]);
 const changed = (r: AgentRead) => plain(r.reading) !== plain(r.loaded);
-type Step = { kind: "idle" } | { kind: "reading" } | { kind: "draft"; file: string; draft: Imported; read?: AgentRead; matches: Matches } | { kind: "saved"; template: SavedTemplate };
+type Step = { kind: "idle" } | { kind: "reading" } | { kind: "draft"; file: string; draft: Imported; read?: AgentRead; matches: Matches } | { kind: "saved"; template: SavedTemplate; clubs: LabClub[] };
 /** Laddningskortet medan filen läses: steget som pågår, och en stund efteråt att den är klar. */
-type Run = { id: number; status: string; done: number; total: number; complete: boolean };
+type Run = { id: number; status: string; done: number; total: number; complete: boolean; title: string; doneText: string };
+const READ_RUN = { title: "Designen är läst", doneText: "Rätta tolkningen och välj klubbarna nedanför." };
 const READ_STEPS = 3;
 const LOADER_PLACE = "bottom-[calc(96px+env(safe-area-inset-bottom))] left-3 md:bottom-8 md:left-6";
 type DraftStep = Extract<Step, { kind: "draft" }>;
@@ -370,10 +372,13 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  /** När Craft bekräftade rätten att använda designen; utan den går ingen fil att välja. */
+  /** När Craft bekräftade rätten att använda designen; utan den skapas ingen design för klubbarna. */
   const [rights, setRights] = useState<string | null>(null);
   const [like, setLike] = useState<number | null>(null);
   const [run, setRun] = useState<Run | null>(null);
+  const [picked, setPicked] = useState<LabClub[]>([]);
+  const [all, setAll] = useState(false);
+  const [drag, setDrag] = useState(false);
   useEffect(() => {
     if (!run?.complete) return;
     const t = setTimeout(() => setRun(null), 2400);
@@ -387,9 +392,9 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
     const id = Date.now();
     const phase = (status: string, done: number) => {
       setStep({ kind: "reading" });
-      setRun({ id, status, done, total: READ_STEPS, complete: false });
+      setRun({ id, status, done, total: READ_STEPS, complete: false, ...READ_RUN });
     };
-    const finish = () => setRun({ id, status: "", done: READ_STEPS, total: READ_STEPS, complete: true });
+    const finish = () => setRun({ id, status: "", done: READ_STEPS, total: READ_STEPS, complete: true, ...READ_RUN });
     try {
       const kind = fileKind(file);
       if (!kind) throw new Error("Välj en SVG-, AI-, PDF-, PNG- eller JPG-fil.");
@@ -456,25 +461,100 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
     void fetch("/api/v1/newwave/wordmark/read/correct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: meta.key, reading: { ...reading, club, notes } }) }).catch(() => undefined);
   };
   const finished = (s: DraftStep) => ({ ...s.draft.template, name: name.trim().slice(0, 40) || s.draft.template.name, made: madeOf(s, like, rights ?? new Date().toISOString()) });
-  const keep = async () => {
+  /** Mallen sparas och läggs sedan i varje vald klubbs shop – eller hos alla klubbar – med klubbens namn, märke och färger. */
+  const create = async () => {
     if (step.kind !== "draft") return;
+    if (!rights) return setError("Bekräfta att ni har rätt att använda designen innan den görs för klubbarna.");
     setBusy(true);
     setError("");
     learn();
+    const id = Date.now();
+    const total = 1 + (all ? 1 : picked.length);
+    const phase = (status: string, done: number) => setRun({ id, status, done, total, complete: false, title: "Designen skapas", doneText: "" });
+    let template: SavedTemplate;
     try {
-      const template = await onSave(finished(step));
-      setStep({ kind: "saved", template });
+      phase("Designen sparas som mall…", 0);
+      template = await onSave(finished(step));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kunde inte spara.");
-    } finally {
+      setRun(null);
       setBusy(false);
+      return setError(e instanceof Error ? e.message : "Kunde inte spara designen.");
     }
+    /** Mallen är sparad – det som inte går att tilldela nu görs om i vyn efteråt, så den sparas aldrig två gånger. */
+    let missed: string[] = [];
+    if (all) {
+      phase("Designen tilldelas alla klubbar…", 1);
+      const res = await fetch(FEATURED, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: template.id, on: true }) }).catch(() => null);
+      if (!res?.ok) missed = ["alla klubbar"];
+    } else {
+      const queue = [...picked];
+      let done = 1;
+      await Promise.all(
+        Array.from({ length: PUBLISH_AT_ONCE }, async () => {
+          for (let c = queue.shift(); c; c = queue.shift()) {
+            phase(`Designen görs för ${c.name}…`, done);
+            await publishTo(c.id, template.id).catch(() => missed.push(c.name));
+            done += 1;
+          }
+        }),
+      );
+    }
+    const made = all ? "Den visas nu i alla klubbars shoppar." : "Se designen för varje klubb nedanför.";
+    const doneText = missed.length ? `Kunde inte göras för ${missed.join(", ")} – försök igen nedanför.` : made;
+    setRun({ id, status: "", done: total, total, complete: true, title: missed.length ? "Designen är sparad" : "Designen är skapad", doneText });
+    setStep({ kind: "saved", template, clubs: all ? [] : picked });
+    setBusy(false);
+  };
+  const pick = (file: File | undefined) => {
+    if (step.kind === "reading" || busy) return;
+    void read(file);
   };
 
-  if (step.kind === "saved") return <ClubBatch template={step.template} variant={variant} onNew={() => setStep({ kind: "idle" })} />;
+  const loader = (
+    <AnimatePresence>
+      {run ? <AgentLoader key={run.id} title={run.title} stages={[run.status]} done={run.done} total={run.total} complete={run.complete} doneText={run.doneText} place={LOADER_PLACE} /> : null}
+    </AnimatePresence>
+  );
+  if (step.kind === "saved")
+    return (
+      <>
+        <ClubBatch
+          template={step.template}
+          variant={variant}
+          initial={step.clubs}
+          onNew={() => {
+            setPicked([]);
+            setAll(false);
+            setStep({ kind: "idle" });
+          }}
+        />
+        {loader}
+      </>
+    );
 
+  const files = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className="relative flex flex-col gap-4"
+      onDragEnter={(e) => files(e) && setDrag(true)}
+      onDragOver={(e) => {
+        if (!files(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setDrag(false)}
+      onDrop={(e) => {
+        if (!files(e)) return;
+        e.preventDefault();
+        setDrag(false);
+        pick(e.dataTransfer.files[0]);
+      }}
+    >
+      {drag ? (
+        <div aria-hidden className="pointer-events-none absolute -inset-2 z-20 grid place-items-center rounded-[18px] border-2 border-dashed border-[var(--nw-ink)] bg-white/85 backdrop-blur-[2px]">
+          <span className="text-[15px] font-semibold text-[var(--nw-ink)]">{step.kind === "draft" ? "Släpp filen för att läsa en ny design" : "Släpp filen så analyseras den"}</span>
+        </div>
+      ) : null}
       <p className="max-w-[70ch] text-[13.5px] leading-snug text-[var(--nw-muted)]">
         Ladda upp en färdig design – SVG, AI, PDF, PNG eller JPG – till exempel en ni gjort för IFK Göteborg. Läsagenten ser vad som är klubbens namn, märke, dekor och färger, och sedan görs samma design för de klubbar ni väljer – med deras namn, märke och färger.
         Agenten läser designen en gång; varje klubbversion ritas sedan utan AI.
@@ -488,18 +568,25 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
         </ol>
         <p className="mt-2">Har lagren i en SVG de här namnen läses filen direkt, utan agenten.</p>
       </details>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <label className={`nw-chip h-10 w-fit cursor-pointer border-dashed px-4 hover:border-[var(--nw-ink)] ${step.kind === "reading" || !rights ? "pointer-events-none opacity-50" : ""}`}>
-          <input type="file" accept={ACCEPT} className="sr-only" disabled={step.kind === "reading" || !rights} onChange={(e) => void read(e.target.files?.[0]).finally(() => (e.target.value = ""))} />
-          {step.kind === "draft" ? "Välj en annan fil" : "Välj fil"}
+      {step.kind === "draft" ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <label className="nw-chip h-10 w-fit cursor-pointer border-dashed px-4 hover:border-[var(--nw-ink)]">
+            <input type="file" accept={ACCEPT} className="sr-only" onChange={(e) => pick(e.target.files?.[0])} onClick={(e) => (e.currentTarget.value = "")} />
+            Välj en annan fil
+          </label>
+          <span className="text-[12.5px] text-[var(--nw-muted)]">eller dra in den här · {step.file}</span>
+        </div>
+      ) : (
+        <label className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[16px] border-2 border-dashed border-[var(--nw-line)] px-6 py-9 text-center transition-colors hover:border-[var(--nw-ink)] hover:bg-[var(--nw-soft)]/60 ${step.kind === "reading" ? "pointer-events-none opacity-60" : ""}`}>
+          <input type="file" accept={ACCEPT} className="sr-only" disabled={step.kind === "reading"} onChange={(e) => pick(e.target.files?.[0])} onClick={(e) => (e.currentTarget.value = "")} />
+          <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-[var(--nw-ink)]" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+          </svg>
+          <span className="text-[15px] font-semibold text-[var(--nw-ink)]">{step.kind === "reading" ? "Designen analyseras…" : "Dra in en fil här eller klicka för att välja"}</span>
+          <span className="text-[12.5px] text-[var(--nw-muted)]">SVG, AI, PDF, PNG eller JPG · max 10 MB · filen analyseras direkt</span>
         </label>
-        <span className="text-[12.5px] text-[var(--nw-muted)]">SVG, AI, PDF, PNG eller JPG · max 10 MB</span>
-      </div>
-      <label className="flex max-w-[70ch] items-start gap-2 text-[13px] leading-snug text-[var(--nw-ink)]">
-        <input type="checkbox" checked={Boolean(rights)} onChange={(e) => setRights(e.target.checked ? new Date().toISOString() : null)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--nw-ink)]" />
-        <span>Vi har rätt att använda designen – den är vår egen, beställarens eller klubbens, eller köpt med licens för tryck. Bekräftelsen sparas med mallen.</span>
-      </label>
-      {error ? <p className="text-[13.5px] text-[#B42318]">{error}</p> : null}
+      )}
+      {error && step.kind !== "draft" ? <p className="text-[13.5px] text-[#B42318]">{error}</p> : null}
       {step.kind === "draft" ? (
         <div className="nw-fade flex flex-col gap-5">
           {step.read ? (
@@ -555,14 +642,51 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
             </label>
           </div>
           {step.read ? <Parts read={step.read} onChange={(r) => void reinterpret(r)} /> : null}
+          <section className="flex flex-col gap-3 border-t border-[var(--nw-line)] pt-5" aria-labelledby="nw-import-assign">
+            <div>
+              <h3 id="nw-import-assign" className="text-[15px] font-semibold text-[var(--nw-ink)]">
+                Tilldela klubbar
+              </h3>
+              <p className="text-[13px] leading-snug text-[var(--nw-muted)]">Sök och välj en, flera eller alla klubbar. Var och en får en liknande design med sitt eget namn, märke och sina färger – utan AI.</p>
+            </div>
+            <div className="grid gap-4 min-[900px]:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+              <ClubPicker selected={picked} all={all} onChange={setPicked} onAll={setAll} max={MAX_CLUBS} />
+              <div className="min-w-0">
+                <p className="text-[13px] text-[var(--nw-muted)]">
+                  {all
+                    ? "Alla klubbar får designen i sin shop – här några av dem."
+                    : picked.length
+                      ? `Så blir designen för ${picked.length === 1 ? picked[0].name : `de ${picked.length} klubbarna`}${picked.length > PREVIEWS ? ` – de första ${PREVIEWS} visas` : ""}.`
+                      : "Välj klubbar i listan, så syns designen för dem här."}
+                </p>
+                {all || picked.length ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2 min-[700px]:grid-cols-3 min-[1200px]:grid-cols-4">
+                    {(all ? clubs : picked.slice(0, PREVIEWS)).map((c) => (
+                      <Draft key={c.id} template={step.draft.template} club={c} variant={variant} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <label className="flex max-w-[70ch] items-start gap-2 text-[13px] leading-snug text-[var(--nw-ink)]">
+              <input type="checkbox" checked={Boolean(rights)} onChange={(e) => setRights(e.target.checked ? new Date().toISOString() : null)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--nw-ink)]" />
+              <span>Vi har rätt att använda designen – den är vår egen, beställarens eller klubbens, eller köpt med licens för tryck. Bekräftelsen sparas med mallen.</span>
+            </label>
+            {error ? <p className="text-[13.5px] text-[#B42318]">{error}</p> : null}
+          </section>
           <div className="sticky bottom-[calc(88px+env(safe-area-inset-bottom))] z-10 mr-14 flex items-center gap-2 rounded-[16px] border border-[var(--nw-line)] bg-white/90 p-2 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] backdrop-blur md:bottom-4 md:mr-0">
-            <button type="button" disabled={busy || !rights} onClick={() => void keep()} className="nw-btn h-10 disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={() => void create()} className="nw-btn h-10 disabled:opacity-50">
               {busy ? (
-                "Sparar…"
+                "Skapar…"
+              ) : all || picked.length ? (
+                <>
+                  <span className="sm:hidden">Skapa</span>
+                  <span className="hidden sm:inline">Skapa liknande design · {all ? "alla klubbar" : `${picked.length} ${picked.length === 1 ? "klubb" : "klubbar"}`}</span>
+                </>
               ) : (
                 <>
                   <span className="sm:hidden">Spara</span>
-                  <span className="hidden sm:inline">Spara och välj klubbar</span>
+                  <span className="hidden sm:inline">Spara designen utan klubbar</span>
                 </>
               )}
             </button>
@@ -589,9 +713,7 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
           </div>
         </div>
       ) : null}
-      <AnimatePresence>
-        {run ? <AgentLoader key={run.id} title="Designen är läst" stages={[run.status]} done={run.done} total={run.total} complete={run.complete} doneText="Rätta tolkningen eller öppna den i designstudion." place={LOADER_PLACE} /> : null}
-      </AnimatePresence>
+      {loader}
     </div>
   );
 }
@@ -599,6 +721,7 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
 type Publish = "checking" | "idle" | "busy" | "published" | "error";
 const PUBLISH_AT_ONCE = 4;
 const MAX_CLUBS = 96;
+const PREVIEWS = 8;
 
 /** Lägger mallen först bland klubbens favoriter, så att den syns överst i klubbens shop. */
 async function publishTo(clubId: string, templateId: string) {
@@ -623,6 +746,20 @@ async function checkClubs(body: { template: string; clubs?: string[]; sample?: n
   const res = await fetch(CHECK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, variant: body.variant === "dark" ? "dark" : "light" }) });
   if (!res.ok) throw new Error();
   return ((await res.json()) as { checked: ClubCheck[] }).checked;
+}
+
+/** Kontrollerna för klubbarna och om designen redan ligger i varje klubbs shop. */
+function follow(template: string, variant: WordmarkVariant, list: LabClub[], onNotes: (n: Record<string, Note[]>) => void, onState: (id: string, s: Publish) => void) {
+  checkClubs({ template, clubs: list.map((c) => c.id), variant })
+    .then((checked) => onNotes(Object.fromEntries(checked.map((c) => [c.id, c.notes]))))
+    .catch(() => undefined);
+  for (const c of list) {
+    onState(c.id, "checking");
+    fetch(`/api/v1/newwave/wordmark/club/${c.id}`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ prefs: { favorites: string[] } }>) : null))
+      .then((d) => onState(c.id, d?.prefs.favorites.includes(template) ? "published" : "idle"))
+      .catch(() => onState(c.id, "idle"));
+  }
 }
 
 /** Det som är värt att se över: för små namn och saknade märken först, sedan kortade namn. Svaga färger syns i bilden. */
@@ -661,8 +798,10 @@ function SampleCheck({ checked }: { checked: ClubCheck[] | null | "error" }) {
  * Designen för alla klubbar på en gång, eller för varje vald klubb med klubbens namn, märke och färger – tryckfiler och
  * publicering i klubbens shop per klubb.
  */
-export function ClubBatch({ template, variant, onNew, newLabel = "Ladda upp en ny design" }: { template: SavedTemplate; variant: WordmarkVariant; onNew: () => void; newLabel?: string }) {
-  const [clubs, setClubs] = useState<LabClub[]>([]);
+export function ClubBatch({ template, variant, onNew, newLabel = "Ladda upp en ny design", initial = [] }: { template: SavedTemplate; variant: WordmarkVariant; onNew: () => void; newLabel?: string; initial?: LabClub[] }) {
+  const [clubs, setClubs] = useState<LabClub[]>(initial);
+  /** Klubbarna designen redan skapats för när vyn öppnas. */
+  const [first] = useState(initial);
   const [state, setState] = useState<Record<string, Publish>>({});
   const [everyone, setEveryone] = useState<Publish>("checking");
   const [detail, setDetail] = useState<LabClub | null>(null);
@@ -681,10 +820,18 @@ export function ClubBatch({ template, variant, onNew, newLabel = "Ladda upp en n
     checkClubs({ template: template.id, sample: SAMPLE, variant })
       .then((c) => live && setSample(c))
       .catch(() => live && setSample("error"));
+    if (first.length)
+      follow(
+        template.id,
+        variant,
+        first,
+        (n) => live && setNotes((m) => ({ ...m, ...n })),
+        (id, s) => live && setState((m) => ({ ...m, [id]: s })),
+      );
     return () => {
       live = false;
     };
-  }, [template.id, variant]);
+  }, [template.id, variant, first]);
   const assignAll = async (on: boolean) => {
     setEveryone("busy");
     setProblem("");
@@ -703,16 +850,7 @@ export function ClubBatch({ template, variant, onNew, newLabel = "Ladda upp en n
     const fresh = list.filter((c) => !clubs.some((x) => x.id === c.id)).slice(0, Math.max(0, MAX_CLUBS - clubs.length));
     if (!fresh.length) return;
     setClubs((cur) => [...cur, ...fresh]);
-    checkClubs({ template: template.id, clubs: fresh.map((c) => c.id), variant })
-      .then((checked) => setNotes((m) => ({ ...m, ...Object.fromEntries(checked.map((c) => [c.id, c.notes])) })))
-      .catch(() => undefined);
-    for (const c of fresh) {
-      mark(c.id, "checking");
-      fetch(`/api/v1/newwave/wordmark/club/${c.id}`)
-        .then((r) => (r.ok ? (r.json() as Promise<{ prefs: { favorites: string[] } }>) : null))
-        .then((d) => mark(c.id, d?.prefs.favorites.includes(template.id) ? "published" : "idle"))
-        .catch(() => mark(c.id, "idle"));
-    }
+    follow(template.id, variant, fresh, (n) => setNotes((m) => ({ ...m, ...n })), mark);
   };
   const toggle = (c: LabClub) => (clubs.some((x) => x.id === c.id) ? setClubs((cur) => cur.filter((x) => x.id !== c.id)) : add([c]));
   const publish = async (c: LabClub) => {
@@ -734,12 +872,15 @@ export function ClubBatch({ template, variant, onNew, newLabel = "Ladda upp en n
   };
   const done = clubs.filter((c) => state[c.id] === "published").length;
   const review = clubs.filter((c) => notes[c.id]?.some((n) => n.level === "varning")).length;
+  const made = first.filter((c) => state[c.id] !== "idle" && state[c.id] !== "error").length;
+  const headline = made ? `skapad för ${made} ${made === 1 ? "klubb" : "klubbar"}` : everyone === "published" ? "skapad för alla klubbar" : "sparad";
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[14px] text-[var(--nw-ink)]">
-          <span className="font-semibold">”{template.name}” är sparad.</span> <span className="text-[var(--nw-muted)]">Välj klubbarna den ska göras för.</span>
+          <span className="font-semibold">”{template.name}” är {headline}.</span>{" "}
+          <span className="text-[var(--nw-muted)]">{headline === "sparad" ? "Välj klubbarna den ska göras för." : "Lägg till fler klubbar eller ladda ner tryckfilerna."}</span>
         </p>
         <button type="button" onClick={onNew} className="nw-chip h-9 px-3">
           {newLabel}

@@ -8,7 +8,6 @@ import type { LabClub } from "./WordmarkLab";
 type Page = { total: number; items: ClubItem[] };
 
 const API = "/api/v1/newwave/registry";
-const num = new Intl.NumberFormat("sv-SE");
 
 type Props = {
   selected: LabClub[];
@@ -19,8 +18,8 @@ type Props = {
   hint?: string;
 };
 
-/** Alla klubbar i klubbregistret som har fått ett klubbmärke; listan växer medan skrapningen pågår. */
-export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klubbar", hint = "välj en för att se alla ordmärken för den" }: Props) {
+/** Klubbarna i klubbregistret som har fått ett klubbmärke, de största först eller de som matchar sökningen; listan växer medan skrapningen pågår. */
+export function useRegistryClubs() {
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [page, setPage] = useState<Page | null>(null);
@@ -47,6 +46,15 @@ export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klu
       clearInterval(t);
     };
   }, [q, limit]);
+
+  return { text, setText, page, more: () => setLimit((l) => l + 48) };
+}
+
+export const num = new Intl.NumberFormat("sv-SE");
+
+/** Alla klubbar i klubbregistret som har fått ett klubbmärke, som en rad med kort. */
+export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klubbar", hint = "välj en för att se alla ordmärken för den" }: Props) {
+  const { text, setText, page, more } = useRegistryClubs();
 
   return (
     <section className="mt-5 rounded-[var(--nw-radius)] border border-[var(--nw-line)] bg-white p-3 min-[900px]:p-4">
@@ -82,7 +90,7 @@ export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klu
         ))}
         {page && page.items.length < page.total ? (
           <li className="snap-start">
-            <button type="button" onClick={() => setLimit((l) => l + 48)} className="grid h-[118px] w-[112px] place-items-center rounded-[12px] border border-dashed border-[var(--nw-line)] text-[12.5px] text-[var(--nw-muted)] hover:border-[var(--nw-ink)] hover:text-[var(--nw-ink)]">
+            <button type="button" onClick={more} className="grid h-[118px] w-[112px] place-items-center rounded-[12px] border border-dashed border-[var(--nw-line)] text-[12.5px] text-[var(--nw-muted)] hover:border-[var(--nw-ink)] hover:text-[var(--nw-ink)]">
               Visa fler
             </button>
           </li>
@@ -93,13 +101,19 @@ export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klu
   );
 }
 
+export function ClubLogo({ club, className }: { club: Pick<ClubItem, "id"> & Partial<Pick<ClubItem, "at" | "onDark">>; className: string }) {
+  return (
+    <span className={`flex items-center justify-center ${className}`} style={{ background: club.onDark ? "#1C1C1E" : "#F4F3F0" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- skrapat klubbmärke */}
+      <img src={registryAsset(club.id, club.at, "logo.png")} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+    </span>
+  );
+}
+
 function Chip({ club, active, onClick }: { club: Pick<ClubItem, "id" | "name"> & Partial<Pick<ClubItem, "at" | "onDark" | "colors">>; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active} className={`block w-[112px] rounded-[12px] p-1 text-left transition ${active ? "bg-[var(--nw-ink)] text-white" : "hover:bg-[var(--nw-soft)]"}`}>
-      <span className="flex h-[84px] items-center justify-center rounded-[9px] p-2.5" style={{ background: club.onDark ? "#1C1C1E" : "#F4F3F0" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- skrapat klubbmärke */}
-        <img src={registryAsset(club.id, club.at, "logo.png")} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
-      </span>
+      <ClubLogo club={club} className="h-[84px] rounded-[9px] p-2.5" />
       <span className="mt-1 block truncate px-0.5 text-[11.5px] font-medium leading-tight">{club.name}</span>
     </button>
   );
