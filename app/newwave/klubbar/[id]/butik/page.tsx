@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- ordmärken och mockups ritas per klubb */
+/* eslint-disable @next/next/no-img-element -- wordmarks och mockups ritas per klubb */
 import { notFound } from "next/navigation";
 import { CollectionSections } from "@/components/newwave/clubshop/CollectionView";
 import { ProductTile } from "@/components/newwave/clubshop/ProductTile";

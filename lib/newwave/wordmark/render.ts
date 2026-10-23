@@ -10,7 +10,7 @@ import type { ColorSlot, Layer, ShapeLayerT, Template, TextLayerT, TextSlot } fr
 import type { WordmarkNames, WordmarkVariant } from "./spec";
 
 /**
- * Ritar en ordmärkesmall för en klubb till ren SVG. Texten blir vektorbanor direkt ur typsnittsfilen, så resultatet
+ * Ritar en wordmarkmall för en klubb till ren SVG. Texten blir vektorbanor direkt ur typsnittsfilen, så resultatet
  * ser likadant ut i webbläsaren, i sharp och i tryck – oavsett vilka typsnitt som finns installerade.
  */
 

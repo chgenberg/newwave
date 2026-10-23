@@ -113,7 +113,7 @@ type ProposalRaw = { name: string; style: string; height: number; ideal_min: num
 const EXAMPLES = ["retro-skript", "kapsel", "stadion"].map((id) => TEMPLATES.find((t) => t.id === id)!);
 const brief = (t: Template) => ({ name: t.name, style: t.style, height: t.height, fit: t.fit, layers: t.layers });
 
-const SYSTEM = `Du är formgivare av ordmärken för idrottsklubbar och översätter referensbilder till mallar för en motor som ritar exakt vektorgrafik.
+const SYSTEM = `Du är formgivare av wordmarks för idrottsklubbar och översätter referensbilder till mallar för en motor som ritar exakt vektorgrafik.
 
 Duken är 1000 enheter bred, y nedåt. Varje lager har en ruta (x, y, w, h). Text skalas så att den fyller rutan utan att gå utanför, så ett kort namn blir högt och ett långt smalare. Välj därför rutor efter det längsta namn mallen är gjord för.
 Slottar: name = hela namnet på en rad (IFK GÖTEBORG), name1 = föreningsförkortningen eller första ordet (IF, IFK, MIAMI), name2 = huvudnamnet (Åsa, Göteborg, Dolphins), tagline = "Sedan 1919" eller sporterna, monogram = förkortningen eller första bokstaven (det stora H:et på en Harvardtröja), sport = huvudsporten (FOTBOLL som UNIVERSITY under märket), est och year = "Est." och grundandeåret, t.ex. på var sin sida om märket; de är tomma när året saknas, så mallen måste se hel ut utan dem. player och number = namn och nummer på ryggen; jubilee och span = "100 år" och "1926–2026" – använd dem bara när referensen är en rygg eller ett jubileum.
@@ -177,7 +177,7 @@ export async function proposeTemplates(images: Buffer[], note: string, popular: 
   const wish = note ? ` Önskemål från Craft: ${cleanText(note, 300)}` : "";
   const intro = popular.length
     ? `Klubbarna väljer de här mallarna mest. Föreslå nya mallar i samma anda – byt typsnitt, former och komposition så att de blir egna, inte kopior:\n${JSON.stringify(popular.map(brief))}`
-    : "Referenser till nya ordmärken.";
+    : "Referenser till nya wordmarks.";
   const content: Content[] = [{ type: "input_text", text: intro + wish }];
   for (const img of images) {
     const jpg = await sharp(img, { limitInputPixels: 40_000_000 }).flatten({ background: "#FFFFFF" }).resize(1024, 1024, { fit: "inside" }).jpeg({ quality: 82 }).toBuffer();

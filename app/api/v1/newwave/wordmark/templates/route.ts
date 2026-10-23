@@ -5,9 +5,9 @@ import { templateStats } from "@/lib/newwave/wordmark/stats";
 import { allTemplates, findTemplate, removeTemplate, saveTemplate, wordmarkClub } from "@/lib/newwave/wordmark/store";
 
 /**
- * Ordmärkena som går att välja. Med en klubb kommer de som passar namnlängden bäst först och mallar som kräver text
+ * Wordmarken som går att välja. Med en klubb kommer de som passar namnlängden bäst först och mallar som kräver text
  * klubben saknar (jubileum utan grundandeår) tas bort; `sort=popular` sorterar efter klubbarnas val. Ryggtrycken
- * hamnar sist eftersom de inte är ett ordmärke för bröstet.
+ * hamnar sist eftersom de inte är ett wordmark för bröstet.
  */
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;

@@ -10,7 +10,7 @@ import { isBackTemplate } from "./templates";
 import { wordmarkClub } from "./store";
 
 /**
- * Tryckfärdiga filer för ett ordmärke: samma produktionsmotor som hubben använder för godkända kampanjer –
+ * Tryckfärdiga filer för ett wordmark: samma produktionsmotor som hubben använder för godkända kampanjer –
  * schabloner med Pantone för screentryck, DST och stygnplan för brodyr, filmer för transfer och DTG – plus
  * originalet som vektor, och priset per plagg för vanliga upplagor.
  */
@@ -70,7 +70,7 @@ const kr = (n: number) => `${new Intl.NumberFormat("sv-SE").format(n)} kr`;
 export async function wordmarkZip(w: WordmarkJob, product: NwProduct, garment: string) {
   const { job } = w;
   const spec = [
-    `${w.club} – ordmärke ${job.methodLabel.toLowerCase()} på ${product.name.toLowerCase()} (${colorName(garment).toLowerCase()})`,
+    `${w.club} – wordmark ${job.methodLabel.toLowerCase()} på ${product.name.toLowerCase()} (${colorName(garment).toLowerCase()})`,
     "",
     `Placering: ${job.placement}`,
     ...job.facts.map((f) => `${f.label}: ${f.value}`),

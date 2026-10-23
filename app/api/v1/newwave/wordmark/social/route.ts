@@ -1,7 +1,7 @@
 import { SOCIAL, type SocialFormat, socialFile } from "@/lib/newwave/wordmark/serve";
 import { parseWordmarkQuery } from "@/lib/newwave/wordmark/spec";
 
-/** Ordmärket för sociala medier på klubbens huvudfärg: ordmärkets parametrar plus f=profil|banner|story|anim. */
+/** Wordmarket för sociala medier på klubbens huvudfärg: wordmarkets parametrar plus f=profil|banner|story|anim. */
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const format = params.get("f") ?? "";

@@ -12,7 +12,7 @@ const url = (v: unknown) => (typeof v === "string" && v.length <= 300 ? v : unde
 
 /**
  * Tryckfilerna för en position i en design från studion, med samma motor som hubben levererar godkända kampanjer med.
- * Body: produkt, plaggfärg, design, position (0 = huvudtrycket), varumärkets namn, färger och logga, och klubben när designen är ett ordmärke.
+ * Body: produkt, plaggfärg, design, position (0 = huvudtrycket), varumärkets namn, färger och logga, och klubben när designen är ett wordmark.
  * Namnen per plagg följer med huvudtrycket.
  */
 export async function POST(req: Request) {

@@ -1,7 +1,7 @@
 import type { Cmyk } from "@/lib/pantone";
 
 /**
- * Gräsrot 360 – betan med New Wave Group: tio föreningar som får klubbmärke i tre varianter, kulörer, ordmärke,
+ * Gräsrot 360 – betan med New Wave Group: tio föreningar som får klubbmärke i tre varianter, kulörer, wordmark,
  * produkter, herobild, material för sociala medier och tryckfiler till leverantörerna.
  *
  * Märkena ligger i assets/grasrot/<id>/: original.svg (och solid.svg) när klubben eller New Wave Group
@@ -21,7 +21,7 @@ export type GrasrotClub = {
   registry?: string;
   /** Var märket kom ifrån. */
   source: { from: string };
-  /** Ordmärkets två rader, när den automatiska uppdelningen inte är den klubben använder. */
+  /** Wordmarkets två rader, när den automatiska uppdelningen inte är den klubben använder. */
   words?: { caps: string; script: string };
   /** Kulörer som klubben eller New Wave Group angett; saknas = förslag från märket som klubben bekräftar. */
   colors?: GrasrotColor[];

@@ -5,7 +5,7 @@ import { splitName } from "@/lib/newwave/wordmark/names";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Klubbens egna val för ordmärkena: färgerna från källan, det klubben rättat, favoriter, godkännande och kontrollerna. */
+/** Klubbens egna val för wordmarken: färgerna från källan, det klubben rättat, favoriter, godkännande och kontrollerna. */
 export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const club = await baseClub(id);

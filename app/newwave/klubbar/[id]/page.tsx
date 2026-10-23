@@ -22,7 +22,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const club = await wordmarkClub((await params).id);
-  return { title: club ? `${club.name} · Ordmärken · Next Wave` : "Next Wave" };
+  return { title: club ? `${club.name} · Wordmarks · Next Wave` : "Next Wave" };
 }
 
 const SOCIAL: { kind: SocialKind; label: string; aspect: string }[] = [
@@ -33,7 +33,7 @@ const SOCIAL: { kind: SocialKind; label: string; aspect: string }[] = [
 ];
 
 /**
- * Förhandsvisningen som Craft skickar till en klubb: klubbens bästa ordmärken på plaggen, kollektionerna, kommande
+ * Förhandsvisningen som Craft skickar till en klubb: klubbens bästa wordmarks på plaggen, kollektionerna, kommande
  * tillfällen och de digitala formaten – och längst ner rättar klubben namn och färger, väljer favoriter och godkänner.
  */
 export default async function ClubPreviewPage({ params }: Props) {
@@ -124,14 +124,14 @@ export default async function ClubPreviewPage({ params }: Props) {
           <p className="text-[12.5px] font-medium uppercase tracking-[0.16em] text-white/60">Klubbens butik</p>
           <p className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Supportrarna handlar här</p>
           <p className="mt-1 max-w-[560px] text-[14px] text-white/70">
-            {shop.groups.reduce((n, g) => n + g.items.length, 0)} produkter med {genitive(club.name)} ordmärken, i {shop.groups.length} stilar – med namn och nummer på ryggen. Köps i klubbshoppen hos Intersport och trycks på beställning.
+            {shop.groups.reduce((n, g) => n + g.items.length, 0)} produkter med {genitive(club.name)} wordmarks, i {shop.groups.length} stilar – med namn och nummer på ryggen. Köps i klubbshoppen hos Intersport och trycks på beställning.
           </p>
         </div>
         <span className="inline-flex h-11 shrink-0 items-center rounded-full bg-white px-5 text-[14px] font-semibold text-[#111]">Öppna butiken →</span>
       </Link>
 
       <section className="mt-10">
-        <h2 className="text-[20px] font-semibold tracking-[-0.01em]">Ordmärken för {club.name}</h2>
+        <h2 className="text-[20px] font-semibold tracking-[-0.01em]">Wordmarks för {club.name}</h2>
         <p className="text-[13.5px] text-[#6F6B63]">De som passar namnet bäst först{favs.size ? ", klubbens favoriter överst" : ""}.</p>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 min-[700px]:grid-cols-4">
           {top.map((t, i) => (
@@ -203,7 +203,7 @@ export default async function ClubPreviewPage({ params }: Props) {
 
       <section className="mt-10">
         <h2 className="text-[20px] font-semibold tracking-[-0.01em]">Digitalt</h2>
-        <p className="text-[13.5px] text-[#6F6B63]">Samma ordmärke på klubbens huvudfärg, färdigt för sociala medier och hemsidan.</p>
+        <p className="text-[13.5px] text-[#6F6B63]">Samma wordmark på klubbens huvudfärg, färdigt för sociala medier och hemsidan.</p>
         <ul className="mt-3 grid grid-cols-2 items-start gap-3 min-[900px]:grid-cols-[1fr_2fr_0.6fr_1fr]">
           {SOCIAL.map((s) => {
             const src = `${wordmarkSocialUrl(spec(first), id, s.kind)}&u=${v}`;

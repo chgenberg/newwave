@@ -144,7 +144,7 @@ export function BuyBox({ clubId, item, sizes, flock, dark, garment, v, checkout 
   );
 }
 
-/** Ryggen ritas av ordmärkesmotorn en stund efter sista tangenttrycket, så att varje bokstav inte blir en bild. */
+/** Ryggen ritas av wordmarkmotorn en stund efter sista tangenttrycket, så att varje bokstav inte blir en bild. */
 function useBackPreview(clubId: string, dark: boolean, v: string, player: string | null, number: string) {
   const [url, setUrl] = useState("");
   useEffect(() => {

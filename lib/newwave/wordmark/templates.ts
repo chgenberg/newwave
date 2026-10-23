@@ -1,7 +1,7 @@
 import { type ColorSlot, type Layer, type Template, type TemplateInput, TemplateSchema, type TextSlot } from "./schema";
 
 /**
- * De inbyggda ordmärkena, i amerikansk vintagestil som NFL-, NHL- och collegetryck: spärrade versaler, fet skrivstil,
+ * De inbyggda wordmarken, i amerikansk vintagestil som NFL-, NHL- och collegetryck: spärrade versaler, fet skrivstil,
  * collegebokstäver med konturer, tunga serifer i båge över märket, kapslar, kransar och klubbmärket. Rutorna ligger på en duk som är 1000 enheter bred;
  * texten skalas så att den fyller sin ruta, så ett kort namn blir högt och ett långt smalare.
  */
@@ -40,7 +40,7 @@ const RAW: TemplateInput[] = [
     ],
   },
   {
-    // New Wave Groups dynamiska ordmärke för Gräsrot 360 (Bilaga 1): Casey Bold och Espiritu ersatta av Holtwood One SC
+    // New Wave Groups dynamiska wordmark för Gräsrot 360 (Bilaga 1): Casey Bold och Espiritu ersatta av Holtwood One SC
     // och Lobster, som får ritas på servern. Korta namn stannar vid Kullaviks bokstavshöjd, långa krymper till bredden.
     id: "grasrot-360",
     name: "Gräsrot 360",

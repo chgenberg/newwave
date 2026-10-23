@@ -53,7 +53,7 @@ export function useRegistryClubs() {
 export const num = new Intl.NumberFormat("sv-SE");
 
 /** Alla klubbar i klubbregistret som har fått ett klubbmärke, som en rad med kort. */
-export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klubbar", hint = "välj en för att se alla ordmärken för den" }: Props) {
+export function WordmarkClubs({ selected, onToggle, onPickAll, title = "Alla klubbar", hint = "välj en för att se alla wordmarks för den" }: Props) {
   const { text, setText, page, more } = useRegistryClubs();
 
   return (

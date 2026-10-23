@@ -22,7 +22,7 @@ export default async function GrasrotPage() {
     GRASROT_CLUBS.map(async (club) => {
       try {
         const [set, emblem, wordmark] = await Promise.all([emblemSet(club.id)!, printChecks(club.id, "klubbmarke", "original"), printChecks(club.id, "ordmarke", "original")]);
-        // Typsnittsersättningen gäller alla ordmärken och står en gång på föreningens sida, inte som status per förening.
+        // Typsnittsersättningen gäller alla wordmarks och står en gång på föreningens sida, inte som status per förening.
         const levels = [...(emblem ?? []), ...(wordmark ?? [])].filter((c) => c.text !== FONT_CHECK.text).map((c) => c.level);
         const level = !set.quality.ready ? "original" : levels.includes("stopp") ? "stopp" : levels.includes("varning") ? "varning" : "ok";
         return { club, set, level } as const;
@@ -40,7 +40,7 @@ export default async function GrasrotPage() {
     <div className="nw-page">
       <h1 className="nw-club-heading text-[26px] leading-tight text-[var(--club)] sm:text-[30px]">Gräsrot 360</h1>
       <p className="mt-1 max-w-[680px] text-[14.5px] text-[var(--nw-muted)]">
-        Tio föreningar i betan. Varje förening har klubbmärket och ordmärket i original, solid och negativ – som PDF och EPS med Pantone-dekorfärger, CMYK eller RGB, och som SVG – och
+        Tio föreningar i betan. Varje förening har klubbmärket och wordmarket i original, solid och negativ – som PDF och EPS med Pantone-dekorfärger, CMYK eller RGB, och som SVG – och
         produkterna i Bilaga 2 i 3D, en herobild från klubbstugan, inlägg för sociala medier och produktionsunderlag till leverantörerna.
       </p>
       <p className="mt-3 text-[13.5px] text-[var(--nw-muted)]">
@@ -58,7 +58,7 @@ export default async function GrasrotPage() {
                   <img src={fileHref(club.id, "klubbmarke-original.svg")} alt={`${club.name} klubbmärke`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-4" />
                 </div>
                 <div className="relative min-h-0 overflow-hidden rounded-xl bg-[var(--nw-soft)]">
-                  <img src={fileHref(club.id, "ordmarke-original.svg")} alt={`${club.name} ordmärke`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-3" />
+                  <img src={fileHref(club.id, "ordmarke-original.svg")} alt={`${club.name} wordmark`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-3" />
                 </div>
               </div>
               <div className="mt-3 flex items-start justify-between gap-3">

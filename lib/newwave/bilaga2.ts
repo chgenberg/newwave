@@ -1,6 +1,6 @@
 /**
  * Tryckytorna i New Wave Groups Gräsrot 360 – Bilaga 2: var på produkterna det får tryckas och med vilka tekniker.
- * Allt som placerar tryck på kläder – designstudion, klubbshopen, ordmärkena och Gräsrot 360 – läser ytorna härifrån.
+ * Allt som placerar tryck på kläder – designstudion, klubbshopen, wordmarken och Gräsrot 360 – läser ytorna härifrån.
  *
  * Bilagan ritar ytorna men anger inga mått. Måtten är uppmätta på bilagans vektorrutor och skalade mot plaggen i
  * storlek M (New Wave Groups måttabeller: T-shirt 3410020 58 cm halv bröstvidd, hoodie 3440020 64 cm) och mot flaskans

@@ -134,7 +134,7 @@ function Slider({ label, value, min, max, unit = "", onStart, onChange }: { labe
 }
 
 /**
- * Designstudion: ordmärket på sin duk, där delarna dras på plats, ändrar storlek i hörnet och får färg, typsnitt och
+ * Designstudion: wordmarket på sin duk, där delarna dras på plats, ändrar storlek i hörnet och får färg, typsnitt och
  * lutning. Förhandsvisningen ritas av servern med en riktig klubb; Spara gör en ny design som sedan tilldelas klubbar.
  */
 export function WordmarkStudio({ initial, clubs, from, onSave, onClose }: { initial: TemplateInput; clubs: LabClub[]; from?: FromImport; onSave: (t: TemplateInput) => Promise<SavedTemplate>; onClose: () => void }) {

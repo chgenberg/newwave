@@ -10,7 +10,7 @@ const PUBLIC = /^\/newwave\/[A-Za-z0-9/_-]+\.(?:png|jpg)$/;
 const REGISTRY = /^\/api\/v1\/newwave\/registry\/([a-z0-9-]{1,80})\/logo\.png(?:\?v=[^&#]*)?$/;
 const GRASROT = /^\/api\/v1\/newwave\/grasrot\/([a-z0-9-]{1,80})\/([a-z0-9-]+\.png)$/;
 
-/** En bild som sajten själv serverar, läst från disk: uppladdade filer, klubbarnas sköldar, klubbregistrets märken, Gräsrot 360-märkena, ordmärken och allt under public/newwave. */
+/** En bild som sajten själv serverar, läst från disk: uppladdade filer, klubbarnas sköldar, klubbregistrets märken, Gräsrot 360-märkena, wordmarks och allt under public/newwave. */
 export async function readAsset(url: string): Promise<Buffer | null> {
   const wordmark = parseWordmarkUrl(url);
   if (wordmark) {

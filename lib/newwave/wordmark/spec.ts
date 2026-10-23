@@ -1,11 +1,11 @@
 /**
- * Ett ordmärke i en design sparas som mall och val, inte som bild. Varje klubb får då sin egen version – med sitt
+ * Ett wordmark i en design sparas som mall och val, inte som bild. Varje klubb får då sin egen version – med sitt
  * namn, sina färger och sitt märke – och bilden ritas av /api/v1/newwave/wordmark när den behövs.
  */
 export type WordmarkNames = { name1?: string; name2?: string };
 export type WordmarkSpec = {
   template: string;
-  /** Klubbens märke i ordmärket. */
+  /** Klubbens märke i wordmarket. */
   icon: boolean;
   /** Rutband, ränder, stjärnor och andra ornament. */
   ornament: boolean;
@@ -126,7 +126,7 @@ export function parseWordmarkQuery(params: URLSearchParams): WordmarkQuery | nul
 }
 
 export type SocialKind = "profil" | "banner" | "story" | "anim";
-/** Ordmärket på klubbens huvudfärg i ett format för sociala medier; `anim` är en animerad SVG. */
+/** Wordmarket på klubbens huvudfärg i ett format för sociala medier; `anim` är en animerad SVG. */
 export const wordmarkSocialUrl = (spec: WordmarkSpec, club: string, kind: SocialKind) =>
   `${wordmarkUrl(spec, club, "club").replace(WORDMARK_PATH, `${WORDMARK_PATH}/social`)}&f=${kind}`;
 
@@ -137,7 +137,7 @@ export function wordmarkExportUrl(spec: WordmarkSpec, club: string, o: ExportOpt
   return `${wordmarkUrl(spec, club, "light").replace(WORDMARK_PATH, `${WORDMARK_PATH}/export`)}&${q}`;
 }
 
-/** Läser en ordmärkes-URL som sajten själv har byggt, t.ex. när mockupmotorn får den som logga. */
+/** Läser en wordmark-URL som sajten själv har byggt, t.ex. när mockupmotorn får den som logga. */
 export function parseWordmarkUrl(url: string): WordmarkQuery | null {
   if (!url.startsWith(`${WORDMARK_PATH}?`)) return null;
   return parseWordmarkQuery(new URLSearchParams(url.slice(WORDMARK_PATH.length + 1)));

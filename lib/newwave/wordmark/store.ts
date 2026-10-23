@@ -128,7 +128,7 @@ export async function baseClub(id: string): Promise<WordmarkClub | null> {
 }
 
 /**
- * Klubbens namn, färger, märke och grundandeår, som ordmärket ritas med: Crafts klubbar först (med färgerna kansliet
+ * Klubbens namn, färger, märke och grundandeår, som wordmarket ritas med: Crafts klubbar först (med färgerna kansliet
  * satt under Varumärke), annars klubbregistret, annars Gräsrot 360-föreningarna – och överst det klubben själv rättat i
  * klubbportalen.
  */

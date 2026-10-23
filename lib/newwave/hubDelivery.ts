@@ -113,7 +113,7 @@ async function productJobs(club: Club, a: Pick<Approval, "id" | "printFiles" | "
   const color = item.custom?.color ?? p.garmentHex;
   const dark = isDarkHex(color);
   const logoUrl = design.logo ? (dark ? (design.logoDark ?? design.logo) : design.logo) : a.printFiles ? (dark ? a.printFiles.dark : a.printFiles.light) : (item.printUrl ?? a.previewUrl);
-  // Ett ordmärke ritas per tryckposition, så att små tryck (bröst, ärm) får mallens lilla version.
+  // Ett wordmark ritas per tryckposition, så att små tryck (bröst, ärm) får mallens lilla version.
   const artUrlFor = (sizeCm: number) => (design.wordmark ? wordmarkUrl(design.wordmark, club.id, dark ? "dark" : "light", 3543, "png", sizeCm) : logoUrl);
   const spots: Placement[] = [design, ...(design.extra ?? [])].map(({ method, colors, shape, zone, sizeCm }) => ({ method, colors, shape, zone, sizeCm }));
   const arts = await Promise.all(spots.map(async (s) => {

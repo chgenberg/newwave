@@ -90,7 +90,7 @@ async function inksOf(id: string, job: Job) {
   return [...seen].map(([name, detail]) => ({ name, detail }));
 }
 
-const ART_LABEL: Record<Placement["art"], string> = { klubbmarke: "Klubbmärke", ordmarke: "Ordmärke", halsduk: "Halsduksdesign" };
+const ART_LABEL: Record<Placement["art"], string> = { klubbmarke: "Klubbmärke", ordmarke: "Wordmark", halsduk: "Halsduksdesign" };
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 

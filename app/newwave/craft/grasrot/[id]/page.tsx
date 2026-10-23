@@ -24,11 +24,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 const LABEL: Record<Variant, string> = { original: "Original", solid: "Solid", negativ: "Negativ" };
 const MODE: Record<ColorMode, string> = { spot: "Pantone", cmyk: "CMYK", rgb: "RGB" };
 const DOT: Record<Check["level"], string> = { ok: "bg-[#2E9E5B]", varning: "bg-[#E0A100]", stopp: "bg-[#D92D20]" };
-/** Leveransen i samma ordning som uppdraget: märke, kulörer, ordmärke, webbshop, herobild, sociala medier, produktion. */
+/** Leveransen i samma ordning som uppdraget: märke, kulörer, wordmark, webbshop, herobild, sociala medier, produktion. */
 const SECTIONS = [
   ["klubbmarke", "Klubbmärke"],
   ["kulorer", "Kulörer"],
-  ["ordmarke", "Ordmärke"],
+  ["ordmarke", "Wordmark"],
   ["webbshop", "Webbshop"],
   ["herobild", "Herobild"],
   ["sociala-medier", "Sociala medier"],
@@ -47,7 +47,7 @@ function Tile({ id, name, artwork, variant, checks }: { id: string; name: string
     );
   };
   const preview = (
-    <img src={fileHref(id, fileName(artwork, variant, "svg"))} alt={`${name} ${artwork === "ordmarke" ? "ordmärke" : "klubbmärke"}, ${LABEL[variant].toLowerCase()}`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-4" />
+    <img src={fileHref(id, fileName(artwork, variant, "svg"))} alt={`${name} ${artwork === "ordmarke" ? "wordmark" : "klubbmärke"}, ${LABEL[variant].toLowerCase()}`} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-4" />
   );
   return (
     <li className="flex min-w-0 flex-col rounded-[var(--nw-radius)] border border-[var(--nw-line)] p-3">
@@ -111,7 +111,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
   const [set, inks] = await Promise.all([pending, clubInks(id)]);
   const artworks: { artwork: Artwork; title: string; text: string }[] = [
     { artwork: "klubbmarke", title: "Klubbmärke", text: "Märket i tre varianter. Solid och negativ är en färg – svart på ljusa plagg, vitt på mörka." },
-    { artwork: "ordmarke", title: "Ordmärke", text: `Gräsrot 360-ordmärket med ${club.words ? `${club.words.caps} och ${club.words.script}` : "föreningens namn"}, rutbandet i föreningens färger och märket i en färg. ${FONT_CHECK.text}` },
+    { artwork: "ordmarke", title: "Wordmark", text: `Gräsrot 360-wordmarket med ${club.words ? `${club.words.caps} och ${club.words.script}` : "föreningens namn"}, rutbandet i föreningens färger och märket i en färg. ${FONT_CHECK.text}` },
   ];
   const checks = Object.fromEntries(
     await Promise.all(artworks.flatMap(({ artwork }) => VARIANTS.map(async (v) => [`${artwork}-${v}`, ((await printChecks(id, artwork, v)) ?? []).filter((c) => c.text !== set.quality.note && c.text !== FONT_CHECK.text)] as const))),
@@ -144,7 +144,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
         <div className="min-w-0 flex-1">
           <p className="nw-club-heading text-[17px]">Hela leveransen i ett paket</p>
           <p className="mt-1 text-[13.5px] text-white/70">
-            Klubbmärke och ordmärke ({FILE_SET.length} filer i Pantone, CMYK och RGB), kulörer som färgprover, webbshopens produktbilder i alla färger, herobilden, inlägg för sociala medier och produktionsunderlag per
+            Klubbmärke och wordmark ({FILE_SET.length} filer i Pantone, CMYK och RGB), kulörer som färgprover, webbshopens produktbilder i alla färger, herobilden, inlägg för sociala medier och produktionsunderlag per
             leverantör – med en läs mig-fil.
           </p>
         </div>
@@ -205,7 +205,7 @@ export default async function GrasrotClubPage({ params }: { params: Promise<{ id
       <section id="webbshop" className={section}>
         <h2 className="nw-club-heading text-[19px] text-[var(--club)]">Webbshop – produkterna i Bilaga 2</h2>
         <p className="mt-0.5 max-w-[720px] text-[13.5px] text-[var(--nw-muted)]">
-          Ensamstående klubbmärke eller ordmärke på varje produkt, i leverantörens färger. T-shirtens ordmärke är i klubbens färger på ljusa plagg och vitt på mörka; hoodien och kepsen har märket i original på alla färger; flaskan trycks på ljusa och graveras på mörka. Vrid produkten i 3D eller se fotot.
+          Ensamstående klubbmärke eller wordmark på varje produkt, i leverantörens färger. T-shirtens wordmark är i klubbens färger på ljusa plagg och vitt på mörka; hoodien och kepsen har märket i original på alla färger; flaskan trycks på ljusa och graveras på mörka. Vrid produkten i 3D eller se fotot.
         </p>
         <GrasrotShop id={id} products={products} featured={featured} />
       </section>

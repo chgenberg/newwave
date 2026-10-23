@@ -194,7 +194,7 @@ export function Workspace({ role, embedded = false }: { role: Role; embedded?: b
     setOccasion(id);
     setTab("kollektion");
   };
-  /** Ett mallpaket med ordmärken: paketets produkter får varsin mall i samma stil, resten av kollektionen ligger kvar. */
+  /** Ett mallpaket med wordmarks: paketets produkter får varsin mall i samma stil, resten av kollektionen ligger kvar. */
   const fromWordmarks = (id: string) => {
     const c = findCollection(id);
     if (!c) return;

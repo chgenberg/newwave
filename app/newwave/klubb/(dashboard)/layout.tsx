@@ -12,7 +12,7 @@ const ITEMS: NavItem[] = [
   { href: `${BASE}/webshop`, label: "Webshop", icon: "store" },
   { href: `${BASE}/statistik`, label: "Statistik", icon: "chart" },
   { href: `${BASE}/varumarke`, label: "Varumärke", icon: "drop" },
-  { href: `${BASE}/ordmarken`, label: "Ordmärken", icon: "layers" },
+  { href: `${BASE}/ordmarken`, label: "Wordmarks", icon: "layers" },
   { href: `${BASE}/support`, label: "Support", icon: "chat" },
 ];
 

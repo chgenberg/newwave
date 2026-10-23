@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element -- mockups och ordmärken ritas per klubb */
+/* eslint-disable @next/next/no-img-element -- mockups och wordmarks ritas per klubb */
 import Link from "next/link";
 import { mockupUrl, printArt, type ShopItem, wordmarkSpec } from "@/lib/newwave/clubShop";
 import { kr } from "./pricing";
 
-/** Produkten på fotot; vid hover syns ordmärket som det trycks. */
+/** Produkten på fotot; vid hover syns wordmarket som det trycks. */
 export function ProductTile({ item, clubId, v, href, eager }: { item: ShopItem; clubId: string; v: string; href: string; eager?: boolean }) {
   const spec = wordmarkSpec(item.template.id, item.worn);
   return (

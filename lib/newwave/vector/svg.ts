@@ -195,7 +195,7 @@ export function flattenSvg(src: string): Flat {
         return;
       }
       case "svg": {
-        // Ett inre <svg> (som konstlagren i ett ordmärke) har egen ruta och viewBox, centrerad och skalad att rymmas.
+        // Ett inre <svg> (som konstlagren i ett wordmark) har egen ruta och viewBox, centrerad och skalad att rymmas.
         const vb = (n.attrs.viewBox ?? "").split(/[\s,]+/).map(Number);
         const [x, y, w, h] = ["x", "y", "width", "height"].map((k) => parseFloat(n.attrs[k] ?? "") || 0);
         let at = mm;

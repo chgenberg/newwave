@@ -12,7 +12,7 @@ import { GRASROT_PRODUCTS, METHOD_TEXT } from "./products";
 import { captionText, SOCIAL_FORMATS, SOCIAL_SLIDES, type SocialFormat, socialSlides } from "./social";
 
 /**
- * Hela leveransen till en förening som en zip: klubbmärket och ordmärket i alla varianter och färglägen, kulörerna,
+ * Hela leveransen till en förening som en zip: klubbmärket och wordmarket i alla varianter och färglägen, kulörerna,
  * webbshopens produktbilder i varje färg, herobilden, inläggen för sociala medier och produktionsunderlaget per
  * leverantör. Paketet byggs på en halv minut och sparas i produktion tills nästa version är ute. En fil som inte går
  * att bygga stoppar inte paketet; den listas i LASMIG.txt.
@@ -62,7 +62,7 @@ async function readme(club: GrasrotClub, inks: ClubInk[], failed: string[]): Pro
     "",
     ...(failed.length ? ["SAKNAS I DEN HÄR LEVERANSEN – kunde inte byggas, hämta dem på nytt från Next Wave:", ...failed.map((f) => `  ${f}`), ""] : []),
     "MAPPAR",
-    "  01-klubbmarke/, 02-ordmarke/  Märket och ordmärket i tre varianter:",
+    "  01-klubbmarke/, 02-ordmarke/  Märket och wordmarket i tre varianter:",
     "      pantone/  PDF och EPS med Pantone-dekorfärger – screentryck, transfer, brodyr och gravyr.",
     "      cmyk/     PDF och EPS i process-CMYK – digitaltryck och offset. Vitt trycks inte; negativet finns därför inte här.",
     "      rgb/      PDF, EPS, SVG och PNG (300 dpi) i RGB – skärm, webbshop och sociala medier.",
@@ -92,7 +92,7 @@ async function readme(club: GrasrotClub, inks: ClubInk[], failed: string[]): Pro
     `  Källa: ${club.source.from}`,
     `  ${set.quality.note}`,
     "",
-    "ORDMÄRKET",
+    "WORDMARKET",
     `  ${FONT_CHECK.text}`,
     "",
     "KULÖRER",

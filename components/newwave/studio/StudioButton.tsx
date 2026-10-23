@@ -73,7 +73,7 @@ export function StudioButton({
   qty?: number;
   needBy?: string;
   brandColor?: string;
-  /** Klubben vars ordmärken studion visar; utan den går ett sparat ordmärke inte att se eller byta. */
+  /** Klubben vars wordmarks studion visar; utan den går ett sparat wordmark inte att se eller byta. */
   wordmarkClub?: ComponentProps<typeof DesignStudio>["wordmarkClub"];
   target?: SaveTarget;
   onSaved?: (s: Saved) => void | Promise<void>;

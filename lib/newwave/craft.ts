@@ -259,7 +259,7 @@ const priceOf = (id: string) => nwProduct(id)?.priceSek ?? 299;
 
 /**
  * Lägger kampanjen hos varje klubb i hubben och returnerar godkännande-id:n. En kampanj från designstudion får klubbens
- * logga – eller designens ordmärke med klubbens namn, färger och märke – på produkterna och färdiga butiksprodukter,
+ * logga – eller designens wordmark med klubbens namn, färger och märke – på produkterna och färdiga butiksprodukter,
  * så att ett godkännande lägger ut dem i klubbens butik hos Intersport.
  */
 export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<string, string>> {
@@ -297,7 +297,7 @@ export async function deliverCampaign(c: Campaign, origin = ""): Promise<Record<
                     {
                       sku: `CRAFT-POD-${p.id.toUpperCase()}-${c.id.toUpperCase()}`,
                       title: `${club.name} – ${c.title} – ${p.name} ${colorName(custom.color).toLowerCase()}`,
-                      description: `${p.name} med ${genitive(club.name)} ${custom.design.wordmark ? "ordmärke" : "logga"}, från Crafts kampanj "${c.title}".`,
+                      description: `${p.name} med ${genitive(club.name)} ${custom.design.wordmark ? "wordmark" : "logga"}, från Crafts kampanj "${c.title}".`,
                       priceSek: p.priceSek,
                       sizes: p.sizes,
                       images: [{ url: mockupUrl, alt: `${p.name} med ${genitive(club.name)} logga`, kind: "mockup" as const }],

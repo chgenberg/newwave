@@ -14,7 +14,7 @@ import { readData, updateJson } from "./workspace";
 /**
  * Det klubben själv skriver och visar i sin butik: rubriken, ingressen, raden i klubbshoppen hos Intersport, om
  * klubben, kontaktuppgifterna, fotot överst och varor som inte ska synas. Delas av alla, som klubbens val för
- * ordmärkena, så att det klubben ändrar via sin länk syns för supportrarna.
+ * wordmarken, så att det klubben ändrar via sin länk syns för supportrarna.
  */
 const FILE = "newwave/clubshop/content.json";
 const PHOTO_DIR = path.join(process.cwd(), ".data", "newwave", "clubshop", "photos");

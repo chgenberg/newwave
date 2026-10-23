@@ -33,7 +33,7 @@ async function resolve(q: WordmarkQuery): Promise<{ template: Template; club: Wo
 const draw = (t: Template, club: WordmarkClub, q: WordmarkQuery, animate = false) =>
   renderWordmark(t, club, { name1: q.name1, name2: q.name2, team: q.team, player: q.player, number: q.number, icon: q.icon, ornament: q.ornament, worn: q.worn, variant: q.variant, animate });
 
-/** Ordmärket som SVG eller PNG; ritas en gång per mall, klubb, namn och storlek och sparas sedan. */
+/** Wordmarket som SVG eller PNG; ritas en gång per mall, klubb, namn och storlek och sparas sedan. */
 export async function wordmarkFile(q: WordmarkQuery): Promise<{ data: Buffer; type: string } | null> {
   const r = await resolve(q);
   if (!r) return null;
@@ -44,16 +44,16 @@ export async function wordmarkFile(q: WordmarkQuery): Promise<{ data: Buffer; ty
   return { data, type: q.format === "svg" ? "image/svg+xml" : "image/png" };
 }
 
-/** Format för sociala medier: profilbild, omslag/banner, story och ett animerat ordmärke för webben. */
+/** Format för sociala medier: profilbild, omslag/banner, story och ett animerat wordmark för webben. */
 export const SOCIAL = {
   profil: { label: "Profilbild", w: 1080, h: 1080, fit: [0.7, 0.7] },
   banner: { label: "Omslagsbild", w: 1500, h: 500, fit: [0.8, 0.72] },
   story: { label: "Story", w: 1080, h: 1920, fit: [0.8, 0.5] },
-  anim: { label: "Animerat ordmärke", w: 1200, h: 1200, fit: [0.8, 0.8] },
+  anim: { label: "Animerat wordmark", w: 1200, h: 1200, fit: [0.8, 0.8] },
 } as const;
 export type SocialFormat = keyof typeof SOCIAL;
 
-/** Ordmärket centrerat på klubbens huvudfärg i formatets mått. */
+/** Wordmarket centrerat på klubbens huvudfärg i formatets mått. */
 function onBackground(r: Rendered, f: (typeof SOCIAL)[SocialFormat], bg: string) {
   const s = Math.min((f.w * f.fit[0]) / r.width, (f.h * f.fit[1]) / r.height);
   const [w, h] = [r.width * s, r.height * s];

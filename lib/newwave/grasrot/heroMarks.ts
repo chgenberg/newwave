@@ -27,7 +27,7 @@ export async function heroMarks(id: string): Promise<HeroMark[]> {
   return raw ? (JSON.parse(raw) as HeroMark[]) : [];
 }
 
-/** Klubbmärket som det ser ut på produkten: halsdukens är negativt, ordmärkets i ordmärkets färg. */
+/** Klubbmärket som det ser ut på produkten: halsdukens är negativt, wordmarkets i wordmarkets färg. */
 export async function markArt(id: string, product: GrasrotProduct, color: ProductColor): Promise<Flat | null> {
   const set = await emblemSet(id);
   if (!set) return null;
@@ -125,7 +125,7 @@ async function stamp(px: Uint8ClampedArray, W: number, H: number, m: HeroMark, f
   const [rx, ry] = o.upright ? [2, r * 3] : [r, r];
   const keep = mask.map((v) => 1 - v);
   // Halsdukens väv och T-shirten är enfärgade runt märket: bara pixlar i tygets färg får ge färg, inte vävda bokstäver,
-  // ränder och ordmärkets rutband bredvid eller räcket och bakgrunden utanför halsdukens kant (med samma ljushet som väven).
+  // ränder och wordmarkets rutband bredvid eller räcket och bakgrunden utanför halsdukens kant (med samma ljushet som väven).
   if (o.even) {
     const near = blur(keep, S, S, grow);
     const ring = [...keep.keys()].filter((i) => keep[i] > 0.99 && near[i] < 0.995);

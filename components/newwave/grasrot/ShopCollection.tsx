@@ -28,7 +28,7 @@ export function G360Tile({ id, product, color, href, eager }: { id: string; prod
   );
 }
 
-/** Klubbkollektionen överst i butiken: Gräsrot 360-produkterna med klubbmärket eller ordmärket. */
+/** Klubbkollektionen överst i butiken: Gräsrot 360-produkterna med klubbmärket eller wordmarket. */
 export function G360Section({ id, home, products, featured }: { id: string; home: string; products: ShopProduct[]; featured: Record<string, string> }) {
   return (
     <section id={G360_SECTION.id} aria-labelledby={`${G360_SECTION.id}-rubrik`} className="scroll-mt-20 pt-10">
@@ -36,7 +36,7 @@ export function G360Section({ id, home, products, featured }: { id: string; home
         <h2 id={`${G360_SECTION.id}-rubrik`} className="text-[24px] font-black tracking-[-0.02em] sm:text-[28px]">
           {G360_SECTION.name}
         </h2>
-        <p className="text-[14px] text-[#6F6B63]">Gräsrot 360 med New Wave Group – klubbmärket och ordmärket på fem produkter</p>
+        <p className="text-[14px] text-[#6F6B63]">Gräsrot 360 med New Wave Group – klubbmärket och wordmarket på fem produkter</p>
       </div>
       <ul className="mt-5 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-4 md:grid-cols-3 lg:grid-cols-5">
         {products.map((p) => (

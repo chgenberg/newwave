@@ -23,8 +23,8 @@ async function put(clubId: string, body: unknown): Promise<{ prefs: Prefs; issue
 }
 
 /**
- * Klubbens egna ordmärken: rätta namn och färger, välj favoriter och godkänn att Craft trycker dem. Det klubben
- * rättar gäller överallt där klubbens ordmärken ritas; ändras något efter godkännandet behöver det godkännas igen.
+ * Klubbens egna wordmarks: rätta namn och färger, välj favoriter och godkänn att Craft trycker dem. Det klubben
+ * rättar gäller överallt där klubbens wordmarks ritas; ändras något efter godkännandet behöver det godkännas igen.
  */
 export function ClubWordmarks({ clubId, colorsHref }: { clubId: string; colorsHref?: string }) {
   const [data, setData] = useState<Loaded | null>(null);
@@ -59,7 +59,7 @@ export function ClubWordmarks({ clubId, colorsHref }: { clubId: string; colorsHr
     };
   }, [load]);
 
-  if (!data) return <p className="mt-4 text-[14px] text-[var(--nw-muted)]">Hämtar ordmärkena…</p>;
+  if (!data) return <p className="mt-4 text-[14px] text-[var(--nw-muted)]">Hämtar wordmarken…</p>;
   const { club, prefs } = data;
   const version = encodeURIComponent(prefs.updatedAt ?? "");
   const favs = new Set(prefs.favorites);
@@ -139,7 +139,7 @@ export function ClubWordmarks({ clubId, colorsHref }: { clubId: string; colorsHr
           <h3 className="text-[15px] font-semibold text-[var(--nw-ink)]">Färgerna</h3>
           {colorsHref ? (
             <p className="mt-0.5 text-[13px] text-[var(--nw-muted)]">
-              Ordmärkena följer klubbens färger under{" "}
+              Wordmarken följer klubbens färger under{" "}
               <Link href={colorsHref} className="underline underline-offset-4">
                 Varumärke
               </Link>
@@ -218,12 +218,12 @@ export function ClubWordmarks({ clubId, colorsHref }: { clubId: string; colorsHr
           <h3 className="text-[15px] font-semibold text-[var(--nw-ink)]">Godkänn</h3>
           <label className="mt-2 flex items-start gap-2 text-[13.5px] text-[var(--nw-ink)]">
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5" />
-            Vi godkänner att Craft och New Wave trycker {genitive(club.name)} namn, märke och färger i de här ordmärkena på klubbens produkter.
+            Vi godkänner att Craft och New Wave trycker {genitive(club.name)} namn, märke och färger i de här wordmarken på klubbens produkter.
           </label>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input value={by} onChange={(e) => setBy(e.target.value)} maxLength={60} placeholder="Ert namn och roll, t.ex. Anna, kansliet" aria-label="Ert namn och roll" className="nw-input h-10 w-[280px] max-w-full" />
-            <button type="button" disabled={busy || !agree || by.trim().length < 2} onClick={() => void save({ approve: { by: by.trim() } }, "Tack! Ordmärkena är godkända.")} className="nw-btn h-10 disabled:opacity-50">
-              Godkänn ordmärkena
+            <button type="button" disabled={busy || !agree || by.trim().length < 2} onClick={() => void save({ approve: { by: by.trim() } }, "Tack! Wordmarken är godkända.")} className="nw-btn h-10 disabled:opacity-50">
+              Godkänn wordmarken
             </button>
           </div>
         </section>

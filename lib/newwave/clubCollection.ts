@@ -69,7 +69,7 @@ export async function loadCollection(clubId: string, hidden: readonly string[] =
 type ClubShop = NonNullable<Awaited<ReturnType<typeof loadClubShop>>>;
 export type Sellable = { id: string; name: string; group: string; priceSek: number; flock: boolean; image: string };
 
-/** Allt klubben säljer, dolt eller inte: kollektionerna och ordmärkena. Priserna här gäller, inte webbläsarens. */
+/** Allt klubben säljer, dolt eller inte: kollektionerna och wordmarken. Priserna här gäller, inte webbläsarens. */
 export async function sellables(shop: ClubShop): Promise<Sellable[]> {
   const id = shop.club.id;
   const { all } = await loadCollection(id);

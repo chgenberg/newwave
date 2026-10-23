@@ -12,7 +12,7 @@ import { fitScore, type Template } from "./schema";
 import { allTemplates, wordmarkClub } from "./store";
 
 /**
- * Kontrollerna innan ett ordmärke når en klubb: syns färgerna på plagget, är märket i färg och skarpt nog, är namnet
+ * Kontrollerna innan ett wordmark når en klubb: syns färgerna på plagget, är märket i färg och skarpt nog, är namnet
  * rätt delat. Det klubben har rättat och godkänt i klubbportalen väger tyngst – en godkänd klubb granskas inte igen.
  */
 export type Level = "fel" | "varning" | "info";
@@ -65,10 +65,10 @@ function assess(f: Facts, templates: Template[]): Issue[] {
   const { club, prefs } = f;
   const own = Boolean(prefs.colors);
   const colors = club.colors.filter((c) => /^#[0-9a-f]{6}$/i.test(c));
-  if (!colors.length) out.push({ id: "colors-missing", level: "fel", text: "Klubbfärger saknas – ordmärkena ritas i svart och vitt.", fix: "Be klubben rätta färgerna i klubbportalen." });
+  if (!colors.length) out.push({ id: "colors-missing", level: "fel", text: "Klubbfärger saknas – wordmarken ritas i svart och vitt.", fix: "Be klubben rätta färgerna i klubbportalen." });
   else {
-    if (paletteFor(colors, "light").primary === "#111111") out.push({ id: "light-contrast", level: "varning", text: "Ingen klubbfärg syns tydligt på vita plagg – ordmärket blir svart där.", fix: "Välj mörka plagg eller lägg till en mörkare klubbfärg." });
-    if (paletteFor(colors, "dark").primary === "#FFFFFF") out.push({ id: "dark-contrast", level: "varning", text: "Ingen klubbfärg syns tydligt på svarta plagg – ordmärket blir vitt där.", fix: "Välj ljusa plagg eller lägg till en ljusare klubbfärg." });
+    if (paletteFor(colors, "light").primary === "#111111") out.push({ id: "light-contrast", level: "varning", text: "Ingen klubbfärg syns tydligt på vita plagg – wordmarket blir svart där.", fix: "Välj mörka plagg eller lägg till en mörkare klubbfärg." });
+    if (paletteFor(colors, "dark").primary === "#FFFFFF") out.push({ id: "dark-contrast", level: "varning", text: "Ingen klubbfärg syns tydligt på svarta plagg – wordmarket blir vitt där.", fix: "Välj ljusa plagg eller lägg till en ljusare klubbfärg." });
     const inLogo = (f.logoColors ?? []).filter((c) => c.share >= 0.08 && chroma(c.hex) > 0.25);
     if (!own && inLogo.length && chroma(colors[0]) > 0.25 && inLogo.every((c) => deltaE(c.hex, colors[0]) > 30))
       out.push({ id: "colors-mismatch", level: "varning", text: `Huvudfärgen ${colors[0]} finns inte i märket (${inLogo.map((c) => c.hex).join(", ")}).`, fix: "Kontrollera färgerna mot klubbens tröja och rätta dem." });

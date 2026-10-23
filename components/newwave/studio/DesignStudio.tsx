@@ -142,9 +142,9 @@ export function DesignStudio({
   picker?: ReactNode;
   /** Varumärkesverktyget (brandbook, webbadress, färger och logga) när studion används fristående. */
   brand?: ReactNode;
-  /** Klubben som ordmärkena förhandsvisas med; utan den visas inga ordmärken. */
+  /** Klubben som wordmarken förhandsvisas med; utan den visas inga wordmarks. */
   wordmarkClub?: { id: string; name: string; logo?: string };
-  /** Ett mallpaket med ordmärken för hela sortimentet. */
+  /** Ett mallpaket med wordmarks för hela sortimentet. */
   onWordmarkCollection?: (id: string) => void;
   /** Högerkolumn bredvid produkten, t.ex. fler produkter i samma design. */
   aside?: ReactNode;
@@ -221,7 +221,7 @@ export function DesignStudio({
   const units = Math.max(qty ?? 1, design.names?.list.length ?? 0);
   const marking = markingPrice(design, units);
   const darkProduct = isDark(color);
-  // Ordmärket ritas per tryckstorlek: små tryck (bröst, ärm) får mallens lilla version.
+  // Wordmarket ritas per tryckstorlek: små tryck (bröst, ärm) får mallens lilla version.
   const logoFor = (sizeCm: number) =>
     design.wordmark && wordmarkClub
       ? wordmarkUrl(design.wordmark, wordmarkClub.id, darkProduct ? "dark" : "light", 1200, "png", sizeCm)
@@ -595,7 +595,7 @@ export function DesignStudio({
     setView(v);
     api.current?.view(v);
   };
-  // Ett nytt motiv (uppladdning, ordmärke, metod) ritas där det syns: kameran vänds mot det valda trycket.
+  // Ett nytt motiv (uppladdning, wordmark, metod) ritas där det syns: kameran vänds mot det valda trycket.
   const shownArt = useRef<LogoArt | null>(null);
   useEffect(() => {
     const before = shownArt.current;
@@ -961,7 +961,7 @@ export function DesignStudio({
                       <span className={`cz-logo-thumb${darkProduct ? " is-dark" : ""}`}>{art ? <img src={art.canvas.toDataURL()} alt="Motivet som det trycks" /> : null}</span>
                       <span className="cz-drop-text">
                         <b>{fetching ? "Hämtar loggan…" : dropping === "panel" ? "Släpp loggan här" : "Ladda upp egen logga"}</b>
-                        <small>{design.wordmark ? "Just nu: ordmärke" : design.logo ? "Egen logga" : `Just nu: ${base.label}`}. PNG, JPG, WebP eller SVG – vi tar bort bakgrunden och gör en ljus och en mörk variant.</small>
+                        <small>{design.wordmark ? "Just nu: wordmark" : design.logo ? "Egen logga" : `Just nu: ${base.label}`}. PNG, JPG, WebP eller SVG – vi tar bort bakgrunden och gör en ljus och en mörk variant.</small>
                       </span>
                     </label>
                     {uploadError ? <p className="brandbar-err">{uploadError}</p> : null}

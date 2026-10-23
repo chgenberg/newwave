@@ -2,8 +2,8 @@ import { z } from "zod";
 import { readData, writeData } from "@/lib/newwave/workspace";
 
 /**
- * Det klubben själv har sagt om sina ordmärken: rättade färger och namn, favoriter och godkännandet att Craft får
- * trycka. Rättelserna gäller överallt där klubbens ordmärken ritas; ändras de släpper godkännandet. Valen delas av
+ * Det klubben själv har sagt om sina wordmarks: rättade färger och namn, favoriter och godkännandet att Craft får
+ * trycka. Rättelserna gäller överallt där klubbens wordmarks ritas; ändras de släpper godkännandet. Valen delas av
  * alla, inte per demomiljö, så att det klubben svarar via sin länk syns i Craft.
  */
 const FILE = "newwave/wordmarks/clubs.json";

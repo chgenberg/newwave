@@ -13,8 +13,8 @@ type Extra = Pick<WordmarkSpec, "team" | "player" | "number">;
 const EXTRA_KEYS = ["team", "player", "number"] as const;
 
 /**
- * Ordmärken i designstudion. Förhandsvisningen ritas med en klubb, men designen sparar bara mall och val –
- * varje klubb som får kollektionen får ordmärket med sitt eget namn, sina färger och sitt märke. Med `onCollection`
+ * Wordmarks i designstudion. Förhandsvisningen ritas med en klubb, men designen sparar bara mall och val –
+ * varje klubb som får kollektionen får wordmarket med sitt eget namn, sina färger och sitt märke. Med `onCollection`
  * kan hela sortimentet få ett mallpaket i samma stil.
  */
 export function WordmarkPicker({
@@ -104,9 +104,9 @@ export function WordmarkPicker({
   return (
     <div className="cz-wm">
       <p className="drawer-label">
-        Ordmärken <span>visas med {club.name}</span>
+        Wordmarks <span>visas med {club.name}</span>
       </p>
-      <div className={`cz-wm-grid${dark ? " is-dark" : ""}`} role="radiogroup" aria-label="Ordmärke">
+      <div className={`cz-wm-grid${dark ? " is-dark" : ""}`} role="radiogroup" aria-label="Wordmark">
         <button type="button" role="radio" aria-checked={!value} className="cz-wm-tile is-logo" onClick={() => onChange(undefined)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- klubbens märke */}
           {club.logo ? <img src={club.logo} alt="" /> : <span aria-hidden />}
@@ -176,7 +176,7 @@ export function WordmarkPicker({
             </button>
           </div>
           <p className="cz-wm-help">
-            Namn 1 skrivs alltid med versaler. Tomt fält = klubbens eget namn. Lag eller sektion ersätter sporten. Varje klubb får ordmärket med sitt namn, sina färger och sitt märke.
+            Namn 1 skrivs alltid med versaler. Tomt fält = klubbens eget namn. Lag eller sektion ersätter sporten. Varje klubb får wordmarket med sitt namn, sina färger och sitt märke.
           </p>
         </div>
       ) : null}

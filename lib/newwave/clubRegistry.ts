@@ -122,7 +122,7 @@ function hue(hex?: string) {
 /** Bara vanliga webbadresser från skrapade sidor når länkarna. */
 const web = (u: unknown) => (typeof u === "string" && /^https?:\/\/[^\s"<>]+$/i.test(u) ? u : undefined);
 
-/** En skrapad klubb som ordmärkena kan ritas för: namn, profilfärger, klubbmärke och grundandeår. */
+/** En skrapad klubb som wordmarken kan ritas för: namn, profilfärger, klubbmärke och grundandeår. */
 export async function registryWordmarkClub(id: string) {
   if (!(await isListed(id))) return null;
   const s = JSON.parse(await readFile(path.join(CLUBS_DIR, "sites", `${id}.json`), "utf8").catch(() => "null"));

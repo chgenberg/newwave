@@ -27,7 +27,7 @@ const kr = (n: number) => `${new Intl.NumberFormat("sv-SE").format(n)} kr`;
 const BOX = "relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[12px]";
 const IMG = "absolute inset-0 h-full w-full object-contain p-[9%]";
 
-/** Allt om ett ordmärke för en klubb: stor och liten version, tryckfiler med Pantone, stygn och pris, och de digitala formaten. */
+/** Allt om ett wordmark för en klubb: stor och liten version, tryckfiler med Pantone, stygn och pris, och de digitala formaten. */
 export function WordmarkDetail({ spec, name, club, onClose }: { spec: WordmarkSpec; name: string; club: LabClub; onClose: () => void }) {
   const [garment, setGarment] = useState(GARMENTS[0].product);
   const product = nwProduct(garment)!;

@@ -38,7 +38,7 @@ export function TailorCard({ analysis, event }: { analysis: SiteAnalysis; event:
             </p>
           )}
           {analysis.logo.status !== "ok" && (
-            <p className="mt-2">{analysis.logo.status === "replaced" ? "Vi hittade en bättre version av er logga i sidhuvudet och använder den." : "Vi satte namnet som ordmärke tills ni laddar upp er logga."}</p>
+            <p className="mt-2">{analysis.logo.status === "replaced" ? "Vi hittade en bättre version av er logga i sidhuvudet och använder den." : "Vi satte namnet som wordmark tills ni laddar upp er logga."}</p>
           )}
         </div>
         {images.length > 0 && (

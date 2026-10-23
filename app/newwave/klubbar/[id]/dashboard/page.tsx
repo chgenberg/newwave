@@ -21,7 +21,7 @@ export default async function ClubDashboard({ params }: { params: Promise<{ id: 
     { done: Boolean(content.headline || content.intro), label: "Skriv butikens rubrik och ingress", href: `${base}/webshop#texter` },
     { done: Boolean(content.email || content.phone), label: "Lägg till kontaktuppgifter", href: `${base}/webshop#kontakt` },
     { done: Boolean(content.photo), label: "Ladda upp ett eget lagfoto", href: `${base}/webshop#foto` },
-    { done: Boolean(prefs.approved), label: "Godkänn ordmärkena för tryck", href: `/newwave/klubbar/${id}#godkann` },
+    { done: Boolean(prefs.approved), label: "Godkänn wordmarken för tryck", href: `/newwave/klubbar/${id}#godkann` },
   ];
   const left = steps.filter((s) => !s.done).length;
 

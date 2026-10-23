@@ -45,7 +45,7 @@ export default async function CraftClubs({ searchParams }: { searchParams: Promi
       <Link href="/newwave/craft/grasrot" className="mt-4 flex items-center gap-4 rounded-[var(--nw-radius)] bg-[var(--club)] px-5 py-4 text-white transition hover:opacity-95">
         <div className="min-w-0 flex-1">
           <p className="nw-club-heading text-[17px]">Gräsrot 360 – betan med New Wave Group</p>
-          <p className="mt-0.5 text-[13.5px] text-white/70">Tio föreningar: märken, kulörer, ordmärken, webbshop, herobild, sociala medier och produktionsunderlag.</p>
+          <p className="mt-0.5 text-[13.5px] text-white/70">Tio föreningar: märken, kulörer, wordmarks, webbshop, herobild, sociala medier och produktionsunderlag.</p>
         </div>
         <span className="shrink-0 text-[14px] font-semibold" aria-hidden>
           Öppna →

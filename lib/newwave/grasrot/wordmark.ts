@@ -9,9 +9,9 @@ import { grasrotClub } from "./clubs";
 import { colorAreas, emblemSet, fit, NEGATIVE_INK, SOLID_INK, type Variant } from "./emblem";
 
 /**
- * Gräsrot 360-ordmärket (Bilaga 1): klubbens typord i spärrade versaler, ortnamnet i skrivstil, ett rutat band i
+ * Gräsrot 360-wordmarket (Bilaga 1): klubbens typord i spärrade versaler, ortnamnet i skrivstil, ett rutat band i
  * klubbens två färger och märket under. Mallen skalar texten efter namnets längd; märket är klubbens vektormärke i
- * samma variant som ordmärket, så att hela ordmärket kan tryckas i original, en färg eller vitt.
+ * samma variant som wordmarket, så att hela wordmarket kan tryckas i original, en färg eller vitt.
  */
 
 export const GRASROT_TEMPLATE = TEMPLATES.find((t) => t.id === "grasrot-360") as (typeof TEMPLATES)[number];
@@ -28,7 +28,7 @@ async function wordmarkColors(id: string, emblem: Flat): Promise<[string, string
     if (share < 0.02 || deltaE2000(hexToLab(hex), hexToLab("#FFFFFF")) < 10) continue;
     if (picked.every((p) => deltaE2000(hexToLab(p), hexToLab(hex)) >= 15)) picked.push(hex);
   }
-  // Den tydligaste färgen bär versalerna och bandets övre rad, som det blå i Särö Kullaviks ordmärke. Ett märke med
+  // Den tydligaste färgen bär versalerna och bandets övre rad, som det blå i Särö Kullaviks wordmark. Ett märke med
   // en enda färg (IF Hallby) får en mörkare ton av den i stället för svart, som inte finns i märket.
   const [a = "#111111", b = mix(a, "#000000", 0.5)] = picked;
   return luminance(a) <= luminance(b) ? [a, b] : [b, a];
@@ -58,7 +58,7 @@ async function build(id: string, variant: Variant): Promise<GrasrotWordmark | nu
   const r = await renderWordmark(GRASROT_TEMPLATE, { id, name: club.name, colors }, { icon: false, ornament: true, variant: "light", canvas: true, texts: { name1: words.caps, name2: words.script } });
   const art = flattenSvg(r.svg);
   const icon = GRASROT_TEMPLATE.layers.find((l) => l.kind === "icon")?.box;
-  // Som i Bilaga 1 står märket i en färg under ordmärket: soliden i huvudfärgen, svart eller vitt.
+  // Som i Bilaga 1 står märket i en färg under wordmarket: soliden i huvudfärgen, svart eller vitt.
   const mark = variant === "original" ? recolor(set.solid, () => colors[0]) : set[variant];
   const emblem = icon ? fit(mark, icon).shapes : [];
   const ink = variant === "solid" ? SOLID_INK : variant === "negativ" ? NEGATIVE_INK : null;

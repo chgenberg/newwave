@@ -10,7 +10,7 @@ import { type TemplateStat, templateStats } from "./wordmark/stats";
 import { allTemplates, featuredTemplates, wordmarkClub } from "./wordmark/store";
 
 /**
- * Klubbens demobutik: katalogens produkter med klubbens ordmärken, utan AI. Sortimentet är klubbens favoriter (eller
+ * Klubbens demobutik: katalogens produkter med klubbens wordmarks, utan AI. Sortimentet är klubbens favoriter (eller
  * de mallar som passar namnet bäst) på tröjorna, och kollektionerna – samma stil över hela sortimentet.
  */
 
@@ -32,11 +32,11 @@ export function rankTemplates(templates: Template[], club: WordmarkClub, favorit
 
 export const wordmarkSpec = (template: string, worn?: boolean): WordmarkSpec => ({ template, icon: true, ornament: true, ...(worn ? { worn: true } : {}) });
 
-/** Ordmärket som det trycks på produkten: mörk variant på mörka plagg och den lilla versionen för små tryck. `v` tömmer webbläsarens cache när klubben rättat något. */
+/** Wordmarket som det trycks på produkten: mörk variant på mörka plagg och den lilla versionen för små tryck. `v` tömmer webbläsarens cache när klubben rättat något. */
 export const printArt = (p: NwProduct, spec: WordmarkSpec, clubId: string, v: string, size = 1200) =>
   `${wordmarkUrl(spec, clubId, p.dark ? "dark" : "light", size, "png", defaultDesign(p).sizeCm)}&u=${encodeURIComponent(v)}`;
 
-/** Produktfotot med ordmärket på, ritat på servern och sparat. */
+/** Produktfotot med wordmarket på, ritat på servern och sparat. */
 export function mockupUrl(p: NwProduct, spec: WordmarkSpec, clubId: string, v: string, size: 480 | 800 | 1200 = 800) {
   return `/api/v1/newwave/mockup?p=${p.id}&l=${encodeURIComponent(printArt(p, spec, clubId, v))}&s=${size}&z=${defaultDesign(p).zone}`;
 }
@@ -73,7 +73,7 @@ export function clubAssortment(club: WordmarkClub, ranked: Template[], favorites
   const picks: ShopGroup = {
     id: "utvalt",
     name: favs ? "Klubbens favoriter" : `Utvalt för ${club.name}`,
-    blurb: favs ? "Ordmärkena som klubben själv valt ut." : "Ordmärkena som passar klubben bäst.",
+    blurb: favs ? "Wordmarken som klubben själv valt ut." : "Wordmarken som passar klubben bäst.",
     items: PICKS.flatMap((p, i) => (ranked[i] ? item("utvalt", p, ranked[i].id) : [])),
   };
   const collections = COLLECTIONS.map((c) => ({ id: c.id, name: c.name, blurb: c.blurb, items: c.items.flatMap((it) => item(c.id, it.product, it.template, c.worn)) }));

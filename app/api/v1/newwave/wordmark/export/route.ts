@@ -7,7 +7,7 @@ import { isBackTemplate } from "@/lib/newwave/wordmark/templates";
 export const maxDuration = 120;
 
 /**
- * Tryckfiler för ett ordmärke: ordmärkets parametrar plus m=metod, p=produkt, cm=bredd och g=plaggets färg.
+ * Tryckfiler för ett wordmark: wordmarkets parametrar plus m=metod, p=produkt, cm=bredd och g=plaggets färg.
  * `info=1` ger färger, Pantone, stygn och pris som JSON; annars en zip med allt tryckeriet behöver.
  */
 export async function GET(req: Request) {

@@ -6,7 +6,7 @@ import { TEXT_MODEL, openai } from "./openai";
 
 /**
  * Det mässmontern och återförsäljarens butik delar när de läser ett varumärke från en webbplats:
- * bilder till visionmodellen, kontrollen av loggan mot alla kandidater i sidhuvudet och ordmärket som sista utväg.
+ * bilder till visionmodellen, kontrollen av loggan mot alla kandidater i sidhuvudet och wordmarket som sista utväg.
  */
 
 const PIXELS = 40_000_000;
@@ -134,7 +134,7 @@ export async function pickLogo(check: LogoCheck | null, scrape: SiteScrape, curr
   }
   try {
     const l = await logoFromFile(await wordmark(brandName, /^#[0-9a-f]{6}$/i.test(color) ? color : "#1D1D1F"), brandName);
-    return { status: "wordmark", note: `${reason} Vi satte namnet som ordmärke tills ni laddar upp er logga.`, result: { ...l, name: brandName, site: scrape.host, source: `${source} · ordmärke` } };
+    return { status: "wordmark", note: `${reason} Vi satte namnet som wordmark tills ni laddar upp er logga.`, result: { ...l, name: brandName, site: scrape.host, source: `${source} · wordmark` } };
   } catch {
     return { status: "ok", note: "", result: null };
   }

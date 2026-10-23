@@ -55,7 +55,7 @@ export async function clubLink(id: string, scope: LinkScope = "club") {
   return `${SITE}/newwave/klubbar/${id}${scope === "shop" ? "/butik" : ""}${k ? `?${CLUB_PARAM}=${k}` : ""}`;
 }
 
-/** Bilderna båda sidorna visar: ordmärken och mockups för klubben, klubbens märke, fotot i butiken och 3D-modellerna. */
+/** Bilderna båda sidorna visar: wordmarks och mockups för klubben, klubbens märke, fotot i butiken och 3D-modellerna. */
 function images(id: string, p: string, q: URLSearchParams) {
   if (p === `/api/v1/newwave/registry/${id}/logo.png` || p === `/api/v1/newwave/registry/${id}/bild.jpg` || MODEL.test(p)) return true;
   if (p.startsWith(`/api/v1/newwave/grasrot/${id}/`)) return GRASROT_SHOP.test(p.slice(`/api/v1/newwave/grasrot/${id}/`.length));

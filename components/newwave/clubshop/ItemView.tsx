@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- mockups och ordmärken ritas per klubb */
+/* eslint-disable @next/next/no-img-element -- mockups och wordmarks ritas per klubb */
 import Link from "next/link";
 import { mockupUrl, printArt, type ShopGroup, type ShopItem, wordmarkSpec } from "@/lib/newwave/clubShop";
 import { genitive } from "@/lib/newwave/newsletterHtml";
@@ -16,7 +16,7 @@ export function ItemView({ item, groups, clubId, clubName, v, base, home, childr
   const more = (group?.items ?? []).filter((x) => x.id !== item.id).slice(0, 4);
   const details = [
     ["Plagg", `${p.name}, ${p.garmentColor.toLowerCase()}`],
-    ["Ordmärke", `${item.template.name} · ${item.template.style}${item.worn ? ", slitet tryck" : ""}`],
+    ["Wordmark", `${item.template.name} · ${item.template.style}${item.worn ? ", slitet tryck" : ""}`],
     ["Storlekar", p.sizes.length > 1 ? `${p.sizes[0]}–${p.sizes.at(-1)}` : "One size"],
     ["Tryck", item.method],
     ["Passar till", p.use],

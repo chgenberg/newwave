@@ -77,7 +77,7 @@ export async function WebshopSections({ shop, lead }: { shop: ClubShop; lead?: {
         {lead?.node}
 
         {g360 ? (
-          <Section id={G360_SECTION.id} title={G360_SECTION.name} text="Gräsrot 360 med New Wave Group: klubbmärket eller ordmärket på produkterna i Bilaga 2. Ligger överst i butiken, i 3D och i alla leverantörens färger.">
+          <Section id={G360_SECTION.id} title={G360_SECTION.name} text="Gräsrot 360 med New Wave Group: klubbmärket eller wordmarket på produkterna i Bilaga 2. Ligger överst i butiken, i 3D och i alla leverantörens färger.">
             <ul className="grid grid-cols-2 gap-x-3 gap-y-6 min-[700px]:grid-cols-3 min-[1000px]:grid-cols-5">
               {g360.products.map((p) => (
                 <li key={p.id} className="min-w-0">

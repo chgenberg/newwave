@@ -1,5 +1,5 @@
 /**
- * Typsnitten som ordmärkena ritas med. Alla har en licens som tillåter att servern ritar dem åt kunder
+ * Typsnitten som wordmarken ritas med. Alla har en licens som tillåter att servern ritar dem åt kunder
  * (SIL Open Font License 1.1; Yellowtail, Ultra, Satisfy, Permanent Marker och Luckiest Guy Apache 2.0). Adobe Fonts får inte användas så – köps en app- eller
  * serverlicens för t.ex. Casey och Espiritu läggs filerna i assets/fonts/wordmark och pekas ut i ROLE_FONT.
  */

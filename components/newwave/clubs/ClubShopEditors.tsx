@@ -119,7 +119,7 @@ export function PhotoEditor({ clubId, shop, photo, own, standard, color }: { clu
   return (
     <div className="grid gap-4 min-[760px]:grid-cols-[1.2fr_1fr] min-[760px]:items-center">
       <div className="relative aspect-[16/9] overflow-hidden rounded-[18px]" style={{ background: color }}>
-        {photo ? <img src={photo} alt="Fotot överst i butiken" className="absolute inset-0 h-full w-full object-cover" /> : <p className="absolute inset-0 grid place-items-center p-6 text-center text-[14px] text-white/80">Ingen bild – butiken visar klubbens färg och ordmärke.</p>}
+        {photo ? <img src={photo} alt="Fotot överst i butiken" className="absolute inset-0 h-full w-full object-cover" /> : <p className="absolute inset-0 grid place-items-center p-6 text-center text-[14px] text-white/80">Ingen bild – butiken visar klubbens färg och wordmark.</p>}
         {status.kind === "busy" ? <span className="absolute inset-0 grid place-items-center bg-black/40 text-[14px] font-medium text-white">Laddar upp …</span> : null}
       </div>
       <div className="grid content-start gap-3">

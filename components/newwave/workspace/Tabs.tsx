@@ -22,7 +22,7 @@ export const LEAD = "mt-1 max-w-[56ch] text-[14px] leading-relaxed text-[#6F6B63
 export const GHOST = "inline-flex h-10 items-center rounded-full border border-[rgba(17,17,17,0.14)] px-4 text-[13px] font-semibold transition hover:border-[#111]";
 export const SOLID = "inline-flex h-11 items-center gap-2 rounded-full bg-[var(--shop)] px-5 text-[14px] font-semibold text-[var(--shop-on)] transition hover:opacity-90 active:scale-[0.97]";
 
-/** Designens ordmärke ritat med en klubbs namn, färger och märke. */
+/** Designens wordmark ritat med en klubbs namn, färger och märke. */
 export const wordmarkLogos = (d: Design, clubId: string) => (d.wordmark ? { logo: wordmarkUrl(d.wordmark, clubId, "light", 1200, "png", d.sizeCm), logoDark: wordmarkUrl(d.wordmark, clubId, "dark", 1200, "png", d.sizeCm) } : null);
 
 export const logoOf = (kit: BrandKit, d: Design, clubId?: string) =>

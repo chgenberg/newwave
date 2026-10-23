@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   try {
     const images = parsed.data.images.map((d) => Buffer.from(d.slice(d.indexOf(",") + 1), "base64"));
     const { templates, dropped } = await proposeTemplates(images, parsed.data.note ?? "", parsed.data.popular ? await popularTemplates(3) : []);
-    if (!templates.length) return Response.json({ error: "Agenten hittade inget ordmärke att bygga en mall av. Prova en tydligare bild." }, { status: 422 });
+    if (!templates.length) return Response.json({ error: "Agenten hittade inget wordmark att bygga en mall av. Prova en tydligare bild." }, { status: 422 });
     return Response.json({ templates, dropped });
   } catch (err) {
     console.error("newwave/wordmark/agent", errorMessage(err));

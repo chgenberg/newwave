@@ -9,7 +9,7 @@ import { scarfDesign } from "./scarf";
 import { grasrotWordmark } from "./wordmark";
 
 /**
- * Tryckfilerna New Wave Group och leverantörerna får – klubbmärket och Gräsrot 360-ordmärket: SVG, PDF och EPS i exakt
+ * Tryckfilerna New Wave Group och leverantörerna får – klubbmärket och Gräsrot 360-wordmarket: SVG, PDF och EPS i exakt
  * storlek, med färgerna som Pantone-dekorfärger, process-CMYK eller RGB, och en förhandskontroll som säger vad som
  * måste åtgärdas innan tryck.
  */
@@ -40,11 +40,11 @@ const MIME: Record<FileFormat, string> = { pdf: "application/pdf", eps: "applica
 export const PNG_DPI = 300;
 const BLACK: Ink = { name: "PANTONE Black C", cmyk: [0, 0, 0, 100] };
 const WHITE: Ink = { name: "White", cmyk: [0, 0, 0, 0] };
-export const FONT_CHECK: Check = { level: "varning", text: "Ordmärket är satt i fria ersättare (Holtwood One SC, Lobster) för Casey Bold och Espiritu – byt om NWG licensierar originalen." };
+export const FONT_CHECK: Check = { level: "varning", text: "Wordmarket är satt i fria ersättare (Holtwood One SC, Lobster) för Casey Bold och Espiritu – byt om NWG licensierar originalen." };
 
 /**
  * Förhandskontrollen för en variant – samma för alla format, så att granskningssidan kan visa den utan att bygga filer.
- * Ordmärket bär alltid märkets solid, även i originalfärger.
+ * Wordmarket bär alltid märkets solid, även i originalfärger.
  */
 export function preflight(set: EmblemSet, artwork: PrintArt, variant: Variant, mode: ColorMode, inks: { name: string; note?: string }[], extra: Check[] = []): Check[] {
   const checks: Check[] = [];
@@ -52,7 +52,7 @@ export function preflight(set: EmblemSet, artwork: PrintArt, variant: Variant, m
   checks.push({ level: q.kind === "vektor" ? (q.ready ? "ok" : "stopp") : q.ready ? "varning" : "stopp", text: q.note });
   for (const issue of set[artwork === "ordmarke" && variant === "original" ? "solid" : artwork === "halsduk" ? "negativ" : variant].issues) checks.push({ level: "stopp", text: issue });
   if (set.auto.solid && variant === "solid") checks.push({ level: "varning", text: "Soliden är ett automatiskt förslag ur originalet – granska vad som trycks och vad som blir hål." });
-  if (set.auto.solid && artwork === "ordmarke" && variant !== "solid") checks.push({ level: "varning", text: "Märket i ordmärket är en automatisk solid ur originalet – granska vad som trycks och vad som blir hål." });
+  if (set.auto.solid && artwork === "ordmarke" && variant !== "solid") checks.push({ level: "varning", text: "Märket i wordmarket är en automatisk solid ur originalet – granska vad som trycks och vad som blir hål." });
   if (variant === "negativ" && mode === "cmyk") checks.push({ level: "stopp", text: "Vitt går inte att trycka i CMYK – välj dekorfärg (White) för negativet." });
   if (variant === "original" && mode === "cmyk" && inks.some((i) => i.name === "White"))
     checks.push({ level: "varning", text: "De vita partierna trycks inte i CMYK – på färgade plagg behövs dekorfärgsfilen, där vitt är en egen färg." });
@@ -107,7 +107,7 @@ export async function printChecks(id: string, artwork: PrintArt, variant: Varian
   return (await prepare(id, artwork, { variant, format: "pdf", mode }))?.checks ?? null;
 }
 
-const ART_TEXT: Record<PrintArt, string> = { klubbmarke: "klubbmärke", ordmarke: "ordmärke", halsduk: "vävd halsduk" };
+const ART_TEXT: Record<PrintArt, string> = { klubbmarke: "klubbmärke", ordmarke: "wordmark", halsduk: "vävd halsduk" };
 
 /** Filens innehåll; namnet sätter den som anropar. */
 export async function printData(id: string, artwork: PrintArt, opts: PrintFileOpts): Promise<Omit<PrintFile, "name"> | null> {

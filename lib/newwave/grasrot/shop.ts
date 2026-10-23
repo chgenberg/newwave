@@ -40,7 +40,7 @@ export async function shopProducts(id: string): Promise<{ products: ShopProduct[
         p.colors.map((c) => {
           const d = p.design(c);
           const job = jobs.find((j) => j.colors.includes(c));
-          const label = d.art === "halsduk" ? "Halsduksdesign i föreningens färger" : `${d.art === "ordmarke" ? "Ordmärke" : "Klubbmärke"}, ${VARIANT_LABEL[d.variant]}`;
+          const label = d.art === "halsduk" ? "Halsduksdesign i föreningens färger" : `${d.art === "ordmarke" ? "Wordmark" : "Klubbmärke"}, ${VARIANT_LABEL[d.variant]}`;
           const design: ShopDesign = {
             label,
             method: d.method,
@@ -73,7 +73,7 @@ export async function shopProducts(id: string): Promise<{ products: ShopProduct[
   return { products, featured };
 }
 
-/** Föreningen som butiken och ordmärkena ser den, när den inte finns i klubbregistret: namnet, ordmärkets färger och klubbmärket. */
+/** Föreningen som butiken och wordmarken ser den, när den inte finns i klubbregistret: namnet, wordmarkets färger och klubbmärket. */
 export const grasrotClubName = (id: string) => grasrotClub(id)?.name ?? null;
 
 export async function grasrotWordmarkClub(id: string): Promise<WordmarkClub | null> {

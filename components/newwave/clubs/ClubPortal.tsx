@@ -5,11 +5,11 @@ import { shopPath } from "@/lib/newwave/clubShop";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", href: (id: string) => `/newwave/klubbar/${id}/dashboard` },
-  { id: "ordmarken", label: "Ordmärken", href: (id: string) => `/newwave/klubbar/${id}` },
+  { id: "ordmarken", label: "Wordmarks", href: (id: string) => `/newwave/klubbar/${id}` },
 ] as const;
 
 /**
- * Klubbens egna sidor: dashboarden och förhandsvisningen av ordmärkena. Klubben själv kommer via sin länk utan
+ * Klubbens egna sidor: dashboarden och förhandsvisningen av wordmarken. Klubben själv kommer via sin länk utan
  * demolösenordet; då leder loggan inte in i demot.
  */
 export function ClubPortal({ id, active, insider, action, children }: { id: string; active: (typeof TABS)[number]["id"]; insider: boolean; action?: React.ReactNode; children: React.ReactNode }) {

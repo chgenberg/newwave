@@ -34,7 +34,7 @@ export type Design = {
   /** Egen logga eller eget motiv; saknas = det som studion öppnades med. */
   logo?: string;
   logoDark?: string;
-  /** Ett ordmärke i stället för loggan; varje klubb får det med sitt eget namn, sina färger och sitt märke. */
+  /** Ett wordmark i stället för loggan; varje klubb får det med sitt eget namn, sina färger och sitt märke. */
   wordmark?: WordmarkSpec;
   /** Fler tryckpositioner, var och en med egen metod, placering och storlek. */
   extra?: Placement[];

@@ -11,7 +11,7 @@ const PAGE = 20;
 const tone = (l: Issue["level"]) => (l === "fel" ? "bg-[#FDECEC] text-[#B42318]" : l === "varning" ? "bg-[#FFF4E0] text-[#8A5300]" : "bg-[var(--nw-soft)] text-[var(--nw-muted)]");
 
 /**
- * Granskningskön: klubbar vars ordmärken inte bör gå ut som de är – vitt märke, fel eller saknade färger, konstig
+ * Granskningskön: klubbar vars wordmarks inte bör gå ut som de är – vitt märke, fel eller saknade färger, konstig
  * namndelning, lågupplöst märke. Största föreningarna först; klubbar som själva godkänt är redan borta ur kön.
  */
 export function WordmarkQueue({ onFocus }: { onFocus: (c: LabClub) => void }) {
@@ -84,7 +84,7 @@ export function WordmarkQueue({ onFocus }: { onFocus: (c: LabClub) => void }) {
               </div>
               <div className="flex shrink-0 gap-2">
                 <button type="button" onClick={() => onFocus({ id: c.id, name: c.name })} className="nw-btn nw-btn-ghost h-9 px-3.5 text-[13px]">
-                  Visa ordmärken
+                  Visa wordmarks
                 </button>
                 <a href={`/newwave/klubbar/${c.id}#godkann`} target="_blank" rel="noopener noreferrer" className="nw-btn h-9 px-3.5 text-[13px]">
                   Be klubben rätta ↗

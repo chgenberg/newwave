@@ -104,7 +104,7 @@ export async function socialSlides(id: string, format: SocialFormat, only?: stri
 }
 
 const PRODUCT_TEXT: Record<ProductId, (club: GrasrotClub) => string> = {
-  tshirt: (club) => `T-shirten med ${genitive(club.name)} ordmärke, screentryckt på bröstet. Loose fit i fem färger.`,
+  tshirt: (club) => `T-shirten med ${genitive(club.name)} wordmark, screentryckt på bröstet. Loose fit i fem färger.`,
   hoodie: (club) => `Hoodien med klubbmärket på bröstet – för kalla kvällar ${club.sport === "Innebandy" ? "i hallen" : "vid planen"}. Loose fit i fem färger.`,
   keps: () => "Washed cap med broderat klubbmärke. Tio färger att välja mellan, några med kontrastskärm.",
   flaska: () => "Termosflaskan på 500 ml med klubbmärket – tryckt på de ljusa flaskorna, lasergraverat på de mörka. Kaffet håller sig varmt hela matchen.",

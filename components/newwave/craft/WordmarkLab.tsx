@@ -142,7 +142,7 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   const save = async (template: TemplateInput, source: "import" | "agent") => {
     const { template: saved } = await post<{ template: Listed & SavedTemplate }>("/api/v1/newwave/wordmark/templates", { template, source });
     await load();
-    setToast(`"${saved.name}" finns nu bland ordmärkena i Designa`);
+    setToast(`"${saved.name}" finns nu bland wordmarken i Designa`);
     return saved;
   };
   /** En sparad design öppnas som en kopia; originalet finns kvar tills någon tar bort det. */
@@ -165,7 +165,7 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
   return (
     <div className="mt-6 flex flex-col gap-3">
       {/* Alla tre verktygen ligger kvar monterade, så att uppladdningar och förslag finns kvar när man byter flik. */}
-      <Fold title="Skapa och granska ordmärken" summary="Flera klubbar · Inspirationsbank · Granskningskö">
+      <Fold title="Skapa och granska wordmarks" summary="Flera klubbar · Inspirationsbank · Granskningskö">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Verktyg">
           {TOOLS.map((t) => (
             <button key={t.id} type="button" aria-pressed={tool === t.id} onClick={() => setTool(t.id)} className={PRESSED}>
@@ -190,7 +190,7 @@ export function WordmarkLab({ clubs }: { clubs: LabClub[] }) {
       <section id="nw-wm-gallery" className="mt-5 scroll-mt-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[17px] font-semibold text-[var(--nw-ink)]">{focus ? `Alla ordmärken för ${focus.name}` : "Alla ordmärken"}</h2>
+            <h2 className="text-[17px] font-semibold text-[var(--nw-ink)]">{focus ? `Alla wordmarks för ${focus.name}` : "Alla wordmarks"}</h2>
             <p className="text-[13px] text-[var(--nw-muted)]">
               {list ? `${list.length} mallar${own.length ? `, varav ${own.length} egna` : ""}` : "Hämtar…"} ·{" "}
               {focus ? "bäst passande först, med klubbens namn, färger och märke" : "visas med ett kort, ett mellanlångt och ett långt namn"}
@@ -348,7 +348,7 @@ function AgentPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub[]; vari
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13.5px] leading-snug text-[var(--nw-muted)]">
-        Ladda upp upp till tre ordmärken ni gillar. Mallagenten läser kompositionen – placering, typsnittsstil, bågar och ornament – och föreslår nya mallar som ritas exakt och går att trycka. Inget sparas förrän ni lägger till det.
+        Ladda upp upp till tre wordmarks ni gillar. Mallagenten läser kompositionen – placering, typsnittsstil, bågar och ornament – och föreslår nya mallar som ritas exakt och går att trycka. Inget sparas förrän ni lägger till det.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {refs.map((r, i) => (
@@ -417,7 +417,7 @@ function AgentPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub[]; vari
       {sketch ? (
         <figure className="nw-fade w-full max-w-[360px]">
           {/* eslint-disable-next-line @next/next/no-img-element -- AI-skiss */}
-          <img src={sketch} alt="AI-skiss av ett ordmärke" className="w-full rounded-[14px] bg-[var(--nw-soft)]" />
+          <img src={sketch} alt="AI-skiss av ett wordmark" className="w-full rounded-[14px] bg-[var(--nw-soft)]" />
           <figcaption className="mt-1.5 text-[12.5px] text-[var(--nw-muted)]">Inspiration – inte för tryck. Gillar ni den? Låt mallagenten göra en tryckbar mall av den.</figcaption>
           {refs.length < 3 ? (
             <button type="button" onClick={() => void takeSketch(sketch)} className="nw-btn nw-btn-ghost mt-2 h-9 px-4 text-[13px]">

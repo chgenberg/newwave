@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isFontRef } from "./fonts";
 
 /**
- * En ordmärkesmall är data, inte ritad kod: lager på en duk som är 1000 enheter bred. Samma format används för
+ * En wordmarkmall är data, inte ritad kod: lager på en duk som är 1000 enheter bred. Samma format används för
  * de inbyggda mallarna, för mallar som importeras från Illustrator och för förslag från mallagenten.
  */
 
@@ -113,7 +113,7 @@ export const TemplateSchema = z.object({
   needs: z.array(z.enum(TEXT_SLOTS)).max(4).optional(),
   /** Mallen som används för små tryck; saknas = stilens lilla standardversion. */
   small: z.string().regex(/^[a-z0-9-]{2,40}$/).optional(),
-  /** Små versioner som bara används automatiskt och inte listas bland ordmärkena. */
+  /** Små versioner som bara används automatiskt och inte listas bland wordmarken. */
   hidden: z.boolean().optional(),
   source: z.enum(["inbyggd", "import", "agent"]).default("inbyggd"),
   made: MadeSchema.optional(),

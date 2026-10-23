@@ -5,7 +5,7 @@ import type { Variant } from "./emblem";
 /**
  * Produkterna i Bilaga 2 med färgerna leverantörerna har och tryckytorna NWG markerat (se lib/newwave/bilaga2.ts, där
  * också måtten förklaras); måtten bekräftas mot leverantörens mall före produktion.
- * Varje produkt har en standarddesign – ensamstående klubbmärke eller ordmärke – vars variant följer plaggfärgen.
+ * Varje produkt har en standarddesign – ensamstående klubbmärke eller wordmark – vars variant följer plaggfärgen.
  */
 
 export type ProductId = "tshirt" | "hoodie" | "keps" | "flaska" | "halsduk";

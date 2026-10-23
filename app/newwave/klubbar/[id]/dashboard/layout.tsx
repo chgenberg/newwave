@@ -41,7 +41,7 @@ export default async function ClubDashboardLayout({ params, children }: Props & 
           <ClubDashNav
             base={base}
             more={[
-              { href: `/newwave/klubbar/${id}`, label: "Ordmärken", icon: "layers" },
+              { href: `/newwave/klubbar/${id}`, label: "Wordmarks", icon: "layers" },
               { href: shopPath(id), label: "Butiken", icon: "bag", out: true },
               { href: intersportPath(id), label: "Intersport", icon: "truck", out: true },
             ]}
