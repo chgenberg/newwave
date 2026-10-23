@@ -230,3 +230,5 @@ export const HUB_NODES = {
 
 /** Filmen som möter besökaren på förstasidan. */
 export const HERO_VIDEO = { src: "/newwave/hero.mp4", poster: "/newwave/hero-poster.jpg" };
+/** Merchfilmen med IFK Göteborg och Önnereds HK, stående 9:16; öppnas från startsidans topprad. */
+export const MERCH_VIDEO = { src: "/newwave/ifk-merch.mp4", poster: "/newwave/ifk-merch-poster.jpg", title: "Merchfilmen med IFK Göteborg och Önnereds HK" };

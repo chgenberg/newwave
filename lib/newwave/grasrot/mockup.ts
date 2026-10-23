@@ -30,11 +30,24 @@ type Photo = {
   body: "fabric" | { x0: number; x1: number; y0: number; y1: number; corner: number };
   /** Kepsens skärm under sömmen, i pixlar från toppen. */
   visorY?: number;
+  front?: FrontLine[];
 };
 
 const PHOTOS: Record<Exclude<ProductId, "halsduk">, Photo> = {
   tshirt: { src: "tee.jpg", pxPerMm: 0.91, at: [511, 386], top: true, bend: 20, body: "fabric" },
-  hoodie: { src: "hoodie.jpg", pxPerMm: 0.74, at: [512, 576], bend: 18, body: "fabric" },
+  hoodie: {
+    src: "hoodie.jpg",
+    pxPerMm: 0.74,
+    at: [512, 468],
+    bend: 18,
+    body: "fabric",
+    front: [
+      { width: 8.5, line: [[477, 272], [477.6, 380], [478.6, 489]] },
+      { width: 5, line: [[478.6, 489], [478.3, 506]] },
+      { width: 8.5, line: [[550, 273], [551, 380], [552, 489]] },
+      { width: 5, line: [[552, 489], [552.4, 506]] },
+    ],
+  },
   keps: { src: "cap.jpg", pxPerMm: 3.6, at: [512, 432], bend: 55, rx: 6, body: "fabric", visorY: 592 },
   flaska: { src: "bottle.jpg", pxPerMm: 2.69, at: [512, 590], round: { r: 94 / MOCKUP_SIZE, e: 4 }, body: { x0: 419, x1: 605, y0: 319, y1: 901, corner: 18 } },
 };
@@ -141,8 +154,30 @@ export async function productMockup(id: string, product: GrasrotProduct, color: 
 
   const [wMm, hMm] = placement.box;
   const s = surface({ cx: ph.at[0] / S, cy: ph.at[1] / S, w: (wMm * ph.pxPerMm) / S, h: (hMm * ph.pxPerMm) / S, bend: ph.bend ?? 0, rx: ph.rx ?? 0, top: Boolean(ph.top), ...(ph.round && { round: ph.round }) });
-  const out = await printOn({ data: px, size: S }, s, flat, { dark: color.dark, soft: ph.body === "fabric" });
+  const out = await printOn({ data: px.slice(), size: S }, s, flat, { dark: color.dark, soft: ph.body === "fabric" });
+  if (ph.front) await inFront(out, px, S, S, ph.front);
   return sharp(Buffer.from(out.buffer), { raw: { width: S, height: S, channels: 4 } }).jpeg({ quality, mozjpeg: true }).toBuffer();
+}
+
+/** Det som hänger framför ett tryck (hoodiens snören och hylsor): linjer i bildpunkter med sin bredd. */
+export type FrontLine = { width: number; line: [number, number][] };
+
+/** Linjerna som gråskala `width` × `height`, med mjuk kant; `dx`, `dy` och `blur` ger deras skugga. */
+async function lineMask(front: FrontLine[], width: number, height: number, o: { dx?: number; dy?: number; blur?: number } = {}) {
+  const lines = front.map((f) => `<polyline points="${f.line.map(([x, y]) => `${x + (o.dx ?? 0)},${y + (o.dy ?? 0)}`).join(" ")}" stroke-width="${f.width}"/>`).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%"/><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">${lines}</g></svg>`;
+  const raw = await sharp(Buffer.from(svg)).blur(o.blur ?? 0.6).greyscale().raw().toBuffer();
+  return Float32Array.from(raw, (v) => v / 255);
+}
+
+/** Lägger tillbaka det som hänger framför trycket (`base` är fotot utan tryck, RGBA), med en svag skugga på trycket. */
+export async function inFront(out: Uint8ClampedArray, base: Uint8ClampedArray, width: number, height: number, front: FrontLine[]) {
+  const [mask, shadow] = await Promise.all([lineMask(front, width, height), lineMask(front, width, height, { dx: 2.5, dy: 3, blur: 3 })]);
+  for (let i = 0; i < mask.length; i++) {
+    const printed = clamp((Math.abs(out[i * 4] - base[i * 4]) + Math.abs(out[i * 4 + 1] - base[i * 4 + 1]) + Math.abs(out[i * 4 + 2] - base[i * 4 + 2])) / 60);
+    const dim = 1 - 0.4 * shadow[i] * printed;
+    for (let k = 0; k < 3; k++) out[i * 4 + k] = out[i * 4 + k] * dim * (1 - mask[i]) + base[i * 4 + k] * mask[i];
+  }
 }
 
 /** Halsduken snett över bilden med fransar och vävstruktur. */

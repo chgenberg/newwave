@@ -576,8 +576,9 @@ function LogoDecal({
     const orient = new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().lookAt(target, placement.point, up));
     placement.mesh.updateMatrixWorld(true);
     const geometry = new DecalGeometry(placement.mesh, placement.point, orient, new THREE.Vector3(width, height, Math.max(width, height) * 2.2));
-    return keepFacing(geometry, placement.normal);
-  }, [placement, texture, logoSize]);
+    const clearCm = zones.find((z) => z.id === zone)?.clearCm;
+    return keepFacing(geometry, placement.normal, clearCm ? { point: placement.point, max: clearCm / sizeCm } : undefined);
+  }, [placement, texture, logoSize, zones, zone, sizeCm]);
   useEffect(() => () => decal?.dispose(), [decal]);
 
   const bump = useMemo(() => {
@@ -690,16 +691,18 @@ function averageNormal(meshes: THREE.Mesh[], point: THREE.Vector3, normal: THREE
 }
 
 /** Drop decal triangles that face away from the projector (inside of a cap, back of a bottle). */
-function keepFacing(geometry: THREE.BufferGeometry, dir: THREE.Vector3) {
+function keepFacing(geometry: THREE.BufferGeometry, dir: THREE.Vector3, clear?: { point: THREE.Vector3; max: number }) {
   const pos = geometry.getAttribute("position");
   const nor = geometry.getAttribute("normal");
   const uv = geometry.getAttribute("uv");
   const keep: number[] = [];
   const n = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  const inFront = (i: number) => clear && v.fromBufferAttribute(pos, i).sub(clear.point).dot(dir) > clear.max;
   for (let i = 0; i < pos.count; i += 3) {
     n.set(0, 0, 0);
     for (let k = 0; k < 3; k++) n.add(new THREE.Vector3().fromBufferAttribute(nor, i + k));
-    if (n.normalize().dot(dir) > 0.08) keep.push(i, i + 1, i + 2);
+    if (n.normalize().dot(dir) > 0.08 && !inFront(i) && !inFront(i + 1) && !inFront(i + 2)) keep.push(i, i + 1, i + 2);
   }
   if (keep.length === pos.count) return geometry;
   const out = new THREE.BufferGeometry();

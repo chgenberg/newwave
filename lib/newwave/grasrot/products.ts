@@ -66,8 +66,7 @@ export const GRASROT_PRODUCTS: GrasrotProduct[] = [
     url: "https://www.untaggedmovement.com/products/um-hoodie-ocs-rcs-loose-fit-unisex/",
     colors: UM_COLORS,
     zones: BILAGA2.hoodie,
-    // Under snörenas ändar och ovanför magfickan, i storlek M.
-    design: () => ({ zone: "brost", art: "klubbmarke", variant: "original", method: "transfer", box: [220, 150] }),
+    design: () => ({ zone: "brost", art: "klubbmarke", variant: "original", method: "transfer", box: [220, 175] }),
     model: "p004",
   },
   {

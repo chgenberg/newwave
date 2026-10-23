@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HubFooterSlim } from "@/components/newwave/HubFooter";
+import { FilmDialogButton } from "@/components/newwave/landing/FilmDialog";
 import { HubMapButton } from "@/components/newwave/landing/HubMap";
 import { PortalFilm } from "@/components/newwave/landing/PortalFilm";
 import { LogoMark } from "@/components/newwave/Logo";
 import { ShareDemo } from "@/components/newwave/ShareDemo";
-import { PORTALS } from "@/lib/newwave/hub";
+import { MERCH_VIDEO, PORTALS } from "@/lib/newwave/hub";
 
 export const metadata: Metadata = { title: "Välj ingång · Next Wave" };
 
@@ -21,6 +22,13 @@ export default function StartPage() {
           </Link>
           <span className="hidden text-[14px] text-[#6F6B63] sm:inline">Välj ingång</span>
           <div className="ml-auto flex items-center gap-2">
+            <FilmDialogButton film={MERCH_VIDEO} className="inline-flex h-10 w-10 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13.5px] sm:w-auto sm:px-3.5 font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
+              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M10 8.5v7l5.5-3.5L10 8.5Z" fill="currentColor" />
+              </svg>
+              <span className="sr-only sm:not-sr-only">Merchfilmen</span>
+            </FilmDialogButton>
             <Link href="/newwave/klubbregistret" aria-label="Klubbregistret" className="inline-flex h-10 w-10 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13.5px] sm:w-auto sm:px-3.5 font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
               <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" rx="1.5" />

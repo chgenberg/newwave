@@ -2,6 +2,7 @@
 // Mäter upp klubbmärkena på föreningens herobild utifrån en ungefärlig mitt, bredd och höjd per märke (i bildpunkter, på
 // produkten som står först) och sparar dem i assets/grasrot/<id>/herobild-marken.json. Körs om när fotot tas om.
 // Ett sjätte värde `true` tar måtten som de är, för märken som mätningen inte hittar (vridning som sjunde värde).
+// Hoodiens snören (`front` på hoodiemärket) skrivs över av en ny mätning och läggs in för hand efteråt.
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -23,10 +24,12 @@ async function main() {
       continue;
     }
     const p = GRASROT_PRODUCTS.find((x) => x.id === product)!;
-    // Bildmodellen ritar halsdukens märken i färg fast väven är vit; de mäts därför mot originalet.
-    const flat = product === "halsduk" ? (await emblemSet(id))?.original : await markArt(id, p, hero.info.colors[product]);
-    if (!flat) throw new Error(`${id}: inget märke för ${product}`);
-    const { score, ...m } = await measureMark(gray, info.width, info.height, { product, cx, cy, w, h, rz: 0 }, flat);
+    // Bildmodellen ritar halsdukens märken ibland i färg och ibland vita som väven; de mäts mot båda.
+    const set = await emblemSet(id);
+    const flats = (product === "halsduk" ? [set?.original, set?.negativ] : [await markArt(id, p, hero.info.colors[product])]).filter((f) => f != null);
+    if (!flats.length) throw new Error(`${id}: inget märke för ${product}`);
+    const tries = await Promise.all(flats.map((f) => measureMark(gray, info.width, info.height, { product, cx, cy, w, h, rz: 0 }, f)));
+    const { score, ...m } = tries.reduce((a, b) => (b.score > a.score ? b : a));
     console.log(`${id} ${product}: ${JSON.stringify(m)} träff ${score}${score < 0.5 ? "  ← kontrollera" : ""}`);
     marks.push(m);
   }

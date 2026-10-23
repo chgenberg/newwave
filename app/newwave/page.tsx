@@ -5,7 +5,7 @@ import { HERO_VIDEO } from "@/lib/newwave/hub";
 export default function NewWaveHome() {
   return (
     <main className="flex h-[100svh] min-h-[520px] flex-col bg-[#141416]">
-      <HeroFilm src={HERO_VIDEO.src} poster={HERO_VIDEO.poster} title="Next Wave" />
+      <HeroFilm src={HERO_VIDEO.src} poster={HERO_VIDEO.poster} title="Filmen om Next Wave" track />
       <Link
         href="/newwave/start"
         className="group flex h-20 w-full shrink-0 items-center justify-between gap-4 bg-white px-5 text-[#111] transition-colors duration-300 hover:bg-[#F1F1EE] sm:h-24 sm:px-8 lg:px-10"

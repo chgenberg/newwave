@@ -96,7 +96,8 @@ export function markingPrice(d: Design, qty: number) {
  * Kamerariktning mot produkten och förskjutning i andelar av modellens storlek; modellerna har framsidan mot +Z.
  * Bilaga 2-ytorna har också största motivet i cm (bredd, höjd) och metoderna ytan tillåter.
  */
-export type Zone = { id: string; label: string; dir: Vec3; offset: [number, number]; sizeCm?: number; maxCm?: [number, number]; methods?: Method[] };
+/** `clearCm`: det som hänger mer än så framför ytan (hoodiens snören) får inget tryck i 3D. */
+export type Zone = { id: string; label: string; dir: Vec3; offset: [number, number]; sizeCm?: number; maxCm?: [number, number]; methods?: Method[]; clearCm?: number };
 
 const Z = (id: string, label: string, dir: Vec3, offset: [number, number] = [0, 0], sizeCm?: number): Zone => ({ id, label, dir, offset, sizeCm });
 
@@ -173,7 +174,7 @@ export function zonesFor(p: NwProduct): Zone[] {
   const zones = facesUp(p.zone.dir) && !base.some((z) => facesUp(z.dir)) ? [Z("ovan", "Ovansidan", [0, 1, 0]), ...base] : base;
   const main = mainZone(p, zones);
   const sorted = [...zones.filter((z) => z.id === main), ...zones.filter((z) => z.id !== main)];
-  return sorted.map((z) => (z.id === main ? { ...z, dir: p.zone.dir, offset: p.zone.offset } : z));
+  return sorted.map((z) => (z.id === main ? { ...z, dir: p.zone.dir, offset: p.zone.offset, clearCm: p.zone.clearCm } : z));
 }
 
 /** Största verkliga måttet i cm; 3D-modellerna normaliseras till det. */

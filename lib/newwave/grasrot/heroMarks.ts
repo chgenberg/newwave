@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { type Quad, surface } from "@/lib/newwave/printSurface";
 import { type Flat, recolor } from "@/lib/newwave/vector/svg";
 import { emblemSet } from "./emblem";
-import { placementArt, printOn, rasterize } from "./mockup";
+import { type FrontLine, inFront, placementArt, printOn, rasterize } from "./mockup";
 import { type GrasrotProduct, type ProductColor, type ProductId } from "./products";
 import { grasrotWordmark } from "./wordmark";
 
@@ -15,8 +15,11 @@ import { grasrotWordmark } from "./wordmark";
  * per foto med scripts/grasrot-hero-marks.ts och sparas bredvid fotot.
  */
 
-/** `erase`: en ruta utanför märket som också målas bort, när fotot visar mer än märket (en sektionstext under det). */
-export type HeroMark = { product: ProductId; cx: number; cy: number; w: number; h: number; rz: number; erase?: { cx: number; cy: number; w: number; h: number } };
+/**
+ * `erase`: en ruta utanför märket som också målas bort, när fotot visar mer än märket (en sektionstext under det).
+ * `front`: det som hänger framför märket på fotot (hoodiens snören); det ligger kvar ovanpå det nya märket.
+ */
+export type HeroMark = { product: ProductId; cx: number; cy: number; w: number; h: number; rz: number; erase?: { cx: number; cy: number; w: number; h: number }; front?: FrontLine[] };
 export const marksFile = (id: string) => path.join(process.cwd(), "assets", "grasrot", id, "herobild-marken.json");
 
 export async function heroMarks(id: string): Promise<HeroMark[]> {
@@ -166,6 +169,7 @@ export async function stampMarks(jpg: Buffer, id: string, products: GrasrotProdu
   if (!marks.length) return jpg;
   const { data, info } = await sharp(jpg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const px = new Uint8ClampedArray(data.buffer, data.byteOffset, data.length);
+  const base = px.slice();
   for (const m of marks) {
     const product = products.find((p) => p.id === m.product);
     const color = product && colors[product.id];
@@ -174,6 +178,8 @@ export async function stampMarks(jpg: Buffer, id: string, products: GrasrotProdu
     const dark = product.id === "halsduk" || color.dark;
     await stamp(px, info.width, info.height, m, flat, { dark, soft: product.id !== "flaska", upright: product.id === "flaska", even: product.id === "halsduk" || product.id === "tshirt" });
   }
+  const front = marks.flatMap((m) => m.front ?? []);
+  if (front.length) await inFront(px, base, info.width, info.height, front);
   return sharp(Buffer.from(px.buffer, px.byteOffset, px.length), { raw: { width: info.width, height: info.height, channels: 4 } })
     .removeAlpha()
     .jpeg({ quality: 90, mozjpeg: true })

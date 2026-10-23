@@ -31,7 +31,7 @@ export type NwProduct = {
   center?: Surface;
   model: string | null;
   /** Var trycket projiceras på 3D-modellen: riktning och förskjutning i andelar av modellens storlek. */
-  zone: { dir: Vec3; offset: [number, number] };
+  zone: { dir: Vec3; offset: [number, number]; clearCm?: number };
   /** Produktens största mått och tryckets bredd i cm, för att skala trycket på 3D-modellen. */
   sizeCm: number;
   printCm: number;
@@ -65,10 +65,12 @@ const BILAGA2_OF: Record<string, Bilaga2Zone[]> = {
   P008: BILAGA2.tshirt,
   P004: BILAGA2.hoodie,
   P005: BILAGA2.hoodie,
-  P006: BILAGA2.hoodie,
-  P007: BILAGA2.hoodie,
-  P009: BILAGA2.hoodie,
-  P010: without(BILAGA2.hoodie, "arm", "arm-hoger"),
+  // Jackorna och västen har dragkedja mitt fram: ingen bröstyta i mitten, bara vänster och höger bröst.
+  P006: without(BILAGA2.hoodie, "brost"),
+  P007: without(BILAGA2.hoodie, "brost"),
+  P009: without(BILAGA2.hoodie, "brost"),
+  // Västens bröstfickor har dragkedja: vänster bröst är oket ovanför fickan, höger bröst ryms inte.
+  P010: within(without(BILAGA2.hoodie, "brost", "hoger", "arm", "arm-hoger"), "vanster", [90, 80]),
   // Förklädets bröstlapp är smalare än hoodiens bröst: bara en mittyta som ryms på lappen.
   P037: within(without(BILAGA2.hoodie, "arm", "arm-hoger", "rygg", "vanster", "hoger"), "brost", [160, 150]),
   P011: BILAGA2.keps,
@@ -80,9 +82,10 @@ const WORN: ReadonlySet<Kind> = new Set(["top", "cap", "beanie"]);
 const TECHNIQUE_LABEL: Record<Technique, string> = { screentryck: "Screentryck", transfer: "Transfer", brodyr: "Brodyr", digitaltryck: "Digitaltryck", lasergravyr: "Gravyr", vavt: "Vävt" };
 /** Handduksmodellens luddiga yta bryter sönder trycket. */
 const NO_MODEL = new Set(["P036"]);
-/** Hoodiens snören sitter där bröstzonen annars hamnar: trycket ligger under snörenas ändar. */
-const TUNED: Record<string, { offset?: [number, number]; sizeCm?: number; printCm?: number }> = {
-  P004: { offset: [0, 0.01] },
+/** Hoodiens snören hänger framför bröstets tryck och får inget tryck själva. Västens tryck sitter på oket ovanför bröstfickan. */
+const TUNED: Record<string, { offset?: [number, number]; sizeCm?: number; printCm?: number; clearCm?: number }> = {
+  P004: { offset: [0, 0.08], clearCm: 0.5 },
+  P010: { offset: [0.14, 0.3], printCm: 7 },
 };
 const WEAR = ["XS", "S", "M", "L", "XL", "XXL"];
 const KIDS = ["110/116", "122/128", "134/140", "146/152"];
@@ -128,9 +131,9 @@ function row(
     chest: place.chest && surface(place.chest),
     center: place.center && surface(place.center),
     model: NO_MODEL.has(id) ? null : `/newwave/models/${id}.glb`,
-    zone: { dir: TOP_DOWN.has(id) ? [0, 1, 0] : k.dir, offset: leftChest ? [0.12, 0.22] : k.offset },
+    zone: { dir: TOP_DOWN.has(id) ? [0, 1, 0] : k.dir, offset: TUNED[id]?.offset ?? (leftChest ? [0.12, 0.22] : k.offset), clearCm: TUNED[id]?.clearCm },
     sizeCm: k.sizeCm,
-    printCm: leftChest ? 9 : k.printCm,
+    printCm: TUNED[id]?.printCm ?? (leftChest ? 9 : k.printCm),
   };
 }
 
@@ -164,7 +167,7 @@ export const NW_CATALOG: NwProduct[] = [
   row("P007", "Fleece", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter"], "kyla, läger och utomhusträning", garment([0.546, 0.229, 0.124, 0.162], true)),
   row("P008", "Funktions-t-shirt", "Kläder", "top", "Svart", "#111111", 299, ["vinter", "vår", "sommar", "höst"], "träning, lopp och cup", garment([0.335, 0.219, 0.327, 0.367])),
   row("P009", "Skaljacka", "Kläder", "top", "Svart", "#111111", 1199, ["höst", "vår"], "regn och ledare", garment([0.54, 0.25, 0.112, 0.156], true)),
-  row("P010", "Funktionärsväst", "Kläder", "top", "Svart", "#111111", 699, ["vinter", "vår", "sommar", "höst"], "funktionärer, parkering och arrangörer", garment([0.537, 0.223, 0.098, 0.162], true)),
+  row("P010", "Funktionärsväst", "Kläder", "top", "Svart", "#111111", 699, ["vinter", "vår", "sommar", "höst"], "funktionärer, parkering och arrangörer", garment([0.61, 0.205, 0.11, 0.075], true)),
   row("P011", "Keps", "Huvudbonader", "cap", "Svart", "#111111", 249, ["vår", "sommar"], "sol, sommarcup och läger", { print: { cx: 0.44, cy: 0.42, w: 0.2, h: 0.1, rx: 16, ry: -18, rz: 6, bend: 70 } }),
   row("P012", "Mössa", "Huvudbonader", "beanie", "Svart", "#111111", 249, ["höst", "vinter"], "kyla, läktare och jul", { print: { cx: 0.505, cy: 0.71, w: 0.22, h: 0.12, round: { r: 0.385, e: 17 } } }),
   row("P013", "Buff", "Huvudbonader", "beanie", "Svart", "#111111", 179, ["höst", "vinter"], "kyla, löpning och skidor", { print: { cx: 0.5, cy: 0.55, w: 0.28, h: 0.17, round: { r: 0.36, e: 12 } } }),

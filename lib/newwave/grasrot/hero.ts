@@ -48,12 +48,12 @@ export const heroPhoto = (id: string) => readFile(heroFile(id)).catch(() => null
 
 const WHERE: Record<ProductId, string> = {
   hoodie:
-    "hangs on a wooden hanger from the veranda beam, front facing the camera; the two drawstrings hang straight down and end above the chest emblem, which sits fully below the drawstring tips and above the kangaroo pocket, exactly as in the reference",
-  tshirt: "hangs on a wooden hanger next to the hoodie, front facing the camera",
+    "hangs on a wooden hanger from the veranda beam, front facing the camera, with the weight and soft natural folds of heavy cotton fleece. The emblem is printed high on the chest, exactly as in the reference, and the two drawstrings hang straight down in front of it, partly covering the emblem, with their metal tips ending on the lower half of the emblem",
+  tshirt: "hangs on a wooden hanger next to the hoodie, front facing the camera, with soft natural creases in the cotton",
   keps: "lies on a rustic wooden table in front of the garments, front panel facing the camera",
   flaska: "stands upright on the same table next to the cap, print facing the camera",
   halsduk:
-    "lies flat and straight along the top rail of the veranda railing beside the garments, fully unfolded so the whole design is readable. It is a long, narrow knitted football scarf: the fringe sits only on its two short ends, and the stripes next to each end run parallel to that fringe, exactly as in the reference; the two long edges are straight with no fringe. Both ends rest on the rail and do not hang down or fold over",
+    "is casually hung over the top of the backrest of a wooden chair standing at the table, the way a supporter leaves a scarf: the middle of the scarf rests on the backrest and the front half hangs straight down the front of the backrest with real weight and soft folds, so the club name reads from top to bottom and the end hangs freely at the bottom. The chair stands close to the table, and the hanging end including the fringe ends above the seat of the chair, so the seat and the veranda floor are visible below the fringe and the whole scarf end is well above the bottom edge of the image. It is a thick, knitted acrylic jacquard football scarf exactly as in the reference: from the hanging end upwards come the fringe, the stripes running straight across the width, the emblem and then the club name; the fringe sits only on the two short ends and the long edges are straight with no fringe",
 };
 
 const SETTING: Record<string, string> = {
@@ -61,7 +61,7 @@ const SETTING: Record<string, string> = {
   Innebandy: "next to the club's sports hall; in the soft background floorball sticks lean against the clubhouse wall and a small floorball goal stands on the lawn",
 };
 
-const prompt = (club: string, sport: string, parts: string[]) => `Hyperrealistic editorial lifestyle photograph for a sports brand campaign, indistinguishable from a real photo. Shot on a full-frame camera, 35 mm lens, f/2.8, natural warm golden-hour sunlight, subtle film grain, true-to-life colours and fabric textures.
+const prompt = (club: string, sport: string, parts: string[]) => `Hyperrealistic editorial lifestyle photograph for a sports brand campaign, indistinguishable from a real photo. Shot on a full-frame camera, 35 mm lens, f/2.8, natural warm golden-hour sunlight, subtle film grain, true-to-life colours and fabric textures. Everything obeys real physics: garments and the scarf have real weight, gravity, natural creases and contact shadows where they touch the hanger, the chair and the table; nothing looks like CGI, a render or a flat cut-out.
 
 Setting: the summer party ("sommarfest") of ${club}, a Swedish grassroots sports club, on the wooden veranda of the club's traditional falu-red clubhouse with white trim, ${SETTING[sport] ?? SETTING.Fotboll}. Softly blurred background: string lights, birch trees, a few club members chatting far away (out of focus, no faces visible). Relaxed, warm, community feeling.
 

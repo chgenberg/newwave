@@ -6,8 +6,11 @@ import { trackVisit } from "@/components/VisitTracker";
 
 type Video = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
-/** Filmen på förstasidan, i hela bredden ovanför startknappen. Startar först när besökaren trycker på play, med ljud och från början. */
-export function HeroFilm({ src, poster, title }: { src: string; poster: string; title: string }) {
+/**
+ * En film som startar först när besökaren trycker på play, med ljud och från början: på förstasidan i hela bredden ovanför
+ * startknappen, och i filmdialogerna. `track` räknar hur långt filmen setts i besöksstatistiken.
+ */
+export function HeroFilm({ src, poster, title, className = "min-h-[420px] flex-1", track }: { src: string; poster: string; title: string; className?: string; track?: boolean }) {
   const video = useRef<Video>(null);
   const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -60,7 +63,7 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
   };
 
   return (
-    <section aria-label="Filmen om Next Wave" className="relative min-h-[420px] w-full flex-1 overflow-hidden bg-[#141416] text-white">
+    <section aria-label={title} className={`relative w-full overflow-hidden bg-[#141416] text-white ${className}`}>
       <video
         ref={video}
         className="absolute inset-0 h-full w-full object-cover"
@@ -76,6 +79,7 @@ export function HeroFilm({ src, poster, title }: { src: string; poster: string; 
         onTimeUpdate={(e) => {
           const p = e.currentTarget.duration ? e.currentTarget.currentTime / e.currentTarget.duration : 0;
           progress.set(p);
+          if (!track) return;
           const step = Math.min(100, Math.floor(p * 4 + 0.02) * 25);
           if (step > reached.current) {
             reached.current = step;
