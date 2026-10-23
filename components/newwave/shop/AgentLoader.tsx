@@ -7,7 +7,24 @@ import { useEffect, useState } from "react";
  * Det lilla kortet nere i hörnet medan agenterna arbetar. Servern streamar inte, så stegen följer typiska tider och
  * andelen klara delar – och når 100 % först när allt är klart. Sidan går att använda under tiden.
  */
-export function AgentLoader({ title, stages, done, total, complete }: { title: string; stages: string[]; done: number; total: number; complete: boolean }) {
+export function AgentLoader({
+  title,
+  stages,
+  done,
+  total,
+  complete,
+  doneText = "Allt nedan är på riktigt och kan beställas direkt.",
+  place = "bottom-[max(16px,env(safe-area-inset-bottom))] left-3 sm:left-6",
+}: {
+  title: string;
+  stages: string[];
+  done: number;
+  total: number;
+  complete: boolean;
+  doneText?: string;
+  /** Var kortet sitter; sidor med mobilmeny längst ner lyfter det över menyn. */
+  place?: string;
+}) {
   const [start] = useState(() => Date.now());
   const [now, setNow] = useState(start);
 
@@ -29,7 +46,7 @@ export function AgentLoader({ title, stages, done, total, complete }: { title: s
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 24 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-      className="fixed bottom-[max(16px,env(safe-area-inset-bottom))] left-3 z-40 flex w-[min(360px,calc(100vw-24px))] items-start gap-3 rounded-[22px] bg-[#1D1D1F] p-4 text-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] sm:left-6"
+      className={`fixed ${place} z-40 flex w-[min(360px,calc(100vw-24px))] items-start gap-3 rounded-[22px] bg-[#1D1D1F] p-4 text-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)]`}
     >
       <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full ${complete ? "bg-[#34C759]" : ""}`}>
         {complete ? (
@@ -46,7 +63,7 @@ export function AgentLoader({ title, stages, done, total, complete }: { title: s
             {line}
           </motion.p>
         </AnimatePresence>
-        <p className="mt-0.5 text-[12px] text-white/60">{complete ? "Allt nedan är på riktigt och kan beställas direkt." : `${done} av ${total} klart · du kan bläddra under tiden`}</p>
+        <p className="mt-0.5 text-[12px] text-white/60">{complete ? doneText : `${done} av ${total} klart · du kan bläddra under tiden`}</p>
         <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/15">
           <div className="h-full rounded-full bg-white transition-[width] duration-300" style={{ width: `${(progress * 100).toFixed(1)}%` }} />
         </div>

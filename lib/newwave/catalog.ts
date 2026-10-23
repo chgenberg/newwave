@@ -78,11 +78,11 @@ const BILAGA2_OF: Record<string, Bilaga2Zone[]> = {
 };
 const WORN: ReadonlySet<Kind> = new Set(["top", "cap", "beanie"]);
 const TECHNIQUE_LABEL: Record<Technique, string> = { screentryck: "Screentryck", transfer: "Transfer", brodyr: "Brodyr", digitaltryck: "Digitaltryck", lasergravyr: "Gravyr", vavt: "Vävt" };
-/** Hoodiens snören sitter där bröstzonen annars hamnar. */
 /** Handduksmodellens luddiga yta bryter sönder trycket. */
 const NO_MODEL = new Set(["P036"]);
+/** Hoodiens snören sitter där bröstzonen annars hamnar: trycket ligger under snörenas ändar. */
 const TUNED: Record<string, { offset?: [number, number]; sizeCm?: number; printCm?: number }> = {
-  P004: { offset: [0, 0.07] },
+  P004: { offset: [0, 0.01] },
 };
 const WEAR = ["XS", "S", "M", "L", "XL", "XXL"];
 const KIDS = ["110/116", "122/128", "134/140", "146/152"];

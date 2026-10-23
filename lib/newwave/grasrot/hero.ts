@@ -47,11 +47,13 @@ export async function heroImage(id: string): Promise<{ jpg: Buffer; info: HeroIn
 export const heroPhoto = (id: string) => readFile(heroFile(id)).catch(() => null);
 
 const WHERE: Record<ProductId, string> = {
-  hoodie: "hangs on a wooden hanger from the veranda beam, front facing the camera",
+  hoodie:
+    "hangs on a wooden hanger from the veranda beam, front facing the camera; the two drawstrings hang straight down and end above the chest emblem, which sits fully below the drawstring tips and above the kangaroo pocket, exactly as in the reference",
   tshirt: "hangs on a wooden hanger next to the hoodie, front facing the camera",
   keps: "lies on a rustic wooden table in front of the garments, front panel facing the camera",
   flaska: "stands upright on the same table next to the cap, print facing the camera",
-  halsduk: "is draped horizontally along the veranda railing beside the garments, fully unfolded so the whole design is readable",
+  halsduk:
+    "lies flat and straight along the top rail of the veranda railing beside the garments, fully unfolded so the whole design is readable. It is a long, narrow knitted football scarf: the fringe sits only on its two short ends, and the stripes next to each end run parallel to that fringe, exactly as in the reference; the two long edges are straight with no fringe. Both ends rest on the rail and do not hang down or fold over",
 };
 
 const SETTING: Record<string, string> = {

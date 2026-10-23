@@ -34,7 +34,7 @@ type Photo = {
 
 const PHOTOS: Record<Exclude<ProductId, "halsduk">, Photo> = {
   tshirt: { src: "tee.jpg", pxPerMm: 0.91, at: [511, 386], top: true, bend: 20, body: "fabric" },
-  hoodie: { src: "hoodie.jpg", pxPerMm: 0.74, at: [512, 530], bend: 18, body: "fabric" },
+  hoodie: { src: "hoodie.jpg", pxPerMm: 0.74, at: [512, 576], bend: 18, body: "fabric" },
   keps: { src: "cap.jpg", pxPerMm: 3.6, at: [512, 432], bend: 55, rx: 6, body: "fabric", visorY: 592 },
   flaska: { src: "bottle.jpg", pxPerMm: 2.69, at: [512, 590], round: { r: 94 / MOCKUP_SIZE, e: 4 }, body: { x0: 419, x1: 605, y0: 319, y1: 901, corner: 18 } },
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import type { Converted } from "@/lib/newwave/wordmark/convert";
 import { FONT_ROLE_LABEL, FONT_ROLES, type FontRole, FONTS } from "@/lib/newwave/wordmark/fonts";
@@ -10,6 +11,7 @@ import type { ReadResult } from "@/lib/newwave/wordmark/memory";
 import type { ClubCheck, Note } from "@/lib/newwave/wordmark/render";
 import type { ColorSlot, Made, TemplateInput, TextSlot } from "@/lib/newwave/wordmark/schema";
 import { type WordmarkVariant, wordmarkUrl } from "@/lib/newwave/wordmark/spec";
+import { AgentLoader } from "../shop/AgentLoader";
 import { Provenance } from "./Provenance";
 import { WordmarkClubs } from "./WordmarkClubs";
 import { WordmarkDetail } from "./WordmarkDetail";
@@ -114,7 +116,11 @@ const COLOR_CHOICES: { value: ColorSlot | "auto"; label: string }[] = [
 type AgentRead = { described: Described; reading: Reading; loaded: Reading; club: string; notes: string[]; mark?: string; meta: Pick<ReadResult, "key" | "memory" | "at" | "model" | "lessons"> };
 const plain = (r: Reading) => JSON.stringify([r.roles, r.colors, Object.entries(r.styles ?? {}).map(([i, s]) => [i, s.font, s.upper]), r.texts]);
 const changed = (r: AgentRead) => plain(r.reading) !== plain(r.loaded);
-type Step = { kind: "idle" } | { kind: "reading"; status: string } | { kind: "draft"; file: string; draft: Imported; read?: AgentRead; matches: Matches } | { kind: "saved"; template: SavedTemplate };
+type Step = { kind: "idle" } | { kind: "reading" } | { kind: "draft"; file: string; draft: Imported; read?: AgentRead; matches: Matches } | { kind: "saved"; template: SavedTemplate };
+/** Laddningskortet medan filen läses: steget som pågår, och en stund efteråt att den är klar. */
+type Run = { id: number; status: string; done: number; total: number; complete: boolean };
+const READ_STEPS = 3;
+const LOADER_PLACE = "bottom-[calc(96px+env(safe-area-inset-bottom))] left-3 md:bottom-8 md:left-6";
 type DraftStep = Extract<Step, { kind: "draft" }>;
 
 /** Det som följer med mallen om hur den kom till: agentens läsning, typsnittsmätningen, likheten och rättigheterna. */
@@ -226,89 +232,131 @@ function ReadSource({ meta }: { meta: AgentRead["meta"] }) {
   return <p className="text-[12.5px] text-[var(--nw-muted)]">{text}</p>;
 }
 
-const partLabel = (c: Candidate) => (c.text ? `”${c.text}”` : { group: `Grupp · ${c.shapes} former`, shape: "Form", image: "Inbäddad bild", text: "Text" }[c.kind]);
+const KIND_LABEL: Record<Candidate["kind"], string> = { group: "Grupp", shape: "Form", image: "Inbäddad bild", text: "Text" };
+const partTitle = (c: Candidate) => (c.text ? `”${c.text}”` : KIND_LABEL[c.kind]);
+const partDetail = (c: Candidate) => [c.text ? KIND_LABEL[c.kind] : "", c.kind === "group" ? `${c.shapes} former` : ""].filter(Boolean).join(" · ");
+/** Agentens bild har 4 % luft runt designen; delarnas rutor är i enheter där designens längsta sida är 1000. */
+const PAD = 40;
+
+/** Var en del sitter i agentens bild, i procent av bilden. */
+function partBox(c: Candidate, aspect: number) {
+  const [w, h] = aspect >= 1 ? [1000 + 2 * PAD, (1000 + 2 * PAD) / aspect] : [(1000 + 2 * PAD) * aspect, 1000 + 2 * PAD];
+  const [x, y, bw, bh] = c.box;
+  return { left: `${((x + PAD) / w) * 100}%`, top: `${((y + PAD) / h) * 100}%`, width: `${(bw / w) * 100}%`, height: `${(bh / h) * 100}%` };
+}
+
+const select = "nw-input h-9 py-0 pr-7 text-[12.5px]";
 
 /** Delarna som agenten såg dem, med numren från bilden, och rollen var och en fick – som Craft kan ändra. */
 function Parts({ read, onChange }: { read: AgentRead; onChange: (r: Reading) => void }) {
   const { described, reading } = read;
   const hexes = [...new Set(described.candidates.flatMap((c) => c.colors))];
+  const [aspect, setAspect] = useState<number | null>(null);
+  const [hot, setHot] = useState<number | null>(null);
+  const shown = hot === null ? undefined : described.candidates.find((c) => c.i === hot);
   return (
-    <div className="grid gap-4 min-[860px]:grid-cols-[minmax(0,360px)_1fr]">
-      {/* eslint-disable-next-line @next/next/no-img-element -- agentens bild av designen */}
-      <img src={described.annotated} alt="Designen med numrerade delar" className="w-full rounded-[12px] bg-[#8E8E8E]" />
-      <div className="flex min-w-0 flex-col gap-3">
-        <ol className="flex flex-col gap-1.5">
-          {described.candidates.map((c) => {
-            const role = reading.roles[c.i] ?? "ornament";
-            const style = reading.styles?.[c.i] ?? defaultStyle(role);
-            const setStyle = (s: Partial<typeof style>) => onChange({ ...reading, styles: { ...reading.styles, [c.i]: { ...style, ...s, picked: true } } });
-            return (
-              <li key={c.i} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-                <span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-[6px] px-1 text-[12px] font-bold text-black" style={{ background: PART_HUES[c.i % PART_HUES.length] }}>
-                  {c.i}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[var(--nw-ink)]">{partLabel(c)}</span>
-                <span className="flex shrink-0 gap-0.5">
-                  {c.colors.map((h) => (
-                    <span key={h} title={h} className="h-3.5 w-3.5 rounded-full border border-[var(--nw-line)]" style={{ background: h }} />
-                  ))}
-                </span>
-                <select value={role} onChange={(e) => onChange({ ...reading, roles: { ...reading.roles, [c.i]: e.target.value as ReadRole } })} aria-label={`Roll för del ${c.i}`} className="nw-input h-8 w-[170px] shrink-0 py-0 pr-7 text-[12.5px]">
-                  {READ_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {READ_ROLE_LABEL[r]}
-                    </option>
-                  ))}
-                </select>
-                {c.kind !== "text" && isTextRole(role) ? (
-                  <span className="flex basis-full justify-end gap-1.5">
-                    <select value={style.font} onChange={(e) => setStyle({ font: e.target.value as FontRole })} aria-label={`Typsnittets stil för del ${c.i}`} className="nw-input h-8 w-[150px] py-0 pr-7 text-[12.5px]">
-                      {FONT_ROLES.map((f) => (
-                        <option key={f} value={f}>
-                          {FONT_ROLE_LABEL[f]}
+    <section className="flex flex-col gap-3">
+      <div>
+        <p className="text-[14px] font-semibold text-[var(--nw-ink)]">Justera tolkningen</p>
+        <p className="text-[12.5px] text-[var(--nw-muted)]">Peka på en rad så syns delen i bilden. Numren är desamma som agenten såg.</p>
+      </div>
+      <div className="grid items-start gap-4 min-[860px]:grid-cols-[minmax(0,340px)_1fr]">
+        <div className="relative overflow-hidden rounded-[14px] bg-[#8E8E8E] min-[860px]:sticky min-[860px]:top-24">
+          {/* eslint-disable-next-line @next/next/no-img-element -- agentens bild av designen */}
+          <img src={described.annotated} alt="Designen med numrerade delar" onLoad={(e) => setAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)} className="block w-full" />
+          {shown && aspect ? (
+            <span className="pointer-events-none absolute rounded-[4px] shadow-[0_0_0_2px_#fff,0_0_0_9999px_rgba(0,0,0,0.45)] transition-all duration-150" style={partBox(shown, aspect)} aria-hidden />
+          ) : null}
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <ol className="divide-y divide-[var(--nw-line)] overflow-hidden rounded-[14px] border border-[var(--nw-line)] bg-white">
+            {described.candidates.map((c) => {
+              const role = reading.roles[c.i] ?? "ornament";
+              const style = reading.styles?.[c.i] ?? defaultStyle(role);
+              const setStyle = (s: Partial<typeof style>) => onChange({ ...reading, styles: { ...reading.styles, [c.i]: { ...style, ...s, picked: true } } });
+              const detail = partDetail(c);
+              return (
+                <li
+                  key={c.i}
+                  onMouseEnter={() => setHot(c.i)}
+                  onMouseLeave={() => setHot(null)}
+                  onFocus={() => setHot(c.i)}
+                  onBlur={() => setHot(null)}
+                  className={`grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors ${hot === c.i ? "bg-[var(--nw-soft)]" : ""}`}
+                >
+                  <span className="grid h-7 w-7 place-items-center rounded-[8px] text-[12px] font-bold text-black" style={{ background: PART_HUES[c.i % PART_HUES.length] }}>
+                    {c.i}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13.5px] font-medium text-[var(--nw-ink)]">{partTitle(c)}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-[var(--nw-muted)]">
+                      {c.colors.map((h) => (
+                        <span key={h} title={h} className="h-3 w-3 rounded-full ring-1 ring-black/10" style={{ background: h }} />
+                      ))}
+                      {detail ? <span className="truncate">{detail}</span> : null}
+                    </span>
+                  </span>
+                  <select value={role} onChange={(e) => onChange({ ...reading, roles: { ...reading.roles, [c.i]: e.target.value as ReadRole } })} aria-label={`Roll för del ${c.i}`} className={`${select} w-[164px]`}>
+                    {READ_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {READ_ROLE_LABEL[r]}
+                      </option>
+                    ))}
+                  </select>
+                  {c.kind !== "text" && isTextRole(role) ? (
+                    <span className="col-span-2 col-start-2 flex flex-wrap items-center justify-end gap-2">
+                      <span className="basis-full text-[11.5px] text-[var(--nw-muted)] sm:mr-auto sm:basis-auto">Texten är former – välj stilen</span>
+                      <select value={style.font} onChange={(e) => setStyle({ font: e.target.value as FontRole })} aria-label={`Typsnittets stil för del ${c.i}`} className={`${select} min-w-0 flex-1 sm:w-[140px] sm:flex-none`}>
+                        {FONT_ROLES.map((f) => (
+                          <option key={f} value={f}>
+                            {FONT_ROLE_LABEL[f]}
+                          </option>
+                        ))}
+                      </select>
+                      <select value={style.upper ? "upper" : "asis"} onChange={(e) => setStyle({ upper: e.target.value === "upper" })} aria-label={`Versaler för del ${c.i}`} className={`${select} min-w-0 flex-1 sm:w-[130px] sm:flex-none`}>
+                        <option value="upper">VERSALER</option>
+                        <option value="asis">Som namnet</option>
+                      </select>
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+          <div>
+            <p className="text-[13px] font-semibold text-[var(--nw-ink)]">Färgerna</p>
+            <p className="text-[12px] text-[var(--nw-muted)]">Vilken av klubbens färger varje färg i originalet blir.</p>
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+              {hexes.map((h) => (
+                <li key={h} className="flex items-center gap-3 rounded-[12px] border border-[var(--nw-line)] bg-white p-2">
+                  <span className="h-9 w-9 shrink-0 rounded-[9px] ring-1 ring-black/10" style={{ background: h }} />
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="font-mono text-[11px] uppercase text-[var(--nw-muted)]">{h}</span>
+                    <select
+                      value={reading.colors[h] ?? "auto"}
+                      onChange={(e) => {
+                        const colors = { ...reading.colors };
+                        if (e.target.value === "auto") delete colors[h];
+                        else colors[h] = e.target.value as ColorSlot;
+                        onChange({ ...reading, colors });
+                      }}
+                      aria-label={`Färgen ${h}`}
+                      className={`${select} h-8 w-full`}
+                    >
+                      {COLOR_CHOICES.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
                         </option>
                       ))}
                     </select>
-                    <select value={style.upper ? "upper" : "asis"} onChange={(e) => setStyle({ upper: e.target.value === "upper" })} aria-label={`Versaler för del ${c.i}`} className="nw-input h-8 w-[130px] py-0 pr-7 text-[12.5px]">
-                      <option value="upper">VERSALER</option>
-                      <option value="asis">Som namnet</option>
-                    </select>
                   </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-        <div>
-          <p className="text-[13px] font-semibold text-[var(--nw-ink)]">Färgerna</p>
-          <ul className="mt-1.5 flex flex-col gap-1.5">
-            {hexes.map((h) => (
-              <li key={h} className="flex items-center gap-2 text-[13px]">
-                <span className="h-6 w-6 shrink-0 rounded-[6px] border border-[var(--nw-line)]" style={{ background: h }} />
-                <span className="w-[72px] shrink-0 font-mono text-[12px] text-[var(--nw-muted)]">{h}</span>
-                <select
-                  value={reading.colors[h] ?? "auto"}
-                  onChange={(e) => {
-                    const colors = { ...reading.colors };
-                    if (e.target.value === "auto") delete colors[h];
-                    else colors[h] = e.target.value as ColorSlot;
-                    onChange({ ...reading, colors });
-                  }}
-                  aria-label={`Färgen ${h}`}
-                  className="nw-input h-8 w-[190px] py-0 pr-7 text-[12.5px]"
-                >
-                  {COLOR_CHOICES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -325,33 +373,48 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
   /** När Craft bekräftade rätten att använda designen; utan den går ingen fil att välja. */
   const [rights, setRights] = useState<string | null>(null);
   const [like, setLike] = useState<number | null>(null);
+  const [run, setRun] = useState<Run | null>(null);
+  useEffect(() => {
+    if (!run?.complete) return;
+    const t = setTimeout(() => setRun(null), 2400);
+    return () => clearTimeout(t);
+  }, [run]);
 
   const read = async (file: File | undefined) => {
     if (!file) return;
     setError("");
     setLike(null);
+    const id = Date.now();
+    const phase = (status: string, done: number) => {
+      setStep({ kind: "reading" });
+      setRun({ id, status, done, total: READ_STEPS, complete: false });
+    };
+    const finish = () => setRun({ id, status: "", done: READ_STEPS, total: READ_STEPS, complete: true });
     try {
       const kind = fileKind(file);
       if (!kind) throw new Error("Välj en SVG-, AI-, PDF-, PNG- eller JPG-fil.");
       if (file.size > MAX_UPLOAD) throw new Error("Filen är för stor – max 10 MB.");
       let source: Pick<Converted, "svg" | "words" | "fonts">;
       if (kind === "svg") {
+        phase("Filen öppnas…", 0);
         source = { svg: await readSvgText(file), words: [], fonts: [] };
         const named = await importSvg(source.svg, file.name).catch((e) => {
           if (e instanceof NoLayerNames) return null;
           throw e;
         });
         if (named) {
+          phase("Typsnitten mäts mot originalet…", 2);
           const matches = await matchFonts(named.original.glyphs).catch(() => ({}));
           setStep({ kind: "draft", file: file.name, draft: withMatches(named, matches), matches });
           setName(named.template.name);
+          finish();
           return;
         }
       } else {
-        setStep({ kind: "reading", status: kind === "image" ? "Bilden görs om till vektorer…" : "Filen öppnas…" });
+        phase(kind === "image" ? "Bilden görs om till vektorer…" : "Filen öppnas…", 0);
         source = await convertFile(file);
       }
-      setStep({ kind: "reading", status: "Läsagenten tittar på designen…" });
+      phase("Läsagenten tittar på designen…", 1);
       const described = await describeSvg(source.svg, source.words);
       const { roles, colors, styles, texts, club, notes, mark, key, memory, at, model, lessons } = await post<ReadResult>("/api/v1/newwave/wordmark/read", {
         name: file.name.slice(0, 80),
@@ -362,12 +425,14 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
       });
       const reading = { roles, colors, styles, texts, club };
       const draft = await importSvg(described.svg, file.name, reading);
-      setStep({ kind: "reading", status: "Typsnitten mäts mot originalet…" });
+      phase("Typsnitten mäts mot originalet…", 2);
       const matches = await matchFonts(draft.original.glyphs).catch(() => ({}));
       setStep({ kind: "draft", file: file.name, draft: withMatches(draft, matches), read: { described, reading, loaded: reading, club, notes, mark, meta: { key, memory, at, model, lessons } }, matches });
       setName(draft.template.name);
+      finish();
     } catch (e) {
       setStep({ kind: "idle" });
+      setRun(null);
       setError(e instanceof Error ? e.message : "Kunde inte läsa filen.");
     }
   };
@@ -434,19 +499,14 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
         <input type="checkbox" checked={Boolean(rights)} onChange={(e) => setRights(e.target.checked ? new Date().toISOString() : null)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--nw-ink)]" />
         <span>Vi har rätt att använda designen – den är vår egen, beställarens eller klubbens, eller köpt med licens för tryck. Bekräftelsen sparas med mallen.</span>
       </label>
-      {step.kind === "reading" ? (
-        <p className="nw-fade text-[13.5px] text-[var(--nw-ink)]" role="status">
-          {step.status}
-        </p>
-      ) : null}
       {error ? <p className="text-[13.5px] text-[#B42318]">{error}</p> : null}
       {step.kind === "draft" ? (
-        <div className="nw-fade flex flex-col gap-4">
+        <div className="nw-fade flex flex-col gap-5">
           {step.read ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               <p className="text-[13.5px] text-[var(--nw-ink)]">
                 <span className="font-semibold">{step.read.meta.memory === "corrected" ? "Er rättade tolkning" : "Agentens tolkning"}</span>
-                {step.read.club ? <span className="text-[var(--nw-muted)]"> · designen är gjord för {step.read.club}</span> : null}. Stämmer något inte, byt rollen eller färgen – förhandsvisningen ritas om direkt, utan AI.
+                {step.read.club ? <span className="text-[var(--nw-muted)]"> · designen är gjord för {step.read.club}</span> : null}. Stämmer något inte, byt rollen eller färgen under bilderna – förhandsvisningen ritas om direkt, utan AI.
               </p>
               <ReadSource meta={step.read.meta} />
               {step.read.mark ? (
@@ -461,7 +521,6 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
                   ))}
                 </ul>
               ) : null}
-              <Parts read={step.read} onChange={(r) => void reinterpret(r)} />
             </div>
           ) : (
             <p className="text-[13px] text-[var(--nw-muted)]">
@@ -475,39 +534,64 @@ export function ImportPanel({ clubs, variant, onSave, onEdit }: { clubs: LabClub
               ))}
             </ul>
           ) : null}
-          <MatchLine draft={step.draft} matches={step.matches} />
-          <div className="grid grid-cols-2 gap-2 min-[700px]:grid-cols-5">
-            <figure className="min-w-0">
-              <div className={tile("light")}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- originalfilen */}
-                <img src={step.draft.original.image} alt="Originalet" className={IMG} />
-              </div>
-              <figcaption className="mt-1 truncate text-[12px] font-medium text-[var(--nw-ink)]">Originalet</figcaption>
-            </figure>
-            {clubs[0] ? <Draft template={step.draft.template} club={{ id: clubs[0].id, name: "Mallen med originalets namn" }} variant="light" original={sampleOf(step.draft, step.read?.club)} against={step.draft.original.image} onLikeness={setLike} /> : null}
-            {clubs.map((c) => (
-              <Draft key={c.id} template={step.draft.template} club={c} variant={variant} />
-            ))}
+          <div className="flex flex-col gap-2.5">
+            <div className="grid grid-cols-2 gap-2 min-[700px]:grid-cols-5">
+              <figure className="min-w-0">
+                <div className={tile("light")}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- originalfilen */}
+                  <img src={step.draft.original.image} alt="Originalet" className={IMG} />
+                </div>
+                <figcaption className="mt-1 truncate text-[12px] font-medium text-[var(--nw-ink)]">Originalet</figcaption>
+              </figure>
+              {clubs[0] ? <Draft template={step.draft.template} club={{ id: clubs[0].id, name: "Mallen med originalets namn" }} variant="light" original={sampleOf(step.draft, step.read?.club)} against={step.draft.original.image} onLikeness={setLike} /> : null}
+              {clubs.map((c) => (
+                <Draft key={c.id} template={step.draft.template} club={c} variant={variant} />
+              ))}
+            </div>
+            <MatchLine draft={step.draft} matches={step.matches} />
+            <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium text-[var(--nw-ink)]">
+              Designens namn
+              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} className="nw-input h-10 w-full max-w-[280px]" />
+            </label>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} aria-label="Designens namn" className="nw-input h-10 w-[220px]" />
+          {step.read ? <Parts read={step.read} onChange={(r) => void reinterpret(r)} /> : null}
+          <div className="sticky bottom-[calc(88px+env(safe-area-inset-bottom))] z-10 mr-14 flex items-center gap-2 rounded-[16px] border border-[var(--nw-line)] bg-white/90 p-2 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] backdrop-blur md:bottom-4 md:mr-0">
             <button type="button" disabled={busy || !rights} onClick={() => void keep()} className="nw-btn h-10 disabled:opacity-50">
-              {busy ? "Sparar…" : "Spara och välj klubbar"}
+              {busy ? (
+                "Sparar…"
+              ) : (
+                <>
+                  <span className="sm:hidden">Spara</span>
+                  <span className="hidden sm:inline">Spara och välj klubbar</span>
+                </>
+              )}
             </button>
-            <button type="button" onClick={() => {
+            <button
+              type="button"
+              onClick={() => {
                 learn();
                 onEdit(finished(step), { image: step.draft.original.image, sample: sampleOf(step.draft, step.read?.club), matches: step.matches });
               }}
-              className="nw-chip h-10 px-4"
+              className="nw-chip h-10 gap-2 px-4"
             >
-              Öppna i designstudion
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+              <span className="sm:hidden">Designstudion</span>
+              <span className="hidden sm:inline">Öppna i designstudion</span>
             </button>
-            <button type="button" onClick={() => setStep({ kind: "idle" })} className="nw-btn nw-btn-ghost h-10">
-              Avbryt
+            <button type="button" onClick={() => setStep({ kind: "idle" })} aria-label="Avbryt" className="nw-btn nw-btn-ghost ml-auto h-10 w-10 px-0 sm:w-auto sm:px-4">
+              <span className="sm:hidden" aria-hidden>
+                ✕
+              </span>
+              <span className="hidden sm:inline">Avbryt</span>
             </button>
           </div>
         </div>
       ) : null}
+      <AnimatePresence>
+        {run ? <AgentLoader key={run.id} title="Designen är läst" stages={[run.status]} done={run.done} total={run.total} complete={run.complete} doneText="Rätta tolkningen eller öppna den i designstudion." place={LOADER_PLACE} /> : null}
+      </AnimatePresence>
     </div>
   );
 }

@@ -121,14 +121,20 @@ async function stamp(px: Uint8ClampedArray, W: number, H: number, m: HeroMark, f
   const r = Math.max(4, Math.round(big * 0.22));
   const [rx, ry] = o.upright ? [2, r * 3] : [r, r];
   const keep = mask.map((v) => 1 - v);
-  // Halsdukens väv är enfärgad runt märket: bara pixlar som liknar väven får ge färg, inte vävda bokstäver och ränder bredvid.
+  // Halsdukens väv och T-shirten är enfärgade runt märket: bara pixlar i tygets färg får ge färg, inte vävda bokstäver,
+  // ränder och ordmärkets rutband bredvid eller räcket och bakgrunden utanför halsdukens kant (med samma ljushet som väven).
   if (o.even) {
-    const lum = (i: number) => 0.2126 * crop[i * 4] + 0.7152 * crop[i * 4 + 1] + 0.0722 * crop[i * 4 + 2];
-    const near = blur(keep, S, S, rx, ry);
-    const ring = keep.map((k, i) => (k > 0.99 && near[i] < 0.995 ? lum(i) : NaN)).filter((v) => !Number.isNaN(v)).sort((x, y) => x - y);
-    const median = ring[ring.length >> 1] ?? 0;
-    const spread = 2.5 * 1.4826 * ([...ring].map((v) => Math.abs(v - median)).sort((x, y) => x - y)[ring.length >> 1] ?? 0) + 6;
-    for (let i = 0; i < keep.length; i++) if (Math.abs(lum(i) - median) > spread) keep[i] = 0;
+    const near = blur(keep, S, S, grow);
+    const ring = [...keep.keys()].filter((i) => keep[i] > 0.99 && near[i] < 0.995);
+    const at = (v: number[], q: number) => v.sort((x, y) => x - y)[Math.floor(v.length * q)] ?? 0;
+    const centre = (from: number[]) => [0, 1, 2].map((c) => at(from.map((i) => crop[i * 4 + c]), 0.5));
+    const away = (c: number[]) => (i: number) => Math.hypot(crop[i * 4] - c[0], crop[i * 4 + 1] - c[1], crop[i * 4 + 2] - c[2]);
+    // Bandet runt märket kan rymma rester av bildmodellens märke: vävens färg är mitten av den närmaste hälften.
+    const rough = away(centre(ring));
+    const cut = at(ring.map(rough), 0.5);
+    const dist = away(centre(ring.filter((i) => rough(i) <= cut)));
+    const spread = 3 * at(ring.map(dist), 0.25) + 8;
+    for (let i = 0; i < keep.length; i++) if (dist(i) > spread) keep[i] = 0;
   }
   const wide = blur(keep, S, S, rx, ry);
   for (let c = 0; c < 3; c++) {
@@ -166,7 +172,7 @@ export async function stampMarks(jpg: Buffer, id: string, products: GrasrotProdu
     const flat = color && (await markArt(id, product, color));
     if (!flat) continue;
     const dark = product.id === "halsduk" || color.dark;
-    await stamp(px, info.width, info.height, m, flat, { dark, soft: product.id !== "flaska", upright: product.id === "flaska", even: product.id === "halsduk" });
+    await stamp(px, info.width, info.height, m, flat, { dark, soft: product.id !== "flaska", upright: product.id === "flaska", even: product.id === "halsduk" || product.id === "tshirt" });
   }
   return sharp(Buffer.from(px.buffer, px.byteOffset, px.length), { raw: { width: info.width, height: info.height, channels: 4 } })
     .removeAlpha()
