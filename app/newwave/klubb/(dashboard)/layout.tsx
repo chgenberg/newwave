@@ -9,6 +9,7 @@ const ITEMS: NavItem[] = [
   { href: HOME, label: "Översikt", icon: "home" },
   { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
   { href: `${BASE}/material`, label: "Material", icon: "spark" },
+  { href: `${BASE}/agent`, label: "Agenten", icon: "phone" },
   { href: `${BASE}/webshop`, label: "Webshop", icon: "store" },
   { href: `${BASE}/statistik`, label: "Statistik", icon: "chart" },
   { href: `${BASE}/varumarke`, label: "Varumärke", icon: "drop" },
