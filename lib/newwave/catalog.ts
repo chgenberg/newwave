@@ -1,4 +1,5 @@
 import { BILAGA2, type Bilaga2Zone, type Technique } from "./bilaga2";
+import pfUrval from "./pf-urval.json";
 import { type Surface, type SurfaceInput, surface } from "./printSurface";
 
 /** New Waves tryckbara sortiment för klubbarna – foton och 3D-modeller från PACH. */
@@ -157,7 +158,56 @@ const SOFT: ReadonlySet<Kind> = new Set(["top", "beanie", "bag", "textile"]);
 /** Tyg som veckar sig, där trycket följer vecken. */
 export const isSoft = (p: Pick<NwProduct, "kind">) => SOFT.has(p.kind);
 
+/** Kategorin för PF Concepts urval med egna 3D-modeller; står först i sortimentet. */
+export const FEATURED_CATEGORY = "Nytt i 3D";
+
+type PfPick = { code: string; name: string; kind: Kind; color: string; hex: string; method: string | null; brand: string | null };
+
+const PF_PRICE: Partial<Record<Kind, number>> = { top: 449, cap: 249, beanie: 199, bag: 399, textile: 349, drink: 299, pen: 149, tech: 399, book: 179, box: 249, umbrella: 349, flat: 99 };
+const PF_SEASONS: Partial<Record<Kind, Season[]>> = { cap: ["vår", "sommar"], beanie: ["höst", "vinter"] };
+/** Tryckytan på PF:s packshot, där produkten står mitt i bilden framifrån. Uppskattad per typ; 3D-modellen visar trycket exakt. */
+const PF_PRINT: Partial<Record<Kind, SurfaceInput>> = {
+  cap: { cx: 0.5, cy: 0.4, w: 0.22, h: 0.1, bend: 40 },
+  beanie: { cx: 0.5, cy: 0.66, w: 0.22, h: 0.12, round: { r: 0.36, e: 14 } },
+  drink: { cx: 0.5, cy: 0.55, w: 0.16, h: 0.16, round: { r: 0.13, e: 12 } },
+  pen: { cx: 0.5, cy: 0.5, w: 0.22, h: 0.05 },
+  bag: { cx: 0.5, cy: 0.52, w: 0.3, h: 0.22, bend: 20 },
+};
+const JACKET = /jacka|väst|fleece|dragkedja/i;
+
+function pfRow(p: PfPick): NwProduct {
+  const k = KIND[p.kind];
+  const bilaga2 = p.kind === "top" ? (JACKET.test(p.name) ? without(BILAGA2.hoodie, "brost") : /hoodie/i.test(p.name) ? BILAGA2.hoodie : BILAGA2.tshirt) : p.kind === "cap" || p.kind === "beanie" ? BILAGA2.keps : undefined;
+  const leftChest = p.kind === "top" && JACKET.test(p.name);
+  const main = bilaga2 && ((leftChest && bilaga2.find((z) => z.id === "vanster")) || bilaga2[0]);
+  const place = p.kind === "top" ? garment([0.33, 0.22, 0.34, 0.38], leftChest) : { print: PF_PRINT[p.kind] ?? { cx: 0.5, cy: 0.5, w: 0.3, h: 0.24 } };
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(p.hex.slice(i, i + 2), 16));
+  return {
+    id: `pf-${p.code.toLowerCase()}`,
+    name: p.name,
+    category: FEATURED_CATEGORY,
+    kind: p.kind,
+    garmentColor: p.color,
+    garmentHex: p.hex,
+    dark: 0.299 * r! + 0.587 * g! + 0.114 * b! < 140,
+    priceSek: PF_PRICE[p.kind] ?? 299,
+    sizes: p.kind === "top" ? WEAR : ["One size"],
+    printArea: main ? { widthCm: main.widthMm / 10, heightCm: main.heightMm / 10, method: p.method ?? TECHNIQUE_LABEL[main.techniques[0]!] } : { widthCm: k.area[0], heightCm: k.area[1], method: p.method ?? k.method },
+    bilaga2,
+    seasons: PF_SEASONS[p.kind] ?? (leftChest ? ["höst", "vinter", "vår"] : ["vinter", "vår", "sommar", "höst"]),
+    use: p.brand ? `${p.brand}, i 3D` : "klubb, ledare och present",
+    photo: `/newwave/products/pf/${p.code}.jpg`,
+    print: surface(place.print),
+    chest: "chest" in place && place.chest ? surface(place.chest) : undefined,
+    model: `/newwave/models/pf-${p.code.replace(/[^A-Za-z0-9]/g, "")}.glb`,
+    zone: { dir: p.kind === "pen" ? [0, 1, 0] : [0, 0, 1], offset: leftChest ? [0.12, 0.22] : k.offset },
+    sizeCm: p.kind === "textile" ? 50 : k.sizeCm,
+    printCm: leftChest ? 9 : p.kind === "textile" ? 15 : k.printCm,
+  };
+}
+
 export const NW_CATALOG: NwProduct[] = [
+  ...(pfUrval as PfPick[]).map(pfRow),
   row("P001", "T-shirt", "Kläder", "top", "Vit", "#F4F3EF", 249, ["vinter", "vår", "sommar", "höst"], "match, träning, cup och sommarläger", garment([0.347, 0.228, 0.308, 0.355])),
   row("P002", "T-shirt Premium", "Kläder", "top", "Svart", "#111111", 349, ["vinter", "vår", "sommar", "höst"], "supportrar och present", garment([0.319, 0.196, 0.352, 0.383])),
   row("P003", "Piké", "Kläder", "top", "Svart", "#111111", 449, ["vår", "sommar"], "ledare, funktionärer och avslutning", { print: { cx: 0.625, cy: 0.32, w: 0.11, h: 0.1, bend: 18 }, center: { cx: 0.5, cy: 0.47, w: 0.22, h: 0.24, bend: 28, top: true }, leftChest: true }),

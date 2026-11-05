@@ -1,0 +1,1379 @@
+[
+ {
+  "code": "100165",
+  "name": "Huggy fleecefilt med påse 150 x 120 cm",
+  "kind": "textile",
+  "color": "Limegrön",
+  "hex": "#A4C254",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "100182",
+  "name": "Spectrum kylväska för 6 burkar 4L",
+  "kind": "bag",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "100288",
+  "name": "Sky flaska",
+  "kind": "drink",
+  "color": "Kungsblå",
+  "hex": "#2F4F8F",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "100289",
+  "name": "Spring flaska",
+  "kind": "drink",
+  "color": "Transparent svart",
+  "hex": "#383839",
+  "method": "Gravyr",
+  "brand": null
+ },
+ {
+  "code": "100310",
+  "name": "Elwood 410 ml termosmugg",
+  "kind": "drink",
+  "color": "Silver",
+  "hex": "#C0C0C0",
+  "method": "Gravyr",
+  "brand": null
+ },
+ {
+  "code": "100313",
+  "name": "Capri sportflaska",
+  "kind": "drink",
+  "color": "Transparent blå",
+  "hex": "#486AB1",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "100314",
+  "name": "Tutti frutti flaska med fruktsil",
+  "kind": "drink",
+  "color": "Transparent",
+  "hex": "#FFFFFF",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "100740",
+  "name": "Bjorn 360 ml RCS-certifierad mugg i återvunnet rostfritt stål med kopparvakuumisolering",
+  "kind": "drink",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "100881",
+  "name": "Stanley Legendary 400 ml matburk med spork",
+  "kind": "box",
+  "color": "Ljusrosa",
+  "hex": "#FFB6C1",
+  "method": "Gravyr",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100945",
+  "name": "Stanley All-Day Julienne Max återvunnen kylväska för 20 burkar",
+  "kind": "bag",
+  "color": "Krämfärgad",
+  "hex": "#FFFDD0",
+  "method": "Transfer",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100946",
+  "name": "Stanley All-Day Julienne Mini återvunnen kylväska för 10 burkar",
+  "kind": "bag",
+  "color": "Krämfärgad",
+  "hex": "#FFFDD0",
+  "method": "Transfer",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "104010",
+  "name": "RFX™ Watch-out säkerhetsväst i påse för professionellt bruk",
+  "kind": "top",
+  "color": "Neongul",
+  "hex": "#CCFF00",
+  "method": "Brodyr",
+  "brand": "RFX™"
+ },
+ {
+  "code": "106180",
+  "name": "Classic A6 inbunden fickanteckningsbok hårt omslag",
+  "kind": "book",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "JournalBooks"
+ },
+ {
+  "code": "106181",
+  "name": "Classic A5 inbunden anteckningsbok hårt omslag",
+  "kind": "book",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "JournalBooks"
+ },
+ {
+  "code": "106367",
+  "name": "Waterman Hemisphere-kulspetspenna, M",
+  "kind": "pen",
+  "color": "Koppar",
+  "hex": "#AC7339",
+  "method": "Gravyr",
+  "brand": "Waterman"
+ },
+ {
+  "code": "106372",
+  "name": "Waterman Hemisphere-kulspetspenna, F",
+  "kind": "pen",
+  "color": "Koppar",
+  "hex": "#AC7339",
+  "method": "Gravyr",
+  "brand": "Waterman"
+ },
+ {
+  "code": "106489",
+  "name": "Parker Urban kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Gravyr",
+  "brand": "Parker"
+ },
+ {
+  "code": "106516",
+  "name": "Waterman Hémisphère kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Silver",
+  "hex": "#C0C0C0",
+  "method": "Gravyr",
+  "brand": "Waterman"
+ },
+ {
+  "code": "106830",
+  "name": "Classic A5 anteckningsbok mjukt omslag",
+  "kind": "book",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "JournalBooks"
+ },
+ {
+  "code": "106838",
+  "name": "Parker Jotter Bond Street kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Gravyr",
+  "brand": "Parker"
+ },
+ {
+  "code": "107079",
+  "name": "Revello anteckningsbok A5 i häfte",
+  "kind": "book",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Transfer",
+  "brand": "Marksman"
+ },
+ {
+  "code": "109064",
+  "name": "Traveler 21,5\" hopfällbart automatiskt paraply",
+  "kind": "umbrella",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "Marksman"
+ },
+ {
+  "code": "112809",
+  "name": "Springwood mjuk rutig filt i polarfleece och sherpafleece",
+  "kind": "textile",
+  "color": "Grå",
+  "hex": "#9E9D9D",
+  "method": "Brodyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "113133",
+  "name": "Mepal Ellipse 500+200 ml lunch box",
+  "kind": "box",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Screentryck",
+  "brand": "Mepal"
+ },
+ {
+  "code": "117005",
+  "name": "Nora handduk av 550 g/m² bomull, 50 x 100 cm",
+  "kind": "textile",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "117006",
+  "name": "Ellie handduk av 550 g/m² bomull, 70 x 140 cm",
+  "kind": "textile",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "120634",
+  "name": "Thule EnRoute ryggsäck 23 l",
+  "kind": "bag",
+  "color": "Grå",
+  "hex": "#9E9D9D",
+  "method": "Transfer",
+  "brand": "Thule"
+ },
+ {
+  "code": "120691",
+  "name": "Herschel Retreat™ återvunnen datorryggsäck 23 liter",
+  "kind": "bag",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": "Brodyr",
+  "brand": "Herschel"
+ },
+ {
+  "code": "120693",
+  "name": "Herschel Novel™ återvunnen duffelväska, 43 l",
+  "kind": "bag",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": "Brodyr",
+  "brand": "Herschel"
+ },
+ {
+  "code": "120820",
+  "name": "Zens 15 W magnetisk nattduksbordsladdare",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Zens"
+ },
+ {
+  "code": "120821",
+  "name": "Zens Pro 2 140 W USB-C 2-i-1-laddningskabel",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Zens"
+ },
+ {
+  "code": "120822",
+  "name": "Zens Pro 3 140 W USB-C 3-i-1-laddningskabel",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Zens"
+ },
+ {
+  "code": "120825",
+  "name": "Boompods Echowave True Wireless-hörlurar",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Tampotryck",
+  "brand": "Boompods"
+ },
+ {
+  "code": "120829",
+  "name": "Boompods Beachboom Mini 5W vattentät minihögtalare",
+  "kind": "tech",
+  "color": "Ljuslila",
+  "hex": "#C0A4FB",
+  "method": "Gravyr",
+  "brand": "Boompods"
+ },
+ {
+  "code": "122019",
+  "name": "RFX™ Felix reflekterande slapwrap",
+  "kind": "flat",
+  "color": "Neongul",
+  "hex": "#CCFF00",
+  "method": "Tampotryck",
+  "brand": "RFX™"
+ },
+ {
+  "code": "2PA60",
+  "name": "Prixton Orbyt smart ring",
+  "kind": "tech",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Digitaltryck",
+  "brand": "Prixton"
+ },
+ {
+  "code": "37504",
+  "name": "Coltan GRS återvunnen softshelljacka herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37522",
+  "name": "Borax 160 g/m² GRS-återvunnen kortärmad funktions t-shirt herr",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37523",
+  "name": "Borax 160 g/m² GRS-återvunnen kortärmad funktions t-shirt dam",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37526",
+  "name": "Kai Unisex cirkulär skaljacka, återvunnet GRS material, Retursystem",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37529",
+  "name": "Amber herrjacka av återvunnen GRS-fleece med hel dragkedja",
+  "kind": "top",
+  "color": "NXT blå",
+  "hex": "#4799B5",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37534",
+  "name": "Petalite dunjacka  av återvunna GRS-material herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37536",
+  "name": "Petalite dunväst av återvunna GRS-material herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "K0427",
+  "name": "Imola 135 g/m² kortärmad funktions T-shirt för barn",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "100752",
+  "name": "Ocean Bottle Brew 350 ml termosmugg",
+  "kind": "drink",
+  "color": "Solorange",
+  "hex": "#FF7548",
+  "method": "Gravyr",
+  "brand": "Ocean Bottle"
+ },
+ {
+  "code": "100827",
+  "name": "Stanley Classic 1 000 ml flaska",
+  "kind": "drink",
+  "color": "Skogsgrön",
+  "hex": "#4E6D4D",
+  "method": "Gravyr",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100884",
+  "name": "Stanley IceFlow™ 2.0 1,06 liter vattenflaska med flip-sugrör",
+  "kind": "drink",
+  "color": "Vit",
+  "hex": "#EDEEEE",
+  "method": "Gravyr",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100932",
+  "name": "MiiR Widemouth 591 ml vattenflaska",
+  "kind": "drink",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "MiiR"
+ },
+ {
+  "code": "100944",
+  "name": "Stanley Transit Fliptop 470 ml transitmugg",
+  "kind": "drink",
+  "color": "Krämfärgad",
+  "hex": "#FFFDD0",
+  "method": "Gravyr",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100947",
+  "name": "Stanley Vitalize™ Macro Method återvunnen ryggsäck 29L",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": "Stanley 1913®"
+ },
+ {
+  "code": "100963",
+  "name": "Mepal Vita 700 ml vattenflaska i återvunnet rostfritt stål",
+  "kind": "drink",
+  "color": "Rosa",
+  "hex": "#D58EA0",
+  "method": "Gravyr",
+  "brand": "Mepal"
+ },
+ {
+  "code": "100965",
+  "name": "Mepal Ellipse 350 ml isolerad resemugg",
+  "kind": "drink",
+  "color": "Rosa",
+  "hex": "#D58EA0",
+  "method": "Gravyr",
+  "brand": "Mepal"
+ },
+ {
+  "code": "100986",
+  "name": "MiiR 354 ml vakuumisolerad campingmugg i rostfritt stål",
+  "kind": "drink",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "MiiR"
+ },
+ {
+  "code": "100989",
+  "name": "Hydro Flask Standard Mouth 621ml isolerad vattenflaska i rostfritt stål med lock med sugrör",
+  "kind": "drink",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Hydro Flask"
+ },
+ {
+  "code": "104099",
+  "name": "Casper multiverktyg med 11 funktioner",
+  "kind": "tech",
+  "color": "Blå",
+  "hex": "#0000FF",
+  "method": "Gravyr",
+  "brand": null
+ },
+ {
+  "code": "106482",
+  "name": "Parker Vector kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Silver",
+  "hex": "#C0C0C0",
+  "method": "Gravyr",
+  "brand": "Parker"
+ },
+ {
+  "code": "106509",
+  "name": "Waterman Graduate kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Krom",
+  "hex": "#DBE4EB",
+  "method": "Gravyr",
+  "brand": "Waterman"
+ },
+ {
+  "code": "107021",
+  "name": "Parker IM kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Gravyr",
+  "brand": "Parker"
+ },
+ {
+  "code": "107151",
+  "name": "Moleskine Classic L inbunden anteckningsbok – linjerad",
+  "kind": "book",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "Moleskine"
+ },
+ {
+  "code": "107763",
+  "name": "Honua A5 anteckningsbok i återvunnet papper med återvunnet PET-cover",
+  "kind": "book",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Transfer",
+  "brand": "Marksman"
+ },
+ {
+  "code": "107823",
+  "name": "Parker Jotter Recycled kulspetspenna (blått bläck)",
+  "kind": "pen",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Parker"
+ },
+ {
+  "code": "108012",
+  "name": "Waterman Allure kulspetspenna 2.0 (blått bläck)",
+  "kind": "pen",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Waterman"
+ },
+ {
+  "code": "109052",
+  "name": "Ida 21,5\" hopfällbart paraply",
+  "kind": "umbrella",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "109072",
+  "name": "Arch 23\" automatiskt paraply",
+  "kind": "umbrella",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": "Marksman"
+ },
+ {
+  "code": "111043",
+  "name": "Irwin mössa",
+  "kind": "beanie",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "111053",
+  "name": "Level mössa",
+  "kind": "beanie",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "111071",
+  "name": "Izu mössa",
+  "kind": "beanie",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "111074",
+  "name": "Baru solhatt i sherpa-stil",
+  "kind": "cap",
+  "color": "Havregryn",
+  "hex": "#D9DAD2",
+  "method": "Brodyr",
+  "brand": "Elevate"
+ },
+ {
+  "code": "111075",
+  "name": "Mitica 270 g/m² solhatt med tvättad effekt",
+  "kind": "cap",
+  "color": "Havregryn",
+  "hex": "#D9DAD2",
+  "method": "Brodyr",
+  "brand": "Elevate"
+ },
+ {
+  "code": "112810",
+  "name": "Bay extra mjuk filt i korallfleece",
+  "kind": "textile",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "113153",
+  "name": "Pao skärbräda i bambu med kniv",
+  "kind": "flat",
+  "color": "Natur",
+  "hex": "#F0EFC7",
+  "method": "Gravyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "113191",
+  "name": "Lily GRS RPET korallfleece filt",
+  "kind": "textile",
+  "color": "Mörkblå",
+  "hex": "#2C3A67",
+  "method": "Brodyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "113326",
+  "name": "Alora kökshandduk av 210 g/m² återvunnen bomull",
+  "kind": "textile",
+  "color": "Havregryn",
+  "hex": "#D9DAD2",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "113331",
+  "name": "Huggy fleecefilt med påse 220 x 250 cm",
+  "kind": "textile",
+  "color": "Beige",
+  "hex": "#F5F5DC",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "113334",
+  "name": "Andrea 240 g/m² förkläde med justerbar nackrem",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "113424",
+  "name": "Originalhome återvunnet förkläde",
+  "kind": "top",
+  "color": "Grön",
+  "hex": "#067F58",
+  "method": "Brodyr",
+  "brand": "Originalhome"
+ },
+ {
+  "code": "117001",
+  "name": "Charlotte handduk av 450 g/m² bomull, 50 x 100 cm",
+  "kind": "textile",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "117003",
+  "name": "Evelyn handduk av 450 g/m² bomull, 100 x 180 cm",
+  "kind": "textile",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "117007",
+  "name": "Riley handduk av 550 g/m² bomull, 100 x 180 cm",
+  "kind": "textile",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Brodyr",
+  "brand": "Seasons"
+ },
+ {
+  "code": "118018",
+  "name": "Tao nyckelring med flask- och burköppnare",
+  "kind": "tech",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Gravyr",
+  "brand": null
+ },
+ {
+  "code": "119179",
+  "name": "Panama strandväska 20L",
+  "kind": "bag",
+  "color": "Limegrön",
+  "hex": "#A4C254",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "119385",
+  "name": "Oriole Premium gympapåse 5L",
+  "kind": "bag",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "120135",
+  "name": "Odessa 220 g/m²bomullskasse 13L",
+  "kind": "bag",
+  "color": "Natural",
+  "hex": "#F0EFC7",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "120181",
+  "name": "Madras 140 g/m² bomullskasse 7L",
+  "kind": "bag",
+  "color": "Natural",
+  "hex": "#F0EFC7",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "120195",
+  "name": "Duffelväska i bomull 25L",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "120461",
+  "name": "Oriole RPET gympapåse 5L",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "120495",
+  "name": "Oriole kylgympapåse, för 12 burkar, med dragsko 5L",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "120534",
+  "name": "Retrend RPET duffelväska 40L",
+  "kind": "bag",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": "Brodyr",
+  "brand": null
+ },
+ {
+  "code": "120632",
+  "name": "Thule Lithos ryggsäck 20 l",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": "Thule"
+ },
+ {
+  "code": "120689",
+  "name": "Case Logic Jaunt 15,6\" återvunnen ryggsäck 23L",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": "Case Logic"
+ },
+ {
+  "code": "120692",
+  "name": "Herschel Classic™ återvunnen datorryggsäck 26 liter",
+  "kind": "bag",
+  "color": "Roséguld",
+  "hex": "#F7D0CB",
+  "method": "Brodyr",
+  "brand": "Herschel"
+ },
+ {
+  "code": "120697",
+  "name": "Rise 15,6\" GRS återvunnen ryggsäck för bärbar dator",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": "Tekiō®"
+ },
+ {
+  "code": "120758",
+  "name": "Thule Achiever 16\" laptopväska",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Transfer",
+  "brand": "Thule"
+ },
+ {
+  "code": "120760",
+  "name": "Madras Blend 140 g/m² tygväska av GRS-certifierad återvunnen bomull 7L",
+  "kind": "bag",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Screentryck",
+  "brand": null
+ },
+ {
+  "code": "124409",
+  "name": "Xtorm XG205 Go2 snabbladdande powerbank på 12 W, 5 000 mAh",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Xtorm"
+ },
+ {
+  "code": "124451",
+  "name": "Kooduu Sensa Play Mini bärbar högtalare och lampa",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Kooduu"
+ },
+ {
+  "code": "124602",
+  "name": "Xtorm Go2 trådlös powerbank på 15 W, 5 000 mAh",
+  "kind": "tech",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Gravyr",
+  "brand": "Xtorm"
+ },
+ {
+  "code": "127961",
+  "name": "Thule Lumion återvunnen duffelväska 40 liter",
+  "kind": "bag",
+  "color": "Svart",
+  "hex": "#000000",
+  "method": "Brodyr",
+  "brand": "Thule"
+ },
+ {
+  "code": "130079",
+  "name": "Panama kylväska för stranden med snörhandtag av återvunnen GRS 23L",
+  "kind": "bag",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": "Transfer",
+  "brand": null
+ },
+ {
+  "code": "37541",
+  "name": "Onyx 240 g/m² Aware™ 5-panelskeps av återvunnet material",
+  "kind": "cap",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "37542",
+  "name": "Opal 240 g/m² Aware™ 6-panelskeps av återvunnet material",
+  "kind": "cap",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38011",
+  "name": "Nanaimo 160 g/m² kortärmad herrtröja",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38012",
+  "name": "Nanaimo kortärmad damtröja",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38028",
+  "name": "Heros 150 g/m² kortärmad herrtröja",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38080",
+  "name": "Calgary 200 g/m² kortärmad herrpikétröja",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38106",
+  "name": "Helios 180 g/m² kortärmad piké för män",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38178",
+  "name": "Pollux 130 g/m² långärmad herrskjorta",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38210",
+  "name": "Arora 300 g/m² rundhalsad tröja unisex",
+  "kind": "top",
+  "color": "Sandsten",
+  "hex": "#DED5C6",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38229",
+  "name": "Charon 240 g/m² hoodie med hel dragkedja unisex",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38327",
+  "name": "Match softshelljacka herr",
+  "kind": "top",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38329",
+  "name": "Dinlas lättviktsjacka för herr",
+  "kind": "top",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38338",
+  "name": "Notus vadderad softshelljacka för herr",
+  "kind": "top",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38668",
+  "name": "Styx 175 g/m² 5-panelskeps med sandwichskärm",
+  "kind": "cap",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38675",
+  "name": "Ares 175 g/m² 6-panelskeps",
+  "kind": "cap",
+  "color": "Havregryn",
+  "hex": "#D9DAD2",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38676",
+  "name": "Boreas mössa med lapp",
+  "kind": "beanie",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38677",
+  "name": "Doyle 260 g/m² 5-panelskeps",
+  "kind": "cap",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "38678",
+  "name": "Davis 260 g/m² 6-panelskeps",
+  "kind": "cap",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39339",
+  "name": "Macin dunjacka herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39341",
+  "name": "Pallas vadderad jacka för män av återvunna material",
+  "kind": "top",
+  "color": "Sandsten",
+  "hex": "#DED5C6",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39435",
+  "name": "Macin dunväst herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#204060",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39437",
+  "name": "Pallas väst herr av återvunna material",
+  "kind": "top",
+  "color": "Sandsten",
+  "hex": "#DED5C6",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39474",
+  "name": "Zelus fleecejacka till herr",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39483",
+  "name": "Brossard mikrofleecejacka med hel dragkedja dam",
+  "kind": "top",
+  "color": "Blå",
+  "hex": "#0000FF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39500",
+  "name": "Sphene 165 g/m² oxfordskjorta för herr",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39502",
+  "name": "Carnelian 133 g/m² poplinskjorta för herr",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "39553",
+  "name": "Jasper 280 g/m² hoodie unisex av ekologiskt OCS-certifierat material",
+  "kind": "top",
+  "color": "Vit",
+  "hex": "#FFFFFF",
+  "method": null,
+  "brand": "Elevate"
+ },
+ {
+  "code": "R0404",
+  "name": "Monzha 150 g/m² kortärmad funktionspikétröja för herr",
+  "kind": "top",
+  "color": "Fluorgul",
+  "hex": "#E9E568",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R0407",
+  "name": "Bahrain 135 g/m² kortärmad funktions T-shirt för herr",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R0425",
+  "name": "Montecarlo 150 g/m² kortärmad sport-T-shirt för herr",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R0427",
+  "name": "Imola 135 g/m² kortärmad funktions T-shirt för herr",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R0430",
+  "name": "Estoril 125 g/m² kortärmad funktions T-shirt för herr",
+  "kind": "top",
+  "color": "Fluorgul",
+  "hex": "#E9E568",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R0437",
+  "name": "Valier tröja för män med hel dragkedja",
+  "kind": "top",
+  "color": "Fluorgul",
+  "hex": "#E9E568",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1067",
+  "name": "Urban 280 g/m² hoodie för herr",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1070",
+  "name": "Clasica 280 g/m² unisex tröja med rund hals",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1074",
+  "name": "Vinson 300 g/m² unisex hoodie ekologisk bomull",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1095",
+  "name": "Himalaya fleecejacka med kvartslång dragkedja för herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1099",
+  "name": "Bellagio unisex fleeceväst",
+  "kind": "top",
+  "color": "Sand",
+  "hex": "#F4C68F",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1115",
+  "name": "Epiro 200 g/m² långärmad unisex sweatshirt med kvartslång dragkedja",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R1217",
+  "name": "Extreme 160 g/m² långärmad T-shirt för herr",
+  "kind": "top",
+  "color": "Sand",
+  "hex": "#F4C68F",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R5072",
+  "name": "America fodrad parkasjacka för herr",
+  "kind": "top",
+  "color": "Mörk sand",
+  "hex": "#9A8A70",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R5075",
+  "name": "Tallin unisex isolerande jacka",
+  "kind": "top",
+  "color": "Röd",
+  "hex": "#E41F26",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R5092",
+  "name": "Oslo väst herr",
+  "kind": "top",
+  "color": "Elektriskt blå",
+  "hex": "#334A97",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R5094",
+  "name": "Finland isolerad jacka för herr",
+  "kind": "top",
+  "color": "Elektriskt blå",
+  "hex": "#334A97",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6412",
+  "name": "Artic fleecejacka för herr med hellång dragkedja",
+  "kind": "top",
+  "color": "Sand",
+  "hex": "#F4C68F",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6421",
+  "name": "Montblanc 280 g/m² unisex hoodie med hellång dragkedja",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6428",
+  "name": "Siberia unisex softshelljacka",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6432",
+  "name": "Antartida softshelljacka för herr",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6435",
+  "name": "Rudolph unisex softshelljacka",
+  "kind": "top",
+  "color": "Marinblå",
+  "hex": "#001D43",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6609",
+  "name": "Pegaso Premium 220 g/m² kortärmad piké för män",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6634",
+  "name": "Star 200 g/m² kortärmad pikétröja för dam",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R6635",
+  "name": "Estrella 220 g/m² långärmad pikétröja för herr",
+  "kind": "top",
+  "color": "Gul",
+  "hex": "#FAE700",
+  "method": null,
+  "brand": "Roly"
+ },
+ {
+  "code": "R9097",
+  "name": "Vademecum 160 g/m2 unisex-servicebyxor",
+  "kind": "top",
+  "color": "Donau blå",
+  "hex": "#0084C9",
+  "method": null,
+  "brand": "Roly WRK"
+ },
+ {
+  "code": "R9098",
+  "name": "Panacea 160 g/m2 kortärmad unisex-servicetröja",
+  "kind": "top",
+  "color": "Donau blå",
+  "hex": "#0084C9",
+  "method": null,
+  "brand": "Roly WRK"
+ }
+]

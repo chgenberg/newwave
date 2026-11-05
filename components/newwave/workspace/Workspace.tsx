@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { type BrandKit, DEFAULT_KIT, kitAccent, readKit } from "@/lib/newwave/brandKit";
-import { CATEGORIES, NW_CATALOG, type NwProduct, nwProduct } from "@/lib/newwave/catalog";
+import { CATEGORIES, FEATURED_CATEGORY, NW_CATALOG, type NwProduct, nwProduct } from "@/lib/newwave/catalog";
 import { defaultDesign, sanitizeDesign } from "@/lib/newwave/marking";
 import { type OccasionId, isOccasion, occasion as occasionOf } from "@/lib/newwave/occasions";
 import { collectionDesign, findCollection } from "@/lib/newwave/wordmark/collections";
@@ -39,7 +39,7 @@ function readItems(raw: unknown, allowed: (id: string) => boolean): Item[] {
 
 function Picker({ products, current, onPick }: { products: NwProduct[]; current: string; onPick: (id: string) => void }) {
   const cats = CATEGORIES.filter((c) => products.some((p) => p.category === c));
-  const [cat, setCat] = useState(nwProduct(current)?.category ?? cats[0]);
+  const [cat, setCat] = useState(cats.includes(FEATURED_CATEGORY) ? FEATURED_CATEGORY : (nwProduct(current)?.category ?? cats[0]));
   return (
     <div>
       <p className="drawer-label">Produkt</p>
