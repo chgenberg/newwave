@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
 import { EditDialog, type ScarfEditResult } from "@/components/ScarfEdit";
 import { ScarfHero } from "@/components/ScarfHero";
-import { Badge, FactoryDialog, LEVEL, Pictures, ScarfActions, type ScarfInfo } from "@/components/ScarfParts";
+import { ChooseDialog, MaterialView } from "@/components/ScarfMaterial";
+import { Badge, FactoryDialog, LEVEL, Pictures, QUIET, ScarfActions, downloadZip, type ScarfInfo } from "@/components/ScarfParts";
 import { ClubPicker, OwnLogoDialog, type PickLite } from "@/components/ScarfPick";
 import { SCARF } from "@/lib/scarf";
 import type { ScarfReview } from "@/lib/scarfAgent";
+import type { FilmChannel, ImageChannel, ScarfCopy, ScarfMaterial } from "@/lib/scarfChannels";
 import type { ScarfPick } from "@/lib/scarfClub";
 import type { DemoScarf } from "@/lib/scarfDemo";
 import type { SignStroke } from "@/lib/scarfDesign";
@@ -24,10 +26,15 @@ type Knit = { palette: string[]; report: ProductionReport; images: { front: stri
 type Files = { artFile?: string | null; photoFile?: string | null; signFile?: string | null };
 type ItemState = "kö" | "stickar" | "granskas" | "görs om" | "klar" | "fel";
 type Item = { key: string; idea: IdeaView; state: ItemState; files: Files; strokes: SignStroke[]; knit?: Knit; review?: ScarfReview | null; first?: { title: string; review: ScarfReview }; edited?: boolean; error?: string };
+/** Materialet för det valda motivet. `base` är halsduken det gjordes för, så att zip-filen packas för just den. */
+type Made = { key: string; title: string; base: { clubId: string; idea: ScarfIdea } & Files; copy: ScarfCopy; material: ScarfMaterial; notes: string[] };
+type Film = { film: { url: string; poster: string } | null; note: string | null };
 
 /** Klubben sidan öppnar med. Resten av profilen hämtas från servern. */
 const START: ScarfPick = { ref: "ifk-goteborg", name: "IFK Göteborg", sub: "Göteborg", crest: "/api/v1/brand/ifk-goteborg/skold-farg.png", colors: ["#234B9A", "#FFFFFF", "#1A3770"], brand: false, lines: [], done: "Heja Blåvitt!" };
-const COUNTS = [3, 4, 6, 8];
+/** Agenten tar alltid fram tre förslag. Ett av dem väljs, och får material för alla kanaler. */
+const COUNT = 3;
+const CONTENT = "/api/v1/scarf/agent/content";
 
 const STEPS = [
   { n: 1, title: "Klubben", text: "Sköld, garnfärger och regelbok läses in." },
@@ -37,6 +44,7 @@ const STEPS = [
   { n: 5, title: "Maskinkontroll", text: `Garner, varv, textstorlek och lösa maskor för ${SCARF.machine}.` },
   { n: 6, title: "Granskare", text: "En andra agent sätter betyg. Underkänt görs om en gång." },
   { n: 7, title: "Stickfiler", text: `Mönster, stickorder och garnlista till ${SCARF.factory}.` },
+  { n: 8, title: "Material", text: "Inlägg, banner och film för det valda motivet." },
 ];
 
 async function post<T>(url: string, body: unknown): Promise<T> {
@@ -64,7 +72,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   const [ownLogo, setOwnLogo] = useState<string | null>(null);
   const [ownPick, setOwnPick] = useState<ScarfPick | null>(null);
   const [naming, setNaming] = useState(false);
-  const [count, setCount] = useState(4);
   const [wishes, setWishes] = useState<WishId[]>([]);
   const [wish, setWish] = useState("");
   const [running, setRunning] = useState(false);
@@ -79,8 +86,15 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   const [showDemo, setShowDemo] = useState(false);
   const [factory, setFactory] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  /** Popuprutan med de tre förslagen, det valda motivet och materialet som gjordes för det. */
+  const [choosing, setChoosing] = useState(false);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [made, setMade] = useState<Made | null>(null);
+  const [making, setMaking] = useState(false);
+  const [madeError, setMadeError] = useState<string | null>(null);
   const loader = useLoader();
   const results = useRef<HTMLElement>(null);
+  const materialRef = useRef<HTMLDivElement>(null);
   const start = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   /** Loggan laddas upp från klubbväljaren: då ska den få ett namn direkt. */
@@ -117,7 +131,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
 
   const allowed = WISHES.filter((w) => !pick.brand || BRAND_WISHES.includes(w.id));
   const want = allowed.filter((w) => wishes.includes(w.id)).map((w) => w.id);
-  const total = Math.max(count, want.length);
 
   const run = async () => {
     if (running) return;
@@ -134,6 +147,10 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
     setNote(null);
     setShowDemo(false);
     setEditing(null);
+    setChoosing(false);
+    setChosen(null);
+    setMade(null);
+    setMadeError(null);
     setStep(1);
     loader.start(pick.brand ? "Läser loggan, garnerna och regelboken" : "Läser klubbens sköld, garner och regelbok", 6, 2500);
     try {
@@ -148,8 +165,8 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       setSources(s.sources);
 
       setStep(3);
-      loader.stage(`${s.signals.length} signaler hittade – agenten tar fram ${total} halsdukar`, 34, 40000);
-      const { mode: m, ideas, note: why, signals: used } = await post<{ mode: "ai" | "demo"; note: string | null; signals?: Signal[]; ideas: IdeaView[] }>("/api/v1/scarf/agent/ideas", { clubId, signals: s.signals, count: total, want, wish: wish.trim() || undefined });
+      loader.stage(`${s.signals.length} signaler hittade – agenten tar fram tre förslag`, 34, 40000);
+      const { mode: m, ideas, note: why, signals: used } = await post<{ mode: "ai" | "demo"; note: string | null; signals?: Signal[]; ideas: IdeaView[] }>("/api/v1/scarf/agent/ideas", { clubId, signals: s.signals, count: COUNT, want, wish: wish.trim() || undefined });
       if (!alive()) return;
       setMode(m);
       setNote(why);
@@ -205,7 +222,12 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       if (alive()) {
         setStep(7);
         loader.done();
-        setTimeout(() => results.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 750);
+        // När laddningsrutan har tonat bort kommer förslagen upp, och ett av dem väljs.
+        setTimeout(() => {
+          if (!alive()) return;
+          results.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          setChoosing(true);
+        }, 750);
       }
     } catch (e) {
       if (alive()) {
@@ -214,6 +236,46 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       }
     } finally {
       if (alive()) setRunning(false);
+    }
+  };
+
+  /** Ett motiv är valt: agenten skriver texterna, halsduken fotograferas, och bilderna och filmerna görs för varje kanal. */
+  const make = async (item: Item) => {
+    if (making || running || !item.knit) return;
+    const id = live.current;
+    const alive = () => live.current === id;
+    const base = { clubId: ran.ref, idea: strip(item.idea), ...item.files };
+    const signal = signals.find((s) => s.title === item.idea.signal);
+    setChoosing(false);
+    setChosen(item.key);
+    setMade(null);
+    setMadeError(null);
+    setMaking(true);
+    loader.start("Agenten skriver texterna för varje kanal", 24, 22000);
+    try {
+      // Fotografierna tar längst tid och börjar därför samtidigt som texterna. Utan dem görs materialet av halsduken ensam.
+      const shooting = post<{ photos: string[]; note: string | null }>(CONTENT, { step: "photo", ...base }).catch(() => ({ photos: [] as string[], note: "Fotografierna gick inte att ta, så materialet är gjort utan." }));
+      const { copy } = await post<{ copy: ScarfCopy }>(CONTENT, { step: "copy", ...base, signal: signal && { title: signal.title, detail: signal.detail } });
+      if (!alive()) return;
+      loader.stage("Halsduken fotograferas på modell", 68, 60000);
+      const shot = await shooting;
+      if (!alive()) return;
+      loader.stage("Bilderna sätts och filmerna klipps", 97, 30000);
+      const rest = { ...base, copy, photos: shot.photos };
+      const film = (channel: FilmChannel) => post<Film>(CONTENT, { step: "film", channel, ...rest }).catch((): Film => ({ film: null, note: null }));
+      const [images, reels, tiktok] = await Promise.all([post<{ images: Record<ImageChannel, string> }>(CONTENT, { step: "images", ...rest }), film("reels"), film("tiktok")]);
+      if (!alive()) return;
+      const notes = [shot.photos.length ? "Personerna på bilderna finns inte – fotografierna är gjorda av bildmodellen." : shot.note, reels.film && tiktok.film ? null : "En film gick inte att klippa den här gången."].filter((n): n is string => Boolean(n));
+      setMade({ key: item.key, title: item.idea.title, base, copy, material: { images: images.images, films: { reels: reels.film, tiktok: tiktok.film }, photos: shot.photos.map((f) => `/api/v1/files/${f}`) }, notes });
+      loader.done();
+      setTimeout(() => materialRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 750);
+    } catch (e) {
+      if (alive()) {
+        loader.fail();
+        setMadeError(e instanceof Error ? e.message : "Kunde inte skapa materialet.");
+      }
+    } finally {
+      if (alive()) setMaking(false);
     }
   };
 
@@ -241,6 +303,8 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       if (!alive()) return;
       files = { ...files, artFile: knit.artFile };
       patch(key, { idea, knit, files, strokes: edit.strokes, edited: true, review: undefined, state: mode === "ai" ? "granskas" : "klar" });
+      // Materialet gjordes för den gamla halsduken och får göras om.
+      setMade((m) => (m?.key === key ? null : m));
       if (mode !== "ai") return;
       const review = await post<{ review: ScarfReview | null }>("/api/v1/scarf/agent/review", { clubId, idea: strip(idea), ...files })
         .then((r) => r.review)
@@ -262,6 +326,8 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   const theme = { "--brand": c0, "--accent": second, "--stripe-a": c0, "--stripe-b": c1, "--bar-a": second, "--bar-b": c0, "--bar-bg": "#ECECEF" } as React.CSSProperties;
   const action = actionColor(pick.colors);
   const edited = editing ? items.find((i) => i.key === editing) : undefined;
+  const proposals = items.filter((i) => i.knit && (i.state === "klar" || i.state === "granskas"));
+  const picked = chosen ? items.find((i) => i.key === chosen) : undefined;
 
   return (
     <main className="flex min-h-screen flex-col bg-white" style={theme}>
@@ -280,9 +346,9 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       />
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6">
-        {/* Startpanelen: vem, hur många och en enda tydlig knapp på samma rad, önskemålen under. Den ligger halvvägs upp på heron, så att den syns direkt. */}
+        {/* Startpanelen: klubben och en enda tydlig knapp på samma rad, önskemålen under. Den ligger halvvägs upp på heron, så att den syns direkt. */}
         <section ref={start} aria-label="Skapa halsdukar" className="relative z-10 mx-auto -mt-12 max-w-[960px] scroll-mt-6 rounded-[28px] bg-white p-4 shadow-[0_24px_70px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.06] sm:p-5">
-          <div className="grid gap-x-3 gap-y-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+          <div className="grid gap-x-3 gap-y-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
             <div className="order-1 min-w-0">
               <p className="mb-1.5 text-[11.5px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Klubb</p>
               <button type="button" onClick={() => setPicker(true)} disabled={running} className="flex h-16 w-full items-center gap-3 rounded-2xl border border-black/[0.12] px-3 text-left transition hover:border-black/40 disabled:opacity-50">
@@ -302,20 +368,9 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
                 </span>
               </button>
             </div>
-            <div className="order-2">
-              <p className="mb-1.5 text-[11.5px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Antal</p>
-              <div className="flex h-16 items-center justify-between gap-1 rounded-2xl border border-black/[0.12] px-2" role="group" aria-label="Antal halsdukar">
-                {COUNTS.map((n) => (
-                  <button key={n} type="button" aria-pressed={count === n} disabled={running} onClick={() => setCount(n)} className={`h-11 w-11 rounded-xl text-[15px] font-semibold transition disabled:opacity-50 ${count === n ? "bg-[#1D1D1F] text-white" : "text-[#1D1D1F] hover:bg-[#F5F5F7]"}`}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* På mobilen kommer knappen sist, efter önskemålen. */}
-            <button type="button" onClick={run} disabled={running} className="order-4 inline-flex h-16 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl px-7 text-[18px] font-semibold tracking-tight shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition hover:brightness-110 active:scale-[0.995] disabled:opacity-60 md:order-3 md:w-auto" style={{ background: action, color: lum(action) > 160 ? "#1D1D1F" : "#FFFFFF" }}>
-              {running ? "Agenten arbetar …" : `Skapa ${total} ${items.length ? "nya " : ""}halsdukar`}
+            <button type="button" onClick={run} disabled={running || making} className="order-3 inline-flex h-16 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl px-7 text-[18px] font-semibold tracking-tight shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition hover:brightness-110 active:scale-[0.995] disabled:opacity-60 md:order-2 md:w-auto" style={{ background: action, color: lum(action) > 160 ? "#1D1D1F" : "#FFFFFF" }}>
+              {running ? "Agenten arbetar …" : items.length ? "Skapa tre nya förslag" : "Skapa tre förslag"}
               {!running && (
                 <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 fill-none stroke-current" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M13 6l6 6-6 6" />
@@ -323,15 +378,15 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
               )}
             </button>
 
-            <div className="order-3 min-w-0 md:order-4 md:col-span-3">
+            <div className="order-2 min-w-0 md:order-3 md:col-span-2">
               <p className="mb-1.5 text-[11.5px] font-medium uppercase tracking-[0.08em] text-[#86868B]">
-                Önskemål <span className="font-normal normal-case tracking-normal">· valfritt</span>
+                Önskemål <span className="font-normal normal-case tracking-normal">· valfritt, högst tre</span>
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 {allowed.map((w) => {
                   const on = wishes.includes(w.id);
                   return (
-                    <button key={w.id} type="button" aria-pressed={on} disabled={running} onClick={() => setWishes((prev) => (on ? prev.filter((x) => x !== w.id) : [...prev, w.id]))} className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-medium transition disabled:opacity-50 ${on ? "border-[#1D1D1F] bg-[#1D1D1F] text-white" : "border-black/[0.12] text-[#1D1D1F] hover:border-black/40"}`}>
+                    <button key={w.id} type="button" aria-pressed={on} disabled={running || (!on && want.length >= COUNT)} onClick={() => setWishes((prev) => (on ? prev.filter((x) => x !== w.id) : [...prev, w.id]))} className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-medium transition disabled:opacity-50 ${on ? "border-[#1D1D1F] bg-[#1D1D1F] text-white" : "border-black/[0.12] text-[#1D1D1F] hover:border-black/40"}`}>
                       {on && (
                         <svg viewBox="0 0 24 24" aria-hidden className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -347,12 +402,12 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
           </div>
           {error && <p className="mt-4 rounded-2xl bg-[#FDECEA] px-5 py-3 text-center text-sm text-[#B3261E]">{error}</p>}
         </section>
-        <p className="mt-3 text-center text-[12.5px] text-[#86868B]">Agenten föreslår, stickar och granskar. Det tar ungefär två minuter.</p>
+        <p className="mt-3 text-center text-[12.5px] text-[#86868B]">Agenten tar fram tre förslag. Du väljer ett och får inlägg, banner och film till det.</p>
 
         {step > 0 && (
           <ol className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Flödets steg">
             {STEPS.map((s) => {
-              const state = step === 7 || s.n < current ? "klar" : s.n === current && running ? "nu" : "väntar";
+              const state = s.n === 8 ? (made ? "klar" : making ? "nu" : "väntar") : step === 7 || s.n < current ? "klar" : s.n === current && running ? "nu" : "väntar";
               return (
                 <li key={s.n} title={s.text} className={`flex items-center gap-1.5 text-[12.5px] font-medium ${state === "väntar" ? "text-[#A1A1A6]" : "text-[#1D1D1F]"}`}>
                   <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10px] font-semibold ${state === "klar" ? "bg-[#1E8E3E] text-white" : state === "nu" ? "bg-[#1D1D1F] text-white" : "bg-[#E8E8ED] text-[#86868B]"}`}>{state === "klar" ? "✓" : s.n}</span>
@@ -431,15 +486,42 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
               </details>
             )}
 
+            {/* Det valda motivets material, eller vägen dit. */}
+            <div ref={materialRef} className="scroll-mt-6">
+              {made && !making ? (
+                <div className="mt-10">
+                  <MaterialView title={made.title} copy={made.copy} material={made.material} notes={made.notes} onChange={() => setChoosing(true)} onZip={() => downloadZip({ ...made.base, copy: made.copy, material: made.material }, `${CONTENT}/zip`, "material.zip")} />
+                </div>
+              ) : (
+                step === 7 &&
+                !making &&
+                proposals.length > 0 && (
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-[#F5F5F7] px-5 py-4 sm:px-6">
+                    <p className="text-[14.5px] text-[#424245]">{madeError ?? (picked ? `”${picked.idea.title}” har ändrats. Skapa materialet igen, eller välj ett annat motiv.` : "Välj ett av förslagen, så får du inlägg, banner och film till det.")}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {picked?.knit && picked.state === "klar" && (
+                        <button type="button" onClick={() => void make(picked)} className="inline-flex h-10 items-center justify-center rounded-full bg-[#1D1D1F] px-4 text-[13.5px] font-medium text-white transition hover:bg-black">
+                          {madeError ? "Försök igen" : "Skapa materialet"}
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setChoosing(true)} className={picked ? QUIET : "inline-flex h-10 items-center justify-center rounded-full bg-[#1D1D1F] px-4 text-[13.5px] font-medium text-white transition hover:bg-black"}>
+                        {picked ? "Byt motiv" : "Välj motiv"}
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+
             {step >= 3 && (
-              <div className="mt-8">
+              <div className="mt-10">
                 <div className="flex flex-wrap items-end justify-between gap-2">
                   <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{items.length ? (running ? `${done.length} av ${items.length} halsdukar klara` : `${approved.length} av ${items.length} halsdukar klara för stickeriet`) : "Agenten tar fram idéer …"}</h2>
                   {mode === "demo" && note && <p className="max-w-sm text-[12.5px] text-[#86868B]">{note}</p>}
                 </div>
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">
                   {items.map((it) => (
-                    <ScarfCard key={it.key} item={it} clubId={ran.ref} club={profile.name} crest={profile.crest} everyday={profile.kind === "brand"} onEdit={() => setEditing(it.key)} />
+                    <ScarfCard key={it.key} item={it} clubId={ran.ref} club={profile.name} crest={profile.crest} everyday={profile.kind === "brand"} chosen={it.key === chosen} onEdit={() => setEditing(it.key)} />
                   ))}
                 </div>
               </div>
@@ -467,6 +549,18 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       </div>
 
       {factory && <FactoryDialog onClose={() => setFactory(false)} />}
+      {choosing && !running && !making && profile && (
+        <ChooseDialog
+          club={profile.name}
+          chosen={chosen}
+          proposals={proposals.map((i) => ({ key: i.key, title: i.idea.title, label: i.idea.recipeLabel, why: i.idea.why, front: i.knit!.images.front, back: i.knit!.images.back, stopped: i.state !== "klar" || stoppedBy(i) }))}
+          onPick={(key) => {
+            const item = items.find((i) => i.key === key);
+            if (item) void make(item);
+          }}
+          onClose={() => setChoosing(false)}
+        />
+      )}
       {picker && (
         <ClubPicker
           current={pick.ref}
@@ -503,7 +597,7 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
 
 const machineLine = (r: { yarns: number; max: number; minText: number | null }) => `${r.yarns} garner, högst ${r.max} per varv${r.max <= 4 ? " – dubbelsystem möjligt" : ""}${r.minText !== null ? `, minsta text ${r.minText} mm` : ""}.`;
 
-function ScarfCard({ item, clubId, club, crest, everyday, onEdit }: { item: Item; clubId: string; club: string; crest: string; everyday: boolean; onEdit: () => void }) {
+function ScarfCard({ item, clubId, club, crest, everyday, chosen, onEdit }: { item: Item; clubId: string; club: string; crest: string; everyday: boolean; chosen: boolean; onEdit: () => void }) {
   const { idea, knit, review } = item;
   const working = item.state === "stickar" || item.state === "granskas" || item.state === "görs om";
   const stopped = item.state === "klar" && ((knit && !knit.report.ok) || review?.verdict === "underkänd");
@@ -524,9 +618,10 @@ function ScarfCard({ item, clubId, club, crest, everyday, onEdit }: { item: Item
       }
     : null;
   return (
-    <article className="flex flex-col rounded-3xl border border-black/[0.08] p-5">
+    <article className={`flex flex-col rounded-3xl border p-5 ${chosen ? "border-[#1D1D1F]" : "border-black/[0.08]"}`}>
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge dark>{LEVEL[idea.level]}</Badge>
+        {chosen && <Badge dark>Vald</Badge>}
+        <Badge dark={!chosen}>{LEVEL[idea.level]}</Badge>
         <Badge>{idea.recipeLabel}</Badge>
         {knit?.artFile && <Badge>Ritat motiv</Badge>}
         {item.first && <Badge>Omgjord</Badge>}

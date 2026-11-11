@@ -1,8 +1,8 @@
-import { toFile } from "openai";
 import sharp from "sharp";
 import { z } from "zod";
 import { cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
-import { IMAGE_MODEL, IMAGE_QUALITY, errorMessage, hasOpenAIKey, openai } from "@/lib/openai";
+import { errorMessage, hasOpenAIKey } from "@/lib/openai";
+import { DRAPE, FAITHFUL, REALISM, editToJpg, scarfReference } from "@/lib/scarfPhoto";
 import { saveFile } from "@/lib/store";
 
 export const maxDuration = 300;
@@ -44,47 +44,12 @@ async function decodePng(dataUrl: string, maxSide = 1400) {
     .toBuffer();
 }
 
-/** Builds a clean reference sheet showing the knitted scarf with fringes on a neutral studio card so the image model sees its exact colours, crest and lettering. */
-async function scarfReferencePng(scarfDataUrl: string) {
-  const b64 = scarfDataUrl.split(",")[1] ?? "";
-  const scarf = await sharp(Buffer.from(b64, "base64"))
-    .resize({ width: 1400, withoutEnlargement: true })
-    .png()
-    .toBuffer();
-  const meta = await sharp(scarf).metadata();
-  const w = meta.width ?? 1400;
-  const h = meta.height ?? 200;
-  const padY = Math.max(120, Math.round((w * 0.55 - h) / 2));
-  return sharp({
-    create: { width: w + 80, height: h + padY * 2, channels: 3, background: { r: 245, g: 245, b: 247 } },
-  })
-    .composite([{ input: scarf, left: 40, top: padY }])
-    .png()
-    .toBuffer();
-}
+/** Halsdukens bild från webbläsaren, som referensbild till bildmodellen. */
+const scarfReferencePng = (scarfDataUrl: string) => scarfReference(Buffer.from(scarfDataUrl.split(",")[1] ?? "", "base64"));
 
 async function editToStoredJpg(files: { buf: Buffer; name: string }[], prompt: string, size: "1024x1024" | "1024x1536" = "1024x1024") {
-  const res = await openai().images.edit({
-    model: IMAGE_MODEL,
-    image: await Promise.all(files.map((f) => toFile(f.buf, f.name, { type: "image/png" }))),
-    prompt,
-    size,
-    quality: IMAGE_QUALITY,
-    output_format: "jpeg",
-  });
-  const b64 = res.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
-  const jpg = await sharp(Buffer.from(b64, "base64")).jpeg({ quality: 86, mozjpeg: true }).toBuffer();
-  const saved = await saveFile(jpg, "jpg");
-  return saved.url;
+  return (await saveFile(await editToJpg(files, prompt, size), "jpg")).url;
 }
-
-const REALISM =
-  "Hyperrealistic editorial photography shot on a full-frame camera with an 85mm f/1.8 lens, natural skin texture, realistic knitted jacquard wool/acrylic yarn texture and fringes, natural fabric folds and lighting. Indistinguishable from a real photograph. No extra limbs or fingers, no watermarks.";
-
-/** The one way the scarf is worn in every photo: hung around the neck, both ends straight down the chest. */
-const DRAPE =
-  "How the scarf is worn (strict): the classic football supporter way – the scarf lies once loosely around the back of the neck and BOTH ends hang straight down the front of the body, side by side and parallel, one on each side of the chest, reaching about to the waist. Each hanging end lies flat and untwisted with its crest, end stripes and fringes at the bottom, facing the camera and fully readable. The scarf is NOT wrapped around the neck, NOT knotted, NOT looped, NOT tucked into the jacket, NOT thrown over one shoulder and NOT held in the hands. Both hands are relaxed and do not cover the scarf.";
 
 export async function POST(req: Request) {
   if (!hasOpenAIKey()) return Response.json({ error: "OpenAI-nyckel saknas på servern." }, { status: 503 });
@@ -169,7 +134,7 @@ export async function POST(req: Request) {
           `The reference image shows the exact custom knitted football scarf for ${clubName}${textHint}.`,
           s.scene,
           DRAPE,
-          "Reproduce the scarf's exact colours, end stripes, club crests, fringes and central graphic/text from the reference image with realistic knitted yarn texture. Fictional generic person, no other brand logos.",
+          FAITHFUL,
         ].join("\n");
         const url = await editToStoredJpg([{ buf: scarfPng, name: "scarf.png" }], prompt, "1024x1536");
         return { id: s.id, label: s.label, url } satisfies ScarfPhoto;

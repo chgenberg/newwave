@@ -21,6 +21,11 @@ const LIMITS = {
   review: { take: limiter("REVIEW", 400, 2000), error: "Granskaren har sett många halsdukar den senaste timmen. Försök igen om en stund." },
   pack: { take: limiter("PACK", 200, 1000), error: "Många stickfiler har hämtats den senaste timmen. Försök igen om en stund." },
   upload: { take: limiter("UPLOAD", 80, 400), error: "Många bilder har laddats upp den senaste timmen. Försök igen om en stund." },
+  /** Materialet för ett valt motiv: texterna (språkmodellen), fotografierna (bildmodellen, två per gång), och bilderna och filmerna (servern). */
+  copy: { take: limiter("COPY", 40, 160), error: "Agenten har skrivit många texter den senaste timmen. Försök igen om en stund." },
+  shoot: { take: limiter("SHOOT", 20, 80), error: "Bildmodellen har tagit många fotografier den senaste timmen." },
+  media: { take: limiter("MEDIA", 120, 500), error: "Mycket material har skapats den senaste timmen. Försök igen om en stund." },
+  film: { take: limiter("FILM", 80, 320), error: "Många filmer har klippts den senaste timmen. Försök igen om en stund." },
 };
 
 export type ScarfLimit = keyof typeof LIMITS;

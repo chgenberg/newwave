@@ -407,12 +407,13 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
 
 // --- Kortets knappar ---------------------------------------------------------------
 
-export async function downloadZip(body: unknown) {
-  const res = await fetch("/api/v1/scarf/agent/package", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Kunde inte skapa stickfilerna.");
+/** Hämtar en zip från servern och sparar den. Utan `url` är det stickfilerna för en halsduk. */
+export async function downloadZip(body: unknown, url = "/api/v1/scarf/agent/package", fallback = "stickfiler.zip") {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Kunde inte skapa zip-filen.");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(await res.blob());
-  a.download = res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "stickfiler.zip";
+  a.download = res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? fallback;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }

@@ -194,7 +194,7 @@ export function ScarfHero({ fileRef, mark, name, onLogo, onUse }: Props) {
             <br />
             till stickfil.
           </h1>
-          <p className="mt-4 max-w-md text-[17px] leading-relaxed text-white/65 max-lg:mx-auto">Agenten föreslår halsdukar, stickar dem maska för maska och lämnar färdiga filer till stickeriet.</p>
+          <p className="mt-4 max-w-md text-[17px] leading-relaxed text-white/65 max-lg:mx-auto">Agenten föreslår tre halsdukar. Du väljer en och får stickfilerna, och inlägg, banner och film till den.</p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 max-lg:justify-center">
             <input

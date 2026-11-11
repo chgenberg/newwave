@@ -39,7 +39,8 @@ export type Knitted = {
 
 const FONT_DIR = path.join(process.cwd(), "assets", "fonts", "wordmark");
 const fonts = new Map<string, Promise<Font>>();
-function loadFontFile(file: string) {
+/** Ett typsnitt ur assets/fonts/wordmark, läst en gång. Delas med kanalbilderna, som sätter rubriken i halsdukens typsnitt. */
+export function loadFontFile(file: string) {
   let f = fonts.get(file);
   if (!f) {
     f = readFile(path.join(FONT_DIR, file)).then((buf) => parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer));
