@@ -15,9 +15,44 @@ export function PortalFilm({ portal: p, n }: { portal: Portal; n: number }) {
   useEffect(() => {
     const el = video.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? el.play().catch(() => {}) : el.pause()), { threshold: 0.35 });
+    let visible = false;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const play = () => {
+      if (visible && !document.hidden && el.paused) el.play().catch(() => {});
+    };
+    const io = new IntersectionObserver(
+      ([e]) => {
+        visible = e.isIntersecting;
+        if (visible) play();
+        else el.pause();
+      },
+      { threshold: 0.35 },
+    );
     io.observe(el);
-    return () => io.disconnect();
+    // Kom första försöket för tidigt startar filmen när den hunnit laddas, eller när fliken visas igen.
+    // En hämtning som bryts – till exempel medan en ny version av sajten startar – görs om några gånger.
+    const retry = () => {
+      if (tries >= 4) return;
+      tries++;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        el.load();
+        play();
+      }, 1500 * tries);
+    };
+    el.addEventListener("canplay", play);
+    el.addEventListener("error", retry);
+    document.addEventListener("visibilitychange", play);
+    // Hämtningen börjar redan när sidan visas, så felet kan ha hunnit komma innan någon lyssnar.
+    if (el.error) retry();
+    return () => {
+      io.disconnect();
+      clearTimeout(timer);
+      el.removeEventListener("canplay", play);
+      el.removeEventListener("error", retry);
+      document.removeEventListener("visibilitychange", play);
+    };
   }, []);
 
   return (

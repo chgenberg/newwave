@@ -17,6 +17,9 @@ ADD https://github.com/chgenberg/newwave/releases/download/${CLUBS_RELEASE}/club
 RUN mkdir -p registry/clubs && tar -xzf /tmp/clubs.tar.gz -C registry/clubs && rm /tmp/clubs.tar.gz
 
 COPY . .
+# Filerna i public får samma datum i varje bygge. Annars ser webbläsaren dem som nya efter varje driftsättning
+# och hämtar filmer, 3D-modeller och bilder på nytt, fast de inte har ändrats.
+RUN find public -type f -exec touch -d "2026-01-01 00:00:00 UTC" {} +
 RUN npm run build
 
 ENV NODE_ENV=production
