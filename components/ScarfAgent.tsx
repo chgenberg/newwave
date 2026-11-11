@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
+import { ScarfHero } from "@/components/ScarfHero";
 import { Badge, FactoryDialog, LEVEL, Pictures, ScarfActions, type ScarfInfo } from "@/components/ScarfParts";
-import { LogoMark } from "@/components/newwave/Logo";
 import { copyFor } from "@/lib/copy";
 import { SCARF } from "@/lib/scarf";
 import type { ScarfReview } from "@/lib/scarfAgent";
@@ -188,35 +188,9 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
 
   return (
     <main className="flex min-h-screen flex-col bg-white" style={theme}>
-      <header className="flex h-14 items-center justify-between gap-3 px-4 md:h-16 md:px-8">
-        <Link href="/newwave/start" className="flex min-h-9 items-center gap-2.5 text-[15px] font-semibold tracking-tight" aria-label="Next Wave – till ingångarna">
-          <LogoMark size={28} />
-          <span>
-            <span className="hidden text-[13px] tracking-[0.18em] sm:inline">NEXT WAVE </span>
-            <span className="font-normal text-[#86868B]">Halsduksagenten</span>
-          </span>
-        </Link>
-        <nav className="flex items-center gap-2">
-          <Link href={`/halsduk?club=${clubId}`} className="hidden h-10 items-center rounded-full px-3 text-[13px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60 sm:inline-flex">
-            Rita själv i studion
-          </Link>
-          <Link href="/halsduk/inspiration" className="inline-flex h-10 items-center rounded-full bg-[#1D1D1F] px-4 text-[13px] font-medium text-white hover:bg-black">
-            Inspirationsbank
-          </Link>
-        </nav>
-      </header>
+      <ScarfHero clubId={clubId} />
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6">
-        <div className="mt-8 text-center sm:mt-12">
-          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">
-            Stickas av {SCARF.factory} på {SCARF.machine}
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-6xl">Från signal till stickfil.</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-[17px] leading-relaxed text-[#6E6E73]">
-            Agenten läser av vad som händer kring klubben, föreslår halsdukar, stickar dem maska för maska och lämnar färdiga filer till stickeriet. Klubben godkänner – resten sker av sig självt.
-          </p>
-        </div>
-
         <ol className="mt-9 flex flex-wrap items-center justify-center gap-1.5">
           {STEPS.map((s) => {
             const state = step === 7 || s.n < current ? "klar" : s.n === current && running ? "nu" : "väntar";
