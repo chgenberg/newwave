@@ -81,9 +81,11 @@ type Props = {
   onLogo: (dataUrl: string) => void;
   /** Besökaren vill att agenten gör fler halsdukar med den egna loggan. */
   onUse: () => void;
+  /** Antalet sparade designer i webbläsaren, bredvid länken i sidhuvudet. */
+  saved?: number;
 };
 
-export function ScarfHero({ fileRef, mark, name, onLogo, onUse }: Props) {
+export function ScarfHero({ fileRef, mark, name, onLogo, onUse, saved = 0 }: Props) {
   const [logo, setLogo] = useState<(HeroLogo & { light: number }) | null>(null);
   const [source, setSource] = useState<"standard" | "egen" | "klubb">("standard");
   /** Färgen besökaren själv har valt. Utan val får halsduken klubbens färg, eller vitt. */
@@ -178,8 +180,14 @@ export function ScarfHero({ fileRef, mark, name, onLogo, onUse }: Props) {
           </span>
         </Link>
         <nav className="flex items-center gap-2">
-          <Link href="/halsduk/inspiration" className="inline-flex h-10 items-center rounded-full bg-white/10 px-4 text-[13px] font-medium text-white hover:bg-white/20">
-            Inspirationsbank
+          <Link href="/halsduk/sparade" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[13px] font-medium text-white hover:bg-white/20 sm:px-4">
+            <span>
+              Sparade<span className="hidden sm:inline"> designer</span>
+            </span>
+            {saved > 0 && <span className="text-white/55">{saved}</span>}
+          </Link>
+          <Link href="/halsduk/inspiration" className="inline-flex h-10 items-center rounded-full bg-white/10 px-3 text-[13px] font-medium text-white hover:bg-white/20 sm:px-4">
+            Inspiration<span className="hidden sm:inline">sbank</span>
           </Link>
         </nav>
       </header>

@@ -96,7 +96,7 @@ function Scores({ r }: { r: ScarfReview }) {
 }
 
 /** Popupruta: stängs med krysset, Esc eller ett klick utanför. Sidan bakom rullar inte under tiden. */
-export function Modal({ title, eyebrow, onClose, children, wide }: { title: string; eyebrow?: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+export function Modal({ title, eyebrow, onClose, children, wide, full }: { title: string; eyebrow?: string; onClose: () => void; children: React.ReactNode; wide?: boolean; full?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const prev = document.body.style.overflow;
@@ -109,7 +109,7 @@ export function Modal({ title, eyebrow, onClose, children, wide }: { title: stri
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:rounded-3xl ${wide ? "sm:max-w-3xl" : "sm:max-w-2xl"}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:rounded-3xl ${full ? "sm:max-w-6xl" : wide ? "sm:max-w-3xl" : "sm:max-w-2xl"}`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-5 sm:px-7 sm:pt-6">
           <div className="min-w-0">
             {eyebrow && <p className="text-[11.5px] font-medium uppercase tracking-[0.08em] text-[#86868B]">{eyebrow}</p>}
@@ -280,7 +280,7 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
     loader.start("Lägger upp halsduken i studion", 15, 1500);
     try {
       const scarfDataUrl = await toDataUrl(scarf);
-      loader.stage(mode === "self" ? "Sätter halsduken på fotot" : "Fotograferar fyra personer i halsduken", 95, mode === "self" ? 28000 : 26000);
+      loader.stage(mode === "self" ? "Sätter halsduken på fotot" : "Fotograferar fyra personer i halsduken", 95, 50000);
       const res = await fetch("/api/v1/scarf/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -397,7 +397,7 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
 
         {self.length > 0 && <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">{self.map((p, i) => card(p, `halsduk-jag-${i + 1}.jpg`, "aspect-square"))}</div>}
         {four.length > 0 && <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{four.map((p) => card(p, `halsduk-${p.id}.jpg`, "aspect-[2/3]"))}</div>}
-        {!self.length && !four.length && !camera && <p className="mt-4 text-[12.5px] leading-snug text-[#86868B]">Bilderna skapas av bildmodellen utifrån halsdukens framsida och tar ungefär en halv minut. Personerna på modellbilderna finns inte.</p>}
+        {!self.length && !four.length && !camera && <p className="mt-4 text-[12.5px] leading-snug text-[#86868B]">Bilderna skapas av bildmodellen utifrån halsdukens framsida och tar knappt en minut. Personerna på modellbilderna finns inte.</p>}
 
         <IFKLoader state={loader.state} crestUrl={target.crestUrl} wide={target.wide} lines={["Halsduken hängs om halsen…", "Ljuset sätts…", "Fransarna rättas till…", "Kameran ställs in…"]} doneLine="Klart!" />
       </div>
@@ -420,8 +420,8 @@ export async function downloadZip(body: unknown, url = "/api/v1/scarf/agent/pack
 
 export const QUIET = "inline-flex h-10 items-center justify-center rounded-full bg-[#F5F5F7] px-4 text-[13.5px] font-medium text-[#1D1D1F] transition hover:bg-[#E8E8ED] disabled:opacity-50";
 
-/** Kortets knappar: stickfilerna, fotografier, ändringar (när halsduken går att ändra) och allt det andra i en popupruta. */
-export function ScarfActions({ info, download, photo, ready = true, onEdit }: { info: ScarfInfo; download: unknown; photo: PhotoTarget; ready?: boolean; onEdit?: () => void }) {
+/** Kortets knappar: stickfilerna, fotografier, ändringar (när halsduken går att ändra) och allt det andra i en popupruta. `extra` är fler knappar sist på raden. */
+export function ScarfActions({ info, download, photo, ready = true, onEdit, extra }: { info: ScarfInfo; download: unknown; photo: PhotoTarget; ready?: boolean; onEdit?: () => void; extra?: React.ReactNode }) {
   const [open, setOpen] = useState<"info" | "photo" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -458,6 +458,7 @@ export function ScarfActions({ info, download, photo, ready = true, onEdit }: { 
         <button type="button" onClick={() => setOpen("info")} className={QUIET}>
           Mer information
         </button>
+        {extra}
       </div>
       {error && <p className="mt-1.5 text-[12px] text-[#B3261E]">{error}</p>}
       {open === "info" && <InfoDialog info={info} onClose={() => setOpen(null)} />}

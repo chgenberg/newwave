@@ -55,9 +55,10 @@ export async function POST(req: Request) {
       // Utan fotografier sätts bilderna och filmerna av halsduken ensam.
       if (!hasOpenAIKey()) return Response.json({ photos: [], note: "Ingen bildmodell är kopplad, så materialet är gjort utan fotografier." });
       if (!scarfAllowed(req, "shoot")) return Response.json({ photos: [], note: "Bildmodellen har tagit många fotografier den senaste timmen, så materialet är gjort utan." });
-      const { photos, errors } = await within(socialPhotos({ club: found.club.name, headline: idea.front.main || idea.back.main, scarf: await frontOf(found, idea, files), setting: found.club.kind === "brand" ? "vardag" : "sport" }), 200_000).catch((err) => ({ photos: [] as Buffer[], errors: [err as unknown] }));
-      errors.forEach((err) => console.error("scarf/agent/content photo", errorMessage(err)));
-      const saved = await Promise.all(photos.map((jpg) => saveFile(jpg, "jpg")));
+      const shot = await within(socialPhotos({ club: found.club.name, scarf: await frontOf(found, idea, files), setting: found.club.kind === "brand" ? "vardag" : "sport" }), 240_000).catch((err) => ({ worn: null, held: null, errors: [err as unknown] }));
+      shot.errors.forEach((err) => console.error("scarf/agent/content photo", errorMessage(err)));
+      // Ordningen är fast: först halsduken buren om halsen, sedan uppsträckt mellan händerna.
+      const saved = await Promise.all([shot.worn, shot.held].flatMap((jpg) => (jpg ? [saveFile(jpg, "jpg")] : [])));
       return Response.json({ photos: saved.map((f) => f.id), note: saved.length ? null : "Bildmodellen kunde inte ta fotografierna, så materialet är gjort utan." });
     }
 

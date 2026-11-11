@@ -1,6 +1,6 @@
 /**
- * Inspirationsbanken: en halsduk per organisation – sex idrottsföreningar i olika sporter (Gräsrot 360 och
- * klubbregistret) och sex företag och föreningar utanför idrotten (återförsäljardemons påhittade kunder).
+ * Inspirationsbanken: en halsduk per förening – sex idrottsföreningar i olika sporter (Gräsrot 360 och
+ * klubbregistret). Banken visar dem tillsammans med demokörningens halsdukar (scripts/scarf-demo.ts).
  * Hela flödet körs på riktigt: agenten föreslår, bildmodellen ritar motiv, stickmotorn stickar, granskaren
  * sätter betyg och underkänt görs om en gång.
  *
@@ -56,20 +56,14 @@ type Pick = {
   when?: { title: string; detail: string };
 };
 
-/** Tolv organisationer. `founded` står bara där registret har årtalet; företagen är återförsäljardemons påhittade kunder. */
+/** Sex idrottsföreningar. `founded` står bara där registret har årtalet. Företag (`from: "kund"`, återförsäljardemons påhittade kunder) ligger inte längre i banken. */
 const PICKS: Pick[] = [
   { id: "farsta-ibk", from: "grasrot", name: "Farsta Sharks IBK", city: "Stockholm", category: "Innebandy", group: "idrott", recipe: "motiv", symbol: "Klubben kallas Sharks och hajen är klubbens maskot. Beställaren vill se en haj som motiv, inte en boll.", fun: true, mascot: "hajen" },
-  { id: "lyktan", from: "kund", name: "Kaffebaren Lyktan", city: "", category: "Kafé", group: "annat", colors: ["#6E3F1F"], recipe: "motiv", symbol: "Kaffet, lyktan i fönstret och stamgästerna.", fun: true },
   { id: "almtuna-is", from: "registry", name: "Almtuna IS", city: "Uppsala", category: "Ishockey", group: "idrott", recipe: "motiv", symbol: "Is, puck och korsade klubbor." },
-  { id: "kb-bygg", from: "kund", name: "KB Bygg & Mark", city: "", category: "Byggföretag", group: "annat", colors: ["#E07020"], recipe: "profil", symbol: "Personalens vinterhalsduk på bygget – syns på håll som varselränder." },
   { id: "arbra-bk", from: "grasrot", name: "Arbrå BK", city: "Arbrå", category: "Fotboll", group: "idrott", recipe: "jul" },
-  { id: "solviken", from: "kund", name: "Solvikens förskola", city: "", category: "Förskola", group: "annat", colors: ["#E0A800"], recipe: "motiv", symbol: "Solen i märket – och barn och pedagoger som är ute i alla väder.", fun: true, when: { title: "Lucia", detail: "Luciatåg på gården i decembermörkret." } },
   { id: "kongahalla-ridsallskap", from: "registry", name: "Kongahälla Ridsällskap", city: "Kungälv", category: "Ridsport", group: "idrott", founded: 1970, recipe: "motiv", symbol: "Hästen.", fun: true },
-  { id: "hamnkrogen", from: "kund", name: "Hamnkrogen i Varberg", city: "Varberg", category: "Restaurang", group: "annat", colors: ["#14365E"], recipe: "vagor", symbol: "Hamnen, havet och ankaret." },
   { id: "byttorps-if", from: "grasrot", name: "Byttorps IF", city: "Borås", category: "Fotboll", group: "idrott", recipe: "argyle" },
-  { id: "techvast", from: "kund", name: "TechVäst AB", city: "", category: "Teknikbolag", group: "annat", colors: ["#5B3FD0"], recipe: "toning", symbol: "Skärmar, kod och sena kvällar – ett lag som bygger saker ihop.", when: { title: "Kick-off i januari", detail: "Nytt år, nya mål – alla medarbetare samlas och får varsin halsduk." } },
   { id: "varbergs-basket", from: "registry", name: "Varbergs Basket", city: "Varberg", category: "Basket", group: "idrott", recipe: "motiv", symbol: "Basketbollen och korgen.", fun: true },
-  { id: "strandangen", from: "kund", name: "Brf Strandängen", city: "", category: "Bostadsrättsförening", group: "annat", colors: ["#2E7D5B"], recipe: "tapet", symbol: "Grannarna och gården mellan husen.", when: { title: "Glögg på gården första advent", detail: "Grannarna samlas vid grillplatsen – föreningen bjuder på glögg och en halsduk till varje hushåll." } },
 ];
 
 async function cached<T>(file: string, make: () => Promise<T>): Promise<T> {

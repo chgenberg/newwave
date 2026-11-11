@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
-import { DRAPE, FAITHFUL, REALISM, editToJpg, scarfReference } from "@/lib/scarfPhoto";
+import { FAITHFUL, REALISM, editToJpg, references, scarfReferences, worn } from "@/lib/scarfPhoto";
 import { saveFile } from "@/lib/store";
 
 export const maxDuration = 300;
@@ -44,8 +44,14 @@ async function decodePng(dataUrl: string, maxSide = 1400) {
     .toBuffer();
 }
 
-/** Halsdukens bild från webbläsaren, som referensbild till bildmodellen. */
-const scarfReferencePng = (scarfDataUrl: string) => scarfReference(Buffer.from(scarfDataUrl.split(",")[1] ?? "", "base64"));
+/** Halsdukens bild från webbläsaren, som underlag till bildmodellen: ändarna som de hänger, och hela halsduken liggande. */
+const scarfRefs = async (scarfDataUrl: string) => {
+  const { hanging, flat } = await scarfReferences(Buffer.from(scarfDataUrl.split(",")[1] ?? "", "base64"));
+  return [
+    { buf: hanging, name: "hanging-ends.png" },
+    { buf: flat, name: "scarf.png" },
+  ];
+};
 
 async function editToStoredJpg(files: { buf: Buffer; name: string }[], prompt: string, size: "1024x1024" | "1024x1536" = "1024x1024") {
   return (await saveFile(await editToJpg(files, prompt, size), "jpg")).url;
@@ -68,61 +74,53 @@ export async function POST(req: Request) {
   try {
     const d = parsed.data;
     const clubName = cleanText(d.club, 80) || "Klubben";
-    const headline = cleanText(d.headline, 80);
-    const scarfPng = await scarfReferencePng(d.scarfDataUrl);
-    const textHint = headline ? ` featuring the text "${headline}"` : "";
+    const scarf = await scarfRefs(d.scarfDataUrl);
 
     if (d.mode === "self") {
       const personPng = await decodePng(d.personDataUrl, 1280);
       const prompt = [
         REALISM,
-        "Image 1 is a photo of a real person. Image 2 is the exact custom knitted football supporter scarf to place on them.",
+        `Image 1 is a photo of a real person. ${references(clubName, 2)}`,
         "Keep the person in Image 1 completely identical — same face, facial features, expression, hair, glasses, skin tone, lighting and background.",
-        `Put the knitted supporter scarf from Image 2 (${clubName}${textHint}) on the person so its colours, end crests, stripes, fringes and design from Image 2 are clearly visible with the soft weight and gentle folds of a real knitted jacquard scarf.`,
-        DRAPE,
+        "Put the knitted scarf on the person with the soft weight and gentle folds of a real knitted jacquard scarf.",
+        worn(2),
         "If the photo is cropped at the chest, the two ends simply continue straight down out of the frame.",
+        "Realistic knitted yarn texture. No other brand logos.",
       ].join("\n");
-      const url = await editToStoredJpg(
-        [
-          { buf: personPng, name: "person.png" },
-          { buf: scarfPng, name: "scarf.png" },
-        ],
-        prompt,
-        "1024x1024",
-      );
+      const url = await editToStoredJpg([{ buf: personPng, name: "person.png" }, ...scarf], prompt, "1024x1024");
       return Response.json({ photos: [{ id: "self", label: "Du i halsduken", url }] satisfies ScarfPhoto[] });
     }
 
     const everyday: { id: string; label: string; scene: string }[] = [
-      { id: "stad", label: "På stan", scene: "Waist-up photo, facing the camera: a smiling Scandinavian woman in her early 30s in a dark wool coat on a Swedish city street on a crisp winter afternoon with softly blurred shop windows behind her, wearing the exact knitted scarf from the reference image." },
-      { id: "jobbet", label: "Utanför jobbet", scene: "Waist-up photo, facing the camera: a friendly Scandinavian man in his 40s in a dark jacket outside a small workplace entrance on a cold bright morning, wearing the exact knitted scarf from the reference image." },
-      { id: "promenad", label: "På promenad", scene: "Waist-up photo, facing the camera: a joyful young adult in a neutral dark sweater and open coat on a frosty park path in golden afternoon light, wearing the exact knitted scarf from the reference image." },
-      { id: "kvall", label: "I kvällsljus", scene: "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian person in their 50s in a classic coat in warm evening light with string lights softly blurred behind, wearing the exact knitted scarf from the reference image." },
+      { id: "stad", label: "På stan", scene: "Waist-up photo, facing the camera: a smiling Scandinavian woman in her early 30s in a dark wool coat on a Swedish city street on a crisp winter afternoon with softly blurred shop windows behind her, wearing the exact knitted scarf from the reference images." },
+      { id: "jobbet", label: "Utanför jobbet", scene: "Waist-up photo, facing the camera: a friendly Scandinavian man in his 40s in a dark jacket outside a small workplace entrance on a cold bright morning, wearing the exact knitted scarf from the reference images." },
+      { id: "promenad", label: "På promenad", scene: "Waist-up photo, facing the camera: a joyful young adult in a neutral dark sweater and open coat on a frosty park path in golden afternoon light, wearing the exact knitted scarf from the reference images." },
+      { id: "kvall", label: "I kvällsljus", scene: "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian person in their 50s in a classic coat in warm evening light with string lights softly blurred behind, wearing the exact knitted scarf from the reference images." },
     ];
     const sport: { id: string; label: string; scene: string }[] = [
       {
         id: "stand",
         label: "På läktaren",
         scene:
-          "Waist-up photo, facing the camera: a smiling Scandinavian woman in her late 20s in a dark wool coat standing in a football stadium stand at dusk with warm floodlights and a softly blurred crowd behind her, wearing the exact knitted supporter scarf from the reference image.",
+          "Waist-up photo, facing the camera: a smiling Scandinavian woman in her late 20s in a dark wool coat standing in a sports arena stand at dusk with warm floodlights and a softly blurred crowd behind her, wearing the exact knitted supporter scarf from the reference images.",
       },
       {
         id: "arena",
         label: "Utanför arenan",
         scene:
-          "Waist-up photo, facing the camera: a proud Scandinavian man in his late 30s in a dark jacket outside a modern Scandinavian football stadium on an autumn match evening, wearing the exact knitted supporter scarf from the reference image.",
+          "Waist-up photo, facing the camera: a proud Scandinavian man in his late 30s in a dark jacket outside a modern Scandinavian sports arena on an autumn match evening, wearing the exact knitted supporter scarf from the reference images.",
       },
       {
         id: "street",
         label: "På väg till matchen",
         scene:
-          "Waist-up photo, facing the camera: a joyful young adult supporter on a cobblestone city street in Gothenburg in golden afternoon light, in a neutral dark sweater, wearing the exact knitted supporter scarf from the reference image.",
+          "Waist-up photo, facing the camera: a joyful young adult supporter on a cobblestone street in a Swedish town in golden afternoon light, in a neutral dark sweater, wearing the exact knitted supporter scarf from the reference images.",
       },
       {
         id: "closeup",
         label: "Porträtt i kvällsljus",
         scene:
-          "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian supporter in their 40s in a classic coat in warm evening light, wearing the exact knitted supporter scarf from the reference image.",
+          "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian supporter in their 40s in a classic coat in warm evening light, wearing the exact knitted supporter scarf from the reference images.",
       },
     ];
 
@@ -131,12 +129,12 @@ export async function POST(req: Request) {
       scenes.map(async (s) => {
         const prompt = [
           REALISM,
-          `The reference image shows the exact custom knitted football scarf for ${clubName}${textHint}.`,
+          references(clubName),
           s.scene,
-          DRAPE,
+          worn(),
           FAITHFUL,
         ].join("\n");
-        const url = await editToStoredJpg([{ buf: scarfPng, name: "scarf.png" }], prompt, "1024x1536");
+        const url = await editToStoredJpg(scarf, prompt, "1024x1536");
         return { id: s.id, label: s.label, url } satisfies ScarfPhoto;
       }),
     );

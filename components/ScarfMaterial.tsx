@@ -88,22 +88,27 @@ function ChannelCard({ channel, src, poster, text }: { channel: Channel; src: st
   );
 }
 
-export function MaterialView({ title, copy, material, notes, onZip, onChange }: { title: string; copy: ScarfCopy; material: ScarfMaterial; notes: string[]; onZip: () => Promise<void>; onChange: () => void }) {
+/** `title` och `onChange` utelämnas när materialet visas i en popupruta som redan har rubriken. */
+export function MaterialView({ title, copy, material, notes, onZip, onChange }: { title?: string; copy: ScarfCopy; material: ScarfMaterial; notes: string[]; onZip: () => Promise<void>; onChange?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const src = (c: Channel) => (c.kind === "film" ? (material.films[c.id]?.url ?? null) : material.images[c.id]);
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Material för det valda motivet</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
+      {title && (
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Material för det valda motivet</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
+          </div>
+          {onChange && (
+            <button type="button" onClick={onChange} className={QUIET}>
+              Byt motiv
+            </button>
+          )}
         </div>
-        <button type="button" onClick={onChange} className={QUIET}>
-          Byt motiv
-        </button>
-      </div>
-      <div className="mx-auto mt-5 grid max-w-sm gap-5 md:max-w-none md:grid-cols-3">
+      )}
+      <div className="mx-auto grid max-w-sm gap-5 md:max-w-none md:grid-cols-3">
         {COLUMNS.map((ids) => (
           <div key={ids.join()} className="space-y-5">
             {ids.map((id) => {

@@ -26,11 +26,16 @@ const run = (args: string[]) =>
     execFile(BIN, args, { timeout: 150_000, maxBuffer: 8_000_000 }, (err, _out, stderr) => (err ? reject(new Error(`ffmpeg: ${String(stderr).split("\n").filter(Boolean).slice(-3).join(" | ") || err.message}`)) : resolve())),
   );
 
-/** Högst två filmer klipps samtidigt – resten väntar på sin tur. */
+/**
+ * ffmpeg startar annars en tråd per kärna för varje bild, filter och kodare – över tvåhundra trådar per film. Två filmer
+ * samtidigt slog i serverns gräns, och den andra filmens kodare gick inte att starta. Därför få trådar, och en film i taget.
+ */
+const THREADS = { decode: "1", filter: "2", encode: "2" };
+
 let busy = 0;
 const waiting: (() => void)[] = [];
 async function turn<T>(job: () => Promise<T>): Promise<T> {
-  if (busy >= 2) await new Promise<void>((go) => waiting.push(go));
+  if (busy >= 1) await new Promise<void>((go) => waiting.push(go));
   busy++;
   try {
     return await job();
@@ -58,11 +63,12 @@ async function cutFilm(scenes: Scene[], posterAt: number) {
   await mkdir(dir, { recursive: true });
   try {
     const inputs: string[] = [];
+    let count = 0;
     const add = async (buf: Buffer) => {
-      const file = path.join(dir, `i${inputs.length / 4}.${ext(buf)}`);
+      const file = path.join(dir, `i${count}.${ext(buf)}`);
       await writeFile(file, buf);
-      inputs.push("-framerate", String(FPS), "-i", file);
-      return inputs.length / 4 - 1;
+      inputs.push("-threads", THREADS.decode, "-framerate", String(FPS), "-i", file);
+      return count++;
     };
     const graph: string[] = [];
     // En bild blir en ström: bilden läses en gång och upprepas i minnet under scenens längd.
@@ -109,8 +115,14 @@ async function cutFilm(scenes: Scene[], posterAt: number) {
     const total = scenes.reduce((sum, s) => sum + s.dur, 0) - CUT * (scenes.length - 1);
     const mp4 = path.join(dir, "film.mp4");
     const poster = path.join(dir, "omslag.jpg");
-    await run(["-y", "-hide_banner", "-loglevel", "error", ...inputs, "-filter_complex", graph.join(";"), "-map", "[ut]", "-t", total.toFixed(3), "-r", String(FPS), "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p", "-color_range", "tv", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-an", mp4]);
-    await run(["-y", "-hide_banner", "-loglevel", "error", "-ss", Math.min(posterAt, total - 0.2).toFixed(2), "-i", mp4, "-frames:v", "1", "-q:v", "3", poster]);
+    const args = ["-y", "-hide_banner", "-loglevel", "error", ...inputs, "-filter_complex_threads", THREADS.filter, "-filter_threads", THREADS.filter, "-filter_complex", graph.join(";"), "-map", "[ut]", "-t", total.toFixed(3), "-r", String(FPS), "-c:v", "libx264", "-threads", THREADS.encode, "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p", "-color_range", "tv", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-an", mp4];
+    // Ett tillfälligt fel (servern har ont om trådar eller minne just då) ska inte kosta filmen: ett försök till efter en kort paus.
+    await run(args).catch(async (err) => {
+      console.error("scarfFilm försöker igen efter", err instanceof Error ? err.message : err);
+      await new Promise((go) => setTimeout(go, 1500));
+      await run(args);
+    });
+    await run(["-y", "-hide_banner", "-loglevel", "error", "-threads", THREADS.decode, "-ss", Math.min(posterAt, total - 0.2).toFixed(2), "-i", mp4, "-frames:v", "1", "-q:v", "3", poster]);
     return { mp4: await readFile(mp4), poster: await readFile(poster), seconds: total };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => null);
@@ -146,7 +158,7 @@ async function tiktok(m: MediaInput) {
     endCard(m, { head: copy.headline, sub: copy.subline, cta: "Länk i bio" }),
   ]);
   const scenes: Scene[] = [
-    { kind: "zoom", dur: 2.3, bg: first.bg, over: first.over, overAt: 0.05, from: photo ? 1.1 : 1, to: photo ? 1 : 1.07 },
+    { kind: "zoom", dur: 2.3, bg: first.bg, over: first.over, overAt: 0.05, from: 1, to: 1.07 },
     { kind: "duo", dur: 3.2, bg: stage.bg, left, right, x: [W / 4 - 220, (W * 3) / 4 - 220], over: stage.over, overAt: 0.3, into: "slideleft" },
     { kind: "slide", dur: 2.6, wide, from: 0.22, to: 0.78, into: "fade" },
     { kind: "zoom", dur: 2.6, bg: end.bg, over: end.over, overAt: 0.3, from: 1.05, to: 1, into: "fade" },

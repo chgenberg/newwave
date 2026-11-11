@@ -10,9 +10,9 @@ import { Badge, FactoryDialog, LEVEL, Pictures, QUIET, ScarfActions, downloadZip
 import { ClubPicker, OwnLogoDialog, type PickLite } from "@/components/ScarfPick";
 import { SCARF } from "@/lib/scarf";
 import type { ScarfReview } from "@/lib/scarfAgent";
+import { saveDesign, savedCount } from "@/lib/scarfSaved";
 import type { FilmChannel, ImageChannel, ScarfCopy, ScarfMaterial } from "@/lib/scarfChannels";
 import type { ScarfPick } from "@/lib/scarfClub";
-import type { DemoScarf } from "@/lib/scarfDemo";
 import type { SignStroke } from "@/lib/scarfDesign";
 import type { ProductionReport } from "@/lib/scarfProduction";
 import type { Level, ScarfIdea } from "@/lib/scarfRecipes";
@@ -60,7 +60,31 @@ const lum = (hex: string) => parseInt(hex.slice(1, 3), 16) * 0.299 + parseInt(he
 /** Startknappens färg: klubbens bärande färg, om den syns mot vitt. */
 const actionColor = (colors: string[]) => colors.find((c) => lum(c) < 215) ?? "#1D1D1F";
 
-export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[] } }) {
+const machineLine = (r: { yarns: number; max: number; minText: number | null }) => `${r.yarns} garner, högst ${r.max} per varv${r.max <= 4 ? " – dubbelsystem möjligt" : ""}${r.minText !== null ? `, minsta text ${r.minText} mm` : ""}.`;
+
+const stoppedBy = (i: Item) => Boolean((i.knit && !i.knit.report.ok) || i.review?.verdict === "underkänd");
+
+/** Allt om en stickad halsduk som kortet, popuprutan och den sparade designen visar. */
+function infoOf(item: Item, club: string): ScarfInfo | null {
+  const { idea, knit, review } = item;
+  if (!knit) return null;
+  return {
+    eyebrow: `${club} · ${idea.recipeLabel} · ${LEVEL[idea.level].toLocaleLowerCase("sv-SE")}`,
+    title: idea.title,
+    why: idea.why,
+    signal: idea.signal,
+    images: knit.images,
+    text: knit.text,
+    yarns: knit.report.yarns.map((y) => ({ hex: y.hex, pantone: y.pantone, share: y.share })),
+    machine: { ok: knit.report.ok, summary: machineLine({ yarns: knit.report.yarns.length, max: knit.report.maxColorsPerRow, minText: null }), checks: knit.report.checks },
+    review: review ?? null,
+    first: item.first,
+    consent: knit.consent,
+    note: knit.artNote,
+  };
+}
+
+export function ScarfAgent() {
   const [pick, setPick] = useState<ScarfPick>(START);
   /** Klubben den senaste körningen gjordes för – korten hör till den, även om en annan klubb väljs efteråt. */
   const [ran, setRan] = useState<ScarfPick>(START);
@@ -83,7 +107,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   const [note, setNote] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [showDemo, setShowDemo] = useState(false);
   const [factory, setFactory] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   /** Popuprutan med de tre förslagen, det valda motivet och materialet som gjordes för det. */
@@ -95,6 +118,10 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   const loader = useLoader();
   const results = useRef<HTMLElement>(null);
   const materialRef = useRef<HTMLDivElement>(null);
+  /** Sparade designer: varje körnings tidpunkt, vad som redan är sparat och hur många som ligger i webbläsaren. */
+  const stamps = useRef(new Map<number, number>());
+  const kept = useRef(new Map<string, string>());
+  const [savedN, setSavedN] = useState(0);
   const start = useRef<HTMLElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   /** Loggan laddas upp från klubbväljaren: då ska den få ett namn direkt. */
@@ -119,6 +146,45 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
       .then((d: { clubs: { id: string; name: string; city: string }[] }) => setFeatured(d.clubs.map((c) => ({ ref: c.id, name: c.name, sub: c.city, crest: `/api/v1/brand/${c.id}/skold-farg.png` }))))
       .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    void savedCount().then(setSavedN);
+  }, []);
+
+  // Varje färdig halsduk sparas i webbläsaren, och sparas om när den ändras eller får sitt material.
+  useEffect(() => {
+    if (!profile || !items.length) return;
+    // Körningen får sin tidpunkt när den första halsduken sparas; den håller ihop körningens förslag i listan.
+    const runAt = stamps.current.get(live.current) ?? Date.now();
+    stamps.current.set(live.current, runAt);
+    const jobs: Promise<void>[] = [];
+    items.forEach((it, order) => {
+      const info = it.state === "klar" ? infoOf(it, profile.name) : null;
+      if (!info) return;
+      const mine = made?.key === it.key ? made : null;
+      const id = `${runAt}:${it.key}`;
+      const sign = [it.idea.id, it.edited ? 1 : 0, it.review?.verdict ?? "", info.images.front.length, mine ? Object.values(mine.material.images).join() : ""].join("|");
+      if (kept.current.get(id) === sign) return;
+      kept.current.set(id, sign);
+      jobs.push(
+        saveDesign({
+          id,
+          runAt,
+          savedAt: Date.now(),
+          order,
+          club: { ref: ran.ref, name: profile.name, crest: profile.crest, brand: profile.kind === "brand" },
+          title: it.idea.title,
+          recipeLabel: it.idea.recipeLabel,
+          level: it.idea.level,
+          download: { clubId: ran.ref, idea: strip(it.idea), ...it.files },
+          info,
+          stopped: stoppedBy(it),
+          made: mine ? { copy: mine.copy, material: mine.material, notes: mine.notes } : null,
+        }),
+      );
+    });
+    if (jobs.length) void Promise.all(jobs).then(savedCount).then(setSavedN);
+  }, [items, made, profile, ran.ref]);
 
   const choose = (p: PickLite) => {
     setPicker(false);
@@ -145,7 +211,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
     setProfile(null);
     setMode(null);
     setNote(null);
-    setShowDemo(false);
     setEditing(null);
     setChoosing(false);
     setChosen(null);
@@ -316,7 +381,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   };
 
   const done = items.filter((i) => i.state === "klar");
-  const stoppedBy = (i: Item) => (i.knit && !i.knit.report.ok) || i.review?.verdict === "underkänd";
   const approved = done.filter((i) => !stoppedBy(i));
   const current = step >= 4 && step < 7 ? (items.some((i) => i.state === "granskas" || i.state === "görs om") ? 6 : items.some((i) => i.knit) ? 5 : 4) : step;
   const usedSignals = signals.filter((s) => items.some((i) => i.idea.signal === s.title));
@@ -335,6 +399,7 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
         fileRef={fileRef}
         mark={heroMark ? { url: heroMark.crest, color: heroMark.ref === pick.ref && !pick.ref.startsWith("own:") ? pick.colors[0] : undefined } : null}
         name={heroMark ? heroMark.name : ownPick?.name}
+        saved={savedN}
         onLogo={(dataUrl) => {
           setOwnLogo(dataUrl);
           setOwnPick(null);
@@ -403,6 +468,13 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
           {error && <p className="mt-4 rounded-2xl bg-[#FDECEA] px-5 py-3 text-center text-sm text-[#B3261E]">{error}</p>}
         </section>
         <p className="mt-3 text-center text-[12.5px] text-[#86868B]">Agenten tar fram tre förslag. Du väljer ett och får inlägg, banner och film till det.</p>
+        {step === 0 && (
+          <p className="mt-5 text-center">
+            <Link href="/halsduk/inspiration" className="text-[14px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60">
+              Se halsdukar i inspirationsbanken
+            </Link>
+          </p>
+        )}
 
         {step > 0 && (
           <ol className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Flödets steg">
@@ -529,18 +601,6 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
           </section>
         )}
 
-        {step === 0 || showDemo ? (
-          <Collection demo={demo} />
-        ) : (
-          !running && (
-            <div className="mt-12 text-center">
-              <button type="button" onClick={() => setShowDemo(true)} className="inline-flex h-11 items-center rounded-full bg-[#F5F5F7] px-5 text-[14px] font-medium text-[#1D1D1F] hover:bg-[#E8E8ED]">
-                Visa demokollektionen ({demo.scarves.length} halsdukar)
-              </button>
-            </div>
-          )
-        )}
-
         <div className="mt-12 text-center">
           <button type="button" onClick={() => setFactory(true)} className="text-[13.5px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60">
             Vad får stickeriet?
@@ -595,28 +655,11 @@ export function ScarfAgent({ demo }: { demo: { date: string; scarves: DemoScarf[
   );
 }
 
-const machineLine = (r: { yarns: number; max: number; minText: number | null }) => `${r.yarns} garner, högst ${r.max} per varv${r.max <= 4 ? " – dubbelsystem möjligt" : ""}${r.minText !== null ? `, minsta text ${r.minText} mm` : ""}.`;
-
 function ScarfCard({ item, clubId, club, crest, everyday, chosen, onEdit }: { item: Item; clubId: string; club: string; crest: string; everyday: boolean; chosen: boolean; onEdit: () => void }) {
-  const { idea, knit, review } = item;
+  const { idea, knit } = item;
   const working = item.state === "stickar" || item.state === "granskas" || item.state === "görs om";
-  const stopped = item.state === "klar" && ((knit && !knit.report.ok) || review?.verdict === "underkänd");
-  const info: ScarfInfo | null = knit
-    ? {
-        eyebrow: `${club} · ${idea.recipeLabel} · ${LEVEL[idea.level].toLocaleLowerCase("sv-SE")}`,
-        title: idea.title,
-        why: idea.why,
-        signal: idea.signal,
-        images: knit.images,
-        text: knit.text,
-        yarns: knit.report.yarns.map((y) => ({ hex: y.hex, pantone: y.pantone, share: y.share })),
-        machine: { ok: knit.report.ok, summary: machineLine({ yarns: knit.report.yarns.length, max: knit.report.maxColorsPerRow, minText: null }), checks: knit.report.checks },
-        review: review ?? null,
-        first: item.first,
-        consent: knit.consent,
-        note: knit.artNote,
-      }
-    : null;
+  const stopped = item.state === "klar" && stoppedBy(item);
+  const info = infoOf(item, club);
   return (
     <article className={`flex flex-col rounded-3xl border p-5 ${chosen ? "border-[#1D1D1F]" : "border-black/[0.08]"}`}>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -652,55 +695,5 @@ function ScarfCard({ item, clubId, club, crest, everyday, chosen, onEdit }: { it
         </>
       )}
     </article>
-  );
-}
-
-function Collection({ demo }: { demo: { date: string; scarves: DemoScarf[] } }) {
-  if (!demo.scarves.length) return null;
-  return (
-    <section className="mt-14">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Exempel ur flödet</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{demo.scarves.length} halsdukar som agenten tagit fram.</h2>
-        </div>
-        <Link href="/halsduk/inspiration" className="text-[13.5px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60">
-          Fler i inspirationsbanken
-        </Link>
-      </div>
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        {demo.scarves.map((s) => {
-          const info: ScarfInfo = {
-            eyebrow: `${s.club} · ${s.recipeLabel} · ${LEVEL[s.level].toLocaleLowerCase("sv-SE")}`,
-            title: s.idea.title,
-            why: s.idea.why,
-            signal: s.idea.signal,
-            images: { front: `/halsduk/demo/${s.slug}-fram.jpg`, back: `/halsduk/demo/${s.slug}-bak.jpg` },
-            text: s.text,
-            yarns: s.yarns,
-            machine: { ok: s.ok, summary: machineLine({ yarns: s.yarns.length, max: s.maxColorsPerRow, minText: s.minTextMm }) },
-            review: s.review,
-            first: s.firstReview ? { review: s.firstReview } : null,
-            consent: s.consent,
-          };
-          return (
-            <article key={s.slug} className="flex flex-col rounded-3xl border border-black/[0.08] p-5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge dark>{s.club}</Badge>
-                <Badge>{s.recipeLabel}</Badge>
-                {s.art && <Badge>Ritat motiv</Badge>}
-              </div>
-              <h3 className="mt-2.5 text-[19px] font-semibold tracking-tight">{s.idea.title}</h3>
-              <div className="mt-3 rounded-2xl bg-[#F5F5F7] p-3">
-                <Pictures front={info.images.front} back={info.images.back} text={s.text} />
-              </div>
-              <div className="mt-auto pt-4">
-                <ScarfActions info={info} download={{ clubId: s.clubId, idea: s.idea, demo: s.slug }} photo={{ club: s.club, headline: s.idea.front.main || s.idea.back.main, crestUrl: `/api/v1/brand/${s.clubId}/skold-farg.png` }} />
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
   );
 }

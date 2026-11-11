@@ -35,7 +35,7 @@ export type MediaInput = {
   /** Fram- och baksida som de blir stickade, liggande med fransar (genomskinlig botten). */
   front: Buffer;
   back: Buffer;
-  /** Fotografier på modell, stående format. Kan vara tom. */
+  /** Fotografier på modell, stående format: först halsduken buren om halsen, sedan uppsträckt mellan händerna. Kan vara tom. */
   photos: Buffer[];
   copy: ScarfCopy;
   fonts: { head: Font; label: Font };
@@ -142,8 +142,15 @@ function pill(font: Font, text: string, x: number, y: number, size: number, look
   };
 }
 
-async function photoUri(photo: Buffer, w: number, h: number, position: "top" | "centre" = "top") {
-  return uri(await sharp(photo).resize(Math.round(w), Math.round(h), { fit: "cover", position }).jpeg({ quality: 90 }).toBuffer(), "jpeg");
+/** Fotot beskuret till rutan. `skip` är hur stor del av det som blir över på höjden som skärs bort upptill (0 = behåll överkanten). */
+async function photoUri(photo: Buffer, w: number, h: number, skip = 0) {
+  const [W, H] = [Math.round(w), Math.round(h)];
+  const meta = await sharp(photo).metadata();
+  const scale = Math.max(W / (meta.width || W), H / (meta.height || H));
+  const [sw, sh] = [Math.max(W, Math.round((meta.width || W) * scale)), Math.max(H, Math.round((meta.height || H) * scale))];
+  const fitted = await sharp(photo).resize(sw, sh, { fit: "fill" }).toBuffer();
+  const cut = await sharp(fitted).extract({ left: Math.floor((sw - W) / 2), top: Math.round((sh - H) * Math.min(1, Math.max(0, skip))), width: W, height: H }).jpeg({ quality: 90 }).toBuffer();
+  return uri(cut, "jpeg");
 }
 
 type Piece = { uri: string; w: number; h: number };
@@ -220,7 +227,15 @@ async function instagram(m: MediaInput) {
   const sub = fit(m.fonts.label, copy.subline, { width: W - P * 2, max: 40, min: 28, lines: 2, leading: 1.5 });
   const subY = H - P - sub.h;
   const headY = subY - 30 - head.h;
-  if (m.photos[0]) {
+  const held = m.photos[1];
+  if (held) {
+    // Halsduken hålls upp i brösthöjd. Fotot slutar ovanför texten, så att ingenting ligger över halsduken.
+    const cut = headY - 110;
+    svg += `<rect width="${W}" height="${H}" fill="${look.stage}"/><image xlink:href="${await photoUri(held, W, cut, 0.3)}" width="${W}" height="${cut}"/>`;
+    svg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${look.stage}" stop-opacity="0"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.5"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
+    svg += `<rect width="${W}" height="230" fill="url(#upp)"/><rect y="${cut - 90}" width="${W}" height="91" fill="url(#ner)"/>`;
+    svg += (await mark(m, P, P - 8, 104, "#FFFFFF")).svg;
+  } else if (m.photos[0]) {
     svg += `<image xlink:href="${await photoUri(m.photos[0], W, H)}" width="${W}" height="${H}"/>`;
     const from = Math.max(0.3, (headY - 330) / H);
     svg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="${n(from)}" stop-color="${look.stage}" stop-opacity="0"/><stop offset="${n((headY - 40) / H)}" stop-color="${look.stage}" stop-opacity="0.9"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.5"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
@@ -243,7 +258,7 @@ async function facebook(m: MediaInput) {
   const { look, copy } = m;
   const split = 640;
   let svg = open(W, H) + `<rect width="${W}" height="${H}" fill="${look.stage}"/>`;
-  const photo = m.photos[1] ?? m.photos[0];
+  const photo = m.photos[0];
   if (photo) svg += `<image xlink:href="${await photoUri(photo, W, split)}" width="${W}" height="${split}"/>`;
   else svg += `<defs>${clip({ x: 0, y: 0, w: W, h: split })}</defs><rect width="${W}" height="${split}" fill="${mix(look.stage, look.onStage, 0.1)}"/>${await bands(m, { x: 0, y: 0, w: W, h: split }, -10)}`;
   // Halsduken som den blir stickad ligger över skarven mellan fotot och färgfältet.
@@ -290,7 +305,7 @@ async function linkedin(m: MediaInput) {
 async function banner(m: MediaInput) {
   const [W, H, P] = [1920, 600, 84];
   const { look, copy } = m;
-  const photo = m.photos[1] ?? m.photos[0];
+  const photo = m.photos[0];
   const side = photo ? 470 : 0;
   let svg = open(W, H) + `<rect width="${W}" height="${H}" fill="${look.stage}"/>`;
   if (photo) {
@@ -309,7 +324,7 @@ async function banner(m: MediaInput) {
   svg += `<g transform="translate(0 ${n(y + head.h + 22 + sub.h + 34)})">${button.svg}</g>`;
   // Halsduken ligger mellan texten och fotot – fram- och baksida, lätt snedställda. Den slutar innan ansiktet.
   const x0 = P + textW + 56;
-  const len = (photo ? W - side + 120 : W - P) - x0;
+  const len = (photo ? W - side + 70 : W - P) - x0;
   const [front, back] = await Promise.all([piece(m.front, len), piece(m.back, len)]);
   const cx = x0 + len / 2;
   svg += scarf(back, cx + 30, H / 2 + front.h * 0.64, -4) + scarf(front, cx - 10, H / 2 - front.h * 0.56, -4);

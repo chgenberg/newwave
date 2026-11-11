@@ -3,7 +3,8 @@ import type { Level, ScarfClub, ScarfIdea } from "./scarfRecipes";
 import data from "./scarfBank.json";
 
 /**
- * Inspirationsbanken: en halsduk per organisation – idrottsföreningar och företag – framtagen av agenten i scripts/scarf-bank.ts.
+ * Inspirationsbanken: en halsduk per idrottsförening, framtagen av agenten i scripts/scarf-bank.ts.
+ * På sidan visas de tillsammans med demokörningens halsdukar (lib/scarfDemo.ts).
  * Profilen ligger med i posten, så att stickfilerna kan tas fram igen utan klubbregistret:
  * märket ligger som public/halsduk/bank/<id>-skold.png och ett ritat motiv som <slug>-motiv.png.
  */
