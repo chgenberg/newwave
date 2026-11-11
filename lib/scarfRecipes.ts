@@ -130,7 +130,8 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
   const fs = up(idea.front.sub);
   const bm = up(idea.back.main) || up(club.nicknames[0] ?? club.shortName);
   const bs = up(idea.back.sub);
-  const year = String(club.founded);
+  // Okänt grundningsår: förkortningen står där årtalet annars hade stått.
+  const year = club.founded ? String(club.founded) : up(club.shortName).slice(0, 5);
 
   const text = (main: string, sub: string, yarn: Yarn, extra: Partial<Extract<Content, { kind: "text" }>> = {}): Content => ({
     kind: "text",

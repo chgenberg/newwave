@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FONT_KEYS, ICONS, type FontKey, type IconId } from "./scarfDesign";
 import { facePreview, knitDesign, sheetPreview, type Knitted } from "./scarfEngine";
 import { inspect, type ProductionReport } from "./scarfProduction";
-import { RECIPE_IDS, buildDesign, type Built, type RecipeId, type ScarfIdea } from "./scarfRecipes";
+import { RECIPE_IDS, buildDesign, type Built, type RecipeId, type ScarfClub, type ScarfIdea } from "./scarfRecipes";
 import { loadFile } from "./store";
 import type { Club } from "./types";
 
@@ -44,13 +44,21 @@ const samplePortrait = () => read(path.join(process.cwd(), "public", "demo", "po
 
 export type KnitResult = { built: Built; knit: Knitted; report: ProductionReport; front: string; back: string };
 
-export async function knitIdea(club: Club, idea: ScarfIdea, opts: { artFile?: string | null; art?: Buffer | null } = {}): Promise<KnitResult> {
-  const [crest, portrait] = await Promise.all([clubCrest(club), idea.recipe === "portratt" ? samplePortrait() : null]);
+/** `crest` är sköldens bild; anges den inte läses klubbens egen från profilen. */
+export async function knitIdea(club: ScarfClub | Club, idea: ScarfIdea, opts: { artFile?: string | null; art?: Buffer | null; crest?: Buffer | null } = {}): Promise<KnitResult> {
+  const [crest, portrait] = await Promise.all([opts.crest !== undefined ? opts.crest : "brand" in club ? clubCrest(club) : null, idea.recipe === "portratt" ? samplePortrait() : null]);
   const art = opts.art ?? (opts.artFile && ART_FILE.test(opts.artFile) ? ((await loadFile(opts.artFile))?.data ?? null) : null);
   const built = buildDesign(club, idea, { crest: Boolean(crest), portrait: Boolean(portrait), art: Boolean(art) });
-  const knit = await knitDesign(built.design, { crest, portrait, art });
+  let knit = await knitDesign(built.design, { crest, portrait, art });
+  let report = inspect(knit);
+  // För många ensamma maskor – oftast ett märke med tunna linjer. Då städas mönstret och kontrolleras igen.
+  if (report.checks.some((c) => c.id === "loose" && c.level === "varning")) {
+    const cleaned = await knitDesign(built.design, { crest, portrait, art }, { clean: true });
+    const again = inspect(cleaned);
+    if (again.checks.every((c) => c.id !== "loose" || c.level === "ok")) [knit, report] = [cleaned, again];
+  }
   const text = (side: { main: string; sub: string }) => [side.main, side.sub].filter(Boolean).join(" / ") || "ingen text";
-  return { built, knit, report: inspect(knit), front: idea.recipe === "bar" ? "ingen text" : text(idea.front), back: text(idea.back) };
+  return { built, knit, report, front: idea.recipe === "bar" ? "ingen text" : text(idea.front), back: text(idea.back) };
 }
 
 const jpgUrl = async (png: Buffer) => `data:image/jpeg;base64,${(await sharp(png).flatten({ background: "#F5F5F7" }).jpeg({ quality: 86 }).toBuffer()).toString("base64")}`;

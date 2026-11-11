@@ -6,7 +6,7 @@
  * Resultatet: lib/scarfDemo.json (idéerna med betyg), public/halsduk/demo/*.jpg (korrektur) och
  * ../offert/halsdukar-demo/ (stickfilerna som zip per halsduk).
  *
- *   set -a; . ./.env.local; set +a; JITI_ALIAS='{"@/":"<repo>/"}' node_modules/.bin/jiti scripts/scarf-demo.ts ifk-goteborg:5:trupp+portratt asa-if:3:personlig circle-k:2
+ *   set -a; . ./.env.local; set +a; JITI_ALIAS='{"@/":"<repo>/"}' node_modules/.bin/jiti scripts/scarf-demo.ts ifk-goteborg:5:trupp+portratt asa-if:3:personlig
  *
  * Efter kolon: antal halsdukar och recept som beställaren vill ha med.
  * --append lägger till i den befintliga kollektionen, --batch=2 håller de nya idéerna isär i mellanlagringen.

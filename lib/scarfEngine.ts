@@ -506,7 +506,7 @@ async function addContent(c: Content, box: Box, palette: string[], assets: KnitA
 
 // --- En sida -----------------------------------------------------------------
 
-async function knitFace(face: Face, palette: string[], assets: KnitAssets): Promise<FaceKnit> {
+async function knitFace(face: Face, palette: string[], assets: KnitAssets, clean = false): Promise<FaceKnit> {
   const out: FaceKnit = { cells: new Uint8Array(ROWS * SIDE), protect: new Uint8Array(ROWS * SIDE), texts: [], margins: [] };
   const placed = layout(face);
   const overlay: Overlay = { svg: [], rasters: [], texts: out.texts, margins: out.margins, direct: [] };
@@ -583,20 +583,28 @@ async function knitFace(face: Face, palette: string[], assets: KnitAssets): Prom
     }
   }
   for (const paint of overlay.direct) paint(out);
-  tidy(out);
+  tidy(out, clean);
   return out;
 }
 
-/** En ensam maska i ett rent fält (rester från kanter i text och sköld) får grannarnas färg. */
-function tidy(face: FaceKnit) {
+/**
+ * En ensam maska i ett rent fält (rester från kanter i text och sköld) får grannarnas färg.
+ * Med `strong` städas alla maskor som saknar granne i samma färg – för märken med så tunna linjer att de annars
+ * blir prickar i stickningen.
+ */
+function tidy(face: FaceKnit, strong = false) {
   const c = face.cells;
-  for (let r = 1; r < ROWS - 1; r++) {
-    for (let s = 1; s < SIDE - 1; s++) {
-      const i = r * SIDE + s;
-      if (face.protect[i]) continue;
-      const v = c[i];
-      const [a, b, d, e] = [c[i - 1], c[i + 1], c[i - SIDE], c[i + SIDE]];
-      if (a !== v && b !== v && d !== v && e !== v && a === b && a === d && a === e) c[i] = a;
+  for (let pass = 0; pass < (strong ? 2 : 1); pass++) {
+    for (let r = 1; r < ROWS - 1; r++) {
+      for (let s = 1; s < SIDE - 1; s++) {
+        const i = r * SIDE + s;
+        if (face.protect[i]) continue;
+        const v = c[i];
+        const [a, b, d, e] = [c[i - 1], c[i + 1], c[i - SIDE], c[i + SIDE]];
+        if (a === v || b === v || d === v || e === v) continue;
+        if (a === b && a === d && a === e) c[i] = a;
+        else if (strong) c[i] = a === b || a === d || a === e ? a : b === d || b === e ? b : d === e ? d : a;
+      }
     }
   }
 }
@@ -615,10 +623,11 @@ export function machineIndex(side: 0 | 1, r: number, s: number, backReads: "hold
   return backReads === "hold-up" ? (ROWS - 1 - r) * NEEDLES + SIDE + s : r * NEEDLES + (NEEDLES - 1 - s);
 }
 
-export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}): Promise<Knitted> {
+/** `clean` städar bort alla ensamma maskor utanför raster och bårder; används när maskinkontrollen annars varnar. */
+export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, opts: { clean?: boolean } = {}): Promise<Knitted> {
   const full = design.palette.slice(0, SCARF.maxColors).map((h) => h.toUpperCase());
   const backReads = design.backReads ?? "hold-up";
-  const faces = (await Promise.all([knitFace(design.front, full, assets), knitFace(design.back, full, assets)])) as [FaceKnit, FaceKnit];
+  const faces = (await Promise.all([knitFace(design.front, full, assets, opts.clean), knitFace(design.back, full, assets, opts.clean)])) as [FaceKnit, FaceKnit];
 
   // Garner som inte fick en enda maska tas bort, så att garnlistan bara innehåller det som ska trädas på maskinen.
   const used = new Array<boolean>(full.length).fill(false);

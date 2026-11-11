@@ -127,7 +127,9 @@ Så fungerar en stickad halsduk:
 ${brand ? "Varumärkets" : "Klubbens"} regelbok (gäller även halsdukar; regler om digitaltryck gäller inte här):
 ${club.rules.map((r) => `- ${r}`).join("\n")}
 - Tonalitet: ${club.tone}
-- ${brand ? "Namn" : "Smeknamn"} som får användas: ${club.nicknames.join(", ")}. ${brand ? "" : `Hemmaarena: ${club.arena}. Grundad ${club.founded}. `}Devis: "${club.tagline}".
+- ${brand ? "Namn" : "Smeknamn"} som får användas: ${club.nicknames.join(", ")}.${brand || !club.arena ? "" : ` Hemmaarena: ${club.arena}.`}${brand || !club.founded ? "" : ` Grundad ${club.founded}.`}${club.tagline ? ` Devis: "${club.tagline}".` : ""}${
+    brand || (club.founded && club.arena) ? "" : `\n- ${[club.founded ? "" : "Grundningsåret", club.arena ? "" : "hemmaarenan"].filter(Boolean).join(" och ")} är inte ${club.founded || club.arena ? "känt" : "kända"}: skriv inga årtal för grundandet och hitta inte på arenanamn, smeknamn eller deviser.`
+  }
 - Färger: ${club.palette.map((c) => `${c.name} ${c.hex}`).join(", ")}.
 
 Du väljer ett recept per idé. Stickmotorn sköter mått, marginaler och maskinens gränser.

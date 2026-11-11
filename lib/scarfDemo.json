@@ -2,203 +2,24 @@
   "date": "2026-11-11",
   "scarves": [
     {
-      "slug": "ifk-goteborg-blavitt-pa-bortaplan",
+      "slug": "ifk-goteborg-hela-staden-bortat",
       "clubId": "ifk-goteborg",
       "club": "IFK Göteborg",
       "idea": {
-        "id": "f45b9dfc-9a03-452a-b4eb-ad0309138ec6",
-        "title": "Blåvitt på bortaplan",
-        "why": "Till bortamatchen mot Hammarby vill supportrarna bära Göteborg högt, med en klassiker som följer med även nästa resa.",
+        "id": "329c2621-a405-4c14-88b5-09328968d78a",
+        "title": "Hela staden bortåt",
+        "why": "Inför bortamatchen mot Hammarby samlas hela stadens lag bakom en halsduk som följer med på bortaresorna även efter slutsignalen.",
         "signal": "Bortamatch mot Hammarby",
-        "recipe": "klassisk",
-        "front": {
-          "main": "ALLTID BLÅVITT",
-          "sub": "HELA STADENS LAG"
-        },
-        "back": {
-          "main": "GÖTEBORG",
-          "sub": "HAMMARBY 23 NOV 2026"
-        },
-        "font": "anton",
-        "colors": {
-          "ground": "#234B9A",
-          "ink": "#FFFFFF",
-          "accent": "#1A3770"
-        },
-        "icon": null,
-        "art": null,
-        "number": "",
-        "roster": []
-      },
-      "level": "enkel",
-      "recipeLabel": "Klassisk",
-      "mode": "ai",
-      "firstReview": null,
-      "palette": [
-        "#234B9A",
-        "#FFFFFF",
-        "#197BC4",
-        "#FBC323",
-        "#1A3770"
-      ],
-      "yarns": [
-        {
-          "hex": "#234B9A",
-          "pantone": "PANTONE 7687 C",
-          "share": 0.426
-        },
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.454
-        },
-        {
-          "hex": "#197BC4",
-          "pantone": "PANTONE 3005 C",
-          "share": 0.031
-        },
-        {
-          "hex": "#FBC323",
-          "pantone": "PANTONE 123 C",
-          "share": 0.026
-        },
-        {
-          "hex": "#1A3770",
-          "pantone": "PANTONE 3597 C",
-          "share": 0.063
-        }
-      ],
-      "system": "enkel",
-      "maxColorsPerRow": 5,
-      "minTextMm": 38,
-      "ok": true,
-      "consent": null,
-      "art": false,
-      "review": {
-        "sales": 7,
-        "brandFit": 9,
-        "legibility": 8,
-        "craft": 8,
-        "strengths": [
-          "Klassisk blåvit färgsättning, officiella sköldar och ändränder ger tydlig klubbidentitet.",
-          "ALLTID BLÅVITT och GÖTEBORG har bra storlek och kontrast för läsning på håll.",
-          "Omvänd färgsättning mellan sidorna ger variation inom ett sammanhållet uttryck."
-        ],
-        "issues": [
-          "Motståndarnamn och datum gör den till en matchsouvenir snarare än den återanvändbara bortaklassiker som idén lovar.",
-          "Provstick de mindre textraderna: smala bokstavsmellanrum riskerar att flyta ihop på några meters håll.",
-          "Ge HELA STADENS LAG och matchraden lite mer luft mot nederkanten."
-        ],
-        "summary": "En säljbar och välbalanserad Blåvitt-halsduk som kan skickas till stickeriet, men matchmärkningen begränsar dess dragningskraft som tidlös bortaklassiker.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "ALLTID BLÅVITT / HELA STADENS LAG",
-        "back": "GÖTEBORG / HAMMARBY 23 NOV 2026"
-      }
-    },
-    {
-      "slug": "ifk-goteborg-arvet-fran-1904",
-      "clubId": "ifk-goteborg",
-      "club": "IFK Göteborg",
-      "idea": {
-        "id": "812e1dda-8380-4396-a978-96406b87a06c",
-        "title": "Arvet från 1904",
-        "why": "Inför Black Friday lockar en tidlös retrohalsduk med klubbens födelseår både samlare och den som ordnar årets första blåvita julgåva.",
-        "signal": "Black Friday",
-        "recipe": "retro",
+        "recipe": "matchdag",
         "front": {
           "main": "BLÅVITT",
-          "sub": "1904"
+          "sub": "BORTÅT"
         },
         "back": {
-          "main": "KAMRATERNA",
-          "sub": "HELA STADENS LAG"
-        },
-        "font": "varsity",
-        "colors": {
-          "ground": "#FFFFFF",
-          "ink": "#234B9A",
-          "accent": "#1A3770"
-        },
-        "icon": null,
-        "art": null,
-        "number": "",
-        "roster": []
-      },
-      "level": "enkel",
-      "recipeLabel": "Retro",
-      "mode": "ai",
-      "firstReview": null,
-      "palette": [
-        "#FFFFFF",
-        "#234B9A",
-        "#1A3770"
-      ],
-      "yarns": [
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.507
-        },
-        {
-          "hex": "#234B9A",
-          "pantone": "PANTONE 7687 C",
-          "share": 0.451
-        },
-        {
-          "hex": "#1A3770",
-          "pantone": "PANTONE 3597 C",
-          "share": 0.042
-        }
-      ],
-      "system": "dubbel",
-      "maxColorsPerRow": 3,
-      "minTextMm": 23,
-      "ok": true,
-      "consent": null,
-      "art": false,
-      "review": {
-        "sales": 8,
-        "brandFit": 9,
-        "legibility": 8,
-        "craft": 8,
-        "strengths": [
-          "Tidlös blåvit retrokänsla med stark supporteridentitet, utan reklamton.",
-          "Stora huvudord med tydlig kontrast fungerar bra på några meters håll.",
-          "Omvänd färgställning och återkommande årtal ger sidorna en sammanhållen, genomarbetad rytm."
-        ],
-        "issues": [
-          "Provstick HELA STADENS LAG: den mindre, täta seriftexten riskerar att flyta ihop på håll och kan behöva förstoras.",
-          "Kontrollera Å-ringen och de tunnaste kantlinjerna i provstickningen så att detaljerna håller sig öppna och jämna."
-        ],
-        "summary": "En stark och säljbar retrohalsduk som är klar för stickeriet, med särskild kontroll av den mindre texten och de fina detaljerna i provstickningen.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "BLÅVITT / 1904",
-        "back": "KAMRATERNA / HELA STADENS LAG"
-      }
-    },
-    {
-      "slug": "ifk-goteborg-anglarnas-lucialjus",
-      "clubId": "ifk-goteborg",
-      "club": "IFK Göteborg",
-      "idea": {
-        "id": "67d579e5-e003-4f1d-8240-6e3fef227e65",
-        "title": "Änglarnas lucialjus",
-        "why": "Till Lucia lyfter vi ljuset i mörkret med Blåvitts officiella sköld och blåvita ändränder i stället för stjärntapet, medan förstorade underrader får egna, enfärgade textfält på båda sidor.",
-        "signal": "Lucia",
-        "recipe": "klassisk",
-        "front": {
-          "main": "LJUS I MÖRKRET",
+          "main": "HELA STADENS LAG",
           "sub": "GÖTEBORG"
         },
-        "back": {
-          "main": "ÄNGLARNA",
-          "sub": "HELA STADENS LAG"
-        },
-        "font": "anton",
+        "font": "block",
         "colors": {
           "ground": "#234B9A",
           "ink": "#FFFFFF",
@@ -209,25 +30,25 @@
         "number": "",
         "roster": []
       },
-      "level": "enkel",
-      "recipeLabel": "Klassisk",
+      "level": "mellan",
+      "recipeLabel": "Matchdag",
       "mode": "ai",
       "firstReview": {
-        "sales": 7,
-        "brandFit": 6,
-        "legibility": 7,
+        "sales": 6,
+        "brandFit": 9,
+        "legibility": 6,
         "craft": 7,
         "strengths": [
-          "Stora, kraftiga huvudtexter med tydlig kontrast och bra läsbarhet på håll.",
-          "Sköldarnas placering ger framsidan balans och tydlig klubbtillhörighet.",
-          "ÄNGLARNA och HELA STADENS LAG har ett supporterförankrat tonläge utan reklamkänsla."
+          "Klubbfärgerna och den centrala skölden ger tydlig Blåvitt-identitet.",
+          "Huvudbudskapen har kraftig typografi och stark kontrast.",
+          "Baksidans riktade ränder ger energi och passar bortamatchtemat."
         ],
         "issues": [
-          "Stjärntapeten är inte en av klubbens tillåtna egna symboler och behöver ersättas med ett klubbförankrat motiv; korrekturet visar dessutom inte idébeskrivningens vita stjärnor på blått.",
-          "Baksidans täta mönster konkurrerar med HELA STADENS LAG – ge underraden en lugnare yta och provstick detaljerna.",
-          "GÖTEBORG är för litet för att få samma tydlighet på några meters håll; förstora underraden."
+          "Matchraden är liten och hårt packad för läsning på några meters håll; förstora och provstick särskilt Å och datumet.",
+          "Framsidan blir vänstertung med långa HELA STADENS mot ensamma LAG; balansera textytorna bättre.",
+          "Motståndarnamn och datum begränsar användningen efter matchen och gör modellen smalare än en tidlös supporterhalsduk."
         ],
-        "summary": "En bärbar grund med starka huvudbudskap, men halsduken behöver göras om med ett klubbförankrat mönster och tydligare underrader innan den skickas till stickeriet.",
+        "summary": "En tydligt blåvit matchdagshalsduk som behöver mer lättläst matchtext och bättre balans på framsidan innan den skickas till stickeriet.",
         "verdict": "underkänd"
       },
       "palette": [
@@ -241,56 +62,55 @@
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.42
+          "share": 0.294
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.46
+          "share": 0.523
         },
         {
           "hex": "#197BC4",
           "pantone": "PANTONE 3005 C",
-          "share": 0.031
+          "share": 0.008
         },
         {
           "hex": "#FBC323",
           "pantone": "PANTONE 123 C",
-          "share": 0.026
+          "share": 0.007
         },
         {
           "hex": "#1A3770",
           "pantone": "PANTONE 3597 C",
-          "share": 0.063
+          "share": 0.168
         }
       ],
-      "system": "enkel",
-      "maxColorsPerRow": 5,
-      "minTextMm": 31,
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 30,
       "ok": true,
       "consent": null,
       "art": false,
       "review": {
         "sales": 8,
         "brandFit": 9,
-        "legibility": 8,
+        "legibility": 9,
         "craft": 8,
         "strengths": [
-          "Tydlig Blåvitt-identitet med officiella sköldar, blåvita ändränder och starka supporterbudskap.",
-          "Omvänd färgsättning ger två distinkta sidor med mycket god kontrast.",
-          "Ljustemat fungerar till Lucia utan att göra halsduken till en ren säsongsprodukt."
+          "Tydlig bortareseidentitet som håller över flera säsonger utan koppling till en enskild motståndare.",
+          "Stora, kraftiga bokstäver och tydliga kontraster gör huvudbudskapen lättlästa på håll.",
+          "Klubbfärgerna, mittskölden och de grafiska ändpartierna ger en sammanhållen supporterprodukt."
         ],
         "issues": [
-          "Provstick GÖTEBORG: underraden är fortfarande betydligt mindre än huvudtexten och riskerar att tappa tydlighet på några meters håll.",
-          "Ge HELA STADENS LAG lite mer luft mot den nedre kantlinjen.",
-          "Kontrollera i provstickningen att prickarna över Ä och Ö förblir tydligt separerade."
+          "Ge HELA STADENS LAG lite mer luft mot ändpartierna; framför allt sista G ligger nära kantlinjen.",
+          "Provstick GÖTEBORG och ringarna över Å så att små teckendetaljer håller sig öppna och tydliga."
         ],
-        "summary": "En stark och bärbar Blåvitt-halsduk som är klar för stickeriet, med särskild kontroll av underradernas läsbarhet i provstickningen.",
+        "summary": "En stark och säljbar bortahalsduk som kan skickas till stickeriet, med mindre marginaljustering och kontroll av teckendetaljer i provstickningen.",
         "verdict": "godkänd"
       },
       "text": {
-        "front": "LJUS I MÖRKRET / GÖTEBORG",
-        "back": "ÄNGLARNA / HELA STADENS LAG"
+        "front": "BLÅVITT / BORTÅT",
+        "back": "HELA STADENS LAG / GÖTEBORG"
       }
     },
     {
@@ -526,24 +346,24 @@
       }
     },
     {
-      "slug": "asa-if-ditt-eget-asa",
+      "slug": "asa-if-asas-vinterljus",
       "clubId": "asa-if",
       "club": "Åsa IF",
       "idea": {
-        "id": "b54b044b-dba1-416e-93fe-b4db9df0e573",
-        "title": "Ditt eget Åsa",
-        "why": "Inför Black Friday lockar en egen gulsvart halsduk, där det påhittade exemplet LIND 12 byts mot namn och nummer som klubben och personen har godkänt.",
-        "signal": "Black Friday",
-        "recipe": "personlig",
+        "id": "b043da86-6e53-4b26-89f6-07b39c19bfce",
+        "title": "Åsas vinterljus",
+        "why": "Till Lucia vill vi samlas kring Åsas gula ljus och hålla värmen tillsammans, oavsett lag eller sektion.",
+        "signal": "Lucia",
+        "recipe": "toning",
         "front": {
-          "main": "LIND",
-          "sub": ""
-        },
-        "back": {
           "main": "ÅSA IF",
           "sub": "SEDAN 1919"
         },
-        "font": "block",
+        "back": {
+          "main": "LJUS I MÖRKRET",
+          "sub": "TILLSAMMANS I ÅSA"
+        },
+        "font": "rund",
         "colors": {
           "ground": "#FDEF04",
           "ink": "#0D0C0C",
@@ -551,11 +371,11 @@
         },
         "icon": null,
         "art": null,
-        "number": "12",
+        "number": "",
         "roster": []
       },
-      "level": "enkel",
-      "recipeLabel": "Personlig",
+      "level": "mellan",
+      "recipeLabel": "Toning",
       "mode": "ai",
       "firstReview": null,
       "palette": [
@@ -567,24 +387,24 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.399
+          "share": 0.482
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.539
+          "share": 0.321
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.063
+          "share": 0.197
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 37,
+      "minTextMm": 26,
       "ok": true,
-      "consent": "Beställaren godkänner sitt eget namn och nummer i kassan. Stickas en och en efter beställning.",
+      "consent": null,
       "art": false,
       "review": {
         "sales": 8,
@@ -592,21 +412,21 @@
         "legibility": 8,
         "craft": 8,
         "strengths": [
-          "Personlig framsida med tydlig presentpotential och ett namn som verkligen syns.",
-          "Svart-gul profil, officiella märken och 1919 ger stark klubbförankring utan reklamkänsla.",
-          "Sidornas omvända färgsättning skapar variation, och klubbmotivet fungerar för alla sektioner."
+          "Tydlig Åsa-identitet med stora klubbmärken, ÅSA IF och grundåret.",
+          "Varmt, inkluderande budskap som fungerar för alla sektioner och även efter Lucia.",
+          "Starka textkontraster och symmetrisk balans ger ett genomarbetat helhetsintryck."
         ],
         "issues": [
-          "Provstick märkenas små detaljer och de tunna vita linjerna så att de håller ihop i jacquard.",
-          "Fastställ maxlängd och layout för längre namn utan att pressa ihop bokstäverna.",
-          "Kontrollera att Å-ring och SEDAN 1919 förblir tydliga på några meters håll."
+          "Provsticka toningens finaste raster i rätt masktäthet; övergångarna riskerar att bli fläckiga snarare än mjuka.",
+          "Förstora gärna TILLSAMMANS I ÅSA något för bättre läsbarhet på några meters håll.",
+          "Kontrollera att Å-ringarna och Ö-prickarna förblir tydliga i stickningen."
         ],
-        "summary": "En säljstark och tydligt Åsa-förankrad personlig halsduk som kan gå till stickeriet när klubbens och personens skriftliga godkännanden finns på plats.",
+        "summary": "En säljstark och förenande klubbhalsduk som kan gå till stickeriet, med toningen och de mindre textdetaljerna som viktiga kontrollpunkter i provstickningen.",
         "verdict": "godkänd"
       },
       "text": {
-        "front": "LIND",
-        "back": "ÅSA IF / SEDAN 1919"
+        "front": "ÅSA IF / SEDAN 1919",
+        "back": "LJUS I MÖRKRET / TILLSAMMANS I ÅSA"
       }
     },
     {
@@ -773,387 +593,6 @@
       "text": {
         "front": "GOD JUL / ÅSA IF",
         "back": "GULSVART / SEDAN 1919"
-      }
-    },
-    {
-      "slug": "circle-k-bilfolkets-farger",
-      "clubId": "circle-k",
-      "club": "Circle K",
-      "idea": {
-        "id": "404bd658-ca87-4a7a-8978-3c19846f39a6",
-        "title": "Bilfolkets färger",
-        "why": "Inför Black Friday blir det här en varm gåva till någon som älskar bilresan lika mycket som kaffestoppet.",
-        "signal": "Black Friday",
-        "recipe": "profil",
-        "front": {
-          "main": "BILFOLKET",
-          "sub": ""
-        },
-        "back": {
-          "main": "ALLTID PÅ VÄGEN",
-          "sub": ""
-        },
-        "font": "anton",
-        "colors": {
-          "ground": "#DA291C",
-          "ink": "#FFFFFF",
-          "accent": "#ED8B00"
-        },
-        "icon": null,
-        "art": null,
-        "number": "",
-        "roster": []
-      },
-      "level": "enkel",
-      "recipeLabel": "Profil",
-      "mode": "ai",
-      "firstReview": null,
-      "palette": [
-        "#DA291C",
-        "#FFFFFF",
-        "#ED8B00"
-      ],
-      "yarns": [
-        {
-          "hex": "#DA291C",
-          "pantone": "PANTONE 485 C",
-          "share": 0.464
-        },
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.522
-        },
-        {
-          "hex": "#ED8B00",
-          "pantone": "PANTONE 144 C",
-          "share": 0.015
-        }
-      ],
-      "system": "dubbel",
-      "maxColorsPerRow": 2,
-      "minTextMm": 75,
-      "ok": true,
-      "consent": null,
-      "art": false,
-      "review": {
-        "sales": 7,
-        "brandFit": 8,
-        "legibility": 9,
-        "craft": 8,
-        "strengths": [
-          "BILFOLKET ger en tydlig gemenskap med nostalgisk supporterkaraktär.",
-          "Stor text och stark rödvit kontrast fungerar på flera meters håll.",
-          "Spegelvända diagonalränder och orange avdelare ger balans och sammanhållning."
-        ],
-        "issues": [
-          "Fyra stora loggor gör helheten mer reklamig än personlig; minska gärna loggornas dominans.",
-          "Provstick Å, Ä och textens smala mellanrum på baksidan så att de förblir tydliga.",
-          "Provstick de tunna orange avdelarna så att de blir jämna och synliga mot rött."
-        ],
-        "summary": "En säljbar och tydlig profilhalsduk som kan gå till stickeriet, även om loggornas dominans begränsar känslan av en personlig favorit.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "BILFOLKET",
-        "back": "ALLTID PÅ VÄGEN"
-      }
-    },
-    {
-      "slug": "circle-k-lucialjus-pa-vagen",
-      "clubId": "circle-k",
-      "club": "Circle K",
-      "idea": {
-        "id": "199fa3b7-cd2b-4765-9fe1-2f023022d507",
-        "title": "Lucialjus på vägen",
-        "why": "Luciamorgonens ljus och varma kaffepaus får följa med i en Circle K-halsduk som känns lika självklar resten av vintern.",
-        "signal": "Lucia",
-        "recipe": "motiv",
-        "front": {
-          "main": "VARM PAUS",
-          "sub": ""
-        },
-        "back": {
-          "main": "CIRCLE K",
-          "sub": ""
-        },
-        "font": "block",
-        "colors": {
-          "ground": "#DA291C",
-          "ink": "#FFFFFF",
-          "accent": "#ED8B00"
-        },
-        "icon": "kopp",
-        "art": "One bold, flat icon of a radiant coffee cup, evoking a welcoming station coffee stop on a dark winter morning. Use a solid white cup with an oversized open handle and three broad orange light rays above it, on a red #DA291C background. White #FFFFFF and orange #ED8B00 only for the motif. Chunky shapes, large negative spaces, no outlines, no fine details, no gradients, no candles, no people, no tex",
-        "number": "",
-        "roster": []
-      },
-      "level": "komplex",
-      "recipeLabel": "Motiv",
-      "mode": "ai",
-      "firstReview": {
-        "sales": 6,
-        "brandFit": 7,
-        "legibility": 8,
-        "craft": 7,
-        "strengths": [
-          "Stora, kraftiga bokstäver gör båda sidornas budskap tydliga på några meters håll.",
-          "Orange, mörkgrått, vitt och röda loggor ger en sammanhållen färgsättning.",
-          "Symmetriska ljusmotiv och randiga avslut skapar en nostalgisk vinterkänsla."
-        ],
-        "issues": [
-          "Lucialjusen är generiska julmotiv; ersätt eller komplettera med exempelvis kaffekoppen eller stationens ljus för tydligare Circle K-koppling.",
-          "Det dominerande LUCIA begränsar användningen till en kort säsong och känns mer som evenemangsmerch än en stamkunds vardagshalsduk.",
-          "Provstick ljusens små detaljer, Å-ringen och de tunna vita linjerna; ge ljusmotiven mer luft mot kantlinjerna."
-        ],
-        "summary": "Ett tydligt och nostalgiskt luciakorrektur som behöver starkare Circle K-motiv och bredare bärbarhet innan det skickas till stickeriet.",
-        "verdict": "underkänd"
-      },
-      "palette": [
-        "#DA291C",
-        "#FFFFFF",
-        "#ED8B00"
-      ],
-      "yarns": [
-        {
-          "hex": "#DA291C",
-          "pantone": "PANTONE 485 C",
-          "share": 0.492
-        },
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.443
-        },
-        {
-          "hex": "#ED8B00",
-          "pantone": "PANTONE 144 C",
-          "share": 0.066
-        }
-      ],
-      "system": "dubbel",
-      "maxColorsPerRow": 3,
-      "minTextMm": 77,
-      "ok": true,
-      "consent": null,
-      "art": true,
-      "review": {
-        "sales": 7,
-        "brandFit": 8,
-        "legibility": 9,
-        "craft": 8,
-        "strengths": [
-          "VARM PAUS är kort, lättläst och kopplar kaffestunden till halsdukens funktion.",
-          "Stora kaffekoppar och rätt färgpalett ger tydlig Circle K-känsla utan att låsa motivet till lucia.",
-          "Omvänd färgsättning mellan sidorna och balanserade motiv ger en genomarbetad helhet."
-        ],
-        "issues": [
-          "Baksidans stora CIRCLE K mellan två loggor känns mer reklam än vardagsaccessoar och begränsar köplusten.",
-          "Provstick de tunna orange kantlinjerna så att de blir jämna och inte försvinner i maskorna.",
-          "Kontrollera de orange strålarnas kontrast mot rött i garn; de syns betydligt svagare än texten."
-        ],
-        "summary": "En säljbar och tydlig kaffehalsduk som kan gå till stickeriet, men den reklamtunga baksidan håller tillbaka attraktionskraften.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "VARM PAUS",
-        "back": "CIRCLE K"
-      }
-    },
-    {
-      "slug": "ifk-goteborg-hela-staden-bortat",
-      "clubId": "ifk-goteborg",
-      "club": "IFK Göteborg",
-      "idea": {
-        "id": "329c2621-a405-4c14-88b5-09328968d78a",
-        "title": "Hela staden bortåt",
-        "why": "Inför bortamatchen mot Hammarby samlas hela stadens lag bakom en halsduk som följer med på bortaresorna även efter slutsignalen.",
-        "signal": "Bortamatch mot Hammarby",
-        "recipe": "matchdag",
-        "front": {
-          "main": "BLÅVITT",
-          "sub": "BORTÅT"
-        },
-        "back": {
-          "main": "HELA STADENS LAG",
-          "sub": "GÖTEBORG"
-        },
-        "font": "block",
-        "colors": {
-          "ground": "#234B9A",
-          "ink": "#FFFFFF",
-          "accent": "#1A3770"
-        },
-        "icon": null,
-        "art": null,
-        "number": "",
-        "roster": []
-      },
-      "level": "mellan",
-      "recipeLabel": "Matchdag",
-      "mode": "ai",
-      "firstReview": {
-        "sales": 6,
-        "brandFit": 9,
-        "legibility": 6,
-        "craft": 7,
-        "strengths": [
-          "Klubbfärgerna och den centrala skölden ger tydlig Blåvitt-identitet.",
-          "Huvudbudskapen har kraftig typografi och stark kontrast.",
-          "Baksidans riktade ränder ger energi och passar bortamatchtemat."
-        ],
-        "issues": [
-          "Matchraden är liten och hårt packad för läsning på några meters håll; förstora och provstick särskilt Å och datumet.",
-          "Framsidan blir vänstertung med långa HELA STADENS mot ensamma LAG; balansera textytorna bättre.",
-          "Motståndarnamn och datum begränsar användningen efter matchen och gör modellen smalare än en tidlös supporterhalsduk."
-        ],
-        "summary": "En tydligt blåvit matchdagshalsduk som behöver mer lättläst matchtext och bättre balans på framsidan innan den skickas till stickeriet.",
-        "verdict": "underkänd"
-      },
-      "palette": [
-        "#234B9A",
-        "#FFFFFF",
-        "#197BC4",
-        "#FBC323",
-        "#1A3770"
-      ],
-      "yarns": [
-        {
-          "hex": "#234B9A",
-          "pantone": "PANTONE 7687 C",
-          "share": 0.294
-        },
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.523
-        },
-        {
-          "hex": "#197BC4",
-          "pantone": "PANTONE 3005 C",
-          "share": 0.008
-        },
-        {
-          "hex": "#FBC323",
-          "pantone": "PANTONE 123 C",
-          "share": 0.007
-        },
-        {
-          "hex": "#1A3770",
-          "pantone": "PANTONE 3597 C",
-          "share": 0.168
-        }
-      ],
-      "system": "dubbel",
-      "maxColorsPerRow": 4,
-      "minTextMm": 30,
-      "ok": true,
-      "consent": null,
-      "art": false,
-      "review": {
-        "sales": 8,
-        "brandFit": 9,
-        "legibility": 9,
-        "craft": 8,
-        "strengths": [
-          "Tydlig bortareseidentitet som håller över flera säsonger utan koppling till en enskild motståndare.",
-          "Stora, kraftiga bokstäver och tydliga kontraster gör huvudbudskapen lättlästa på håll.",
-          "Klubbfärgerna, mittskölden och de grafiska ändpartierna ger en sammanhållen supporterprodukt."
-        ],
-        "issues": [
-          "Ge HELA STADENS LAG lite mer luft mot ändpartierna; framför allt sista G ligger nära kantlinjen.",
-          "Provstick GÖTEBORG och ringarna över Å så att små teckendetaljer håller sig öppna och tydliga."
-        ],
-        "summary": "En stark och säljbar bortahalsduk som kan skickas till stickeriet, med mindre marginaljustering och kontroll av teckendetaljer i provstickningen.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "BLÅVITT / BORTÅT",
-        "back": "HELA STADENS LAG / GÖTEBORG"
-      }
-    },
-    {
-      "slug": "asa-if-asas-vinterljus",
-      "clubId": "asa-if",
-      "club": "Åsa IF",
-      "idea": {
-        "id": "b043da86-6e53-4b26-89f6-07b39c19bfce",
-        "title": "Åsas vinterljus",
-        "why": "Till Lucia vill vi samlas kring Åsas gula ljus och hålla värmen tillsammans, oavsett lag eller sektion.",
-        "signal": "Lucia",
-        "recipe": "toning",
-        "front": {
-          "main": "ÅSA IF",
-          "sub": "SEDAN 1919"
-        },
-        "back": {
-          "main": "LJUS I MÖRKRET",
-          "sub": "TILLSAMMANS I ÅSA"
-        },
-        "font": "rund",
-        "colors": {
-          "ground": "#FDEF04",
-          "ink": "#0D0C0C",
-          "accent": "#FFFFFF"
-        },
-        "icon": null,
-        "art": null,
-        "number": "",
-        "roster": []
-      },
-      "level": "mellan",
-      "recipeLabel": "Toning",
-      "mode": "ai",
-      "firstReview": null,
-      "palette": [
-        "#FDEF04",
-        "#0D0C0C",
-        "#FFFFFF"
-      ],
-      "yarns": [
-        {
-          "hex": "#FDEF04",
-          "pantone": "PANTONE 3945 C",
-          "share": 0.482
-        },
-        {
-          "hex": "#0D0C0C",
-          "pantone": "PANTONE 419 C",
-          "share": 0.321
-        },
-        {
-          "hex": "#FFFFFF",
-          "pantone": "White",
-          "share": 0.197
-        }
-      ],
-      "system": "dubbel",
-      "maxColorsPerRow": 3,
-      "minTextMm": 26,
-      "ok": true,
-      "consent": null,
-      "art": false,
-      "review": {
-        "sales": 8,
-        "brandFit": 9,
-        "legibility": 8,
-        "craft": 8,
-        "strengths": [
-          "Tydlig Åsa-identitet med stora klubbmärken, ÅSA IF och grundåret.",
-          "Varmt, inkluderande budskap som fungerar för alla sektioner och även efter Lucia.",
-          "Starka textkontraster och symmetrisk balans ger ett genomarbetat helhetsintryck."
-        ],
-        "issues": [
-          "Provsticka toningens finaste raster i rätt masktäthet; övergångarna riskerar att bli fläckiga snarare än mjuka.",
-          "Förstora gärna TILLSAMMANS I ÅSA något för bättre läsbarhet på några meters håll.",
-          "Kontrollera att Å-ringarna och Ö-prickarna förblir tydliga i stickningen."
-        ],
-        "summary": "En säljstark och förenande klubbhalsduk som kan gå till stickeriet, med toningen och de mindre textdetaljerna som viktiga kontrollpunkter i provstickningen.",
-        "verdict": "godkänd"
-      },
-      "text": {
-        "front": "ÅSA IF / SEDAN 1919",
-        "back": "LJUS I MÖRKRET / TILLSAMMANS I ÅSA"
       }
     }
   ]

@@ -28,6 +28,8 @@ const Body = z.discriminatedUnion("mode", [
     club: z.string().trim().min(1).max(80),
     headline: z.string().trim().max(80).default(""),
     scarfDataUrl: DataImage,
+    /** "vardag" för företag och föreningar utanför idrotten: stad och arbetsplats i stället för läktare och arena. */
+    setting: z.enum(["sport", "vardag"]).default("sport"),
   }),
 ]);
 
@@ -126,7 +128,13 @@ export async function POST(req: Request) {
       return Response.json({ photos: [{ id: "self", label: "Du i halsduken", url }] satisfies ScarfPhoto[] });
     }
 
-    const scenes: { id: string; label: string; scene: string }[] = [
+    const everyday: { id: string; label: string; scene: string }[] = [
+      { id: "stad", label: "På stan", scene: "Waist-up photo, facing the camera: a smiling Scandinavian woman in her early 30s in a dark wool coat on a Swedish city street on a crisp winter afternoon with softly blurred shop windows behind her, wearing the exact knitted scarf from the reference image." },
+      { id: "jobbet", label: "Utanför jobbet", scene: "Waist-up photo, facing the camera: a friendly Scandinavian man in his 40s in a dark jacket outside a small workplace entrance on a cold bright morning, wearing the exact knitted scarf from the reference image." },
+      { id: "promenad", label: "På promenad", scene: "Waist-up photo, facing the camera: a joyful young adult in a neutral dark sweater and open coat on a frosty park path in golden afternoon light, wearing the exact knitted scarf from the reference image." },
+      { id: "kvall", label: "I kvällsljus", scene: "Waist-up editorial portrait, facing the camera: a charismatic Scandinavian person in their 50s in a classic coat in warm evening light with string lights softly blurred behind, wearing the exact knitted scarf from the reference image." },
+    ];
+    const sport: { id: string; label: string; scene: string }[] = [
       {
         id: "stand",
         label: "På läktaren",
@@ -153,6 +161,7 @@ export async function POST(req: Request) {
       },
     ];
 
+    const scenes = d.setting === "vardag" ? everyday : sport;
     const settled = await Promise.allSettled(
       scenes.map(async (s) => {
         const prompt = [
