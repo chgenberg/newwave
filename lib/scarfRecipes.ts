@@ -1,5 +1,5 @@
 import { GREY_YARNS, SCARF, deltaE, hexToRgb } from "./scarf";
-import { mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type Stripe, type Yarn } from "./scarfDesign";
+import { mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type SignStroke, type Stripe, type Yarn } from "./scarfDesign";
 import type { Club } from "./types";
 
 /**
@@ -23,7 +23,8 @@ export type RecipeId =
   | "personlig"
   | "arena"
   | "vagor"
-  | "profil";
+  | "profil"
+  | "autograf";
 
 export type Level = "enkel" | "mellan" | "komplex";
 
@@ -44,7 +45,13 @@ export const RECIPES: Record<RecipeId, { label: string; hint: string; level: Lev
   motiv: { label: "Motiv", hint: "Ett stort motiv i mitten – en ikon eller ett motiv som bildmodellen ritar.", level: "komplex" },
   trupp: { label: "Truppen", hint: "Spelarnas namn och nummer längs hela halsduken.", level: "komplex" },
   portratt: { label: "Porträtt", hint: "Ett foto stickat i fyra gråtoner, med namn och nummer.", level: "komplex" },
+  autograf: { label: "Autografer", hint: "Spelarnas namnteckningar stickade längs halsduken, med en kort rubrik.", level: "komplex" },
 };
+
+/** Recept som bär en persons namn, nummer, ansikte eller namnteckning och därför kräver godkännande. */
+export const PERSONAL: RecipeId[] = ["trupp", "portratt", "personlig", "autograf"];
+/** Påhittade exempel som står på halsduken tills beställaren fyller i sina egna. */
+export const SAMPLE_SIGNERS = ["Elsa Lindkvist", "Noah Berg", "Maja Holm"];
 export const RECIPE_IDS = Object.keys(RECIPES) as RecipeId[];
 
 export type ScarfIdea = {
@@ -65,6 +72,7 @@ export type ScarfIdea = {
   /** Beskrivning på engelska av ett motiv som bildmodellen ritar. Bara för receptet "motiv". */
   art: string | null;
   number: string;
+  /** Truppens spelare ("7 NILSSON"), eller för receptet autograf namnen som stickas som namnteckningar. */
   roster: string[];
 };
 
@@ -117,7 +125,8 @@ function yarns(club: ScarfClub, idea: ScarfIdea, opts: { crest: boolean; portrai
 const solid = (yarn: Yarn): Fill => ({ kind: "solid", yarn });
 const stripes = (...list: [Yarn, number][]): Stripe[] => list.map(([yarn, mm]) => ({ yarn, mm }));
 
-export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: boolean; portrait: boolean; art: boolean }): Built {
+/** `sign` är namnteckningar som beställaren själv har ritat; de ersätter exempelnamnen i receptet autograf. */
+export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: boolean; portrait: boolean; art: boolean }, sign?: SignStroke[] | null): Built {
   const recipe = idea.recipe;
   const wantsPortrait = recipe === "portratt" && has.portrait;
   const wantsArt = recipe === "motiv" && has.art && Boolean(idea.art);
@@ -321,6 +330,15 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
       const face: Section[] = wantsPortrait ? [{ mm: 214, fill: solid(G), content: { kind: "portrait", frame: I, yarns: y.grey }, pad: [10, 7] }] : [];
       front = { sections: [endBars(G, I), ...face, { fill: solid(G), content: text(fm, fs, I) }, ...crest(G, 160), { ...endBars(G, I), flip: true }], edge: thin(A === G ? I : A) };
       consent = "Porträtt och namn kräver personens skriftliga godkännande och klubbens.";
+      break;
+    }
+
+    case "autograf": {
+      // Rubriken till vänster, namnteckningarna över resten av halsduken och skölden sist – som porträttet, fast med bläck.
+      const names = idea.roster.length ? idea.roster : SAMPLE_SIGNERS;
+      const signs: Section = { fill: solid(G), content: { kind: "sign", yarn: I, names, strokes: sign?.length ? sign : undefined }, pad: [22, 20] };
+      front = { sections: [endBars(G, I), { mm: 330, fill: solid(G), content: text(fm, fs, I), pad: [14, 30] }, line(pop(G, I), 5), signs, ...crest(G, 160), { ...endBars(G, I), flip: true }], edge: thin(A === G ? I : A) };
+      consent = "Namnteckningar kräver klubbens och personernas skriftliga godkännande.";
       break;
     }
   }

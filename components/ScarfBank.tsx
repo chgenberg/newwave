@@ -32,9 +32,6 @@ export function ScarfBank({ bank }: { bank: { date: string; scarves: BankScarf[]
           </span>
         </Link>
         <nav className="flex items-center gap-2">
-          <Link href="/halsduk" className="hidden h-10 items-center rounded-full px-3 text-[13px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60 sm:inline-flex">
-            Rita själv i studion
-          </Link>
           <Link href="/halsduk/agent" className="inline-flex h-10 items-center rounded-full bg-[#1D1D1F] px-4 text-[13px] font-medium text-white hover:bg-black">
             Kör agenten
           </Link>

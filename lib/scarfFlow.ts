@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
-import { FONT_KEYS, ICONS, type FontKey, type IconId } from "./scarfDesign";
+import { FONT_KEYS, ICONS, type FontKey, type IconId, type SignStroke } from "./scarfDesign";
 import { facePreview, knitDesign, sheetPreview, type Knitted } from "./scarfEngine";
 import { inspect, type ProductionReport } from "./scarfProduction";
 import { RECIPE_IDS, buildDesign, type Built, type RecipeId, type ScarfClub, type ScarfIdea } from "./scarfRecipes";
@@ -31,6 +31,36 @@ export const IdeaSchema = z.object({
 });
 
 export const ART_FILE = /^[0-9a-f-]{36}\.png$/;
+export const PHOTO_FILE = /^[0-9a-f-]{36}\.jpg$/;
+export const SIGN_FILE = /^[0-9a-f-]{36}\.json$/;
+
+/** Det som hör till en halsduk utöver idén: det ritade motivet, och beställarens eget foto och egna namnteckningar. */
+export const FilesShape = {
+  artFile: z.string().regex(ART_FILE).nullable().optional(),
+  photoFile: z.string().regex(PHOTO_FILE).nullable().optional(),
+  signFile: z.string().regex(SIGN_FILE).nullable().optional(),
+};
+export type ScarfFiles = { artFile?: string | null; photoFile?: string | null; signFile?: string | null };
+
+const point = z.number().min(0).max(1);
+/** Namnteckningar ritade för hand: streck av punkter i 0–1 på ritrutan. */
+export const SignSchema = z.object({ strokes: z.array(z.array(z.tuple([point, point])).min(1).max(400)).min(1).max(80) });
+
+async function ownPhoto(file?: string | null) {
+  return file && PHOTO_FILE.test(file) ? ((await loadFile(file))?.data ?? null) : null;
+}
+
+async function ownSign(file?: string | null): Promise<SignStroke[] | null> {
+  if (!file || !SIGN_FILE.test(file)) return null;
+  const raw = await loadFile(file);
+  if (!raw) return null;
+  try {
+    const parsed = SignSchema.safeParse(JSON.parse(raw.data.toString("utf8")));
+    return parsed.success ? parsed.data.strokes : null;
+  } catch {
+    return null;
+  }
+}
 
 const read = (file: string) => readFile(file).catch(() => null);
 
@@ -44,11 +74,18 @@ const samplePortrait = () => read(path.join(process.cwd(), "public", "demo", "po
 
 export type KnitResult = { built: Built; knit: Knitted; report: ProductionReport; front: string; back: string };
 
-/** `crest` är sköldens bild; anges den inte läses klubbens egen från profilen. */
-export async function knitIdea(club: ScarfClub | Club, idea: ScarfIdea, opts: { artFile?: string | null; art?: Buffer | null; crest?: Buffer | null } = {}): Promise<KnitResult> {
-  const [crest, portrait] = await Promise.all([opts.crest !== undefined ? opts.crest : "brand" in club ? clubCrest(club) : null, idea.recipe === "portratt" ? samplePortrait() : null]);
+/**
+ * `crest` är sköldens bild; anges den inte läses klubbens egen från profilen.
+ * Porträttet stickas från beställarens foto om det finns, annars från exempelfotot; autograferna från det beställaren ritat, annars från namnen.
+ */
+export async function knitIdea(club: ScarfClub | Club, idea: ScarfIdea, opts: ScarfFiles & { art?: Buffer | null; crest?: Buffer | null } = {}): Promise<KnitResult> {
+  const [crest, portrait, sign] = await Promise.all([
+    opts.crest !== undefined ? opts.crest : "brand" in club ? clubCrest(club) : null,
+    idea.recipe === "portratt" ? ownPhoto(opts.photoFile).then((own) => own ?? samplePortrait()) : null,
+    idea.recipe === "autograf" ? ownSign(opts.signFile) : null,
+  ]);
   const art = opts.art ?? (opts.artFile && ART_FILE.test(opts.artFile) ? ((await loadFile(opts.artFile))?.data ?? null) : null);
-  const built = buildDesign(club, idea, { crest: Boolean(crest), portrait: Boolean(portrait), art: Boolean(art) });
+  const built = buildDesign(club, idea, { crest: Boolean(crest), portrait: Boolean(portrait), art: Boolean(art) }, sign);
   let knit = await knitDesign(built.design, { crest, portrait, art });
   let report = inspect(knit);
   // För många ensamma maskor – oftast ett märke med tunna linjer. Då städas mönstret och kontrolleras igen.

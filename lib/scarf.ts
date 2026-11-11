@@ -19,6 +19,9 @@ export const CELLS = SCARF.needles * SCARF.rows;
 /** About ten stitches across the letter height; smaller text knits blurry. */
 export const MIN_TEXT_MM = 15;
 
+/** Längsta text på en halsduk, i tecken: huvudrad, underrad, en spelare i truppen och en namnteckning – och hur många av de två sista som ryms. */
+export const SCARF_TEXT = { main: 16, sub: 24, player: 16, players: 14, sign: 22, signers: 4 } as const;
+
 export type Rgb = [number, number, number];
 
 export function hexToRgb(hex: string): Rgb {

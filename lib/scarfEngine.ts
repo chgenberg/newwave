@@ -3,7 +3,7 @@ import path from "node:path";
 import { type Font, parse } from "opentype.js";
 import sharp, { type OverlayOptions } from "sharp";
 import { MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, deltaE, hexToRgb, type Rgb } from "./scarf";
-import { ASPECT, BITMAPS, FONT_FILES, ICON_BOX, ICONS, L_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
+import { ASPECT, BITMAPS, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
 
 /**
  * Stickmotorn: gör om en design till maskor för OPEK 365.
@@ -38,16 +38,17 @@ export type Knitted = {
 // --- Typsnitt ----------------------------------------------------------------
 
 const FONT_DIR = path.join(process.cwd(), "assets", "fonts", "wordmark");
-const fonts = new Map<FontKey, Promise<Font>>();
-function loadFont(key: FontKey) {
-  let f = fonts.get(key);
+const fonts = new Map<string, Promise<Font>>();
+function loadFontFile(file: string) {
+  let f = fonts.get(file);
   if (!f) {
-    f = readFile(path.join(FONT_DIR, FONT_FILES[key])).then((buf) => parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer));
-    f.catch(() => fonts.delete(key));
-    fonts.set(key, f);
+    f = readFile(path.join(FONT_DIR, file)).then((buf) => parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer));
+    f.catch(() => fonts.delete(file));
+    fonts.set(file, f);
   }
   return f;
 }
+const loadFont = (key: FontKey) => loadFontFile(FONT_FILES[key]);
 
 // --- Fyllningar --------------------------------------------------------------
 
@@ -443,11 +444,48 @@ async function addContent(c: Content, box: Box, palette: string[], assets: KnitA
       return;
     }
     case "crest":
-      if (assets.crest) await placeImage(assets.crest, box, palette, c.yarns, out, c.plate === undefined ? undefined : { yarn: c.plate, ground });
+      if (assets.crest) await placeImage(c.turn ? await sharp(assets.crest).rotate(c.turn * 90).png().toBuffer() : assets.crest, box, palette, c.yarns, out, c.plate === undefined ? undefined : { yarn: c.plate, ground });
       return;
     case "art":
       if (assets.art) await placeImage(assets.art, box, palette, c.yarns, out);
       return;
+    case "sign": {
+      const ink = palette[c.yarn];
+      const strokes = (c.strokes ?? []).filter((s) => s.length);
+      if (strokes.length) {
+        // Egna streck: det ritade passas in i rutan med rätt proportioner. Linjen är drygt tre maskor bred, så att den håller i stickningen.
+        const line = 5;
+        const pts = strokes.flat().map(([x, y]) => [x * SIGN_PAD, y] as const);
+        const [x0, x1] = [Math.min(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[0]))];
+        const [y0, y1] = [Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[1]))];
+        const k = Math.min((box.w - line) / Math.max(x1 - x0, 0.02), (box.h - line) / Math.max(y1 - y0, 0.02));
+        const [ox, oy] = [box.x + (box.w - (x1 - x0) * k) / 2, box.y + (box.h - (y1 - y0) * k) / 2];
+        const at = ([x, y]: [number, number]) => `${esc(ox + (x * SIGN_PAD - x0) * k)} ${esc(oy + (y - y0) * k)}`;
+        // En ensam punkt blir en prick: ett streck utan längd ritas inte.
+        const d = strokes.map((s) => `M${s.map(at).join("L")}${s.length === 1 ? `l0.1 0` : ""}`).join("");
+        out.svg.push(`<path d="${d}" fill="none" stroke="${ink}" stroke-width="${line}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      } else {
+        const names = c.names.map((n) => n.trim()).filter(Boolean).slice(0, 4);
+        if (!names.length) return;
+        const font = await loadFontFile(SIGN_FONT_FILE);
+        const cell = box.w / names.length;
+        const shapes = names.map((name) => {
+          const p = font.getPath(name, 0, 0, 1000);
+          const bb = p.getBoundingBox();
+          return { d: p.toPathData(1), bb, bw: bb.x2 - bb.x1 || 1, bh: bb.y2 - bb.y1 || 1 };
+        });
+        // Alla namnteckningar får samma storlek – den som det längsta namnet ryms i.
+        const k = Math.min(...shapes.map((sh) => Math.min((cell * 0.88) / sh.bw, (box.h * 0.84) / sh.bh)));
+        shapes.forEach(({ d, bb, bw, bh }, i) => {
+          const [cx, cy] = [box.x + cell * (i + 0.5), box.y + box.h / 2];
+          // Namnteckningar lutar lite uppåt. Konturen gör de tunna dragen minst två maskor breda.
+          const t = `transform="translate(${esc(cx)} ${esc(cy)}) rotate(-4) scale(${k.toFixed(6)}) translate(${esc(-(bb.x1 + bw / 2))} ${esc(-(bb.y1 + bh / 2))})"`;
+          out.svg.push(`<path d="${d}" fill="${ink}" stroke="${ink}" stroke-width="${esc(2.4 / k)}" stroke-linejoin="round" ${t}/>`);
+        });
+      }
+      out.margins.push(box.y, W_MM - box.y - box.h);
+      return;
+    }
     case "roster": {
       const font = await loadFont(c.font);
       const players = c.players.map((p) => p.trim().toLocaleUpperCase("sv-SE")).filter(Boolean).slice(0, 18);

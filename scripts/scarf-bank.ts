@@ -17,18 +17,17 @@ import path from "node:path";
 import JSZip from "jszip";
 import sharp from "sharp";
 import { seasonFor, upcomingOccasions } from "@/lib/calendar";
-import { ASA_IF } from "@/lib/club";
 import { CLUBS_DIR } from "@/lib/newwave/clubRegistry";
 import { errorMessage } from "@/lib/openai";
 import { htmlToPdf } from "@/lib/pdf";
-import { deltaE, hexToRgb, rgbToHex, type Rgb } from "@/lib/scarf";
 import { createScarfIdeas, drawScarfMotif, reviewScarf, reviseScarfIdea, type ScarfReview } from "@/lib/scarfAgent";
 import type { BankScarf } from "@/lib/scarfBank";
+import { SPORT, clubOf, crestColors, paletteOf, withoutYears } from "@/lib/scarfClub";
 import { facePreview } from "@/lib/scarfEngine";
 import { knitIdea, proof } from "@/lib/scarfFlow";
 import { buildPackage, slug } from "@/lib/scarfProduction";
 import { RECIPES, type RecipeId, type ScarfIdea } from "@/lib/scarfRecipes";
-import type { Club, ColorToken, Signal } from "@/lib/types";
+import type { Signal } from "@/lib/types";
 
 const TMP = "/tmp/nw-scarf-bank";
 const ROOT = process.cwd();
@@ -73,27 +72,6 @@ const PICKS: Pick[] = [
   { id: "strandangen", from: "kund", name: "Brf Strandängen", city: "", category: "Bostadsrättsförening", group: "annat", colors: ["#2E7D5B"], recipe: "tapet", symbol: "Grannarna och gården mellan husen.", when: { title: "Glögg på gården första advent", detail: "Grannarna samlas vid grillplatsen – föreningen bjuder på glögg och en halsduk till varje hushåll." } },
 ];
 
-const SPORT: Record<string, string> = {
-  Fotboll: "Gräs, läktare och söndagsmatcher – föreningen är byns mötesplats.",
-  Innebandy: "Fart, plast och hallgolv – vintersäsongen är i full gång.",
-  Handboll: "Hallen, klistret och klacken – säsongen pågår hela vintern.",
-  Ishockey: "Is, puck och kalla hallar – halsduken hör till.",
-  Bandy: "Stor is, kyla och varm dryck på läktaren – bandyn är halsdukens sport.",
-  Orientering: "Skog, karta och kompass.",
-  Ridsport: "Stall, tävlingsdagar och kalla ridhus.",
-  Simning: "Simhall, tävlingar och föräldrar på läktaren.",
-  Basket: "Hallen, tempot och korgen.",
-  Golf: "Vintern är väntan på säsongen – och en halsduk i klubbshoppen.",
-  Skidor: "Snö, spår och minusgrader – här bärs halsduken på riktigt.",
-  Segling: "Hamnen, bryggan och höstens upptagning.",
-  Kafé: "Ett stamställe – halsduken säljs över disk och bärs av personalen.",
-  Byggföretag: "Arbetslag som står ute hela vintern.",
-  Förskola: "Barn, föräldrar och pedagoger – en halsduk till hela huset.",
-  Restaurang: "Personalen på uteserveringen och gästerna som vill ta med sig ett minne.",
-  Teknikbolag: "Medarbetare och kunder – en present som faktiskt används.",
-  Bostadsrättsförening: "Grannar som känner varandra – en halsduk till gårdsfesten och städdagen.",
-};
-
 async function cached<T>(file: string, make: () => Promise<T>): Promise<T> {
   const p = path.join(TMP, file);
   if (existsSync(p)) return JSON.parse(await readFile(p, "utf8")) as T;
@@ -110,99 +88,6 @@ async function cachedFile(file: string, make: () => Promise<Buffer>): Promise<Bu
   await writeFile(p, v);
   return v;
 }
-
-// --- Klubbens färger ur märket -------------------------------------------------
-
-const lum = ([r, g, b]: Rgb) => r * 0.299 + g * 0.587 + b * 0.114;
-const sat = ([r, g, b]: Rgb) => (Math.max(r, g, b) === 0 ? 0 : (Math.max(r, g, b) - Math.min(r, g, b)) / Math.max(r, g, b));
-
-/** Märkets färger efter yta: närliggande nyanser slås ihop, kantutjämning och småfläckar faller bort. */
-async function crestColors(crest: Buffer) {
-  const { data } = await sharp(crest).resize(140, 140, { fit: "inside" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const buckets = new Map<number, number>();
-  let total = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] < 200) continue;
-    const key = ((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3);
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    total++;
-  }
-  const clusters: { rgb: [number, number, number]; w: number; hex: string }[] = [];
-  for (const [key, n] of [...buckets].sort((a, b) => b[1] - a[1])) {
-    const rgb: Rgb = [((key >> 10) & 31) * 8 + 4, ((key >> 5) & 31) * 8 + 4, (key & 31) * 8 + 4];
-    const hex = rgbToHex(rgb);
-    const c = clusters.find((x) => deltaE(x.hex, hex) < 17);
-    if (c) {
-      c.rgb = [(c.rgb[0] * c.w + rgb[0] * n) / (c.w + n), (c.rgb[1] * c.w + rgb[1] * n) / (c.w + n), (c.rgb[2] * c.w + rgb[2] * n) / (c.w + n)];
-      c.w += n;
-    } else clusters.push({ rgb: [...rgb], w: n, hex });
-  }
-  return clusters
-    .map((c) => {
-      const rgb = c.rgb.map(Math.round) as Rgb;
-      // Mörk marin är inte svart: bara det som är mörkt i alla kanaler räknas som svart.
-      const hex = lum(rgb) > 238 && sat(rgb) < 0.08 ? "#FFFFFF" : Math.max(...rgb) < 58 ? "#0A0A0A" : rgbToHex(rgb);
-      return { hex, share: c.w / (total || 1) };
-    })
-    .filter((c) => c.share >= 0.04)
-    .sort((a, b) => b.share - a.share)
-    .slice(0, 6);
-}
-
-function colorName(hex: string) {
-  const rgb = hexToRgb(hex);
-  const [r, g, b] = rgb.map((v) => v / 255);
-  const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
-  const l = lum(rgb);
-  if (l > 238 && sat(rgb) < 0.1) return "Vit";
-  if (Math.max(...rgb) < 58) return "Svart";
-  if (sat(rgb) < 0.14) return l > 150 ? "Ljusgrå" : "Grå";
-  const d = max - min;
-  const h = ((max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360;
-  if (h < 16 || h >= 335) return l < 70 ? "Vinröd" : "Röd";
-  if (h < 40) return l < 120 || (sat(rgb) < 0.6 && l < 170) ? "Brun" : "Orange";
-  if (h < 66) return sat(rgb) < 0.72 ? "Guld" : "Gul";
-  if (h < 170) return l < 70 ? "Mörkgrön" : "Grön";
-  if (h < 200) return "Turkos";
-  if (h < 245) return l < 62 ? "Mörkblå" : "Blå";
-  if (h < 300) return "Lila";
-  return "Rosa";
-}
-
-const isGrey = (hex: string) => {
-  const rgb = hexToRgb(hex);
-  return sat(rgb) < 0.16 && lum(rgb) >= 30 && lum(rgb) <= 238;
-};
-
-/**
- * Profilens färger i ordning: de bärande först – störst yta i märket, där vitt väger hälften eftersom det ofta är
- * bakgrund och grått räknas som skuggning – sedan vitt och svart. Angivna kulörer (Bilaga 1) går alltid först.
- */
-function paletteOf(crest: { hex: string; share: number }[], given?: string[]): ColorToken[] {
-  const out: string[] = [];
-  const add = (hex: string, min = 12) => {
-    if (out.length < 5 && !out.some((o) => deltaE(o, hex) < min)) out.push(hex.toUpperCase());
-  };
-  given?.forEach((h) => add(h));
-  const carriers = crest
-    .filter((c) => !isGrey(c.hex))
-    .map((c) => ({ hex: c.hex, w: c.hex === "#FFFFFF" ? c.share * 0.5 : c.share }))
-    .sort((a, b) => b.w - a.w);
-  // Nyanser av en angiven kulör är kantutjämning i märket, inte egna färger.
-  carriers.slice(0, 3).forEach((c) => add(c.hex, given?.length ? 34 : 12));
-  if (out.length < 2) crest.filter((c) => isGrey(c.hex)).slice(0, 1).forEach((c) => add(c.hex));
-  add("#FFFFFF");
-  add("#0A0A0A");
-  const seen = new Map<string, number>();
-  return out.map((hex) => {
-    const base = colorName(hex);
-    const n = (seen.get(base) ?? 0) + 1;
-    seen.set(base, n);
-    return { name: n > 1 ? `${base} ${n}` : base, hex };
-  });
-}
-
-const short = (name: string) => (name.length <= 6 ? name : name.split(/\s+/).map((w) => (w === w.toLocaleUpperCase("sv-SE") ? w : w[0])).join("").toLocaleUpperCase("sv-SE").slice(0, 5));
 
 /** Kundloggan är en symbol med namnet under. Symbolen är märket; namnet stickas som text. */
 async function symbolOf(logo: Buffer) {
@@ -227,71 +112,6 @@ async function loadCrest(p: Pick): Promise<Buffer> {
   return sharp(await readFile(path.join(dir, "original.svg")), { density: 300 }).resize({ height: 900, fit: "inside" }).png().toBuffer();
 }
 
-function clubOf(p: Pick, palette: ColorToken[], crest: { hex: string }[]): Club {
-  const what = p.category.toLocaleLowerCase("sv-SE");
-  const colors = `${palette.map((c) => `${c.name.toLocaleLowerCase("sv-SE")} ${c.hex}`).join(", ")}`;
-  const base = {
-    ...ASA_IF,
-    id: p.id,
-    unlisted: true,
-    copy: undefined,
-    name: p.name,
-    shortName: short(p.name),
-    nicknames: [p.name],
-    city: p.city,
-    arena: "",
-    founded: p.founded ?? 0,
-    tagline: "",
-    newsQuery: `"${p.name}"`,
-    palette,
-    crestColors: crest.map((c) => c.hex),
-    sources: { website: "", weather: { place: p.city, lat: 0, lon: 0 } },
-  };
-  if (p.group === "annat") {
-    return {
-      ...base,
-      kind: "brand",
-      tone: `Varm, personlig och lokal – ${what}${p.city ? ` i ${p.city}` : ""}. Glimten i ögat, aldrig reklamig.`,
-      rules: [
-        `Endast profilens färger: ${colors}.`,
-        "Endast den officiella loggan. Den får aldrig ändras, beskäras eller färgläggas om. AI ritar aldrig logga.",
-        "Inga verkliga personers namn eller ansikten utan godkännande.",
-        "Inga säljfraser, priser eller erbjudanden på halsduken.",
-        "Aldrig konkurrenters namn, loggor eller färger.",
-      ],
-      agent: {
-        ...ASA_IF.agent,
-        name: `${p.name}-agenten`,
-        mission: `Ta fram stickade halsdukar som medarbetare, kunder och grannar till ${p.name} vill bära.`,
-        guidelines: [`Följ ${p.name}s färger utan undantag.`, "Använd det som är verksamhetens eget: loggan, namnet och det man gör.", "Allt ska kännas som en gåva man blir glad över – inte som reklam.", "Aldrig namn eller ansikten utan godkännande."],
-      },
-    };
-  }
-  return {
-    ...base,
-    tone: `Varm, stolt och lokal förening i ${p.city} – ${what} för alla åldrar. Glimten i ögat, aldrig kaxig mot andra klubbar.`,
-    rules: [
-      `Endast klubbens färger: ${colors}.`,
-      "Endast det officiella klubbmärket. Det får aldrig ändras, beskäras eller färgläggas om. AI ritar aldrig märke eller logga.",
-      "Inga spelares eller barns namn, ansikten eller nummer utan godkännande.",
-      `Motiv ska höra hemma i ${what} eller i ${p.city}.`,
-      ...(p.mascot ? [`Klubbens maskot, ${p.mascot}, får ritas som eget motiv på halsduken. Det är beställt av klubben och räknas inte som ett nytt klubbmärke.`] : []),
-      "Inga svordomar, hat eller personangrepp – och aldrig elakt mot andra klubbar.",
-    ],
-    agent: {
-      ...ASA_IF.agent,
-      name: `${p.name}-agenten`,
-      mission: `Ta fram stickade halsdukar som medlemmar, föräldrar och supportrar i ${p.name} vill bära.`,
-      guidelines: [
-        `Följ ${p.name}s färger utan undantag.`,
-        `Använd det som är klubbens eget: märket, namnet, orten ${p.city} och sporten ${what}.`,
-        "Allt ska kännas som något medlemmarna vill bära – inte som reklam.",
-        "Aldrig namn, ansikten eller nummer utan godkännande. Aldrig hat, svordomar eller personangrepp.",
-      ],
-    },
-  };
-}
-
 function signalsFor(p: Pick, now: Date): Signal[] {
   const own: Signal[] = [
     { id: "sport", kind: "club", title: `${p.group === "idrott" ? "Sporten" : "Verksamheten"}: ${p.category.toLocaleLowerCase("sv-SE")}`, detail: SPORT[p.category] ?? "" },
@@ -307,20 +127,6 @@ function signalsFor(p: Pick, now: Date): Signal[] {
   if (p.group === "annat") return [...(p.when ? [{ id: "nar", kind: "occasion" as const, ...p.when }] : []), season, ...own];
   // Kalenderns texter är skrivna för fotboll; här räcker högtiden och datumet.
   return [...upcomingOccasions(now, 75).map((o) => ({ ...o, detail: "Högtid i kalendern." })), season, ...own];
-}
-
-/** Utan känt grundningsår får inga gamla årtal stå på halsduken, även om modellen hittar på ett. */
-function withoutYears(idea: ScarfIdea, founded: number | undefined): ScarfIdea {
-  if (founded) return idea;
-  const clean = (s: string) =>
-    s
-      .replace(/\b(SEDAN|EST\.?|ANNO|GRUNDAD)\s*(1[89]\d{2}|20[01]\d)\b/g, "")
-      .replace(/\b(1[89]\d{2}|20[01]\d)\b/g, "")
-      .replace(/\s*[·•–-]\s*$/g, "")
-      .replace(/^\s*[·•–-]\s*/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  return { ...idea, front: { main: clean(idea.front.main), sub: clean(idea.front.sub) }, back: { main: clean(idea.back.main), sub: clean(idea.back.sub) } };
 }
 
 async function make(p: Pick, now: Date): Promise<BankScarf> {

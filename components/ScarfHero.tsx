@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { downloadZip } from "@/components/ScarfParts";
 import { LogoMark } from "@/components/newwave/Logo";
 import { SCARF } from "@/lib/scarf";
 import type { HeroLogo } from "./ScarfHero3D";
@@ -65,13 +66,38 @@ function prepareLogo(src: string): Promise<HeroLogo & { light: number }> {
   });
 }
 
-export function ScarfHero({ clubId }: { clubId: string }) {
-  const [logo, setLogo] = useState<HeroLogo | null>(null);
-  const [own, setOwn] = useState(false);
-  const [color, setColor] = useState(YARNS[0].hex);
+const dark = (hex: string) => parseInt(hex.slice(1, 3), 16) * 0.299 + parseInt(hex.slice(3, 5), 16) * 0.587 + parseInt(hex.slice(5, 7), 16) * 0.114 < 110;
+/** En ljus logga försvinner på ljust garn och en mörk på mörkt; då får halsduken svart eller vitt garn i stället. */
+const fit = (hex: string, light: number) => (light > 185 && !dark(hex) ? YARNS[1].hex : light < 70 && dark(hex) ? YARNS[0].hex : hex);
+
+type Props = {
+  /** Filväljaren delas med klubbväljaren längre ner, så att en logga laddas upp på ett enda ställe. */
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  /** En klubb som besökaren har valt: märket läggs på halsduken, i klubbens färg. */
+  mark: { url: string; color?: string } | null;
+  /** Namnet på stickordern när halsduken laddas ner. */
+  name?: string;
+  /** En egen logga har laddats upp, frilagd och klar att sparas. */
+  onLogo: (dataUrl: string) => void;
+  /** Besökaren vill att agenten gör fler halsdukar med den egna loggan. */
+  onUse: () => void;
+};
+
+export function ScarfHero({ fileRef, mark, name, onLogo, onUse }: Props) {
+  const [logo, setLogo] = useState<(HeroLogo & { light: number }) | null>(null);
+  const [source, setSource] = useState<"standard" | "egen" | "klubb">("standard");
+  /** Färgen besökaren själv har valt. Utan val får halsduken klubbens färg, eller vitt. */
+  const [picked, setPicked] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
+
+  // En ny klubb börjar om från klubbens egen färg.
+  const [seen, setSeen] = useState(mark?.url);
+  if (seen !== mark?.url) {
+    setSeen(mark?.url);
+    setPicked(null);
+  }
 
   useEffect(() => {
     let live = true;
@@ -83,6 +109,28 @@ export function ScarfHero({ clubId }: { clubId: string }) {
     };
   }, []);
 
+  const markUrl = mark?.url;
+  useEffect(() => {
+    if (!markUrl) return;
+    let live = true;
+    prepareLogo(markUrl)
+      .then((l) => {
+        if (!live) return;
+        setLogo(l);
+        setSource("klubb");
+      })
+      .catch(() => null);
+    return () => {
+      live = false;
+    };
+  }, [markUrl]);
+
+  const club = source === "klubb" && mark?.color ? mark.color.toUpperCase() : null;
+  const color = picked ?? (club && logo ? fit(club, logo.light) : YARNS[0].hex);
+  const yarns = club && !YARNS.some((y) => y.hex === club) ? [{ name: "Klubbens färg", hex: club }, ...YARNS] : YARNS;
+  const own = source === "egen";
+  const made = source !== "standard";
+
   const upload = async (file: File | undefined) => {
     if (!file) return;
     setError(null);
@@ -92,15 +140,27 @@ export function ScarfHero({ clubId }: { clubId: string }) {
     try {
       const l = await prepareLogo(url);
       setLogo(l);
-      setOwn(true);
-      // En ljus logga försvinner på vitt garn och en mörk på svart; då byter halsduken färg.
-      const dark = (hex: string) => parseInt(hex.slice(1, 3), 16) * 0.299 + parseInt(hex.slice(3, 5), 16) * 0.587 + parseInt(hex.slice(5, 7), 16) * 0.114 < 110;
-      if (l.light > 185 && !dark(color)) setColor(YARNS[1].hex);
-      else if (l.light < 70 && dark(color)) setColor(YARNS[0].hex);
+      setSource("egen");
+      if (fit(color, l.light) !== color) setPicked(fit(color, l.light));
+      onLogo(l.canvas.toDataURL("image/png"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Kunde inte läsa bilden.");
     } finally {
       URL.revokeObjectURL(url);
+    }
+  };
+
+  /** Stickfilerna för just den här halsduken: garnfärgen och loggan på båda ändarna. */
+  const download = async () => {
+    if (!logo || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await downloadZip({ hero: { color, logo: logo.canvas.toDataURL("image/png"), name } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kunde inte skapa stickfilerna.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -118,57 +178,86 @@ export function ScarfHero({ clubId }: { clubId: string }) {
           </span>
         </Link>
         <nav className="flex items-center gap-2">
-          <Link href={`/halsduk?club=${clubId}`} className="hidden h-10 items-center rounded-full px-3 text-[13px] font-medium text-white/80 underline decoration-white/25 underline-offset-4 hover:text-white hover:decoration-white/60 sm:inline-flex">
-            Rita själv i studion
-          </Link>
-          <Link href="/halsduk/inspiration" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-[13px] font-medium text-[#0B0B0D] hover:bg-white/90">
+          <Link href="/halsduk/inspiration" className="inline-flex h-10 items-center rounded-full bg-white/10 px-4 text-[13px] font-medium text-white hover:bg-white/20">
             Inspirationsbank
           </Link>
         </nav>
       </header>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-2 px-4 pb-10 pt-6 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:gap-6 lg:pb-6 lg:pt-4">
+      <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-2 px-4 pb-20 pt-6 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:gap-6 lg:pb-16 lg:pt-0">
         <div className="min-w-0 max-lg:text-center">
           <p className="text-[12px] font-medium uppercase tracking-[0.1em] text-white/50">
             Stickas av {SCARF.factory} på {SCARF.machine}
           </p>
-          <h1 className="mt-3 text-[clamp(40px,6.2vw,76px)] font-semibold leading-[0.98] tracking-[-0.035em]">
+          <h1 className="mt-3 text-[clamp(40px,min(6.2vw,9.5vh),76px)] font-semibold leading-[0.98] tracking-[-0.035em]">
             Från signal
             <br />
             till stickfil.
           </h1>
-          <p className="mt-5 max-w-md text-[17px] leading-relaxed text-white/65 max-lg:mx-auto">Agenten föreslår halsdukar, stickar dem maska för maska och lämnar färdiga filer till stickeriet.</p>
+          <p className="mt-4 max-w-md text-[17px] leading-relaxed text-white/65 max-lg:mx-auto">Agenten föreslår halsdukar, stickar dem maska för maska och lämnar färdiga filer till stickeriet.</p>
 
-          <div className="mt-7 flex flex-wrap items-center gap-3 max-lg:justify-center">
-            <input ref={input} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" className="hidden" onChange={(e) => {
-              void upload(e.target.files?.[0]);
-              e.target.value = "";
-            }} />
-            <button type="button" onClick={() => input.current?.click()} className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-medium text-[#0B0B0D] transition hover:bg-white/90">
+          <div className="mt-6 flex flex-wrap items-center gap-3 max-lg:justify-center">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                void upload(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className={`inline-flex h-12 items-center gap-2 rounded-full px-6 text-[15px] font-medium transition ${made ? "border border-white/30 text-white hover:border-white/70" : "bg-white text-[#0B0B0D] hover:bg-white/90"}`}
+            >
               <svg viewBox="0 0 24 24" aria-hidden className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />
               </svg>
               {own ? "Byt logga" : "Ladda upp din logga"}
             </button>
             <div className="flex items-center gap-1.5" role="group" aria-label="Garnfärg">
-              {YARNS.map((y) => (
+              {yarns.map((y) => (
                 <button
                   key={y.hex}
                   type="button"
                   aria-label={y.name}
                   aria-pressed={color === y.hex}
                   title={y.name}
-                  onClick={() => setColor(y.hex)}
+                  onClick={() => setPicked(y.hex)}
                   className={`h-8 w-8 rounded-full border transition ${color === y.hex ? "border-white shadow-[0_0_0_2px_#0B0B0D,0_0_0_3.5px_#fff]" : "border-white/25 hover:border-white/60"}`}
                   style={{ background: y.hex }}
                 />
               ))}
             </div>
           </div>
-          {error ? <p className="mt-3 text-[13px] text-[#FF9A8F]">{error}</p> : <p className="mt-3 text-[12.5px] text-white/40">{own ? "Loggan ligger på båda ändarna. Dra i halsduken för att vrida den." : "Loggan hamnar på båda ändarna – prova med din egen."}</p>}
+
+          {/* När halsduken bär en logga går den att hämta som stickfil, precis som den ser ut. */}
+          {made && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 max-lg:justify-center">
+              <button type="button" onClick={download} disabled={busy || !logo} className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-medium text-[#0B0B0D] transition hover:bg-white/90 disabled:opacity-60">
+                <svg viewBox="0 0 24 24" aria-hidden className="h-[18px] w-[18px] fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 4v12M7 11l5 5 5-5M5 20h14" />
+                </svg>
+                {busy ? "Stickar och packar …" : "Stickfiler (.zip)"}
+              </button>
+              {own && (
+                <button type="button" onClick={onUse} className="inline-flex h-12 items-center rounded-full px-2 text-[14px] font-medium text-white/80 underline decoration-white/30 underline-offset-4 hover:text-white hover:decoration-white/70">
+                  Fler förslag från agenten
+                </button>
+              )}
+            </div>
+          )}
+          {error ? (
+            <p className="mt-3 text-[13px] text-[#FF9A8F]">{error}</p>
+          ) : (
+            <p className="mt-3 text-[12.5px] text-white/40">{made ? "Stickfilerna gäller halsduken du ser: färgen och loggan på båda ändarna." : "Loggan hamnar på båda ändarna – prova med din egen."}</p>
+          )}
         </div>
 
-        <div className={`relative h-[400px] w-full min-w-0 overflow-hidden transition-opacity duration-700 sm:h-[520px] lg:h-[600px] ${ready ? "opacity-100" : "opacity-0"}`}>
+        {/* På bred skärm tar halsduken den höjd som finns kvar, så att startpanelen under syns även i ett lågt fönster. */}
+        <div className={`relative h-[400px] w-full min-w-0 overflow-hidden transition-opacity duration-700 sm:h-[500px] lg:h-[clamp(360px,calc(100vh-330px),540px)] ${ready ? "opacity-100" : "opacity-0"}`}>
           <Scarf3D color={color} logo={logo} onReady={() => setReady(true)} />
         </div>
         {!ready && <p className="pointer-events-none absolute inset-x-0 bottom-24 text-center text-[12.5px] text-white/35 lg:left-1/2 lg:bottom-1/2">Halsduken läggs upp …</p>}

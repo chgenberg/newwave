@@ -209,7 +209,7 @@ async function toDataUrl(src: string) {
   });
 }
 
-function fileToJpeg(file: File): Promise<string> {
+export function fileToJpeg(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) return reject(new Error("Välj en bildfil (JPG, PNG eller WebP)."));
     if (file.size > 15_000_000) return reject(new Error("Bilden är för stor – välj ett foto under 15 MB."));
@@ -407,7 +407,7 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
 
 // --- Kortets knappar ---------------------------------------------------------------
 
-async function downloadZip(body: unknown) {
+export async function downloadZip(body: unknown) {
   const res = await fetch("/api/v1/scarf/agent/package", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Kunde inte skapa stickfilerna.");
   const a = document.createElement("a");
@@ -417,10 +417,10 @@ async function downloadZip(body: unknown) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-const QUIET = "inline-flex h-10 items-center justify-center rounded-full bg-[#F5F5F7] px-4 text-[13.5px] font-medium text-[#1D1D1F] transition hover:bg-[#E8E8ED] disabled:opacity-50";
+export const QUIET = "inline-flex h-10 items-center justify-center rounded-full bg-[#F5F5F7] px-4 text-[13.5px] font-medium text-[#1D1D1F] transition hover:bg-[#E8E8ED] disabled:opacity-50";
 
-/** Kortets tre knappar: stickfilerna, fotografier och allt det andra i en popupruta. */
-export function ScarfActions({ info, download, photo, ready = true }: { info: ScarfInfo; download: unknown; photo: PhotoTarget; ready?: boolean }) {
+/** Kortets knappar: stickfilerna, fotografier, ändringar (när halsduken går att ändra) och allt det andra i en popupruta. */
+export function ScarfActions({ info, download, photo, ready = true, onEdit }: { info: ScarfInfo; download: unknown; photo: PhotoTarget; ready?: boolean; onEdit?: () => void }) {
   const [open, setOpen] = useState<"info" | "photo" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -449,6 +449,11 @@ export function ScarfActions({ info, download, photo, ready = true }: { info: Sc
         <button type="button" onClick={() => setOpen("photo")} className={QUIET}>
           Fotografera
         </button>
+        {onEdit && (
+          <button type="button" onClick={onEdit} disabled={!ready} className={QUIET}>
+            Ändra
+          </button>
+        )}
         <button type="button" onClick={() => setOpen("info")} className={QUIET}>
           Mer information
         </button>

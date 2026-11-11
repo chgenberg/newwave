@@ -2,7 +2,7 @@ import { SCARF } from "./scarf";
 
 /**
  * Halsdukens designspråk. En design är två sidor som var och en delas i sektioner längs halsduken.
- * Varje sektion har en fyllning (ränder, rutor, bårder …) och kan bära ett innehåll (text, sköld, ikon, trupp, porträtt).
+ * Varje sektion har en fyllning (ränder, rutor, bårder …) och kan bära ett innehåll (text, sköld, ikon, trupp, porträtt, autografer).
  * Motorn i scarfEngine.ts gör om en design till maskor – inget i den här filen behöver servern.
  *
  * Mått är i millimeter på den liggande halsduken: x längs de 135 cm, y tvärs över de 18 cm.
@@ -40,6 +40,13 @@ export const FONT_LABEL: Record<FontKey, string> = {
   pensel: "Pensel – handmålad",
   fart: "Fart – lutande och sportig",
 };
+
+/** Skrivstilen som autografer sätts i när ingen har ritat dem för hand. */
+export const SIGN_FONT_FILE = "kaushan-script.ttf";
+/** Ritrutan för autografer är så här många gånger bredare än den är hög. */
+export const SIGN_PAD = 4;
+/** Ett streck ritat för hand: punkter i 0–1 i båda led på ritrutan, x längs halsduken. */
+export type SignStroke = [number, number][];
 
 export type Fill =
   | { kind: "solid"; yarn: Yarn }
@@ -80,12 +87,14 @@ export type TextStyle = {
 export type Content =
   | ({ kind: "text"; lines: string[]; /** Underradernas andel av höjden. */ sub?: number; /** Läses tvärs över halsduken. */ rotate?: boolean; /** Texter i samma grupp får samma versalhöjd – den minsta av dem. */ group?: string } & TextStyle)
   /** `plate` är färgen på en platta som läggs bakom skölden när dess ytterkant har samma färg som bottnen och annars skulle försvinna. */
-  | { kind: "crest"; yarns?: Yarn[]; plate?: Yarn }
+  | { kind: "crest"; yarns?: Yarn[]; plate?: Yarn; /** Vriden ett kvarts varv, så att märket står rätt när änden hänger: 1 medurs, -1 moturs. */ turn?: 1 | -1 }
   | { kind: "icon"; icon: IconId; yarn: Yarn; outline?: Yarn; count?: number }
   | { kind: "roster"; title?: string; players: string[]; font: FontKey; yarn: Yarn; accent: Yarn }
   | { kind: "portrait"; frame: Yarn; yarns: Yarn[] }
   /** Ett motiv som bildmodellen ritat, reducerat till de angivna garnerna. */
-  | { kind: "art"; yarns: Yarn[] };
+  | { kind: "art"; yarns: Yarn[] }
+  /** Autografer: namnen i skrivstil bredvid varandra, eller de streck beställaren själv har ritat. */
+  | { kind: "sign"; yarn: Yarn; names: string[]; strokes?: SignStroke[] };
 
 export type Section = {
   /** Fast bredd i mm, annars delar sektionen på resten efter `flex` (1 om inget anges). */
