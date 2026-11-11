@@ -236,6 +236,7 @@ const INTRO = [
 const MORE = [
   { href: "/newwave/teknik", label: "För IT – så är hubben byggd" },
   { href: "/halsduk", label: "Exempel – Halsduk" },
+  { href: "/halsduk/agent", label: "Exempel – Halsduksagenten" },
 ];
 
 function Details({ pick, onPick }: { pick: Sel | null; onPick: (p: Sel | null) => void }) {

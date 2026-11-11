@@ -266,20 +266,25 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             <span className="font-normal text-[#86868B]">Halsduk</span>
           </span>
         </Link>
-        {clubs.length > 1 && (
-          <select
-            value={clubId ?? ""}
-            onChange={(e) => setClubId(e.target.value)}
-            aria-label="Klubb"
-            className="h-10 rounded-full bg-[#F5F5F7] px-4 text-[13px] font-medium outline-none"
-          >
-            {clubs.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          <Link href="/halsduk/agent" className="inline-flex h-10 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60">
+            Låt agenten föreslå
+          </Link>
+          {clubs.length > 1 && (
+            <select
+              value={clubId ?? ""}
+              onChange={(e) => setClubId(e.target.value)}
+              aria-label="Klubb"
+              className="h-10 rounded-full bg-[#F5F5F7] px-4 text-[13px] font-medium outline-none"
+            >
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </header>
 
       {error && <div className="mx-4 mt-2 max-w-xl rounded-2xl bg-[#FDECEA] px-5 py-3 text-sm text-[#B3261E] sm:mx-auto">{error}</div>}
