@@ -6,6 +6,7 @@ import { z } from "zod";
 import { cleanText, readJson } from "@/lib/demoLimit";
 import { htmlToPdf } from "@/lib/pdf";
 import { bankScarf } from "@/lib/scarfBank";
+import { CALIBRATION, knitCalibration } from "@/lib/scarfCalibration";
 import { scarfClub } from "@/lib/scarfClub";
 import { FilesShape, IdeaSchema, knitIdea } from "@/lib/scarfFlow";
 import { scarfLimit } from "@/lib/scarfLimit";
@@ -25,6 +26,8 @@ const Body = z.object({
 });
 /** En halsduk ur inspirationsbanken: klubben, idén, skölden och motivet hämtas ur banken. */
 const BankBody = z.object({ bank: z.string().regex(SLUG) });
+/** Kalibreringshalsduken: stickas en gång och visar hur maskinen vänder filerna. */
+const CalibrationBody = z.object({ calibration: z.literal(true) });
 /** Halsduken från sidans 3D-vy: en garnfärg och loggan på båda ändarna. */
 const HeroBody = z.object({
   hero: z.object({
@@ -38,11 +41,12 @@ const asset = (dir: "demo" | "bank", name: string) => readFile(path.join(process
 
 type Knit = { consent: string | null; knit: Knitted; report: ProductionReport; front: string; back: string };
 
-async function zipResponse(club: string, title: string, why: string, { consent, knit, report, front, back }: Knit) {
+async function zipResponse(club: string, title: string, why: string, { consent, knit, report, front, back }: Knit, extra: { name: string; data: string }[] = []) {
   const date = new Date().toISOString().slice(0, 10);
   const pack = await buildPackage({ club, title, why, front, back, consent, knit, report, date, pdf: htmlToPdf });
   const zip = new JSZip();
   for (const f of pack.files) zip.file(f.name, f.data);
+  for (const f of extra) zip.file(f.name, f.data);
   const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
   return new Response(Buffer.from(out), { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="stickfiler-${pack.base}-${date}.zip"` } });
 }
@@ -62,6 +66,11 @@ export async function POST(req: Request) {
       if (!entry) return Response.json({ error: "Okänd halsduk" }, { status: 404 });
       const [crest, art] = await Promise.all([asset("bank", `${entry.club.id}-skold.png`), entry.art ? asset("bank", `${entry.slug}-motiv.png`) : null]);
       return await zipResponse(entry.club.name, entry.idea.title, entry.idea.why, fromIdea(await knitIdea(entry.club, entry.idea, { crest, art })));
+    }
+
+    if (CalibrationBody.safeParse(body).success) {
+      const { knit, report } = await knitCalibration();
+      return await zipResponse(CALIBRATION.club, CALIBRATION.title, CALIBRATION.why, { consent: null, knit, report, front: "A / FRAMSIDA / B", back: "B / BAKSIDA / A" }, [{ name: CALIBRATION.file, data: CALIBRATION.guide }]);
     }
 
     const hero = HeroBody.safeParse(body);

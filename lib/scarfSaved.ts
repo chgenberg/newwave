@@ -3,18 +3,17 @@ import type { ScarfCopy, ScarfMaterial } from "./scarfChannels";
 import type { Level, ScarfIdea } from "./scarfRecipes";
 
 /**
- * Sparade designer: halsdukarna en besökare har tagit fram ligger kvar i webbläsaren (IndexedDB), så att de går att
- * hitta igen utan konto. Inget skickas till servern. Bilderna sparas med, så att sidan visas direkt; stickfilerna
- * packas på nytt av servern från idén när de hämtas.
+ * Sparade designer: det motiv en besökare har valt i en körning, med materialet som gjordes för det, ligger kvar i
+ * webbläsaren (IndexedDB) så att det går att hitta igen utan konto. En design per körning – väljs ett annat motiv i
+ * samma körning ersätter det den förra. Inget skickas till servern. Halsdukens bilder sparas med, så att sidan visas
+ * direkt; stickfilerna packas på nytt av servern från idén när de hämtas, och materialets filer ligger på servern.
  */
 
 export type SavedDesign = {
-  /** Körningens tidpunkt och halsdukens nyckel – en ändrad halsduk skriver över sin tidigare version. */
+  /** Körningens tidpunkt: en design per körning. */
   id: string;
   runAt: number;
   savedAt: number;
-  /** Platsen bland körningens tre förslag. */
-  order: number;
   club: { ref: string; name: string; crest: string; brand: boolean };
   title: string;
   recipeLabel: string;
@@ -24,7 +23,7 @@ export type SavedDesign = {
   /** Bilderna, texten, garnerna, kontrollen och omdömet – det kortet och popuprutan visar. */
   info: ScarfInfo;
   stopped: boolean;
-  /** Materialet för sociala medier, om det här motivet valdes. Filerna ligger på servern. */
+  /** Materialet för sociala medier. Filerna ligger på servern. Äldre poster kan sakna det – de visas inte och rensas bort. */
   made: { copy: ScarfCopy; material: ScarfMaterial; notes: string[] } | null;
 };
 
@@ -72,13 +71,14 @@ async function store<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => ID
   });
 }
 
-/** Alla sparade designer, de senaste först. */
+/** Alla sparade designer, de senaste först. Förslag som sparades utan att väljas (en tidigare version sparade alla tre) rensas bort. */
 export async function savedDesigns(): Promise<SavedDesign[]> {
   const all = await store<SavedDesign[]>("readonly", (s) => s.getAll(), []);
-  return all.sort((a, b) => b.runAt - a.runAt || a.order - b.order);
+  for (const d of all) if (!d.made) await removeDesign(d.id);
+  return all.filter((d) => d.made).sort((a, b) => b.runAt - a.runAt);
 }
 
-export const savedCount = () => store<number>("readonly", (s) => s.count(), 0);
+export const savedCount = async () => (await savedDesigns()).length;
 
 export async function removeDesign(id: string) {
   await store("readwrite", (s) => void s.delete(id), null);

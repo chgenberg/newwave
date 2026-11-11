@@ -9,7 +9,7 @@ import type { BankScarf } from "@/lib/scarfBank";
 import type { DemoScarf } from "@/lib/scarfDemo";
 
 /** Ett kort i banken, oavsett om halsduken kommer från bankens körning eller demokörningen. */
-type Card = { key: string; name: string; sub: string; crest: string; art: boolean; info: ScarfInfo; download: unknown; photo: PhotoTarget };
+type Card = { key: string; name: string; sport: string; sub: string; crest: string; art: boolean; info: ScarfInfo; download: unknown; photo: PhotoTarget };
 
 const machine = (s: { yarns: unknown[]; maxColorsPerRow: number; system: "dubbel" | "enkel"; minTextMm: number | null }) =>
   `${s.yarns.length} garner, högst ${s.maxColorsPerRow} per varv${s.system === "dubbel" ? " – dubbelsystem möjligt" : ""}${s.minTextMm !== null ? `, minsta text ${s.minTextMm} mm` : ""}.`;
@@ -19,6 +19,7 @@ function fromBank(s: BankScarf): Card {
   return {
     key: s.slug,
     name: s.club.name,
+    sport: s.club.category,
     sub: [s.club.category, s.club.city].filter(Boolean).join(" · "),
     crest,
     art: s.art,
@@ -39,12 +40,13 @@ function fromBank(s: BankScarf): Card {
   };
 }
 
-function fromDemo(s: DemoScarf, sub: string): Card {
+function fromDemo(s: DemoScarf, place: { sport: string; city: string } | undefined): Card {
   const crest = `/api/v1/brand/${s.clubId}/skold-farg.png`;
   return {
     key: s.slug,
     name: s.club,
-    sub,
+    sport: place?.sport ?? "",
+    sub: [place?.sport, place?.city].filter(Boolean).join(" · "),
     crest,
     art: s.art,
     info: {
@@ -66,13 +68,21 @@ function fromDemo(s: DemoScarf, sub: string): Card {
 }
 
 /**
- * Inspirationsbanken: idrottsföreningarnas halsdukar ur bankens körning och demokörningen, varvade så att föreningarna blandas.
- * `places` är raden under föreningens namn för demokörningens föreningar (sport och ort).
+ * Inspirationsbanken: idrottsföreningarnas halsdukar ur bankens körning, med demokörningens halsdukar jämnt utspridda
+ * bland dem. `places` är sporten och orten för demokörningens föreningar.
  */
-export function ScarfBank({ bank, demo, places }: { bank: BankScarf[]; demo: DemoScarf[]; places: Record<string, string> }) {
+export function ScarfBank({ bank, demo, places }: { bank: BankScarf[]; demo: DemoScarf[]; places: Record<string, { sport: string; city: string }> }) {
   const [factory, setFactory] = useState(false);
-  const [a, b] = [bank.map(fromBank), demo.map((s) => fromDemo(s, places[s.clubId] ?? ""))];
-  const cards = Array.from({ length: Math.max(a.length, b.length) }, (_, i) => [a[i], b[i]]).flat().filter((c): c is Card => Boolean(c));
+  const [sport, setSport] = useState<string | null>(null);
+  const [a, b] = [bank.map(fromBank), demo.map((s) => fromDemo(s, places[s.clubId]))];
+  const every = Math.max(1, Math.floor(a.length / (b.length + 1)));
+  const cards = a.flatMap((card, i) => ((i + 1) % every === 0 && b[(i + 1) / every - 1] ? [card, b[(i + 1) / every - 1]] : [card])).concat(b.slice(Math.floor(a.length / every)));
+  // Sporterna som knappar, de med flest halsdukar först.
+  const count = new Map<string, number>();
+  for (const c of cards) if (c.sport) count.set(c.sport, (count.get(c.sport) ?? 0) + 1);
+  const sports = [...count.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0], "sv"));
+  const shown = sport ? cards.filter((c) => c.sport === sport) : cards;
+  const chip = (on: boolean) => `inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-medium transition ${on ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]"}`;
 
   return (
     <main className="flex min-h-screen flex-col bg-white">
@@ -101,12 +111,26 @@ export function ScarfBank({ bank, demo, places }: { bank: BankScarf[]; demo: Dem
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-6xl">Halsdukar att börja från.</h1>
           <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-[#6E6E73]">
-            {cards.length} halsdukar som agenten har tagit fram för idrottsföreningar – var och en med stickfilerna till produktionen.
+            {cards.length} halsdukar i {sports.length} sporter som agenten har tagit fram – var och en med stickfilerna till produktionen.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          {cards.map((c) => (
+        {/* På mobilen rullar sporterna i sidled; på större skärmar bryts de på flera rader. */}
+        <div className="-mx-4 mt-8 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0" role="group" aria-label="Sport">
+          <button type="button" aria-pressed={sport === null} onClick={() => setSport(null)} className={chip(sport === null)}>
+            Alla
+            <span className={sport === null ? "text-white/60" : "text-[#86868B]"}>{cards.length}</span>
+          </button>
+          {sports.map(([name, n]) => (
+            <button key={name} type="button" aria-pressed={sport === name} onClick={() => setSport(name)} className={chip(sport === name)}>
+              {name}
+              <span className={sport === name ? "text-white/60" : "text-[#86868B]"}>{n}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-8 grid gap-5 lg:grid-cols-2">
+          {shown.map((c) => (
             <article key={c.key} className="flex flex-col rounded-3xl border border-black/[0.08] p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center">

@@ -151,39 +151,32 @@ export function ScarfAgent() {
     void savedCount().then(setSavedN);
   }, []);
 
-  // Varje färdig halsduk sparas i webbläsaren, och sparas om när den ändras eller får sitt material.
+  // Det valda motivet sparas i webbläsaren när materialet är klart: en design per körning. Väljs ett annat motiv ersätter det den förra.
   useEffect(() => {
-    if (!profile || !items.length) return;
-    // Körningen får sin tidpunkt när den första halsduken sparas; den håller ihop körningens förslag i listan.
+    const it = made ? items.find((i) => i.key === made.key) : undefined;
+    const info = it && profile ? infoOf(it, profile.name) : null;
+    if (!made || !it || !info || !profile) return;
     const runAt = stamps.current.get(live.current) ?? Date.now();
     stamps.current.set(live.current, runAt);
-    const jobs: Promise<void>[] = [];
-    items.forEach((it, order) => {
-      const info = it.state === "klar" ? infoOf(it, profile.name) : null;
-      if (!info) return;
-      const mine = made?.key === it.key ? made : null;
-      const id = `${runAt}:${it.key}`;
-      const sign = [it.idea.id, it.edited ? 1 : 0, it.review?.verdict ?? "", info.images.front.length, mine ? Object.values(mine.material.images).join() : ""].join("|");
-      if (kept.current.get(id) === sign) return;
-      kept.current.set(id, sign);
-      jobs.push(
-        saveDesign({
-          id,
-          runAt,
-          savedAt: Date.now(),
-          order,
-          club: { ref: ran.ref, name: profile.name, crest: profile.crest, brand: profile.kind === "brand" },
-          title: it.idea.title,
-          recipeLabel: it.idea.recipeLabel,
-          level: it.idea.level,
-          download: { clubId: ran.ref, idea: strip(it.idea), ...it.files },
-          info,
-          stopped: stoppedBy(it),
-          made: mine ? { copy: mine.copy, material: mine.material, notes: mine.notes } : null,
-        }),
-      );
-    });
-    if (jobs.length) void Promise.all(jobs).then(savedCount).then(setSavedN);
+    const id = String(runAt);
+    const sign = [it.key, it.idea.id, Object.values(made.material.images).join()].join("|");
+    if (kept.current.get(id) === sign) return;
+    kept.current.set(id, sign);
+    void saveDesign({
+      id,
+      runAt,
+      savedAt: Date.now(),
+      club: { ref: ran.ref, name: profile.name, crest: profile.crest, brand: profile.kind === "brand" },
+      title: it.idea.title,
+      recipeLabel: it.idea.recipeLabel,
+      level: it.idea.level,
+      download: made.base,
+      info,
+      stopped: stoppedBy(it),
+      made: { copy: made.copy, material: made.material, notes: made.notes },
+    })
+      .then(savedCount)
+      .then(setSavedN);
   }, [items, made, profile, ran.ref]);
 
   const choose = (p: PickLite) => {

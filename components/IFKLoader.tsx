@@ -140,8 +140,11 @@ export function IFKLoader({
           <div className="ifk-bar h-full rounded-full" style={{ width: `${state.value}%` }} />
         </div>
 
-        <p className="mt-5 min-h-[1.5rem] text-[15px] font-medium text-[#1D1D1F]">{state.label}</p>
-        <p key={line} className="ifk-line mt-1 text-[13px] text-[#86868B]">
+        {/* Texten får alltid plats för två rader, så att rutan inte ändrar storlek när den byts. */}
+        <p className="mt-5 flex h-[2.75rem] items-center justify-center text-[15px] font-medium leading-[1.375rem] text-[#1D1D1F]">
+          <span className="line-clamp-2">{state.label}</span>
+        </p>
+        <p key={line} className="ifk-line mt-1 h-5 truncate text-[13px] leading-5 text-[#86868B]">
           {pct === 100 ? doneLine : lines[line % lines.length]}
         </p>
       </div>

@@ -62,7 +62,7 @@ export function ScarfSaved() {
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6">
         <div className="mt-8 text-center sm:mt-12">
           <h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">Sparade designer.</h1>
-          <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-[#6E6E73]">Halsdukarna du har tagit fram. De ligger sparade i den här webbläsaren.</p>
+          <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-[#6E6E73]">Motiven du har valt, med inlägg, banner och film. De ligger sparade i den här webbläsaren.</p>
         </div>
 
         {list && list.length === 0 && (
@@ -84,25 +84,33 @@ export function ScarfSaved() {
                   {d.stopped && <Badge>Stoppad</Badge>}
                   <span className="ml-auto text-[11.5px] text-[#86868B]">{when(d.runAt)}</span>
                 </div>
-                <h3 className="mt-2.5 text-[19px] font-semibold tracking-tight">{d.title}</h3>
-                <div className="mt-3 rounded-2xl bg-[#F5F5F7] p-3">
-                  <Pictures front={d.info.images.front} back={d.info.images.back} text={d.info.text} />
+                {/* Hela designen går att klicka på: den öppnar halsduken med inläggen, bannern och filmerna. */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Öppna ${d.title}`}
+                  onClick={() => setOpen(d)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    setOpen(d);
+                  }}
+                  className="group mt-2.5 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#1D1D1F] focus-visible:ring-offset-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="min-w-0 truncate text-[19px] font-semibold tracking-tight">{d.title}</h3>
+                    <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[#1D1D1F] px-3.5 text-[13px] font-medium text-white transition group-hover:bg-black">Öppna</span>
+                  </div>
+                  <div className="mt-3 rounded-2xl bg-[#F5F5F7] p-3 transition group-hover:bg-[#ECECEF]">
+                    <Pictures front={d.info.images.front} back={d.info.images.back} text={d.info.text} />
+                  </div>
                 </div>
                 <div className="mt-auto pt-4">
                   <ScarfActions
                     info={d.info}
                     download={d.download}
                     photo={{ club: d.club.name, headline: d.download.idea.front.main || d.download.idea.back.main, crestUrl: d.club.crest, everyday: d.club.brand, wide: d.club.brand }}
-                    extra={
-                      <>
-                        {d.made && (
-                          <button type="button" onClick={() => setOpen(d)} className={QUIET}>
-                            Material
-                          </button>
-                        )}
-                        <Remove onRemove={() => void remove(d.id)} />
-                      </>
-                    }
+                    extra={<Remove onRemove={() => void remove(d.id)} />}
                   />
                 </div>
               </article>
@@ -112,7 +120,10 @@ export function ScarfSaved() {
       </div>
 
       {open?.made && (
-        <Modal title={open.title} eyebrow={`${open.club.name} · material`} onClose={() => setOpen(null)} full>
+        <Modal title={open.title} eyebrow={`${open.club.name} · ${open.recipeLabel}`} onClose={() => setOpen(null)} full>
+          <div className="mb-6 rounded-2xl bg-[#F5F5F7] p-3">
+            <Pictures front={open.info.images.front} back={open.info.images.back} text={open.info.text} captions />
+          </div>
           <MaterialView copy={open.made.copy} material={open.made.material} notes={open.made.notes} onZip={() => downloadZip({ ...open.download, copy: open.made!.copy, material: open.made!.material }, "/api/v1/scarf/agent/content/zip", "material.zip")} />
         </Modal>
       )}

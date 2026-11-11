@@ -7,7 +7,11 @@
  * Färgerna läses ur märket. Receptet per organisation är beställt i listan nedan så att banken blir blandad;
  * text, färgroller, typsnitt och motiv är agentens. Varje steg sparas under /tmp/nw-scarf-bank.
  *
- * Resultat: lib/scarfBank.json, public/halsduk/bank/ (korrektur, märke, motiv) och ../offert/halsdukar-inspiration/ (zip).
+ * Föreningar som redan ligger i banken görs inte om – en körning lägger bara till dem som saknas i lib/scarfBank.json.
+ * Med föreningens id som argument görs just den om. `--send` lägger dessutom stickfilerna som zip i
+ * ../offert/halsdukar-inspiration/, för utskick; på sajten packas de när de hämtas.
+ *
+ * Resultat: lib/scarfBank.json och public/halsduk/bank/ (korrektur, märke, motiv).
  *
  *   set -a; . ./.env.local; set +a; JITI_ALIAS='{"@/":"<repo>/"}' node_modules/.bin/jiti scripts/scarf-bank.ts
  */
@@ -34,6 +38,7 @@ const ROOT = process.cwd();
 const PUBLIC = path.join(ROOT, "public", "halsduk", "bank");
 const SEND = path.join(ROOT, "..", "offert", "halsdukar-inspiration");
 const today = new Date().toISOString().slice(0, 10);
+const TO_SEND = process.argv.includes("--send");
 
 type Pick = {
   id: string;
@@ -52,11 +57,19 @@ type Pick = {
   fun?: boolean;
   /** Maskoten, som får ritas som eget motiv. */
   mascot?: string;
-  /** Tillfället halsduken görs för. Företag får annars bara årstiden, så att inte alla blir luciahalsdukar. */
+  /** Tillfället halsduken görs för. Utan det får föreningen kalenderns högtider, och då blir det ofta en julhalsduk. */
   when?: { title: string; detail: string };
 };
 
-/** Sex idrottsföreningar. `founded` står bara där registret har årtalet. Företag (`from: "kund"`, återförsäljardemons påhittade kunder) ligger inte längre i banken. */
+/** Tillfällen som gäller vilken förening som helst – inget som måste stämma med en viss klubbs kalender. */
+const HOME = { title: "Hemmapremiären", detail: "Första hemmamatchen för säsongen – halsduken alla tar med sig." };
+const YEAR = { title: "Supporterhalsduken", detail: "Halsduken som bärs hela säsongen, år efter år." };
+const KIDS = { title: "Säsongsavslutningen", detail: "En halsduk till alla ungdomar och ledare när säsongen summeras." };
+
+/**
+ * Föreningarna i banken, blandade över sporter och recept. Årtalet står bara där det finns i klubbregistret eller i
+ * klubbens eget märke, och orten bara där den står i klubbens namn eller märke. Ordningen är den som visas på sidan.
+ */
 const PICKS: Pick[] = [
   { id: "farsta-ibk", from: "grasrot", name: "Farsta Sharks IBK", city: "Stockholm", category: "Innebandy", group: "idrott", recipe: "motiv", symbol: "Klubben kallas Sharks och hajen är klubbens maskot. Beställaren vill se en haj som motiv, inte en boll.", fun: true, mascot: "hajen" },
   { id: "almtuna-is", from: "registry", name: "Almtuna IS", city: "Uppsala", category: "Ishockey", group: "idrott", recipe: "motiv", symbol: "Is, puck och korsade klubbor." },
@@ -64,6 +77,34 @@ const PICKS: Pick[] = [
   { id: "kongahalla-ridsallskap", from: "registry", name: "Kongahälla Ridsällskap", city: "Kungälv", category: "Ridsport", group: "idrott", founded: 1970, recipe: "motiv", symbol: "Hästen.", fun: true },
   { id: "byttorps-if", from: "grasrot", name: "Byttorps IF", city: "Borås", category: "Fotboll", group: "idrott", recipe: "argyle" },
   { id: "varbergs-basket", from: "registry", name: "Varbergs Basket", city: "Varberg", category: "Basket", group: "idrott", recipe: "motiv", symbol: "Basketbollen och korgen.", fun: true },
+  { id: "storvreta-ibk", from: "registry", name: "Storvreta IBK", city: "Storvreta", category: "Innebandy", group: "idrott", recipe: "motiv", symbol: "Örnen i klubbmärket.", fun: true, mascot: "örnen", when: HOME },
+  { id: "spanga-is-fk", from: "registry", name: "Spånga IS FK", city: "Spånga", category: "Fotboll", group: "idrott", founded: 1929, recipe: "retro", when: YEAR },
+  { id: "ystads-aff-rockets", from: "registry", name: "Ystad Rockets", city: "Ystad", category: "Amerikansk fotboll", group: "idrott", founded: 1993, recipe: "motiv", symbol: "Klubben heter Rockets – raketen är given.", fun: true, mascot: "raketen", when: YEAR },
+  { id: "nassjo-if", from: "registry", name: "Nässjö IF", city: "Nässjö", category: "Bandy", group: "idrott", founded: 1899, recipe: "jul" },
+  { id: "onnereds-hk", from: "registry", name: "Önnereds HK", city: "Önnered", category: "Handboll", group: "idrott", founded: 1965, recipe: "autograf", when: HOME },
+  { id: "tarna-ik-fjallvinden", from: "registry", name: "Tärna IK Fjällvinden", city: "Tärnaby", category: "Skidor", group: "idrott", founded: 1928, recipe: "motiv", symbol: "Fjället i klubbmärket och backen ner mot byn.", when: YEAR },
+  { id: "ifk-ostersund", from: "registry", name: "IFK Östersund", city: "Östersund", category: "Fotboll", group: "idrott", founded: 1906, recipe: "klassisk", when: YEAR },
+  { id: "pingvin-rugby-club", from: "registry", name: "Pingvin Rugby Club", city: "Trelleborg", category: "Rugby", group: "idrott", recipe: "motiv", symbol: "Pingvinen i klubbmärket.", fun: true, mascot: "pingvinen", when: YEAR },
+  { id: "sala-simsallskap", from: "registry", name: "Sala Simsällskap", city: "Sala", category: "Simning", group: "idrott", founded: 1927, recipe: "vagor", when: KIDS },
+  { id: "if-bjorkloven", from: "registry", name: "IF Björklöven", city: "Umeå", category: "Ishockey", group: "idrott", recipe: "tapet", symbol: "Björklövet – klubbens namn och märke.", when: HOME },
+  { id: "toreboda-golfklubb", from: "registry", name: "Töreboda Golfklubb", city: "Töreboda", category: "Golf", group: "idrott", recipe: "argyle", when: { title: "Klubbshoppen", detail: "En halsduk i klubbens färger för kalla morgonronder." } },
+  { id: "tjorns-konstakning-team-seaside", from: "registry", name: "Tjörns Konståkningsklubb", city: "Tjörn", category: "Konståkning", group: "idrott", founded: 1985, recipe: "motiv", symbol: "Skridskon och isen.", fun: true, when: KIDS },
+  { id: "sodertalje-sportklubb", from: "registry", name: "Södertälje SK", city: "Södertälje", category: "Ishockey", group: "idrott", founded: 1902, recipe: "retro", when: YEAR },
+  { id: "koping-tennisklubb", from: "registry", name: "Köpings Tennisklubb", city: "Köping", category: "Tennis", group: "idrott", founded: 1897, recipe: "klassisk", when: YEAR },
+  { id: "gothia-volleybollklubb", from: "registry", name: "Gothia Volley", city: "", category: "Volleyboll", group: "idrott", recipe: "motiv", symbol: "Lejonet med kronan i klubbmärket.", fun: true, mascot: "lejonet", when: HOME },
+  { id: "kungalvs-bk", from: "registry", name: "Kungälvs BK", city: "Kungälv", category: "Bowling", group: "idrott", founded: 1962, recipe: "retro", when: YEAR },
+  { id: "sundsvalls-friidrottsforening", from: "registry", name: "Sundsvalls Friidrott", city: "Sundsvall", category: "Friidrott", group: "idrott", recipe: "toning", symbol: "Löparbanans kurva i klubbmärket.", when: KIDS },
+  { id: "ck-granit", from: "registry", name: "CK Granit", city: "Gävle", category: "Curling", group: "idrott", founded: 1963, recipe: "motiv", symbol: "Curlingstenen i klubbmärket.", fun: true, when: YEAR },
+  { id: "karra-hf", from: "registry", name: "Kärra HF", city: "Göteborg", category: "Handboll", group: "idrott", founded: 1958, recipe: "sicksack", when: HOME },
+  { id: "ok-landehof", from: "registry", name: "OK Landehof", city: "", category: "Orientering", group: "idrott", recipe: "tapet", symbol: "Orienteringsskärmen i klubbmärket.", when: YEAR },
+  { id: "bankeryds-basket", from: "registry", name: "Bankeryds Basket", city: "Bankeryd", category: "Basket", group: "idrott", founded: 1981, recipe: "personlig" },
+  { id: "dalaro-batklubb", from: "registry", name: "Dalarö Båtklubb", city: "Dalarö", category: "Segling", group: "idrott", founded: 1947, recipe: "motiv", symbol: "Segelbåten och hamnen.", when: { title: "Sjösättningen", detail: "Vårens sjösättning – klubben samlas på bryggan." } },
+  { id: "guldstadens-boxningsklubb", from: "registry", name: "Guldstadens BK", city: "Skellefteå", category: "Boxning", group: "idrott", recipe: "bar", when: YEAR },
+  { id: "ifk-vanersborg", from: "registry", name: "IFK Vänersborg", city: "Vänersborg", category: "Bandy", group: "idrott", recipe: "matchdag", when: { title: "Annandagsbandyn", detail: "Bandyns egen högtid – läktaren är full på annandag jul." } },
+  { id: "gefle-gymnastikforening", from: "registry", name: "Gefle Gymnastikförening", city: "Gävle", category: "Gymnastik", group: "idrott", recipe: "toning", when: KIDS },
+  { id: "vastra-frolunda-badmintonklubb", from: "registry", name: "Västra Frölunda Badmintonklubb", city: "Västra Frölunda", category: "Badminton", group: "idrott", recipe: "sicksack", symbol: "Fjäderbollen i klubbmärket.", when: YEAR },
+  { id: "ik-sparta", from: "registry", name: "IK Sparta", city: "Malmö", category: "Brottning", group: "idrott", recipe: "klassisk", when: YEAR },
+  { id: "hindas-kanot-friluftsklubb", from: "registry", name: "Hindås Kanot & Friluftsklubb", city: "Hindås", category: "Kanot", group: "idrott", recipe: "vagor", symbol: "Kanoten och paddlarna i klubbmärket.", when: { title: "Paddelsäsongen", detail: "När isen går upp bär klubben ut kanoterna igen." } },
 ];
 
 async function cached<T>(file: string, make: () => Promise<T>): Promise<T> {
@@ -119,6 +160,7 @@ function signalsFor(p: Pick, now: Date): Signal[] {
   ];
   const season = { ...seasonFor(now), detail: "Kallt och mörkt – halsduksväder." };
   if (p.group === "annat") return [...(p.when ? [{ id: "nar", kind: "occasion" as const, ...p.when }] : []), season, ...own];
+  if (p.when) return [{ id: "nar", kind: "occasion" as const, ...p.when }, season, ...own];
   // Kalenderns texter är skrivna för fotboll; här räcker högtiden och datumet.
   return [...upcomingOccasions(now, 75).map((o) => ({ ...o, detail: "Högtid i kalendern." })), season, ...own];
 }
@@ -186,14 +228,18 @@ async function make(p: Pick, now: Date): Promise<BankScarf> {
     writeFile(path.join(PUBLIC, `${p.id}-skold.png`), crest),
     ...(built.uses.art && art ? [writeFile(path.join(PUBLIC, `${name}-motiv.png`), art)] : []),
   ]);
-  const pack = await buildPackage({ club: club.name, title: idea.title, why: idea.why, front, back, consent: built.consent, knit, report, date: today, pdf: htmlToPdf });
-  const zip = new JSZip();
-  for (const file of pack.files) zip.file(file.name, file.data);
-  await writeFile(path.join(SEND, `stickfiler-${pack.base}.zip`), await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
+  let drift = "";
+  if (TO_SEND) {
+    const pack = await buildPackage({ club: club.name, title: idea.title, why: idea.why, front, back, consent: built.consent, knit, report, date: today, pdf: htmlToPdf });
+    const zip = new JSZip();
+    for (const file of pack.files) zip.file(file.name, file.data);
+    await writeFile(path.join(SEND, `stickfiler-${pack.base}.zip`), await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
+    drift = `  jpg-avvikelse ${pack.jpgDrift}`;
+  }
 
   const warn = report.checks.filter((c) => c.level === "varning").map((c) => c.title);
   console.log(
-    `${p.name.padEnd(24)} ${idea.recipe.padEnd(9)} "${idea.title}"  ${knit.palette.length} garn  jpg-avvikelse ${pack.jpgDrift}  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${
+    `${p.name.padEnd(24)} ${idea.recipe.padEnd(9)} "${idea.title}"  ${knit.palette.length} garn${drift}  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${
       review ? `  betyg ${review.sales}/${review.brandFit}/${review.legibility}/${review.craft} → ${review.verdict}` : ""
     }${firstReview ? "  (omgjord)" : ""}${built.uses.art ? "  [ritat motiv]" : ""}`,
   );
@@ -218,23 +264,30 @@ async function make(p: Pick, now: Date): Promise<BankScarf> {
 
 async function main() {
   const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  const picks = only.length ? PICKS.filter((p) => only.includes(p.id)) : PICKS;
-  await Promise.all([mkdir(PUBLIC, { recursive: true }), mkdir(SEND, { recursive: true })]);
+  const file = path.join(ROOT, "lib", "scarfBank.json");
+  const kept = new Map(((JSON.parse(await readFile(file, "utf8")) as { scarves: BankScarf[] }).scarves ?? []).map((s) => [s.club.id, s]));
+  // Utan argument görs bara det som saknas; med föreningens id görs just den om.
+  const picks = PICKS.filter((p) => (only.length ? only.includes(p.id) : !kept.has(p.id)));
+  await Promise.all([mkdir(PUBLIC, { recursive: true }), ...(TO_SEND ? [mkdir(SEND, { recursive: true })] : [])]);
   const now = new Date();
-  const out = new Array<BankScarf | null>(picks.length).fill(null);
   let next = 0;
+  let made = 0;
   const worker = async () => {
     for (let i = next++; i < picks.length; i = next++) {
-      out[i] = await make(picks[i], now).catch((e) => {
+      const scarf = await make(picks[i], now).catch((e) => {
         console.log(`${picks[i].name}: FEL – ${errorMessage(e)}`);
         return null;
       });
+      if (!scarf) continue;
+      kept.set(picks[i].id, scarf);
+      made++;
+      // Sparas efter varje halsduk, i listans ordning, så att en avbruten körning inte tappar det som blev klart.
+      const scarves = PICKS.flatMap((p) => (kept.has(p.id) ? [kept.get(p.id)!] : []));
+      await writeFile(file, `${JSON.stringify({ date: today, scarves }, null, 2)}\n`);
     }
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
-  const scarves = out.filter((s): s is BankScarf => s !== null);
-  if (!only.length) await writeFile(path.join(ROOT, "lib", "scarfBank.json"), `${JSON.stringify({ date: today, scarves }, null, 2)}\n`);
-  console.log(`\n${scarves.length} av ${picks.length} halsdukar klara.`);
+  console.log(`\n${made} av ${picks.length} halsdukar klara. Banken har ${kept.size}.`);
 }
 
 main().catch((e) => {

@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { nearestPantone } from "./pantone";
 import { CELLS, MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, hexToRgb } from "./scarf";
 import { facePreview, sheetPreview, type Knitted } from "./scarfEngine";
+import { tubeMismatch } from "./scarfTube";
 
 /**
  * Det Seger behöver för att sticka: kontroll av mönstret maska för maska och ett filpaket till Draw Designer.
@@ -86,6 +87,8 @@ export function inspect(knit: Knitted): ProductionReport {
   const text = knit.minTextMm;
   const margin = knit.minMarginMm;
   const fast = maxColors <= FAST_COLORS;
+  // Filen viks till en tub och sidorna läses av från utsidan – de ska vara de sidor som ritades, maska för maska.
+  const tube = tubeMismatch(knit);
 
   const checks: ProductionCheck[] = [
     { id: "format", level: "ok", title: `${W} × ${ROWS.toLocaleString("sv-SE")} maskor`, note: `En pixel per maska: ${W} nålar runt cylindern och ${ROWS.toLocaleString("sv-SE")} maskrader. Fransarna ligger utanför.` },
@@ -135,6 +138,15 @@ export function inspect(knit: Knitted): ProductionReport {
       note: "Garn som inte stickas löper på tubens insida. Stäm av med Seger om långa flotteringar ska bindas in eller klippas.",
     },
     { id: "seam", level: "info", title: "Varvskarven i nederkanten", note: "Varvet börjar och slutar i halsdukens nedre vikkant, så hacket i tvärränder syns minst." },
+    {
+      id: "tube",
+      level: tube === 0 ? "ok" : "varning",
+      title: tube === 0 ? "Fram- och baksida ligger rätt på tuben" : "Sidorna ligger fel i stickfilen",
+      note:
+        tube === 0
+          ? `Filen är vikt till en tub och avläst från utsidan: båda sidor läses rätt, ingen är spegelvänd${knit.backReads === "hold-up" ? ", och baksidan läses rätt bakifrån när halsduken hålls upp" : ", och baksidan läses rätt när halsduken vänds över långsidan"}.`
+          : `${tube.toLocaleString("sv-SE")} maskor hamnar fel när filen viks till en tub – skicka inte filen till stickeriet.`,
+    },
   ];
 
   return {

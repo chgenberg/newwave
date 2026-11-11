@@ -714,6 +714,3244 @@
         "front": "VARBERGS / BASKET",
         "back": "GOD JUL / VARBERG"
       }
+    },
+    {
+      "slug": "storvreta-ibk-ornen-fran-uppsala",
+      "club": {
+        "id": "storvreta-ibk",
+        "name": "Storvreta IBK",
+        "shortName": "SIBK",
+        "palette": [
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Röd",
+            "hex": "#DE3235"
+          }
+        ],
+        "crestColors": [
+          "#FFFFFF",
+          "#0A0A0A",
+          "#DE3235",
+          "#969394",
+          "#545352"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Storvreta",
+        "nicknames": [
+          "Storvreta IBK"
+        ],
+        "category": "Innebandy",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "0b58880b-8783-47b2-93f6-b9e1fe9d26fb",
+        "title": "Örnen från Uppsala",
+        "why": "När innebandysäsongen är i full gång får supportrarna bära klubbens örn och sin Uppsalastolthet på samma halsduk.",
+        "signal": "Klubbens symbol",
+        "recipe": "motiv",
+        "front": {
+          "main": "STORVRETA IBK",
+          "sub": "UPPSALA"
+        },
+        "back": {
+          "main": "INNEBANDY",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#FFFFFF",
+          "ink": "#0A0A0A",
+          "accent": "#DF3235"
+        },
+        "icon": null,
+        "art": "One bold, flat eagle mascot with outstretched wings, a proud upright stance and a friendly expression. Use large solid black shapes (#0A0A0A) with a few red accents (#DF3235) on a white background (#FFFFFF). Simplify feathers into broad geometric blocks with generous gaps. Standalone mascot illustration, not a crest or logo. No shield, text, people, gradients, shading or fine lines.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.531
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.404
+        },
+        {
+          "hex": "#DE3235",
+          "pantone": "PANTONE 185 C",
+          "share": 0.065
+        },
+        {
+          "hex": "#969394",
+          "pantone": "PANTONE 4289 C",
+          "share": 0
+        },
+        {
+          "hex": "#545352",
+          "pantone": "PANTONE 6216 C",
+          "share": 0
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 5,
+      "minTextMm": 46,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Örnen och Uppsala ger tydlig lokal stolthet utan reklamkänsla.",
+          "Kraftiga bokstäver och hög kontrast gör huvudtexterna lättlästa på flera meters håll.",
+          "Omvända bottenfärger och sammanhållna kantlinjer ger två tydliga, välbalanserade sidor."
+        ],
+        "issues": [
+          "Provsticka örnens huvud, klor och smala mellanrum i vingarna så att detaljerna inte flyter ihop.",
+          "Kontrollera klubbmärkenas små texter och de tunna röda kantlinjerna i stickad kvalitet."
+        ],
+        "summary": "En stark och bärbar supporterhalsduk som är klar att skickas till stickeriet, med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "STORVRETA IBK / UPPSALA",
+        "back": "INNEBANDY"
+      }
+    },
+    {
+      "slug": "spanga-is-fk-spanga-pa-langden",
+      "club": {
+        "id": "spanga-is-fk",
+        "name": "Spånga IS FK",
+        "shortName": "SISFK",
+        "palette": [
+          {
+            "name": "Mörkblå",
+            "hex": "#083470"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Blå",
+            "hex": "#7488AC"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#FFFFFF",
+          "#083470",
+          "#7488AC",
+          "#B0B9CE",
+          "#3D5C8C"
+        ],
+        "founded": 1929,
+        "arena": "",
+        "city": "Spånga",
+        "nicknames": [
+          "Spånga IS FK"
+        ],
+        "category": "Fotboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "852bbe17-d9ea-4425-868e-a66a2a728b95",
+        "title": "Spånga på längden",
+        "why": "Den låter supportrarna bära sin Spångastolthet genom höstens matcher och i vardagen.",
+        "signal": "Hemorten Spånga",
+        "recipe": "retro",
+        "front": {
+          "main": "SPÅNGA",
+          "sub": "IS FK"
+        },
+        "back": {
+          "main": "SPÅNGA IS FK",
+          "sub": ""
+        },
+        "font": "varsity",
+        "colors": {
+          "ground": "#083470",
+          "ink": "#FFFFFF",
+          "accent": "#7488AC"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Retro",
+      "yarns": [
+        {
+          "hex": "#083470",
+          "pantone": "PANTONE 294 C",
+          "share": 0.492
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.466
+        },
+        {
+          "hex": "#7488AC",
+          "pantone": "PANTONE 6110 C",
+          "share": 0.042
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 41,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klassisk retrokänsla med tydlig Spångastolthet – lätt att bära både på match och till vardags.",
+          "Stora, kraftiga bokstäver och tydlig mörkblå–vit kontrast fungerar på flera meters håll.",
+          "Omvänd färgsättning ger två användbara sidor, medan ränderna håller ihop uttrycket."
+        ],
+        "issues": [
+          "Provsticka Å-ringarna så att de små öppningarna inte sluts.",
+          "Kontrollera att de tunna blå och vita linjerna blir jämna och tydligt åtskilda i jacquarden.",
+          "Ändarnas vridna IS FK kräver att blicken vänds; framsidans fullständiga klubbnamn blir därför mindre direktläst."
+        ],
+        "summary": "En stark och säljbar supporterhalsduk med klubbnära retrostil som kan gå till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "SPÅNGA / IS FK",
+        "back": "SPÅNGA IS FK"
+      }
+    },
+    {
+      "slug": "ystads-aff-rockets-raketen-fran-ystad",
+      "club": {
+        "id": "ystads-aff-rockets",
+        "name": "Ystad Rockets",
+        "shortName": "YR",
+        "palette": [
+          {
+            "name": "Mörkgrön",
+            "hex": "#144324"
+          },
+          {
+            "name": "Gul",
+            "hex": "#FBCC04"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#144324",
+          "#FBCC04"
+        ],
+        "founded": 1993,
+        "arena": "",
+        "city": "Ystad",
+        "nicknames": [
+          "Ystad Rockets"
+        ],
+        "category": "Amerikansk fotboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "0973be57-f254-4394-90b2-2f3bf7b36075",
+        "title": "Raketen från Ystad",
+        "why": "När höstkylan kommer får supportrarna bära Ystads egen raket runt halsen, på matchdag och resten av veckan.",
+        "signal": "Klubbens symbol",
+        "recipe": "motiv",
+        "front": {
+          "main": "YSTAD",
+          "sub": "ROCKETS"
+        },
+        "back": {
+          "main": "YSTAD ROCKETS",
+          "sub": ""
+        },
+        "font": "teknik",
+        "colors": {
+          "ground": "#144324",
+          "ink": "#FBCC04",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": "One bold, playful rocket mascot pointing diagonally upward, with a chunky body, oversized fins, a single round porthole and a short integrated exhaust flame. Flat yellow (#FBCC04) and white (#FFFFFF) shapes against dark green (#144324), generous negative space and thick, clean edges. No thin lines, gradients, extra objects, people, text, shield or logo.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#144324",
+          "pantone": "PANTONE 2411 C",
+          "share": 0.456
+        },
+        {
+          "hex": "#FBCC04",
+          "pantone": "PANTONE 116 C",
+          "share": 0.478
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.065
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 72,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Stora, kraftiga bokstäver och tydliga kontraster gör klubbnamnet lättläst på flera meters håll.",
+          "Raketen ger framsidan personlighet, medan de officiella märkena förankrar baksidan i klubben.",
+          "Omvänd färgställning ger två användbara uttryck som känns supporterplagg snarare än reklam."
+        ],
+        "issues": [
+          "Provstick raketens fönster, låga och smala gröna mellanrum så att detaljerna håller ihop i jacquard.",
+          "Ge raketens nos och nedersta fena lite mer luft mot kantlinjerna.",
+          "Kontrollera att de tunna vita längsgående linjerna blir jämna i stickningen."
+        ],
+        "summary": "En säljbar och tydligt klubbförankrad halsduk som kan gå till stickeriet, med raketens detaljer och kantlinjerna som kontrollpunkter i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "YSTAD / ROCKETS",
+        "back": "YSTAD ROCKETS"
+      }
+    },
+    {
+      "slug": "nassjo-if-jul-i-nassjo",
+      "club": {
+        "id": "nassjo-if",
+        "name": "Nässjö IF",
+        "shortName": "NIF",
+        "palette": [
+          {
+            "name": "Mörkblå",
+            "hex": "#1C4475"
+          },
+          {
+            "name": "Gul",
+            "hex": "#F8DF05"
+          },
+          {
+            "name": "Mörkblå 2",
+            "hex": "#083186"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#1C4475",
+          "#F8DF05",
+          "#083186",
+          "#ACAA2D"
+        ],
+        "founded": 1899,
+        "arena": "",
+        "city": "Nässjö",
+        "nicknames": [
+          "Nässjö IF"
+        ],
+        "category": "Bandy",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "74c93fb8-b857-48ec-99a5-e3ffbc726b4a",
+        "title": "Jul i Nässjö",
+        "why": "När julen närmar sig vill supportrarna bära Nässjö IF:s färger med snöstjärnor och hjärtan som värmer både på bandyläktaren och hemma i Nässjö.",
+        "signal": "Jul",
+        "recipe": "jul",
+        "front": {
+          "main": "NÄSSJÖ IF",
+          "sub": ""
+        },
+        "back": {
+          "main": "GOD JUL",
+          "sub": "NÄSSJÖ"
+        },
+        "font": "slab",
+        "colors": {
+          "ground": "#1C4475",
+          "ink": "#F8DF05",
+          "accent": "#FFFFFF"
+        },
+        "icon": "snoflinga",
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Julhalsduk",
+      "yarns": [
+        {
+          "hex": "#1C4475",
+          "pantone": "PANTONE 4154 C",
+          "share": 0.524
+        },
+        {
+          "hex": "#F8DF05",
+          "pantone": "PANTONE 102 C",
+          "share": 0.455
+        },
+        {
+          "hex": "#083186",
+          "pantone": "PANTONE 287 C",
+          "share": 0.002
+        },
+        {
+          "hex": "#ACAA2D",
+          "pantone": "PANTONE 7745 C",
+          "share": 0.001
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.018
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 30,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Tydlig klubbidentitet med officiella märken, klubbnamn och rätt färgkaraktär.",
+          "Stor, kraftig huvudtext och stark kontrast fungerar väl på läktaravstånd.",
+          "Snöstjärnor, hjärtan och omvänd färgställning ger en sammanhållen julprodukt utan reklamkänsla."
+        ],
+        "issues": [
+          "Baksidans NÄSSJÖ är betydligt mindre än julhälsningen; förstora något för bättre läsbarhet på håll.",
+          "Provstick ändbårdernas små snöstjärnor och tunna vita sicksacklinjer så att detaljerna inte flyter ihop."
+        ],
+        "summary": "En stark och bärbar julhalsduk med tydlig Nässjö IF-identitet, klar för stickeriet med särskild kontroll av de finaste detaljerna.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "NÄSSJÖ IF",
+        "back": "GOD JUL / NÄSSJÖ"
+      }
+    },
+    {
+      "slug": "onnereds-hk-premiarens-autografer",
+      "club": {
+        "id": "onnereds-hk",
+        "name": "Önnereds HK",
+        "shortName": "ÖHK",
+        "palette": [
+          {
+            "name": "Grön",
+            "hex": "#04AB4D"
+          },
+          {
+            "name": "Gul",
+            "hex": "#C6952D"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#04AB4D",
+          "#C6952D",
+          "#0A0A0A",
+          "#FFFFFF"
+        ],
+        "founded": 1965,
+        "arena": "",
+        "city": "Önnered",
+        "nicknames": [
+          "Önnereds HK"
+        ],
+        "category": "Handboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "8e89ceb6-0834-49eb-bf15-36fb8ab01560",
+        "title": "Premiärens autografer",
+        "why": "En grönvit autografhalsduk gör hemmapremiären till ett minne att bära hela säsongen – de påhittade exempelnamnen ersätts före tillverkning med namnteckningar godkända av klubben och respektive person.",
+        "signal": "Hemmapremiären",
+        "recipe": "autograf",
+        "front": {
+          "main": "SIGNERAD",
+          "sub": ""
+        },
+        "back": {
+          "main": "ÖNNEREDS HK",
+          "sub": "ÖNNERED"
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#04AB4D",
+          "ink": "#FFFFFF",
+          "accent": "#C6952D"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": [
+          "Elsa Lindkvist",
+          "Albin Bergholm",
+          "Nora Sandvik"
+        ]
+      },
+      "level": "komplex",
+      "recipeLabel": "Autografer",
+      "yarns": [
+        {
+          "hex": "#04AB4D",
+          "pantone": "PANTONE 2257 C",
+          "share": 0.47
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.425
+        },
+        {
+          "hex": "#C6952D",
+          "pantone": "PANTONE 1245 C",
+          "share": 0.091
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.014
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 31,
+      "ok": true,
+      "consent": "Namnteckningar kräver klubbens och personernas skriftliga godkännande.",
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Autograferna ger ett personligt samlarvärde utan att halsduken känns som reklam.",
+          "SIGNERAD och ÖNNEREDS HK har rejäl storlek och tydlig kontrast för läsning på håll.",
+          "Omvända grönvita sidor, gula kantlinjer och balanserade märken ger en sammanhållen klubbprodukt."
+        ],
+        "issues": [
+          "ÖNNERED är betydligt mindre än huvudtexten och bör förstoras för bättre läsbarhet på några meters håll.",
+          "Provsticka de slutliga autografernas tunna streck och täta partier så att den handskrivna karaktären bevaras."
+        ],
+        "summary": "En stark och säljbar souvenirhalsduk som kan gå till stickeriet när de slutliga autograferna har godkänts skriftligt av klubben och respektive person.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "SIGNERAD",
+        "back": "ÖNNEREDS HK / ÖNNERED"
+      }
+    },
+    {
+      "slug": "tarna-ik-fjallvinden-tarnaby-i-blatt",
+      "club": {
+        "id": "tarna-ik-fjallvinden",
+        "name": "Tärna IK Fjällvinden",
+        "shortName": "TIKF",
+        "palette": [
+          {
+            "name": "Gul",
+            "hex": "#FBDE06"
+          },
+          {
+            "name": "Mörkblå",
+            "hex": "#332D88"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#FBDE06",
+          "#332D88",
+          "#FFFFFF"
+        ],
+        "founded": 1928,
+        "arena": "",
+        "city": "Tärnaby",
+        "nicknames": [
+          "Tärna IK Fjällvinden"
+        ],
+        "category": "Skidor",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "c808b49e-a836-4cc2-ab62-e7a9193258a6",
+        "title": "Tärnaby i blått",
+        "why": "När kylan kommer vill supportrarna bära hemorten nära, med ett stort skidbacksmotiv som håller säsong efter säsong.",
+        "signal": "Hemorten Tärnaby",
+        "recipe": "motiv",
+        "front": {
+          "main": "TÄRNA IK",
+          "sub": "FJÄLLVINDEN"
+        },
+        "back": {
+          "main": "TÄRNABY",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#332D88",
+          "ink": "#FBDE06",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": "One bold, flat mountain slope motif with a broad ski run sweeping downhill, evoking skiing in Tarnaby. Use a solid white mountain mass and a wide yellow ski run on dark blue #332D88, with yellow #FBDE06 and white #FFFFFF only. Simple chunky shapes, no thin lines, no gradients, no people, no text, no shield, no logo. Create an original landscape motif, not a recreation of the club crest.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#332D88",
+          "pantone": "PANTONE 2370 C",
+          "share": 0.54
+        },
+        {
+          "hex": "#FBDE06",
+          "pantone": "PANTONE Yellow C",
+          "share": 0.378
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.082
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 49,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Stor hemortstext och tydlig klubbidentitet ger stark bärlust utan reklamkänsla.",
+          "Gult, mörkblått och vitt ger tydlig kontrast på båda sidor.",
+          "Skidbacksmotivet knyter ihop skidåkning och fjällmiljö, medan sidornas färgbyte ger variation."
+        ],
+        "issues": [
+          "Provstick fjällmotivets smala vita partier och små träd så att detaljerna inte flyter ihop.",
+          "Kontrollera klubbmärkenas små bokstäver i provstickningen utan att ändra originalmärket."
+        ],
+        "summary": "En stark och bärbar klubbhalsduk med tydlig Tärnabyprofil, redo att skickas till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "TÄRNA IK / FJÄLLVINDEN",
+        "back": "TÄRNABY"
+      }
+    },
+    {
+      "slug": "ifk-ostersund-den-klassiska-supporterhalsduken",
+      "club": {
+        "id": "ifk-ostersund",
+        "name": "IFK Östersund",
+        "shortName": "IFKÖ",
+        "palette": [
+          {
+            "name": "Röd",
+            "hex": "#EC191F"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Röd 2",
+            "hex": "#FABEC0"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#EC191F",
+          "#FFFFFF",
+          "#FABEC0",
+          "#F2696C"
+        ],
+        "founded": 1906,
+        "arena": "",
+        "city": "Östersund",
+        "nicknames": [
+          "IFK Östersund"
+        ],
+        "category": "Fotboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "d213182c-bd62-41a6-b70b-92cdcc0f3155",
+        "title": "Den klassiska supporterhalsduken",
+        "why": "När höstkylan kommer vill supportrarna bära klubbens färger och Östersunds namn – på läktaren och till vardags, säsong efter säsong.",
+        "signal": "Supporterhalsduken",
+        "recipe": "klassisk",
+        "front": {
+          "main": "IFK ÖSTERSUND",
+          "sub": ""
+        },
+        "back": {
+          "main": "ÖSTERSUND",
+          "sub": ""
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#EC191F",
+          "ink": "#FFFFFF",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Klassisk",
+      "yarns": [
+        {
+          "hex": "#EC191F",
+          "pantone": "PANTONE 179 C",
+          "share": 0.44
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.494
+        },
+        {
+          "hex": "#FABEC0",
+          "pantone": "PANTONE 4064 C",
+          "share": 0.002
+        },
+        {
+          "hex": "#F2696C",
+          "pantone": "PANTONE 2346 C",
+          "share": 0.001
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.063
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 5,
+      "minTextMm": 118,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Klassiskt supporteruttryck med tydlig klubbidentitet och lång livslängd.",
+          "Stor, kraftig text och tydliga kontraster gör båda sidorna lättlästa på håll.",
+          "Välbalanserade ändpartier med klubbmärken och ränder som håller ihop designen."
+        ],
+        "issues": [
+          "Provstick klubbmärkenas små detaljer så att de inte flyter ihop.",
+          "Kontrollera att de tunna svarta kantlinjerna blir jämna och att texten får tillräcklig luft mot nederkanten."
+        ],
+        "summary": "En stark och tidlös supporterhalsduk som kan skickas till stickeriet, med finlir i provstickningen av märken och kantdetaljer.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "IFK ÖSTERSUND",
+        "back": "ÖSTERSUND"
+      }
+    },
+    {
+      "slug": "pingvin-rugby-club-pingvinen-vid-sidlinjen",
+      "club": {
+        "id": "pingvin-rugby-club",
+        "name": "Pingvin Rugby Club",
+        "shortName": "PRC",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#FFFFFF",
+          "#0A0A0A"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Trelleborg",
+        "nicknames": [
+          "Pingvin Rugby Club"
+        ],
+        "category": "Rugby",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "12685d34-aa7b-4f66-916f-198000e471df",
+        "title": "Pingvinen vid sidlinjen",
+        "why": "En lekfull pingvin med rugbybollen i famnen gör höstens halsduk till en favorit att bära säsong efter säsong.",
+        "signal": "Klubbens symbol",
+        "recipe": "motiv",
+        "front": {
+          "main": "PINGVIN",
+          "sub": "TRELLEBORG"
+        },
+        "back": {
+          "main": "RUGBY CLUB",
+          "sub": ""
+        },
+        "font": "rund",
+        "colors": {
+          "ground": "#FFFFFF",
+          "ink": "#0A0A0A",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": "One bold, flat illustration of a cheerful penguin mascot hugging an oversized oval rugby ball, forming a single compact silhouette. Original mascot artwork, not a reproduction of the club emblem. Use only solid black and white, chunky shapes and generous negative space. Clearly elongated rugby ball, no soccer panels. No people, lettering, numbers, shield, badge, gradients, fine lines or background",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.552
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.448
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 2,
+      "minTextMm": 60,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Pingvinen med rugbybollen ger personlighet och bärglädje utan reklamkänsla.",
+          "Svartvitt, officiella märken och tydlig koppling till både rugby och Trelleborg.",
+          "Stor, kraftig text och omvänd kontrast mellan sidorna ger mycket god läsbarhet på håll."
+        ],
+        "issues": [
+          "Provsticka pingvinens ögon, näbb och bollens smala linjer så att detaljerna inte flyter ihop.",
+          "Kontrollera att de tunna längsgående ränderna blir jämna och sammanhängande i stickningen."
+        ],
+        "summary": "En säljbar och väl sammanhållen supporterhalsduk som kan skickas till stickeriet, med särskild kontroll av maskotens små detaljer i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "PINGVIN / TRELLEBORG",
+        "back": "RUGBY CLUB"
+      }
+    },
+    {
+      "slug": "sala-simsallskap-sasongens-vagor",
+      "club": {
+        "id": "sala-simsallskap",
+        "name": "Sala Simsällskap",
+        "shortName": "SS",
+        "palette": [
+          {
+            "name": "Mörkblå",
+            "hex": "#051B6D"
+          },
+          {
+            "name": "Gul",
+            "hex": "#FAE705"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#051B6D",
+          "#FAE705"
+        ],
+        "founded": 1927,
+        "arena": "",
+        "city": "Sala",
+        "nicknames": [
+          "Sala Simsällskap"
+        ],
+        "category": "Simning",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "081c974e-9b9a-4bba-a000-e44379d3be6a",
+        "title": "Säsongens vågor",
+        "why": "En gemensam halsduk för ungdomar och ledare som vill fira säsongen och bära Salas färger även efter avslutningen.",
+        "signal": "Säsongsavslutningen",
+        "recipe": "vagor",
+        "front": {
+          "main": "SALA SIMSÄLLSKAP",
+          "sub": ""
+        },
+        "back": {
+          "main": "SÄSONGSAVSLUT",
+          "sub": "SALA"
+        },
+        "font": "smal",
+        "colors": {
+          "ground": "#051B6D",
+          "ink": "#FAE705",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Vågor",
+      "yarns": [
+        {
+          "hex": "#051B6D",
+          "pantone": "PANTONE 662 C",
+          "share": 0.46
+        },
+        {
+          "hex": "#FAE705",
+          "pantone": "PANTONE 102 C",
+          "share": 0.453
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.087
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 38,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 7,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Stort klubbnamn med tydlig gul–mörkblå kontrast ger stark igenkänning på håll.",
+          "Vågorna knyter an till simningen och ger halsduken en sammanhållen, livlig rytm.",
+          "Omvänd färgsättning och symmetriskt placerade klubbmärken gör båda sidorna genomarbetade."
+        ],
+        "issues": [
+          "SÄSONGSAVSLUT känns mer som ett evenemangsminne än en tidlös supportertext och begränsar användningen efter avslutningen.",
+          "Provstick klubbmärkenas små detaljer och bokstävernas mellanrum på baksidan så att de inte flyter ihop.",
+          "SALA på baksidan är tydligt underordnat och tappar läsbarhet på några meters håll."
+        ],
+        "summary": "En säljbar och klubbtrogen säsongshalsduk som kan skickas till stickeriet, med provstickning av märken och baksidestext före produktion.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "SALA SIMSÄLLSKAP",
+        "back": "SÄSONGSAVSLUT / SALA"
+      }
+    },
+    {
+      "slug": "if-bjorkloven-hemmapremiar-i-gront",
+      "club": {
+        "id": "if-bjorkloven",
+        "name": "IF Björklöven",
+        "shortName": "IFB",
+        "palette": [
+          {
+            "name": "Mörkgrön",
+            "hex": "#0C5542"
+          },
+          {
+            "name": "Gul",
+            "hex": "#F8D105"
+          },
+          {
+            "name": "Grön",
+            "hex": "#839422"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#0C5542",
+          "#F8D105",
+          "#839422",
+          "#447332"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Umeå",
+        "nicknames": [
+          "IF Björklöven"
+        ],
+        "category": "Ishockey",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "f661f5c5-caf2-4a27-89ec-f788c0b45945",
+        "title": "Hemmapremiär i grönt",
+        "why": "Till första hemmamatchen vill supportrarna möta säsongen i grönt och gult med Umeå nära hjärtat.",
+        "signal": "Hemmapremiären",
+        "recipe": "tapet",
+        "front": {
+          "main": "IF BJÖRKLÖVEN",
+          "sub": "UMEÅ"
+        },
+        "back": {
+          "main": "HEMMAPREMIÄR",
+          "sub": ""
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#0C5542",
+          "ink": "#F8D105",
+          "accent": "#FFFFFF"
+        },
+        "icon": "stralkastare",
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Tapet",
+      "yarns": [
+        {
+          "hex": "#0C5542",
+          "pantone": "PANTONE 7729 C",
+          "share": 0.486
+        },
+        {
+          "hex": "#F8D105",
+          "pantone": "PANTONE 7405 C",
+          "share": 0.406
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.051
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.056
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 22,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 7,
+        "brandFit": 8,
+        "legibility": 7,
+        "craft": 7,
+        "strengths": [
+          "Klubbnamnet och de officiella märkena ger tydlig Björklöven-identitet.",
+          "Gult mot mörkgrönt ger huvudtexterna bra kontrast på läktaravstånd.",
+          "Sidornas omvända färgfördelning skapar variation och en festlig premiärkänsla."
+        ],
+        "issues": [
+          "UMEÅ är för litet för att få avsedd betydelse på några meters håll; förstora texten.",
+          "Den täta stjärntapeten konkurrerar med klubbnamnet; glesa gärna ut mönstret kring texten.",
+          "Provstick stjärnornas små spetsar och de vita detaljerna mot gult så att mönstret inte blir grötigt."
+        ],
+        "summary": "En säljbar premiärhalsduk med tydlig klubbidentitet som kan gå till stickeriet, med särskild kontroll av Umeå-texten och stjärnmönstret i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "IF BJÖRKLÖVEN / UMEÅ",
+        "back": "HEMMAPREMIÄR"
+      }
+    },
+    {
+      "slug": "toreboda-golfklubb-toreboda-i-romber",
+      "club": {
+        "id": "toreboda-golfklubb",
+        "name": "Töreboda Golfklubb",
+        "shortName": "TG",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Brun",
+            "hex": "#8B6047"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#0A0A0A",
+          "#FFFFFF",
+          "#8B6047",
+          "#A0A0A0"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Töreboda",
+        "nicknames": [
+          "Töreboda Golfklubb"
+        ],
+        "category": "Golf",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "ae9ce585-c011-4f76-ad00-164b81f8721c",
+        "title": "Töreboda i romber",
+        "why": "Höstens kalla morgonronder lockar fram en varm halsduk med klassiska golfromber i klubbens egna färger.",
+        "signal": "Höst",
+        "recipe": "argyle",
+        "front": {
+          "main": "TÖREBODA",
+          "sub": "GOLFKLUBB"
+        },
+        "back": {
+          "main": "GOLF",
+          "sub": "TÖREBODA"
+        },
+        "font": "slab",
+        "colors": {
+          "ground": "#8B6047",
+          "ink": "#FFFFFF",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Argyle",
+      "yarns": [
+        {
+          "hex": "#8B6047",
+          "pantone": "PANTONE 2469 C",
+          "share": 0.552
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.223
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.223
+        },
+        {
+          "hex": "#A0A0A0",
+          "pantone": "PANTONE 4276 C",
+          "share": 0.002
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 30,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klassiska golfromber och klubbfärger ger en bärbar halsduk snarare än en reklamprodukt.",
+          "Framsidans stora TÖREBODA och officiella märken skapar tydlig klubbtillhörighet.",
+          "Balanserade mönsterfält och kraftig typografi ger båda sidorna ett genomarbetat uttryck."
+        ],
+        "issues": [
+          "Provstick rombernas tunna vita diagonaler så att linjerna håller ihop utan att bli taggiga.",
+          "Baksidans mindre TÖREBODA tappar läsbarhet på håll; något större text skulle stärka ortsanknytningen.",
+          "Kontrollera att Ö-prickar och bokstävernas små öppningar förblir tydliga i stickningen."
+        ],
+        "summary": "En stark och säljbar klubbhalsduk med klassisk golfkänsla, redo att skickas till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "TÖREBODA / GOLFKLUBB",
+        "back": "GOLF / TÖREBODA"
+      }
+    },
+    {
+      "slug": "tjorns-konstakning-team-seaside-sasongens-skridsko",
+      "club": {
+        "id": "tjorns-konstakning-team-seaside",
+        "name": "Tjörns Konståkningsklubb",
+        "shortName": "TK",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#0A0A0A",
+          "#FFFFFF"
+        ],
+        "founded": 1985,
+        "arena": "",
+        "city": "Tjörn",
+        "nicknames": [
+          "Tjörns Konståkningsklubb"
+        ],
+        "category": "Konståkning",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "b2e552b1-1eed-4f1e-adf9-7a3bbfce8ad5",
+        "title": "Säsongens skridsko",
+        "why": "När säsongen summeras får ungdomar och ledare ett gemensamt minne av tiden på isen.",
+        "signal": "Säsongsavslutningen",
+        "recipe": "motiv",
+        "front": {
+          "main": "TJÖRNS",
+          "sub": "KONSTÅKNINGSKLUBB"
+        },
+        "back": {
+          "main": "SÄSONGSAVSLUT",
+          "sub": ""
+        },
+        "font": "rund",
+        "colors": {
+          "ground": "#FFFFFF",
+          "ink": "#0A0A0A",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": "One bold, flat side-view silhouette of a generic figure skate, black on white. Use a chunky boot shape, a thick blade and a clearly visible toe pick, with generous negative space and minimal detail. No thin lines, shading, gradients, people, text, shield or logo. Create an independent illustration, not a reproduction of any club emblem.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.537
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.463
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 2,
+      "minTextMm": 43,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 7,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 7,
+        "strengths": [
+          "Tydlig klubbidentitet med rätt färger, officiella märken och ett relevant skridskomotiv.",
+          "Kraftiga bokstäver och hög kontrast ger bra läsbarhet på några meters håll.",
+          "Den omvända färgsättningen ger sidorna variation och en sammanhållen supporterkänsla."
+        ],
+        "issues": [
+          "SÄSONGSAVSLUT fungerar som gemensamt minne men begränsar köplusten som allmän supporterhalsduk.",
+          "Ge skridskon mer luft mot ramlinjerna, särskilt där skenan flyter ihop med den nedre linjen.",
+          "Provstick prickar, ringar och skridskons smala öppningar så att de förblir tydliga i jacquard."
+        ],
+        "summary": "En säljbar och klubbtrogen minneshalsduk som kan skickas till stickeriet, med provstickning av smådetaljer och lite mer luft kring skridskon.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "TJÖRNS / KONSTÅKNINGSKLUBB",
+        "back": "SÄSONGSAVSLUT"
+      }
+    },
+    {
+      "slug": "sodertalje-sportklubb-laktarretro-fran-1902",
+      "club": {
+        "id": "sodertalje-sportklubb",
+        "name": "Södertälje SK",
+        "shortName": "SSK",
+        "palette": [
+          {
+            "name": "Blå",
+            "hex": "#0464B2"
+          },
+          {
+            "name": "Orange",
+            "hex": "#D6BA85"
+          },
+          {
+            "name": "Gul",
+            "hex": "#FBDE05"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#0464B2",
+          "#D6BA85",
+          "#FBDE05",
+          "#0A0A0A",
+          "#8C7753"
+        ],
+        "founded": 1902,
+        "arena": "",
+        "city": "Södertälje",
+        "nicknames": [
+          "Södertälje SK"
+        ],
+        "category": "Ishockey",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "799b5233-7839-4a72-b418-78c422f9cb73",
+        "title": "Läktarretro från 1902",
+        "why": "Klassiska längsränder och klubbens färger gör den till en halsduk att bära på läktaren hela säsongen, år efter år.",
+        "signal": "Supporterhalsduken",
+        "recipe": "retro",
+        "front": {
+          "main": "SÖDERTÄLJE SK",
+          "sub": ""
+        },
+        "back": {
+          "main": "ISHOCKEY",
+          "sub": "SÖDERTÄLJE"
+        },
+        "font": "varsity",
+        "colors": {
+          "ground": "#0464B2",
+          "ink": "#FFFFFF",
+          "accent": "#FBDE05"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Retro",
+      "yarns": [
+        {
+          "hex": "#0464B2",
+          "pantone": "PANTONE 2144 C",
+          "share": 0.455
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.503
+        },
+        {
+          "hex": "#FBDE05",
+          "pantone": "PANTONE Yellow C",
+          "share": 0.042
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 17,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klassisk blåvit läktarkänsla med gula accenter och tydlig klubbidentitet.",
+          "Stor, kontrastrik huvudtext som fungerar på flera meters håll.",
+          "Omvänd färgsättning och balanserade årtalsfält ger två genomarbetade sidor."
+        ],
+        "issues": [
+          "Baksidans SÖDERTÄLJE är för litet för läsning på håll; förstora det och ge raden mer utrymme.",
+          "Provsticka de tunna längsränderna och bokstävernas detaljer så att de förblir tydliga i jacquarden."
+        ],
+        "summary": "En stark och tidlös supporterhalsduk som kan skickas till stickeriet, med särskild kontroll av baksidans småtext och de tunna ränderna i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "SÖDERTÄLJE SK",
+        "back": "ISHOCKEY / SÖDERTÄLJE"
+      }
+    },
+    {
+      "slug": "koping-tennisklubb-klubbens-klassiker",
+      "club": {
+        "id": "koping-tennisklubb",
+        "name": "Köpings Tennisklubb",
+        "shortName": "KT",
+        "palette": [
+          {
+            "name": "Mörkblå",
+            "hex": "#053466"
+          },
+          {
+            "name": "Gul",
+            "hex": "#F8CF08"
+          },
+          {
+            "name": "Grön",
+            "hex": "#616F43"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#053466",
+          "#F8CF08",
+          "#616F43",
+          "#BFA81F",
+          "#8F8B31"
+        ],
+        "founded": 1897,
+        "arena": "",
+        "city": "Köping",
+        "nicknames": [
+          "Köpings Tennisklubb"
+        ],
+        "category": "Tennis",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "990debbb-d85c-475d-80a9-1e76a0d3f8b4",
+        "title": "Klubbens klassiker",
+        "why": "En halsduk i klubbens färger att samlas kring hela säsongen och bära med stolthet både vid tennisbanan och på stan.",
+        "signal": "Supporterhalsduken",
+        "recipe": "klassisk",
+        "front": {
+          "main": "KÖPINGS",
+          "sub": "TENNISKLUBB"
+        },
+        "back": {
+          "main": "TENNIS",
+          "sub": "KÖPING"
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#053466",
+          "ink": "#F8CF08",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Klassisk",
+      "yarns": [
+        {
+          "hex": "#053466",
+          "pantone": "PANTONE 648 C",
+          "share": 0.489
+        },
+        {
+          "hex": "#F8CF08",
+          "pantone": "PANTONE 109 C",
+          "share": 0.433
+        },
+        {
+          "hex": "#616F43",
+          "pantone": "PANTONE 5753 C",
+          "share": 0.01
+        },
+        {
+          "hex": "#BFA81F",
+          "pantone": "PANTONE 103 C",
+          "share": 0.001
+        },
+        {
+          "hex": "#8F8B31",
+          "pantone": "PANTONE 582 C",
+          "share": 0.002
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.065
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 6,
+      "minTextMm": 31,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 7,
+        "craft": 8,
+        "strengths": [
+          "Klassisk klubbkänsla med rätt färgpalett och officiella märken, utan reklamton.",
+          "Stora huvudord och tydlig blågul kontrast ger bra synlighet på håll.",
+          "Omvänd färgsättning mellan sidorna och välbalanserade ändpartier ger en genomarbetad helhet."
+        ],
+        "issues": [
+          "TENNISKLUBB och framför allt baksidans KÖPING är små för läsning på några meters håll; ge dem gärna större grad.",
+          "Provstick de tunna vita linjerna och småtexternas bokstavsmellanrum så att de håller sig tydliga i jacquard."
+        ],
+        "summary": "En säljbar och bärbar klubbklassiker med stark identitet som är klar att skickas till stickeriet, med småtext och tunna linjer som kontrollpunkter vid provstickning.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "KÖPINGS / TENNISKLUBB",
+        "back": "TENNIS / KÖPING"
+      }
+    },
+    {
+      "slug": "gothia-volleybollklubb-hemmapremiarens-halsduk",
+      "club": {
+        "id": "gothia-volleybollklubb",
+        "name": "Gothia Volley",
+        "shortName": "GV",
+        "palette": [
+          {
+            "name": "Turkos",
+            "hex": "#0BADED"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Gul",
+            "hex": "#FADE06"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#0BADED",
+          "#FFFFFF",
+          "#FADE06",
+          "#84D5F4"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "",
+        "nicknames": [
+          "Gothia Volley"
+        ],
+        "category": "Volleyboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "421b9b3c-b2bc-4ed6-b0bc-ce0f053b20b7",
+        "title": "Hemmapremiärens halsduk",
+        "why": "Till säsongens första hemmamatch vill supportrarna samlas bakom klubbens färger med en stor volleyboll mellan händerna.",
+        "signal": "Hemmapremiären",
+        "recipe": "motiv",
+        "front": {
+          "main": "GOTHIA",
+          "sub": "VOLLEY"
+        },
+        "back": {
+          "main": "HEMMAPREMIÄR",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#0BADED",
+          "ink": "#0A0A0A",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": "One oversized, bold, flat volleyball with unmistakable curved volleyball panel groups. White panels with thick black seams against a turquoise #0BADED background. Use only #FFFFFF, #0A0A0A and #0BADED. Simple silhouette, broad shapes, no fine details, no shading, no gradients, no motion lines, no text, no people, no shield or logo, no soccer-ball polygons.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#0BADED",
+          "pantone": "PANTONE 2995 C",
+          "share": 0.473
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.412
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.107
+        },
+        {
+          "hex": "#FADE06",
+          "pantone": "PANTONE Yellow C",
+          "share": 0.005
+        },
+        {
+          "hex": "#84D5F4",
+          "pantone": "PANTONE 2975 C",
+          "share": 0.003
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 5,
+      "minTextMm": 63,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Stor klubbtext och tydlig volleyboll ger en stark supportersida som fungerar på läktaren.",
+          "Klubbfärgerna och de officiella märkena skapar tydlig tillhörighet utan reklamkänsla.",
+          "Rejäla bokstäver, god kontrast och balanserad placering gör båda sidorna lättlästa på håll."
+        ],
+        "issues": [
+          "Provstick märkenas små detaljer och tunna kantlinjer så att de inte flyter ihop eller försvinner.",
+          "Ge volleybollen lite mer luft mot långsidornas vita linjer; den ligger väl tätt i höjdled.",
+          "HEMMAPREMIÄR begränsar användningen jämfört med ett budskap som känns lika aktuellt hela säsongen."
+        ],
+        "summary": "En stark och säljbar premiärhalsduk som kan skickas till stickeriet, med provstickning av smådetaljer och en mindre justering av bollens marginaler.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "GOTHIA / VOLLEY",
+        "back": "HEMMAPREMIÄR"
+      }
+    },
+    {
+      "slug": "kungalvs-bk-klubbens-retrohalsduk",
+      "club": {
+        "id": "kungalvs-bk",
+        "name": "Kungälvs BK",
+        "shortName": "KBK",
+        "palette": [
+          {
+            "name": "Gul",
+            "hex": "#F7D434"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Gul 2",
+            "hex": "#E9B10B"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#F7D434",
+          "#0A0A0A",
+          "#E9B10B"
+        ],
+        "founded": 1962,
+        "arena": "",
+        "city": "Kungälv",
+        "nicknames": [
+          "Kungälvs BK"
+        ],
+        "category": "Bowling",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "dd789157-f027-44a8-ba07-f7db121c930b",
+        "title": "Klubbens retrohalsduk",
+        "why": "En gulsvart klassiker för supportrar som vill bära klubbens färger hela säsongen, år efter år.",
+        "signal": "Supporterhalsduken",
+        "recipe": "retro",
+        "front": {
+          "main": "KUNGÄLVS BK",
+          "sub": "BK"
+        },
+        "back": {
+          "main": "BOWLING",
+          "sub": "KUNGÄLV"
+        },
+        "font": "varsity",
+        "colors": {
+          "ground": "#F7D434",
+          "ink": "#0A0A0A",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Retro",
+      "yarns": [
+        {
+          "hex": "#F7D434",
+          "pantone": "PANTONE 7405 C",
+          "share": 0.462
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.496
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.042
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 17,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Tidlös gulsvart supporterdesign med tydlig klubbkänsla, utan reklamkänsla.",
+          "KUNGÄLVS BK och BOWLING är stora, kontrastrika och lättlästa på håll.",
+          "Omvänd färgsättning mellan sidorna och återkommande BK-fält ger en genomarbetad retrohelhet."
+        ],
+        "issues": [
+          "KUNGÄLV på baksidan är för litet för att läsas tydligt på några meters håll; förstora gärna.",
+          "Provsticka de tunna ljusa linjerna och den lilla textens detaljer så att de inte flyter ihop."
+        ],
+        "summary": "En stark och bärbar retrohalsduk som kan skickas till stickeriet, med provstickning av de finaste detaljerna.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "KUNGÄLVS BK / BK",
+        "back": "BOWLING / KUNGÄLV"
+      }
+    },
+    {
+      "slug": "sundsvalls-friidrottsforening-sasongens-farger",
+      "club": {
+        "id": "sundsvalls-friidrottsforening",
+        "name": "Sundsvalls Friidrott",
+        "shortName": "SF",
+        "palette": [
+          {
+            "name": "Röd",
+            "hex": "#EC1B32"
+          },
+          {
+            "name": "Blå",
+            "hex": "#0864AC"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#EC1B32",
+          "#0864AC",
+          "#FFFFFF"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Sundsvall",
+        "nicknames": [
+          "Sundsvalls Friidrott"
+        ],
+        "category": "Friidrott",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "1969d783-822c-4800-91a1-0e87f6818670",
+        "title": "Säsongens färger",
+        "why": "En gemensam halsduk till säsongsavslutningen tackar ungdomar och ledare för året och låter klubbkänslan följa med hem.",
+        "signal": "Säsongsavslutningen",
+        "recipe": "toning",
+        "front": {
+          "main": "SUNDSVALLS",
+          "sub": "FRIIDROTT"
+        },
+        "back": {
+          "main": "TACK FÖR I ÅR",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#0864AC",
+          "ink": "#FFFFFF",
+          "accent": "#EC1B32"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Toning",
+      "yarns": [
+        {
+          "hex": "#0864AC",
+          "pantone": "PANTONE 3506 C",
+          "share": 0.461
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.26
+        },
+        {
+          "hex": "#EC1B32",
+          "pantone": "PANTONE 1788 C",
+          "share": 0.279
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 35,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 7,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klubbnamnet och de officiella märkena ger tydlig tillhörighet utan reklamkänsla.",
+          "Stor vit text på sammanhållna röda och blå mittfält ger bra läsbarhet på håll.",
+          "Symmetriska ändpartier och ett varmt tackbudskap passar säsongsavslutningen."
+        ],
+        "issues": [
+          "Provstick de finprickiga toningarna så att övergångarna blir jämna, inte flammiga, med enbart klubbens garnfärger.",
+          "Kontrollera att prickarna över Ö och ringen över Å förblir tydliga i stickningen.",
+          "Tackbudskapet gör modellen mer till ett säsongsminne än en självklar supporterhalsduk året runt."
+        ],
+        "summary": "En säljbar, välbalanserad avslutningshalsduk med stark klubbkänsla som kan skickas till stickeriet med toningarna som viktigaste provstickningspunkt.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "SUNDSVALLS / FRIIDROTT",
+        "back": "TACK FÖR I ÅR"
+      }
+    },
+    {
+      "slug": "ck-granit-stenen-i-centrum",
+      "club": {
+        "id": "ck-granit",
+        "name": "CK Granit",
+        "shortName": "CKG",
+        "palette": [
+          {
+            "name": "Gul",
+            "hex": "#FAE21A"
+          },
+          {
+            "name": "Blå",
+            "hex": "#047BC3"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#FAE21A",
+          "#047BC3",
+          "#0A0A0A",
+          "#99870F",
+          "#636466"
+        ],
+        "founded": 1963,
+        "arena": "",
+        "city": "Gävle",
+        "nicknames": [
+          "CK Granit"
+        ],
+        "category": "Curling",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "360fd044-5635-464a-8199-3c49ace77d4b",
+        "title": "Stenen i centrum",
+        "why": "När kylan känns i hallen vill vi värma oss med en halsduk som visar att curling är vår sport.",
+        "signal": "Sporten: curling",
+        "recipe": "motiv",
+        "front": {
+          "main": "CK GRANIT",
+          "sub": "GÄVLE"
+        },
+        "back": {
+          "main": "CURLING",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#047BC3",
+          "ink": "#FAE21A",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": "One bold, flat curling stone viewed from the side, with a broad white body and an oversized yellow handle on a blue background. Use only blue #047BC3, yellow #FAE21A and white #FFFFFF. Simple chunky silhouette, solid shapes and generous negative space. No thin lines, shading, gradients, people, text, shield or logo. An independent illustration of sports equipment, not a recreation of any club embl",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#047BC3",
+          "pantone": "PANTONE 3005 C",
+          "share": 0.505
+        },
+        {
+          "hex": "#FAE21A",
+          "pantone": "PANTONE 107 C",
+          "share": 0.386
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.009
+        },
+        {
+          "hex": "#99870F",
+          "pantone": "PANTONE 3985 C",
+          "share": 0.002
+        },
+        {
+          "hex": "#636466",
+          "pantone": "PANTONE 4195 C",
+          "share": 0.004
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.094
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 6,
+      "minTextMm": 65,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Stora, tydliga ord och stark gul–blå kontrast fungerar på flera meters håll.",
+          "Curlingstenen binder ihop klubbnamnet och Gävle till en tydlig, klubbe­gen framsida.",
+          "Omvänd färgsättning ger variation mellan sidorna utan att tappa sammanhållningen."
+        ],
+        "issues": [
+          "Provsticka stenens handtag så att öppningen förblir tydlig och motivet känns distinkt.",
+          "Kontrollera att märkenas små detaljer och de tunna vita kantlinjerna håller i jacquarden."
+        ],
+        "summary": "En stark och bärbar supporterhalsduk med tydlig klubb- och curlingidentitet som kan skickas till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "CK GRANIT / GÄVLE",
+        "back": "CURLING"
+      }
+    },
+    {
+      "slug": "karra-hf-premiar-i-sicksack",
+      "club": {
+        "id": "karra-hf",
+        "name": "Kärra HF",
+        "shortName": "KHF",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Gul",
+            "hex": "#FBD405"
+          },
+          {
+            "name": "Orange",
+            "hex": "#CCBCA1"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#0A0A0A",
+          "#FBD405",
+          "#CCBCA1",
+          "#C79B11"
+        ],
+        "founded": 1958,
+        "arena": "",
+        "city": "Göteborg",
+        "nicknames": [
+          "Kärra HF"
+        ],
+        "category": "Handboll",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "fbfeb441-4dcd-486e-99e6-d063c0263cf9",
+        "title": "Premiär i sicksack",
+        "why": "Gult och svart med tydliga sicksackändar blir ett stolt klubbtecken att lyfta på hemmapremiären och bära resten av säsongen.",
+        "signal": "Hemmapremiären",
+        "recipe": "sicksack",
+        "front": {
+          "main": "KÄRRA HF",
+          "sub": "GÖTEBORG"
+        },
+        "back": {
+          "main": "HANDBOLL",
+          "sub": ""
+        },
+        "font": "slab",
+        "colors": {
+          "ground": "#FBD405",
+          "ink": "#0A0A0A",
+          "accent": "#FFFFFF"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Sicksack",
+      "yarns": [
+        {
+          "hex": "#FBD405",
+          "pantone": "PANTONE Yellow 012 C",
+          "share": 0.47
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.451
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.079
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 30,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "KÄRRA HF och HANDBOLL syns tydligt på håll med kraftiga bokstäver och stark kontrast.",
+          "Klubbnamn, Göteborg och handboll ger tydlig tillhörighet utan reklamkänsla.",
+          "Sicksackändarna och de omvända bottenfärgerna ger en sammanhållen, energisk supporterprodukt."
+        ],
+        "issues": [
+          "Provstick GÖTEBORG så att de små bokstavsöppningarna och prickarna över Ö inte flyter ihop.",
+          "Kontrollera att sicksackens smala vita linjer håller jämn tjocklek genom vändningarna.",
+          "HANDBOLL ligger nära sidornas avdelare; lite mer luft skulle ge baksidan bättre balans."
+        ],
+        "summary": "En stark och säljbar klubbhalsduk som kan skickas till stickeriet, med småtext och tunna mönsterlinjer att kontrollera i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "KÄRRA HF / GÖTEBORG",
+        "back": "HANDBOLL"
+      }
+    },
+    {
+      "slug": "ok-landehof-host-i-skogen",
+      "club": {
+        "id": "ok-landehof",
+        "name": "OK Landehof",
+        "shortName": "OKL",
+        "palette": [
+          {
+            "name": "Blå",
+            "hex": "#055B94"
+          },
+          {
+            "name": "Gul",
+            "hex": "#F9E006"
+          },
+          {
+            "name": "Grön",
+            "hex": "#739556"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#055B94",
+          "#F9E006",
+          "#739556",
+          "#A4AF38"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "",
+        "nicknames": [
+          "OK Landehof"
+        ],
+        "category": "Orientering",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "9aa2c057-bafa-4448-8930-834c69afc572",
+        "title": "Höst i skogen",
+        "why": "När höstkylan kommer håller den värmen vid orienteringsbanan och låter klubbkänslan följa med hem.",
+        "signal": "Höst",
+        "recipe": "tapet",
+        "front": {
+          "main": "OK LANDEHOF",
+          "sub": ""
+        },
+        "back": {
+          "main": "ORIENTERING",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#055B94",
+          "ink": "#F9E006",
+          "accent": "#FFFFFF"
+        },
+        "icon": "gran",
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Tapet",
+      "yarns": [
+        {
+          "hex": "#055B94",
+          "pantone": "PANTONE 6126 C",
+          "share": 0.495
+        },
+        {
+          "hex": "#F9E006",
+          "pantone": "PANTONE 102 C",
+          "share": 0.418
+        },
+        {
+          "hex": "#739556",
+          "pantone": "PANTONE 7490 C",
+          "share": 0.001
+        },
+        {
+          "hex": "#A4AF38",
+          "pantone": "PANTONE 7745 C",
+          "share": 0
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.086
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 5,
+      "minTextMm": 77,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Stora, kraftiga bokstäver gör både klubbnamnet och ORIENTERING tydliga på håll.",
+          "Klubbmärken, klubbfärger och skogsmotiv ger stark tillhörighet utan reklamkänsla.",
+          "Omvänd färgsättning och matchande fransar håller ihop sidorna till en genomarbetad produkt."
+        ],
+        "issues": [
+          "Provstick de små granarna så att siluetterna håller och inte blir otydliga prickar.",
+          "Vita granar på gul botten har låg kontrast och riskerar att försvinna på håll.",
+          "Den täta tapeten konkurrerar något med klubbnamnet; pröva lite mer luft runt bokstäverna."
+        ],
+        "summary": "En säljbar och tydligt klubbförankrad halsduk som är klar för stickeriet, med småmönstrets återgivning som viktigaste punkt att följa i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "OK LANDEHOF",
+        "back": "ORIENTERING"
+      }
+    },
+    {
+      "slug": "bankeryds-basket-din-egen-halsduk",
+      "club": {
+        "id": "bankeryds-basket",
+        "name": "Bankeryds Basket",
+        "shortName": "BB",
+        "palette": [
+          {
+            "name": "Röd",
+            "hex": "#E40925"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Röd 2",
+            "hex": "#F3B6B7"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#E40925",
+          "#FFFFFF",
+          "#F3B6B7",
+          "#EC8286",
+          "#E7545A"
+        ],
+        "founded": 1981,
+        "arena": "",
+        "city": "Bankeryd",
+        "nicknames": [
+          "Bankeryds Basket"
+        ],
+        "category": "Basket",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "145ca8de-61f2-4cd2-9233-91c84f576e18",
+        "title": "Din egen halsduk",
+        "why": "En personlig julgåva med namn och nummer gör klubbkänslan till din egen hela vintern; LIND och 12 är påhittade exempel, och beställningen stickas först efter klubbens och personens godkännande.",
+        "signal": "Jul",
+        "recipe": "personlig",
+        "front": {
+          "main": "LIND",
+          "sub": "BANKERYD"
+        },
+        "back": {
+          "main": "BANKERYDS BASKET",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#E40925",
+          "ink": "#FFFFFF",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": null,
+        "number": "12",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Personlig",
+      "yarns": [
+        {
+          "hex": "#E40925",
+          "pantone": "PANTONE 185 C",
+          "share": 0.458
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.446
+        },
+        {
+          "hex": "#F3B6B7",
+          "pantone": "PANTONE 4064 C",
+          "share": 0.006
+        },
+        {
+          "hex": "#EC8286",
+          "pantone": "PANTONE 2029 C",
+          "share": 0
+        },
+        {
+          "hex": "#E7545A",
+          "pantone": "PANTONE 4058 C",
+          "share": 0.003
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.087
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 6,
+      "minTextMm": 38,
+      "ok": true,
+      "consent": "Beställaren godkänner sitt eget namn och nummer i kassan. Stickas en och en efter beställning.",
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Namn och nummer ger tydlig presentkänsla utan att halsduken blir reklamig.",
+          "Baksidans stora klubbnamn och starka kontrast fungerar väl på flera meters håll.",
+          "Klubbfärger, officiella märken och samordnade ändränder ger en sammanhållen supporterprodukt."
+        ],
+        "issues": [
+          "Provstick klubbmärkets små detaljer och de tunna svarta linjerna så att de håller i jacquard.",
+          "Fastställ maximal namnlängd och kontrollera varje personligt korrektur så att längre namn inte pressas ihop."
+        ],
+        "summary": "En säljbar och tydligt klubbförankrad presenthalsduk som kan gå till stickeriet när klubbens och personens skriftliga godkännanden finns.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "LIND / BANKERYD",
+        "back": "BANKERYDS BASKET"
+      }
+    },
+    {
+      "slug": "dalaro-batklubb-sjosattning-pa-dalaro",
+      "club": {
+        "id": "dalaro-batklubb",
+        "name": "Dalarö Båtklubb",
+        "shortName": "DB",
+        "palette": [
+          {
+            "name": "Blå",
+            "hex": "#1C3F98"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#1C3F98"
+        ],
+        "founded": 1947,
+        "arena": "",
+        "city": "Dalarö",
+        "nicknames": [
+          "Dalarö Båtklubb"
+        ],
+        "category": "Segling",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "9bc22f0c-e844-4359-b22c-09ad81cb268a",
+        "title": "Sjösättning på Dalarö",
+        "why": "När klubben samlas på bryggan för vårens sjösättning värmer halsduken och visar samhörigheten på Dalarö.",
+        "signal": "Sjösättningen",
+        "recipe": "motiv",
+        "front": {
+          "main": "DALARÖ",
+          "sub": "BÅTKLUBB"
+        },
+        "back": {
+          "main": "SJÖSÄTTNINGEN",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#1C3F98",
+          "ink": "#FFFFFF",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": "One bold, flat side-view silhouette of a generic sailboat, with a broad hull and two large triangular sails. Solid white on a royal blue (#1C3F98) background, with generous negative space between the sails and hull. Simple chunky shapes, no thin lines, no gradients, no people, no text, no crest, no logo.",
+        "number": "",
+        "roster": []
+      },
+      "level": "komplex",
+      "recipeLabel": "Motiv",
+      "yarns": [
+        {
+          "hex": "#1C3F98",
+          "pantone": "PANTONE 293 C",
+          "share": 0.476
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.47
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.054
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 62,
+      "ok": true,
+      "consent": null,
+      "art": true,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Stora, kraftiga bokstäver och tydlig blåvit kontrast ger mycket god läsbarhet på håll.",
+          "Klubbnamnet, segelbåten och de officiella märkena skapar tydlig tillhörighet utan reklamkänsla.",
+          "Omvänd färgsättning mellan sidorna och välplacerade motiv ger en sammanhållen produkt."
+        ],
+        "issues": [
+          "Provstick prickarna och ringen över Ö, Ä och Å så att de förblir tydliga i jacquarden.",
+          "Kontrollera att de tunna svarta kantlinjerna blir jämna och att segelbåtens smala blå mellanrum hålls öppna."
+        ],
+        "summary": "En stark och bärbar klubbhalsduk med tydlig seglingskänsla som kan skickas till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "DALARÖ / BÅTKLUBB",
+        "back": "SJÖSÄTTNINGEN"
+      }
+    },
+    {
+      "slug": "guldstadens-boxningsklubb-guldstadens-breda-rander",
+      "club": {
+        "id": "guldstadens-boxningsklubb",
+        "name": "Guldstadens BK",
+        "shortName": "GBK",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Röd",
+            "hex": "#D02C24"
+          },
+          {
+            "name": "Gul",
+            "hex": "#F3C41D"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#0A0A0A",
+          "#D02C24",
+          "#F3C41D",
+          "#E0E0E0"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Skellefteå",
+        "nicknames": [
+          "Guldstadens BK"
+        ],
+        "category": "Boxning",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "42df38bc-21b4-4069-aaa7-e5d4a87e3e31",
+        "title": "Guldstadens breda ränder",
+        "why": "När halsduksvädret kommer vill supportrarna bära klubbens färger och Skellefteå med sig, hela säsongen och år efter år.",
+        "signal": "Supporterhalsduken",
+        "recipe": "bar",
+        "front": {
+          "main": "",
+          "sub": ""
+        },
+        "back": {
+          "main": "GBK",
+          "sub": "SKELLEFTEÅ"
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#D02C24",
+          "ink": "#FFFFFF",
+          "accent": "#F3C41D"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Bar scarf",
+      "yarns": [
+        {
+          "hex": "#D02C24",
+          "pantone": "PANTONE 7626 C",
+          "share": 0.48
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.497
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.017
+        },
+        {
+          "hex": "#F3C41D",
+          "pantone": "PANTONE 7406 C",
+          "share": 0.007
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 62,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 7,
+        "brandFit": 8,
+        "legibility": 8,
+        "craft": 7,
+        "strengths": [
+          "Klassiska breda ränder ger en lättburen halsduk som håller över flera säsonger.",
+          "Det officiella märket ger tydlig klubbanknytning utan reklamkänsla.",
+          "Stora GBK-bokstäver med god kontrast fungerar på några meters håll."
+        ],
+        "issues": [
+          "Baksidan saknar utlovade SKELLEFTEÅ; ortsanknytningen blir svag när den bara finns i märkets småtext.",
+          "Provsticka märkets små bokstäver och tunna konturer så att detaljerna inte flyter ihop.",
+          "Klubbidentiteten är koncentrerad till mitten och riskerar att döljas när halsduken knyts."
+        ],
+        "summary": "En säljbar och stickklar klassisk klubbhalsduk, men Skellefteå framträder svagare än idén utlovar.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "ingen text",
+        "back": "GBK / SKELLEFTEÅ"
+      }
+    },
+    {
+      "slug": "ifk-vanersborg-annandagens-blavita",
+      "club": {
+        "id": "ifk-vanersborg",
+        "name": "IFK Vänersborg",
+        "shortName": "IFKV",
+        "palette": [
+          {
+            "name": "Mörkblå",
+            "hex": "#0633AC"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Blå",
+            "hex": "#4E6EC5"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#0633AC",
+          "#FFFFFF",
+          "#4E6EC5"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Vänersborg",
+        "nicknames": [
+          "IFK Vänersborg"
+        ],
+        "category": "Bandy",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "62db5917-84ef-4a0b-9c38-8ff3baf0b3de",
+        "title": "Annandagens blåvita",
+        "why": "En blåvit halsduk för att samlas kring IFK Vänersborg på bandyns egen högtid, annandag jul.",
+        "signal": "Annandagsbandyn",
+        "recipe": "matchdag",
+        "front": {
+          "main": "ANNANDAGS",
+          "sub": "BANDY"
+        },
+        "back": {
+          "main": "IFK VÄNERSBORG",
+          "sub": ""
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#0633AC",
+          "ink": "#FFFFFF",
+          "accent": "#4E6EC5"
+        },
+        "icon": "snoflinga",
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Matchdag",
+      "yarns": [
+        {
+          "hex": "#0633AC",
+          "pantone": "PANTONE 286 C",
+          "share": 0.333
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.496
+        },
+        {
+          "hex": "#4E6EC5",
+          "pantone": "PANTONE 6102 C",
+          "share": 0.172
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 95,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 9,
+        "craft": 8,
+        "strengths": [
+          "Annandagsbandyn ger ett tydligt supporterbudskap med stark förankring i sporten.",
+          "Stora, kraftiga bokstäver och tydliga kontraster gör båda sidorna lättlästa på håll.",
+          "Klubbmärket, blåvita färgfält och baksidans vinklade ändpartier ger en genomarbetad klubbprodukt."
+        ],
+        "issues": [
+          "Provstick vit text mot det ljusare blå fältet så att BANDY behåller sin tydlighet.",
+          "Kontrollera att klubbmärkets små detaljer återges tydligt i stickningen utan att originalet ändras."
+        ],
+        "summary": "En stark och säljbar matchdagshalsduk som är klar att skickas till stickeriet, med kontrast och märkesdetaljer att kontrollera i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "ANNANDAGS / BANDY",
+        "back": "IFK VÄNERSBORG"
+      }
+    },
+    {
+      "slug": "gefle-gymnastikforening-sasongens-svartvita-minne",
+      "club": {
+        "id": "gefle-gymnastikforening",
+        "name": "Gefle Gymnastikförening",
+        "shortName": "GG",
+        "palette": [
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#FFFFFF",
+          "#0A0A0A",
+          "#838294"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Gävle",
+        "nicknames": [
+          "Gefle Gymnastikförening"
+        ],
+        "category": "Gymnastik",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "af6989a2-b4da-4450-9a7a-378f440d6bb7",
+        "title": "Säsongens svartvita minne",
+        "why": "När säsongen summeras får ungdomar och ledare ett gemensamt minne av träningarna, uppvisningarna och gemenskapen i Gefle Gymnastikförening.",
+        "signal": "Säsongsavslutningen",
+        "recipe": "toning",
+        "front": {
+          "main": "GEFLE",
+          "sub": "GYMNASTIKFÖRENING"
+        },
+        "back": {
+          "main": "SÄSONGSAVSLUT",
+          "sub": "GÄVLE"
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#FFFFFF",
+          "ink": "#0A0A0A",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Toning",
+      "yarns": [
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.53
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.469
+        },
+        {
+          "hex": "#838294",
+          "pantone": "PANTONE 4127 C",
+          "share": 0
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 20,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 7,
+        "brandFit": 9,
+        "legibility": 7,
+        "craft": 8,
+        "strengths": [
+          "Tydlig klubbidentitet med officiella märken, föreningsnamn och Gävle i svartvitt.",
+          "Stora GEFLE och rena kontrastfält ger framsidan bra läsbarhet på håll.",
+          "Balanserade ändpartier och omvända ljusförhållanden ger två genomarbetade sidor."
+        ],
+        "issues": [
+          "Provstick toningens finaste raster så att övergångarna inte blir grötiga eller randiga.",
+          "GYMNASTIKFÖRENING är liten i förhållande till GEFLE; öka gärna texthöjden för bättre läsning på några meters håll.",
+          "SÄSONGSAVSLUT fungerar som gemensamt minne men begränsar attraktionskraften som tidlös klubbhalsduk."
+        ],
+        "summary": "En säljbar och klubbnära minneshalsduk som kan skickas till stickeriet, med särskild kontroll av toningen och den mindre texten i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "GEFLE / GYMNASTIKFÖRENING",
+        "back": "SÄSONGSAVSLUT / GÄVLE"
+      }
+    },
+    {
+      "slug": "vastra-frolunda-badmintonklubb-hostens-grona-sicksack",
+      "club": {
+        "id": "vastra-frolunda-badmintonklubb",
+        "name": "Västra Frölunda Badmintonklubb",
+        "shortName": "VFB",
+        "palette": [
+          {
+            "name": "Mörkgrön",
+            "hex": "#0A5643"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Grön",
+            "hex": "#8FAEA5"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#FFFFFF",
+          "#0A5643",
+          "#8FAEA5",
+          "#0D6432"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Västra Frölunda",
+        "nicknames": [
+          "Västra Frölunda Badmintonklubb"
+        ],
+        "category": "Badminton",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "101d8f02-f9ef-4b44-82e1-63215f434223",
+        "title": "Höstens gröna sicksack",
+        "why": "När höstkylan kommer vill supportrarna bära klubbens färger både på väg till hallen och till vardags.",
+        "signal": "Höst",
+        "recipe": "sicksack",
+        "front": {
+          "main": "VÄSTRA FRÖLUNDA",
+          "sub": "BADMINTONKLUBB"
+        },
+        "back": {
+          "main": "BADMINTON",
+          "sub": "VÄSTRA FRÖLUNDA"
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#0A5643",
+          "ink": "#FFFFFF",
+          "accent": "#8FAEA5"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Sicksack",
+      "yarns": [
+        {
+          "hex": "#0A5643",
+          "pantone": "PANTONE 7729 C",
+          "share": 0.484
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.437
+        },
+        {
+          "hex": "#8FAEA5",
+          "pantone": "PANTONE 5575 C",
+          "share": 0.079
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 30,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klubbens färger, ort och sport ger tydlig identitet utan reklamkänsla.",
+          "Kraftig text och omvänd kontrast gör båda sidorna lättlästa på håll.",
+          "Sicksackändarna ger en sammanhållen, vardagsvänlig stil med tydlig supporterprägel."
+        ],
+        "issues": [
+          "Ge de största textraderna lite mer luft mot sidofälten; särskilt BADMINTON ligger tätt intill kanterna.",
+          "Provsticka sicksackens smala ljusgröna och vita partier så att de förblir tydligt åtskilda.",
+          "Kontrollera att prickarna över Ä och Ö håller ihop i den mindre ortstexten på baksidan."
+        ],
+        "summary": "En stark och bärbar klubbhalsduk som kan skickas till stickeriet, med mindre justeringar av textmarginalerna och provstickning av de finaste detaljerna.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "VÄSTRA FRÖLUNDA / BADMINTONKLUBB",
+        "back": "BADMINTON / VÄSTRA FRÖLUNDA"
+      }
+    },
+    {
+      "slug": "ik-sparta-supporterns-klassiker",
+      "club": {
+        "id": "ik-sparta",
+        "name": "IK Sparta",
+        "shortName": "IKS",
+        "palette": [
+          {
+            "name": "Gul",
+            "hex": "#F0D70C"
+          },
+          {
+            "name": "Turkos",
+            "hex": "#057465"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          }
+        ],
+        "crestColors": [
+          "#F0D70C",
+          "#057465",
+          "#0A0A0A",
+          "#A29109",
+          "#3D3704"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Malmö",
+        "nicknames": [
+          "IK Sparta"
+        ],
+        "category": "Brottning",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "c5e5286a-6f8b-42e1-ada6-42af4507c306",
+        "title": "Supporterns klassiker",
+        "why": "När höstkylan kommer vill supportrarna bära IK Sparta nära, på tävlingsresan och till vardags, säsong efter säsong.",
+        "signal": "Supporterhalsduken",
+        "recipe": "klassisk",
+        "front": {
+          "main": "IK SPARTA",
+          "sub": "MALMÖ"
+        },
+        "back": {
+          "main": "BROTTNING",
+          "sub": ""
+        },
+        "font": "anton",
+        "colors": {
+          "ground": "#F0D70C",
+          "ink": "#0A0A0A",
+          "accent": "#057465"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "enkel",
+      "recipeLabel": "Klassisk",
+      "yarns": [
+        {
+          "hex": "#F0D70C",
+          "pantone": "PANTONE 3965 C",
+          "share": 0.571
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.338
+        },
+        {
+          "hex": "#057465",
+          "pantone": "PANTONE 562 C",
+          "share": 0.086
+        },
+        {
+          "hex": "#A29109",
+          "pantone": "PANTONE 399 C",
+          "share": 0.003
+        },
+        {
+          "hex": "#3D3704",
+          "pantone": "PANTONE 5747 C",
+          "share": 0.002
+        }
+      ],
+      "system": "enkel",
+      "maxColorsPerRow": 5,
+      "minTextMm": 31,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Klassisk supporterhalsduk med tydlig klubbidentitet och lång livslängd stilmässigt.",
+          "Svart mot gult ger stark kontrast; IK SPARTA och BROTTNING läses direkt på håll.",
+          "Återkommande märken och ändränder håller ihop sidorna, medan färgväxlingen ger variation."
+        ],
+        "issues": [
+          "MALMÖ är betydligt mindre än huvudtexten och bör förstoras för bättre läsbarhet på några meters håll.",
+          "Provstick de tunna turkosa kantlinjerna så att de framträder jämnt och tydligt."
+        ],
+        "summary": "En stark och bärbar klubbklassiker som kan skickas till stickeriet, med mindre förbättringar av ortsnamnets läsbarhet och kontroll av kantlinjerna.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "IK SPARTA / MALMÖ",
+        "back": "BROTTNING"
+      }
+    },
+    {
+      "slug": "hindas-kanot-friluftsklubb-vagor-vid-sasongsstart",
+      "club": {
+        "id": "hindas-kanot-friluftsklubb",
+        "name": "Hindås Kanot & Friluftsklubb",
+        "shortName": "HK&F",
+        "palette": [
+          {
+            "name": "Röd",
+            "hex": "#E31A1A"
+          },
+          {
+            "name": "Vit",
+            "hex": "#FFFFFF"
+          },
+          {
+            "name": "Svart",
+            "hex": "#0A0A0A"
+          }
+        ],
+        "crestColors": [
+          "#E31A1A",
+          "#FFFFFF"
+        ],
+        "founded": 0,
+        "arena": "",
+        "city": "Hindås",
+        "nicknames": [
+          "Hindås Kanot & Friluftsklubb"
+        ],
+        "category": "Kanot",
+        "group": "idrott"
+      },
+      "idea": {
+        "id": "cfcda9ce-98f7-4292-8f99-615275edc068",
+        "title": "Vågor vid säsongsstart",
+        "why": "När isen går upp vill vi bära Hindås färger och hålla värmen medan kanoterna kommer ut igen.",
+        "signal": "Paddelsäsongen",
+        "recipe": "vagor",
+        "front": {
+          "main": "HINDÅS",
+          "sub": "KANOT & FRILUFTSKLUBB"
+        },
+        "back": {
+          "main": "PADDELSÄSONG",
+          "sub": ""
+        },
+        "font": "block",
+        "colors": {
+          "ground": "#E31A1A",
+          "ink": "#FFFFFF",
+          "accent": "#0A0A0A"
+        },
+        "icon": null,
+        "art": null,
+        "number": "",
+        "roster": []
+      },
+      "level": "mellan",
+      "recipeLabel": "Vågor",
+      "yarns": [
+        {
+          "hex": "#E31A1A",
+          "pantone": "PANTONE 485 C",
+          "share": 0.43
+        },
+        {
+          "hex": "#FFFFFF",
+          "pantone": "White",
+          "share": 0.483
+        },
+        {
+          "hex": "#0A0A0A",
+          "pantone": "PANTONE 419 C",
+          "share": 0.087
+        }
+      ],
+      "system": "dubbel",
+      "maxColorsPerRow": 3,
+      "minTextMm": 32,
+      "ok": true,
+      "consent": null,
+      "art": false,
+      "review": {
+        "sales": 8,
+        "brandFit": 9,
+        "legibility": 8,
+        "craft": 8,
+        "strengths": [
+          "Stort HINDÅS med tydlig kontrast ger stark lokal identitet på håll.",
+          "Vågorna knyter an till paddlingen och skapar ett sammanhållet uttryck på båda sidor.",
+          "PADDELSÄSONG och klubbmärkena ger baksidan egen karaktär utan reklamkänsla."
+        ],
+        "issues": [
+          "Provstick den långa raden KANOT & FRILUFTSKLUBB så att bokstävernas öppningar håller på några meters håll.",
+          "Kontrollera att prickarna i PADDELSÄSONG och klubbmärkenas små detaljer blir tydliga i stickningen.",
+          "Vågfälten är visuellt intensiva; kontrollera på ett knutet prov att de inte tar över klubbidentiteten."
+        ],
+        "summary": "En stark och bärbar klubbhalsduk med tydlig Hindås-identitet och fin säsongskänsla, klar att skickas till stickeriet med detaljkontroll i provstickningen.",
+        "verdict": "godkänd"
+      },
+      "firstReview": null,
+      "text": {
+        "front": "HINDÅS / KANOT & FRILUFTSKLUBB",
+        "back": "PADDELSÄSONG"
+      }
     }
   ]
 }

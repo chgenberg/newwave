@@ -469,6 +469,8 @@ export function ScarfActions({ info, download, photo, ready = true, onEdit, extr
 
 /** Vad stickeriet får – texten som tidigare låg längst ner på sidan. */
 export function FactoryDialog({ onClose }: { onClose: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const rows = [
     ["Mönstret i JPG", `Formatet ${SCARF.factory} bett om. Sparad utan färgkomprimering och kontrollerad: varje pixel ligger närmast rätt garn.`],
     ["Samma mönster i BMP och PNG", "Indexerade filer där färg 0–6 är garn 1–7, utan mellantoner – det format stickprogram normalt läser."],
@@ -490,6 +492,31 @@ export function FactoryDialog({ onClose }: { onClose: () => void }) {
           </li>
         ))}
       </ul>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#F5F5F7] p-3.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold">Kalibreringshalsduk</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-[#6E6E73]">Stickas en gång. Visar hur maskinen vänder filerna – spegelvänt eller inte, var tuben viks och hur baksidan läses.</p>
+          {error && <p className="mt-1 text-[12px] text-[#B3261E]">{error}</p>}
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              await downloadZip({ calibration: true });
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Kunde inte skapa filen.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#1D1D1F] px-4 text-[13.5px] font-medium text-white transition hover:bg-black disabled:bg-[#C7C7CC]"
+        >
+          {busy ? "Packar …" : "Stickfiler (.zip)"}
+        </button>
+      </div>
     </Modal>
   );
 }
