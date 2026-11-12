@@ -2,7 +2,9 @@ import sharp from "sharp";
 import { z } from "zod";
 import { cleanText, clientIp, createLimiter, envInt, readJson } from "@/lib/demoLimit";
 import { errorMessage, hasOpenAIKey } from "@/lib/openai";
-import { FAITHFUL, SAME_PHOTO, SNAPSHOT, editToJpg, people, references, scarfReferences, worn } from "@/lib/scarfPhoto";
+import { scarfClub, sportOf } from "@/lib/scarfClub";
+import { FAITHFUL, SAME_PHOTO, SNAPSHOT, UPRIGHT, editToJpg, references, scarfReferences, shoot, worn } from "@/lib/scarfPhoto";
+import { outdoors, people, settingOf, type Season } from "@/lib/scarfScene";
 import { saveFile } from "@/lib/store";
 
 export const maxDuration = 300;
@@ -30,6 +32,8 @@ const Body = z.discriminatedUnion("mode", [
     scarfDataUrl: DataImage,
     /** "vardag" för företag och föreningar utanför idrotten: stad och arbetsplats i stället för läktare och arena. */
     setting: z.enum(["sport", "vardag"]).default("sport"),
+    /** Klubben i flödet, om fotot hör till en. Då tas bilderna på sportens egen plats – ishallen, idrottshallen eller planen. */
+    clubId: z.string().max(120).optional(),
   }),
 ]);
 
@@ -46,15 +50,37 @@ async function decodePng(dataUrl: string, maxSide = 1400) {
 
 /** Halsdukens bild från webbläsaren, som underlag till bildmodellen: ändarna som de hänger, och hela halsduken liggande. */
 const scarfRefs = async (scarfDataUrl: string) => {
-  const { hanging, flat } = await scarfReferences(Buffer.from(scarfDataUrl.split(",")[1] ?? "", "base64"));
-  return [
-    { buf: hanging, name: "hanging-ends.png" },
-    { buf: flat, name: "scarf.png" },
-  ];
+  const facts = await scarfReferences(Buffer.from(scarfDataUrl.split(",")[1] ?? "", "base64"));
+  return {
+    facts,
+    files: [
+      { buf: facts.hanging, name: "hanging-ends.png" },
+      { buf: facts.flat, name: "scarf.png" },
+    ],
+  };
 };
 
-async function editToStoredJpg(files: { buf: Buffer; name: string }[], prompt: string, size: "1024x1024" | "1024x1536" = "1024x1024") {
-  return (await saveFile(await editToJpg(files, prompt, size), "jpg")).url;
+type Scene = { id: string; label: string; where: string; wear: Season | "hall" };
+
+/** Fyra vardagliga platser och vanligt ljus: fotona ska se ut som mobilbilder som någon i klubben har tagit. */
+function scenes(setting: "sport" | "vardag", sport: string | null): Scene[] {
+  const town = settingOf({ everyday: true });
+  if (setting === "vardag") {
+    return [
+      { id: "stad", label: "På stan", ...town.at("entrance") },
+      { id: "jobbet", label: "Utanför jobbet", ...town.at("stand") },
+      { id: "promenad", label: "På promenad", where: `standing on a gravel path in a town park, with trees and a park bench behind. ${outdoors(town.season)}`, wear: town.season },
+      { id: "kvall", label: "I kvällsljus", ...town.at("entrance", true) },
+    ];
+  }
+  const home = settingOf({ sport });
+  const street = town.at("entrance");
+  return [
+    { id: "stand", label: "På läktaren", ...home.at("stand") },
+    { id: "arena", label: "Utanför arenan", ...home.at("entrance") },
+    { id: "street", label: "På väg till matchen", where: `on the way to the match, ${street.where}`, wear: street.wear },
+    { id: "closeup", label: "Porträtt i kvällsljus", ...home.at("entrance", true) },
+  ];
 }
 
 export async function POST(req: Request) {
@@ -74,7 +100,7 @@ export async function POST(req: Request) {
   try {
     const d = parsed.data;
     const clubName = cleanText(d.club, 80) || "Klubben";
-    const scarf = await scarfRefs(d.scarfDataUrl);
+    const { facts, files: scarf } = await scarfRefs(d.scarfDataUrl);
 
     if (d.mode === "self") {
       const personPng = await decodePng(d.personDataUrl, 1280);
@@ -87,38 +113,26 @@ export async function POST(req: Request) {
         "If the photo is cropped at the chest, the two ends simply continue straight down out of the frame.",
         "Realistic knitted yarn texture. No other brand logos.",
       ].join("\n");
-      const url = await editToStoredJpg([{ buf: personPng, name: "person.png" }, ...scarf], prompt, "1024x1024");
+      const url = (await saveFile(await editToJpg([{ buf: personPng, name: "person.png" }, ...scarf], prompt, "1024x1024"), "jpg")).url;
       return Response.json({ photos: [{ id: "self", label: "Du i halsduken", url }] satisfies ScarfPhoto[] });
     }
 
-    // Vardagliga platser och vanligt ljus: fotona ska se ut som mobilbilder som någon i klubben har tagit.
-    const shot = (place: string, scarf: string) => (who: string) => `Photo from the hips up, facing the camera: ${who}, ${place}. The person wears the exact knitted ${scarf} from the reference images.`;
-    const everyday: { id: string; label: string; scene: (who: string) => string }[] = [
-      { id: "stad", label: "På stan", scene: shot("standing on an ordinary Swedish town street on a grey winter afternoon, with shop fronts and parked bicycles behind", "scarf") },
-      { id: "jobbet", label: "Utanför jobbet", scene: shot("standing outside the entrance of an ordinary Swedish workplace on a cold grey morning, with a brick wall and a car park behind", "scarf") },
-      { id: "promenad", label: "På promenad", scene: shot("standing on a gravel path in a town park on an overcast day, with bare trees and a park bench behind", "scarf") },
-      { id: "kvall", label: "I kvällsljus", scene: shot("standing on a pavement in the early evening under ordinary street lamps, with lit windows and a few parked cars behind", "scarf") },
-    ];
-    const sport: { id: string; label: string; scene: (who: string) => string }[] = [
-      { id: "stand", label: "På läktaren", scene: shot("standing in the stand of a local Swedish sports arena before the match starts, with half-empty rows and a few other supporters behind", "supporter scarf") },
-      { id: "arena", label: "Utanför arenan", scene: shot("standing outside the entrance of a local Swedish sports arena on a grey match day, with a bicycle rack, a parked car and other supporters behind", "supporter scarf") },
-      { id: "street", label: "På väg till matchen", scene: shot("standing on the pavement of an ordinary Swedish town street on the way to the match on a grey afternoon, with parked cars and a bus stop behind", "supporter scarf") },
-      { id: "closeup", label: "Porträtt i kvällsljus", scene: shot("standing outside a local Swedish sports arena in the early evening under ordinary outdoor lamps, with the lit entrance and a few supporters behind", "supporter scarf") },
-    ];
-
-    const scenes = d.setting === "vardag" ? everyday : sport;
-    const who = people(scenes.length);
+    const found = d.clubId ? await scarfClub(d.clubId).catch(() => null) : null;
+    const list = scenes(d.setting, found ? sportOf(found) : null);
+    const who = people(list.map((s) => s.wear));
+    const what = d.setting === "vardag" ? "scarf" : "supporter scarf";
+    // Varje foto granskas mot mönstret och tas om en gång om något avviker.
     const settled = await Promise.allSettled(
-      scenes.map(async (s, i) => {
-        const prompt = [SNAPSHOT, references(clubName), s.scene(who[i]), worn(), FAITHFUL, "Vertical picture with some space above the head; both fringed ends are inside the picture."].join("\n");
-        const url = await editToStoredJpg(scarf, prompt, "1024x1536");
+      list.map(async (s, i) => {
+        const prompt = [SNAPSHOT, references(clubName), `Photo from the hips up, facing the camera: ${who[i]}, ${s.where} The person wears the exact knitted ${what} from the reference images.`, worn(), FAITHFUL, UPRIGHT].join("\n");
+        const url = (await saveFile(await shoot("worn", scarf, prompt, "1024x1536", facts), "jpg")).url;
         return { id: s.id, label: s.label, url } satisfies ScarfPhoto;
       }),
     );
 
     const photos = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
     if (!photos.length) throw new Error("Kunde inte skapa fotografierna just nu.");
-    return Response.json({ photos, failedCount: scenes.length - photos.length });
+    return Response.json({ photos, failedCount: list.length - photos.length });
   } catch (e) {
     console.error("scarf/photos", errorMessage(e));
     return Response.json({ error: "Kunde inte skapa fotografierna just nu." }, { status: 502 });

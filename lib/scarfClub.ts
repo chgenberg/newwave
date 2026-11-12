@@ -279,7 +279,12 @@ export type ScarfClub = {
   crestUrl: string;
   /** Finns för klubbar ur registret och egna loggor – de saknar egen regelbok, matcher och väder. */
   org: Org | null;
+  /** Klubbens webbplats, om den är känd. Dit leder affischens QR-kod tills beställaren anger en annan länk. */
+  link?: string;
 };
+
+/** Sporten, för platsen fotona tas på. Klubbarna med full profil är fotbollsklubbar; företag har ingen sport. */
+export const sportOf = (found: ScarfClub) => (found.org ? (found.org.group === "idrott" ? found.org.category : null) : found.club.kind === "brand" ? null : "Fotboll");
 
 /** Det gränssnittet behöver veta om den valda klubben. */
 export type ScarfPick = { ref: string; name: string; sub: string; crest: string; colors: string[]; brand: boolean; lines: string[]; done: string };
@@ -312,7 +317,7 @@ const OwnMeta = (raw: unknown) => {
 
 async function load(ref: string): Promise<ScarfClub | null> {
   const club = CLUBS[ref];
-  if (club) return { ref, club, crestUrl: `/api/v1/brand/${club.id}/${club.brand.crest.farg}`, org: null };
+  if (club) return { ref, club, crestUrl: `/api/v1/brand/${club.id}/${club.brand.crest.farg}`, org: null, link: club.sources.website };
 
   const reg = REG.exec(ref)?.[1];
   if (reg) {
@@ -320,7 +325,7 @@ async function load(ref: string): Promise<ScarfClub | null> {
     const logo = d ? await readFile(path.join(CLUBS_DIR, "logos", `${reg}.png`)).catch(() => null) : null;
     if (!d || !logo) return null;
     const org: Org = { id: reg, name: d.name, city: d.municipality, category: d.sport || "Idrott", group: "idrott", founded: Number(d.founded) || undefined };
-    return derived(ref, org, logo, registryAsset(reg, d.at, "logo.png"), d.colors ?? []);
+    return { ...(await derived(ref, org, logo, registryAsset(reg, d.at, "logo.png"), d.colors ?? [])), link: d.url || undefined };
   }
 
   const own = OWN.exec(ref)?.[1];

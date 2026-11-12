@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { htmlToPdf } from "@/lib/pdf";
-import { CopySchema } from "@/lib/scarfChannels";
+import { CopySchema, cleanLink } from "@/lib/scarfChannels";
 import { scarfClub } from "@/lib/scarfClub";
 import { materialZip } from "@/lib/scarfContent";
 import { FilesShape, IdeaSchema } from "@/lib/scarfFlow";
@@ -18,9 +18,11 @@ const Body = z.object({
   ...FilesShape,
   copy: CopySchema,
   material: z.object({
-    images: z.object({ instagram: made("jpg"), facebook: made("jpg"), linkedin: made("jpg"), banner: made("jpg") }),
+    // Händelsebilden och affischen saknas i material som sparades innan de fanns.
+    images: z.object({ instagram: made("jpg"), facebook: made("jpg"), linkedin: made("jpg"), banner: made("jpg"), story: made("jpg").optional(), poster: made("jpg").optional() }),
     films: z.object({ reels: film, tiktok: film }),
     photos: z.array(made("jpg")).max(2),
+    link: z.string().max(400).nullish(),
   }),
 });
 
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
   if (!found) return Response.json({ error: "Okänd klubb" }, { status: 404 });
   try {
     const films = { reels: material.films.reels && { file: material.films.reels.url, poster: material.films.reels.poster }, tiktok: material.films.tiktok && { file: material.films.tiktok.url, poster: material.films.tiktok.poster } };
-    const zip = await materialZip({ found, idea, files: { artFile, photoFile, signFile }, copy, material: { images: material.images, films, photos: material.photos }, pdf: htmlToPdf });
+    const zip = await materialZip({ found, idea, files: { artFile, photoFile, signFile }, copy, material: { images: material.images, films, photos: material.photos, link: cleanLink(material.link) }, pdf: htmlToPdf });
     return new Response(Buffer.from(zip.data), { headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${zip.name}"` } });
   } catch (err) {
     console.error("scarf/agent/content/zip", err instanceof Error ? err.message : err);

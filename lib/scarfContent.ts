@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import JSZip from "jszip";
 import sharp from "sharp";
 import { generateJson } from "./openai";
-import { CHANNELS, COPY_MAX, CopySchema, channelText, type ChannelId, type FilmChannel, type ImageChannel, type ScarfCopy } from "./scarfChannels";
+import { CHANNELS, COPY_MAX, CopySchema, channelText, cleanLink, type Channel, type ChannelId, type FilmChannel, type ImageChannel, type ScarfCopy } from "./scarfChannels";
 import type { ScarfClub } from "./scarfClub";
 import { facePreview } from "./scarfEngine";
 import { PHOTO_FILE, clubCrest, knitIdea, type KnitResult, type ScarfFiles } from "./scarfFlow";
@@ -32,6 +32,7 @@ const copySchema = obj({
   banner: obj({ headline: str, subline: str, button: str, altText: str }),
   reels: obj({ hook: str, caption: str }),
   tiktok: obj({ hook: str, caption: str, hashtags: list }),
+  newsletter: obj({ subject: str, body: str }),
 });
 
 const sides = (idea: ScarfIdea) => {
@@ -70,6 +71,7 @@ function tidy(raw: Partial<ScarfCopy> | null, base: ScarfCopy): ScarfCopy {
     },
     reels: { hook: clamp(r.reels?.hook, COPY_MAX.hook, base.reels.hook), caption: clamp(r.reels?.caption, COPY_MAX.caption, base.reels.caption) },
     tiktok: { hook: clamp(r.tiktok?.hook, COPY_MAX.hook, base.tiktok.hook), caption: clamp(r.tiktok?.caption, COPY_MAX.caption, base.tiktok.caption), hashtags: tagList(r.tiktok?.hashtags, base.tiktok.hashtags) },
+    newsletter: { subject: clamp(r.newsletter?.subject, COPY_MAX.subject, base.newsletter?.subject ?? "Ny halsduk").replace(/[.!]+$/, ""), body: clamp(r.newsletter?.body, COPY_MAX.letter, base.newsletter?.body ?? "Ny halsduk.") },
   };
   const checked = CopySchema.safeParse(copy);
   return checked.success ? checked.data : base;
@@ -92,6 +94,10 @@ export function demoScarfCopy(club: Club, idea: ScarfIdea): ScarfCopy {
     banner: { headline: "Ny halsduk", subline: clamp(idea.title, COPY_MAX.subline, "Stickad i våra färger"), button: "Beställ halsduken", altText: clamp(`${club.name}s stickade halsduk ${idea.title}, fram- och baksida.`, COPY_MAX.alt, "Stickad halsduk") },
     reels: { hook: "Ny halsduk", caption: clamp(`${idea.title} – stickad i våra färger. Länk i bio.`, COPY_MAX.caption, "Länk i bio.") },
     tiktok: { hook: "Den här vill du ha", caption: clamp(`${idea.title}. Länk i bio.`, COPY_MAX.caption, "Länk i bio."), hashtags: tags.slice(0, 4) },
+    newsletter: {
+      subject: clamp(`${idea.title} – vår nya halsduk`, COPY_MAX.subject, "Vår nya halsduk"),
+      body: clamp(`Nu är den här: ${idea.title}, ${club.name}s nya stickade halsduk.\n\n${idea.why}\n\nHalsduken är stickad i jacquard, 135 cm lång, med fransar och olika text på fram- och baksidan. ${where}`, COPY_MAX.letter, where),
+    },
   };
 }
 
@@ -119,6 +125,7 @@ Fält:
 - banner: hemsidans banner. headline högst 5 ord, subline högst 10 ord, button högst 3 ord (till exempel "Beställ halsduken"), altText en mening som beskriver bilden för den som inte ser den.
 - reels.hook: texten i filmens första sekund, högst 5 ord. reels.caption: högst 200 tecken, avslutas med "Länk i bio."
 - tiktok.hook: högst 6 ord, rakare och mer lekfull än i Reels. tiktok.caption: högst 150 tecken, avslutas med "Länk i bio." tiktok.hashtags: 3–5 stycken utan #.
+- newsletter: texten till ${brand ? "företagets nyhetsbrev" : "klubbens nyhetsbrev eller medlemsmejl"}. subject: ämnesraden, högst 50 tecken, utan utropstecken. body: tre korta stycken med en tom rad emellan, högst 700 tecken – vad som är nytt, hur halsduken ser ut (motivet och texten på fram- och baksidan), och till sist hur man får tag på den. Sista meningen är "${where}" Ingen hälsningsfras, ingen signatur och inga emojis.
 Om signalen kommer från en nyhet: bygg på det som hänt, men citera inte artikeln och nämn inte tidningen.`;
 
   const user = `Halsduken "${idea.title}" (${RECIPES[idea.recipe].label}). Idén: ${idea.why}
@@ -166,26 +173,44 @@ export async function photoBuffers(ids: string[]) {
   return loaded.flatMap((f) => (f ? [f.data] : []));
 }
 
-/** Framsidan som den blir stickad – referensen fotografen får. */
+/** Framsidan som den blir stickad, och texten som står på den – det fotografen och granskaren får. */
 export async function frontOf(found: ScarfClub, idea: ScarfIdea, files: ScarfFiles) {
-  return (await faces(found, idea, files)).front;
+  const knit = await faces(found, idea, files);
+  return { image: knit.front, text: knit.result.front };
 }
 
-/** Allt som bilderna och filmerna sätts av. */
-export async function mediaFor(found: ScarfClub, idea: ScarfIdea, files: ScarfFiles, copy: ScarfCopy, photos: string[]): Promise<MediaInput> {
+/** Dit affischens QR-kod leder: länken beställaren har angett, annars klubbens webbplats. */
+export const posterLink = (found: ScarfClub, given?: string | null) => cleanLink(given) ?? cleanLink(found.link);
+
+/** Allt som bilderna och filmerna sätts av. `link` är beställarens egen länk till affischens QR-kod. */
+export async function mediaFor(found: ScarfClub, idea: ScarfIdea, files: ScarfFiles, copy: ScarfCopy, photos: string[], link?: string | null): Promise<MediaInput> {
   const [knit, crest, fonts, shots] = await Promise.all([faces(found, idea, files), crestOf(found), mediaFonts(idea), photoBuffers(photos)]);
-  return { name: found.club.name, crest, look: lookOf(found.club, idea), front: knit.front, back: knit.back, photos: await sortPhotos(shots), copy, fonts };
+  return { name: found.club.name, crest, look: lookOf(found.club, idea), front: knit.front, back: knit.back, photos: await sortPhotos(shots), link: posterLink(found, link), brand: found.club.kind === "brand", copy, fonts };
 }
 
 // --- Zip-filen ----------------------------------------------------------------------
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim().replace(/[.\s]+$/, "");
 
-export type MaterialFiles = { images: Record<ImageChannel, string>; films: Record<FilmChannel, { file: string; poster: string } | null>; photos: string[] };
+/** Raden om kanalens mapp i LÄS MIG. */
+function about(ch: Channel, link: string | null, posterPdf: boolean) {
+  if (ch.kind === "text") return "texten till nyhetsbrevet eller medlemsmejlet (text.txt), med ämnesraden överst.";
+  if (ch.kind === "film") return `${ch.file} (tio sekunder, utan ljud – lägg på ett ljud i appen). omslag.jpg är omslagsbilden.`;
+  if (ch.id === "banner") return `${ch.file}. Knappens text och bildens alt-text står i text.txt.`;
+  if (ch.id === "story") return `${ch.file}. Stående bild till händelser – lägg på en länkknapp i appen.`;
+  if (ch.id === "poster") return `${posterPdf ? "affisch-a4.pdf att skriva ut i A4, och samma affisch som bild" : `${ch.file} att skriva ut i A4`}. ${link ? `QR-koden leder till ${link}` : "Affischen har ingen QR-kod, eftersom ingen länk var angiven."}`;
+  return ch.file;
+}
+
+export type MaterialFiles = { images: Partial<Record<ImageChannel, string>>; films: Record<FilmChannel, { file: string; poster: string } | null>; photos: string[]; link?: string | null };
+
+/** Affischen som en sida i A4, utan marginaler – bilden är redan satt för hela arket. */
+const posterPage = (jpg: Buffer) =>
+  `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:0}html,body{margin:0}img{display:block;width:210mm;height:297mm}</style></head><body><img src="data:image/jpeg;base64,${jpg.toString("base64")}"></body></html>`;
 
 /**
  * Allt material i en zip: en mapp per kanal med bilden eller filmen och texten, fotografierna, halsdukens båda sidor
- * och stickfilerna. `pdf` gör stickordern till PDF; utan den följer stickordern med som data.
+ * och stickfilerna. `pdf` gör stickordern och affischen till PDF; utan den följer stickordern med som data och affischen som bild.
  */
 export async function materialZip(input: { found: ScarfClub; idea: ScarfIdea; files: ScarfFiles; copy: ScarfCopy; material: MaterialFiles; pdf?: (html: string) => Promise<Buffer> }) {
   const { found, idea, copy, material } = input;
@@ -195,19 +220,42 @@ export async function materialZip(input: { found: ScarfClub; idea: ScarfIdea; fi
   const root = zip.folder(safe(`${found.club.name} – ${idea.title}`) || "Material")!;
   const missing: string[] = [];
 
-  const fileOf: Record<ChannelId, string | null> = { ...material.images, reels: material.films.reels?.file ?? null, tiktok: material.films.tiktok?.file ?? null };
+  const link = material.link ?? null;
+  const fileOf: Partial<Record<ChannelId, string | null>> = { ...material.images, reels: material.films.reels?.file ?? null, tiktok: material.films.tiktok?.file ?? null };
+  const packed = new Set<ChannelId>();
+  let posterPdf = false;
   for (const ch of CHANNELS) {
-    const folder = root.folder(ch.folder)!;
+    const words = channelText(copy, ch.id, link);
+    if (ch.kind === "text") {
+      // Bara text: saknas den (material från innan nyhetsbrevet fanns) blir det ingen mapp.
+      if (words) {
+        root.folder(ch.folder)!.file("text.txt", `${words}\n`);
+        packed.add(ch.id);
+      }
+      continue;
+    }
     const id = fileOf[ch.id];
+    // Material som sparades innan händelsebilden och affischen fanns saknar dem – då blir det ingen mapp, och inget saknas.
+    if (id === undefined) continue;
+    const folder = root.folder(ch.folder)!;
+    packed.add(ch.id);
     const data = id ? ((await loadFile(id))?.data ?? null) : null;
     if (data) folder.file(ch.file, data);
     else missing.push(ch.label);
+    if (ch.id === "poster" && data && input.pdf) {
+      const page = await input.pdf(posterPage(data)).catch((err) => {
+        console.error("scarfContent affisch", err instanceof Error ? err.message : err);
+        return null;
+      });
+      if (page) folder.file("affisch-a4.pdf", page);
+      posterPdf = Boolean(page);
+    }
     if (ch.kind === "film") {
       const poster = material.films[ch.id]?.poster;
       const cover = poster ? ((await loadFile(poster))?.data ?? null) : null;
       if (cover) folder.file("omslag.jpg", cover);
     }
-    folder.file("text.txt", `${channelText(copy, ch.id)}\n`);
+    folder.file("text.txt", `${words}\n`);
   }
 
   const pictures = root.folder("Bilder")!;
@@ -234,7 +282,7 @@ export async function materialZip(input: { found: ScarfClub; idea: ScarfIdea; fi
     "",
     "Varje mapp är en kanal: bilden eller filmen, och texten att klistra in (text.txt).",
     "",
-    ...CHANNELS.map((ch) => `${ch.folder} – ${ch.file}${ch.kind === "film" ? " (tio sekunder, utan ljud – lägg på ett ljud i appen). omslag.jpg är omslagsbilden." : ch.id === "banner" ? ". Knappens text och bildens alt-text står i text.txt." : ""}`),
+    ...CHANNELS.filter((ch) => packed.has(ch.id)).map((ch) => `${ch.folder} – ${about(ch, link, posterPdf)}`),
     `Bilder – ${photos.length ? "fotografierna och " : ""}halsdukens fram- och baksida som de blir stickade.`,
     ...(factory ? ["Stickfiler – underlaget till stickeriet."] : []),
     "",

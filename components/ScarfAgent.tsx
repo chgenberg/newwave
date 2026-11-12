@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { IFKLoader, useLoader } from "@/components/IFKLoader";
 import { EditDialog, type ScarfEditResult } from "@/components/ScarfEdit";
 import { ScarfHero } from "@/components/ScarfHero";
-import { ChooseDialog, MaterialView } from "@/components/ScarfMaterial";
+import { ChooseDialog, MaterialView, relinkPoster } from "@/components/ScarfMaterial";
 import { Badge, FactoryDialog, LEVEL, Pictures, QUIET, ScarfActions, downloadZip, type ScarfInfo } from "@/components/ScarfParts";
 import { ClubPicker, OwnLogoDialog, type PickLite } from "@/components/ScarfPick";
 import { SCARF } from "@/lib/scarf";
@@ -315,16 +315,16 @@ export function ScarfAgent() {
       const shooting = post<{ photos: string[]; note: string | null }>(CONTENT, { step: "photo", ...base }).catch(() => ({ photos: [] as string[], note: "Fotografierna gick inte att ta, så materialet är gjort utan." }));
       const { copy } = await post<{ copy: ScarfCopy }>(CONTENT, { step: "copy", ...base, signal: signal && { title: signal.title, detail: signal.detail } });
       if (!alive()) return;
-      loader.stage("Halsduken fotograferas på modell", 68, 60000);
+      loader.stage("Halsduken fotograferas och fotona granskas", 68, 75000);
       const shot = await shooting;
       if (!alive()) return;
       loader.stage("Bilderna sätts och filmerna klipps", 97, 30000);
       const rest = { ...base, copy, photos: shot.photos };
       const film = (channel: FilmChannel) => post<Film>(CONTENT, { step: "film", channel, ...rest }).catch((): Film => ({ film: null, note: null }));
-      const [images, reels, tiktok] = await Promise.all([post<{ images: Record<ImageChannel, string> }>(CONTENT, { step: "images", ...rest }), film("reels"), film("tiktok")]);
+      const [images, reels, tiktok] = await Promise.all([post<{ images: Record<ImageChannel, string>; link: string | null }>(CONTENT, { step: "images", ...rest }), film("reels"), film("tiktok")]);
       if (!alive()) return;
       const notes = [shot.photos.length ? "Personerna på bilderna finns inte – fotografierna är gjorda av bildmodellen." : shot.note, reels.film && tiktok.film ? null : "En film gick inte att klippa den här gången."].filter((n): n is string => Boolean(n));
-      setMade({ key: item.key, title: item.idea.title, base, copy, material: { images: images.images, films: { reels: reels.film, tiktok: tiktok.film }, photos: shot.photos.map((f) => `/api/v1/files/${f}`) }, notes });
+      setMade({ key: item.key, title: item.idea.title, base, copy, material: { images: images.images, films: { reels: reels.film, tiktok: tiktok.film }, photos: shot.photos.map((f) => `/api/v1/files/${f}`), link: images.link }, notes });
       loader.done();
       setTimeout(() => materialRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 750);
     } catch (e) {
@@ -460,7 +460,7 @@ export function ScarfAgent() {
           </div>
           {error && <p className="mt-4 rounded-2xl bg-[#FDECEA] px-5 py-3 text-center text-sm text-[#B3261E]">{error}</p>}
         </section>
-        <p className="mt-3 text-center text-[12.5px] text-[#86868B]">Agenten tar fram tre förslag. Du väljer ett och får inlägg, banner och film till det.</p>
+        <p className="mt-3 text-center text-[12.5px] text-[#86868B]">Agenten tar fram tre förslag. Du väljer ett och får inlägg, banner, film och affisch till det.</p>
         {step === 0 && (
           <p className="mt-5 text-center">
             <Link href="/halsduk/inspiration" className="text-[14px] font-medium text-[#1D1D1F] underline decoration-black/20 underline-offset-4 hover:decoration-black/60">
@@ -555,14 +555,26 @@ export function ScarfAgent() {
             <div ref={materialRef} className="scroll-mt-6">
               {made && !making ? (
                 <div className="mt-10">
-                  <MaterialView title={made.title} copy={made.copy} material={made.material} notes={made.notes} onChange={() => setChoosing(true)} onZip={() => downloadZip({ ...made.base, copy: made.copy, material: made.material }, `${CONTENT}/zip`, "material.zip")} />
+                  <MaterialView
+                    title={made.title}
+                    copy={made.copy}
+                    material={made.material}
+                    notes={made.notes}
+                    onChange={() => setChoosing(true)}
+                    onZip={() => downloadZip({ ...made.base, copy: made.copy, material: made.material }, `${CONTENT}/zip`, "material.zip")}
+                    onLink={async (link) => {
+                      // Affischen görs om med den nya länken; det ändrade materialet sparas av samma effekt som sparade det första.
+                      const material = await relinkPoster(made.base, made.copy, made.material, link);
+                      setMade((now) => (now && now.key === made.key ? { ...now, material } : now));
+                    }}
+                  />
                 </div>
               ) : (
                 step === 7 &&
                 !making &&
                 proposals.length > 0 && (
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-[#F5F5F7] px-5 py-4 sm:px-6">
-                    <p className="text-[14.5px] text-[#424245]">{madeError ?? (picked ? `”${picked.idea.title}” har ändrats. Skapa materialet igen, eller välj ett annat motiv.` : "Välj ett av förslagen, så får du inlägg, banner och film till det.")}</p>
+                    <p className="text-[14.5px] text-[#424245]">{madeError ?? (picked ? `”${picked.idea.title}” har ändrats. Skapa materialet igen, eller välj ett annat motiv.` : "Välj ett av förslagen, så får du inlägg, banner, film och affisch till det.")}</p>
                     <div className="flex flex-wrap gap-2">
                       {picked?.knit && picked.state === "klar" && (
                         <button type="button" onClick={() => void make(picked)} className="inline-flex h-10 items-center justify-center rounded-full bg-[#1D1D1F] px-4 text-[13.5px] font-medium text-white transition hover:bg-black">
@@ -683,7 +695,7 @@ function ScarfCard({ item, clubId, club, crest, everyday, chosen, onEdit }: { it
           </div>
           {stopped && <p className="mt-2.5 text-[12.5px] leading-snug text-[#B3261E]">Stoppad av {knit.report.ok ? "granskaren" : "maskinkontrollen"} – se Mer information.</p>}
           <div className="mt-auto pt-4">
-            <ScarfActions info={info} download={{ clubId, idea: strip(idea), ...item.files }} photo={{ club, headline: idea.front.main || idea.back.main, crestUrl: crest, everyday }} ready={item.state === "klar"} onEdit={onEdit} />
+            <ScarfActions info={info} download={{ clubId, idea: strip(idea), ...item.files }} photo={{ club, clubId, headline: idea.front.main || idea.back.main, crestUrl: crest, everyday }} ready={item.state === "klar"} onEdit={onEdit} />
           </div>
         </>
       )}

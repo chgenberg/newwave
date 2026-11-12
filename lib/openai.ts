@@ -17,12 +17,15 @@ export async function generateJson<T>(opts: {
   user: string;
   schemaName: string;
   schema: Record<string, unknown>;
+  /** Bilder (JPG eller PNG) som modellen får se efter texten, i den här ordningen. */
+  images?: Buffer[];
 }): Promise<T> {
+  const picture = (buf: Buffer) => ({ type: "input_image" as const, detail: "high" as const, image_url: `data:image/${buf[0] === 0x89 ? "png" : "jpeg"};base64,${buf.toString("base64")}` });
   const res = await openai().responses.create({
     model: TEXT_MODEL,
     input: [
       { role: "system", content: opts.system },
-      { role: "user", content: opts.user },
+      { role: "user", content: opts.images?.length ? [{ type: "input_text" as const, text: opts.user }, ...opts.images.map(picture)] : opts.user },
     ],
     text: {
       format: { type: "json_schema", name: opts.schemaName, schema: opts.schema, strict: true },

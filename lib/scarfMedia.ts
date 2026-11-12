@@ -1,14 +1,15 @@
 import type { Font, PathCommand } from "opentype.js";
+import QRCode from "qrcode";
 import sharp from "sharp";
 import { deltaE, hexToRgb, rgbToHex } from "./scarf";
-import type { ImageChannel, ScarfCopy } from "./scarfChannels";
+import { linkLabel, type ImageChannel, type ScarfCopy } from "./scarfChannels";
 import { FONT_FILES } from "./scarfDesign";
 import { loadFontFile } from "./scarfEngine";
 import type { ScarfIdea } from "./scarfRecipes";
 
 /**
- * Kanalbilderna för ett valt motiv: Instagram, Facebook, LinkedIn och hemsidans banner, samt stillbilderna som
- * filmerna klipps av. Varje bild är en SVG som sätts ihop av fotot, halsduken som den blir stickad, märket och
+ * Kanalbilderna för ett valt motiv: Instagram (inlägg och händelse), Facebook, LinkedIn, hemsidans banner och en
+ * affisch i A4, samt stillbilderna som filmerna klipps av. Varje bild är en SVG som sätts ihop av fotot, halsduken som den blir stickad, märket och
  * texterna, och sedan görs om till en bild. All text ritas som konturer ur typsnittsfilerna, så att bilderna
  * blir likadana på alla datorer.
  */
@@ -37,6 +38,10 @@ export type MediaInput = {
   back: Buffer;
   /** Fotografier på modell: halsduken buren om halsen (stående foto) och uppsträckt mellan händerna (liggande foto). */
   photos: Photos;
+  /** Dit affischens QR-kod leder. Utan länk får affischen ingen kod. */
+  link?: string | null;
+  /** Sant för företag och föreningar utanför idrotten – de har ingen klubbshop. */
+  brand?: boolean;
   copy: ScarfCopy;
   fonts: { head: Font; label: Font };
 };
@@ -261,7 +266,8 @@ async function instagram(m: MediaInput) {
     svg += `<rect width="${W}" height="${H}" fill="${look.stage}"/><defs>${clip(box)}</defs>${await bands(m, { ...box, y: 150, h: box.h - 150 })}`;
     svg += (await mark(m, P, P - 8, 104, look.onStage, { plate: look.plate })).svg;
   }
-  const tag = pill(m.fonts.label, "Ny halsduk", P, headY - 78, 30, look);
+  // Ringen på ett Å sticker upp över raden – etiketten står så högt att den går fri.
+  const tag = pill(m.fonts.label, "Ny halsduk", P, headY - 78 - head.cap * 0.2, 30, look);
   svg += tag.svg + draw(head, P, headY, look.onStage) + draw(sub, P, subY, look.onStage, "left", 0.86);
   return jpg(`${svg}</svg>`);
 }
@@ -346,9 +352,118 @@ async function banner(m: MediaInput) {
   return jpg(`${svg}</svg>`);
 }
 
-const IMAGES: Record<ImageChannel, (m: MediaInput) => Promise<Buffer>> = { instagram, facebook, linkedin, banner };
+// --- Instagram händelse 9:16 ---------------------------------------------------------
 
-/** De fyra kanalbilderna som JPG. */
+export const FILM = { w: 1080, h: 1920 } as const;
+const [FW, FH, FP] = [FILM.w, FILM.h, 76];
+/** Appens egna knappar ligger över det översta och det nedersta av en stående bild eller film. Där står ingenting viktigt. */
+const SAFE = { top: 250, bottom: 340 };
+
+async function story(m: MediaInput) {
+  const { look, copy } = m;
+  const { worn, held } = m.photos;
+  const head = fit(m.fonts.head, up(copy.headline), { width: FW - FP * 2, max: 140, min: 70, lines: 2 });
+  const sub = fit(m.fonts.label, copy.subline, { width: FW - FP * 2, max: 46, min: 32, lines: 2, leading: 1.5 });
+  const subY = FH - SAFE.bottom - sub.h;
+  const headY = subY - 30 - head.h;
+  let svg = open(FW, FH);
+  if (worn) {
+    svg += `<image xlink:href="${await photoUri(worn, FW, FH)}" width="${FW}" height="${FH}"/>`;
+    svg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="${n(Math.max(0.3, (headY - 330) / FH))}" stop-color="${look.stage}" stop-opacity="0"/><stop offset="${n((headY - 40) / FH)}" stop-color="${look.stage}" stop-opacity="0.9"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.55"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
+    svg += `<rect width="${FW}" height="520" fill="url(#upp)"/><rect width="${FW}" height="${FH}" fill="url(#ner)"/>`;
+    svg += (await mark(m, FP, SAFE.top, 104, "#FFFFFF")).svg;
+  } else {
+    // Utan det stående fotot: det liggande fotot i hela sin bredd, eller halsdukens båda sidor, över klubbens färg.
+    svg += `<rect width="${FW}" height="${FH}" fill="${look.stage}"/>`;
+    const top = SAFE.top + 104 + 70;
+    if (held) {
+      const size = await sharp(held).metadata();
+      const h = Math.min(820, Math.round((FW * (size.height || 2)) / (size.width || 3)));
+      svg += `<image xlink:href="${await photoUri(held, FW, h, 0.5)}" y="${top}" width="${FW}" height="${h}"/>`;
+    } else {
+      const box = { x: 0, y: top, w: FW, h: headY - 150 - top };
+      svg += `<defs>${clip(box)}</defs>${await bands(m, box, -14)}`;
+    }
+    svg += (await mark(m, FP, SAFE.top, 104, look.onStage, { plate: look.plate })).svg;
+  }
+  const tag = pill(m.fonts.label, "Ny halsduk", FP, headY - 84 - head.cap * 0.2, 32, look);
+  svg += tag.svg + draw(head, FP, headY, look.onStage) + draw(sub, FP, subY, look.onStage, "left", 0.88);
+  return jpg(`${svg}</svg>`);
+}
+
+// --- Affisch A4 ----------------------------------------------------------------------
+
+/** QR-koden som en bana av rutor, högst `size` bred, med övre vänstra hörnet i (x, y). Rutorna är hela bildpunkter i utskriften. */
+function qr(link: string, x: number, y: number, size: number) {
+  const code = QRCode.create(link, { errorCorrectionLevel: "M" });
+  const count = code.modules.size;
+  const cell = Math.floor((size * 2) / count) / 2;
+  const pad = (size - cell * count) / 2;
+  let d = "";
+  for (let r = 0; r < count; r++) for (let c = 0; c < count; c++) if (code.modules.get(r, c)) d += `M${x + pad + c * cell} ${y + pad + r * cell}h${cell}v${cell}h${-cell}z`;
+  return `<path d="${d}" fill="#111111" shape-rendering="crispEdges"/>`;
+}
+
+/**
+ * Affischen till klubbstugan: rubriken, fotot, halsdukens båda sidor och en QR-kod till beställningen. Vit botten, så
+ * att den går att skriva ut på en vanlig skrivare. Ritas i halv storlek och görs dubbelt så stor – 2480 × 3508 punkter.
+ */
+async function poster(m: MediaInput) {
+  const [W, H, P] = [1240, 1754, 84];
+  const { look, copy, link } = m;
+  const width = W - P * 2;
+  let svg = open(W, H, 2) + `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
+  svg += (await mark(m, P, 72, 84, INK, { maxWidth: 320 })).svg;
+  const head = fit(m.fonts.head, up(copy.headline), { width, max: 128, min: 64, lines: 2 });
+  const sub = fit(m.fonts.label, copy.subline, { width, max: 44, min: 30, lines: 1 });
+  const headY = 72 + 84 + 56;
+  svg += draw(head, P, headY, INK) + draw(sub, P, headY + head.h + 26, "#55555A");
+  const textEnd = headY + head.h + 26 + sub.h;
+
+  // Nederst: halsdukens båda sidor och uppmaningen till vänster, QR-koden i en ruta till höger.
+  const zoneH = 470;
+  const zoneY = H - P - zoneH;
+  const side = link ? 332 : 0;
+  const left = width - (side ? side + 40 : 0);
+  const [front, back] = await Promise.all([piece(m.front, left), piece(m.back, left)]);
+  const call = fit(m.fonts.head, up(copy.banner.button), { width: left, max: 84, min: 44, lines: 2 });
+  // Adressen skrivs ut om den är kort nog att läsa och skriva av; annars bara webbplatsens namn.
+  const address = link ? linkLabel(link) : "";
+  const line = fit(m.fonts.label, link ? (address.length <= 40 ? address : address.split(/[/?#]/)[0]) : m.brand ? "Finns att beställa hos oss" : "Finns i klubbshoppen", { width: left, max: 36, min: 22, lines: 1 });
+  const scarvesH = front.h + 16 + back.h;
+  const textH = call.h + 22 + line.h;
+  const gap = Math.max(28, Math.min(56, zoneH - scarvesH - textH));
+  const y0 = zoneY + Math.max(0, (zoneH - scarvesH - gap - textH) / 2);
+  svg += scarf(front, P + left / 2, y0 + front.h / 2) + scarf(back, P + left / 2, y0 + front.h + 16 + back.h / 2);
+  svg += draw(call, P, y0 + scarvesH + gap, INK) + draw(line, P, y0 + scarvesH + gap + call.h + 22, "#55555A");
+  if (link) {
+    const x = W - P - side;
+    const box = side - 72;
+    const scan = fit(m.fonts.label, up("Skanna koden"), { width: box, max: 40, min: 26, lines: 1, spacing: 0.06 });
+    svg += `<rect x="${x}" y="${zoneY}" width="${side}" height="${zoneH}" rx="40" fill="${look.stage}"/><rect x="${x + 36}" y="${zoneY + 36}" width="${box}" height="${box}" rx="18" fill="#FFFFFF"/>`;
+    svg += qr(link, x + 36 + 16, zoneY + 36 + 16, box - 32);
+    svg += draw(scan, x + side / 2, zoneY + 36 + box + (zoneH - 36 - box - scan.h) / 2, look.onStage, "center");
+  }
+
+  // Fotot fyller det som blir över mellan texten och halsdukarna, men beskärs aldrig i sidled: hela halsduken ska synas.
+  const photo = m.photos.held ?? m.photos.worn;
+  const free = zoneY - 44 - (textEnd + 44);
+  const size = photo ? await sharp(photo).metadata() : null;
+  const photoH = Math.round(Math.min(free, size && m.photos.held ? (width * (size.height || 2)) / (size.width || 3) : free));
+  const photoY = Math.round(textEnd + 44 + (free - photoH) / 2);
+  const frame = { x: P, y: photoY, w: width, h: photoH };
+  svg += `<defs><clipPath id="foto"><rect x="${frame.x}" y="${frame.y}" width="${frame.w}" height="${frame.h}" rx="32"/></clipPath></defs>`;
+  if (photo) svg += `<image xlink:href="${await photoUri(photo, width * 2, photoH * 2, m.photos.held ? 0.25 : 0.1)}" x="${frame.x}" y="${frame.y}" width="${frame.w}" height="${frame.h}" clip-path="url(#foto)"/>`;
+  else svg += `<rect x="${frame.x}" y="${frame.y}" width="${frame.w}" height="${frame.h}" rx="32" fill="${look.stage}"/><defs>${clip(frame)}</defs><g clip-path="url(#foto)">${await bands(m, frame, -10)}</g>`;
+  return jpg(`${svg}</svg>`);
+}
+
+const IMAGES: Record<ImageChannel, (m: MediaInput) => Promise<Buffer>> = { instagram, facebook, linkedin, banner, story, poster };
+
+/** En kanalbild som JPG. */
+export const channelImage = (id: ImageChannel, m: MediaInput) => IMAGES[id](m);
+
+/** Alla kanalbilder som JPG. */
 export async function channelImages(m: MediaInput): Promise<Record<ImageChannel, Buffer>> {
   const ids = Object.keys(IMAGES) as ImageChannel[];
   const out = await Promise.all(ids.map((id) => IMAGES[id](m)));
@@ -356,9 +471,6 @@ export async function channelImages(m: MediaInput): Promise<Record<ImageChannel,
 }
 
 // --- Filmernas stillbilder (1080 × 1920) -------------------------------------------
-
-export const FILM = { w: 1080, h: 1920 } as const;
-const [FW, FH, FP] = [FILM.w, FILM.h, 76];
 
 /** Stillbilderna till zoomscenerna ritas dubbelt så stora som filmen, så att zoomen blir mjuk. */
 const still = (svg: string) => render(svg).flatten({ background: "#000000" }).jpeg({ quality: 92 }).toBuffer();

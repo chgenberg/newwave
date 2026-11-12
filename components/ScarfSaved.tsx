@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { MaterialView } from "@/components/ScarfMaterial";
+import { MaterialView, relinkPoster } from "@/components/ScarfMaterial";
 import { Badge, Modal, Pictures, QUIET, ScarfActions, downloadZip } from "@/components/ScarfParts";
 import { LogoMark } from "@/components/newwave/Logo";
-import { removeDesign, savedDesigns, type SavedDesign } from "@/lib/scarfSaved";
+import { removeDesign, saveDesign, savedDesigns, type SavedDesign } from "@/lib/scarfSaved";
 
 /** Sparade designer: halsdukarna besökaren har tagit fram, som de ligger sparade i webbläsaren. */
 
@@ -62,7 +62,7 @@ export function ScarfSaved() {
       <div className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6">
         <div className="mt-8 text-center sm:mt-12">
           <h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">Sparade designer.</h1>
-          <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-[#6E6E73]">Motiven du har valt, med inlägg, banner och film. De ligger sparade i den här webbläsaren.</p>
+          <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-[#6E6E73]">Motiven du har valt, med inlägg, banner, film och affisch. De ligger sparade i den här webbläsaren.</p>
         </div>
 
         {list && list.length === 0 && (
@@ -109,7 +109,7 @@ export function ScarfSaved() {
                   <ScarfActions
                     info={d.info}
                     download={d.download}
-                    photo={{ club: d.club.name, headline: d.download.idea.front.main || d.download.idea.back.main, crestUrl: d.club.crest, everyday: d.club.brand, wide: d.club.brand }}
+                    photo={{ club: d.club.name, clubId: d.club.ref, headline: d.download.idea.front.main || d.download.idea.back.main, crestUrl: d.club.crest, everyday: d.club.brand, wide: d.club.brand }}
                     extra={<Remove onRemove={() => void remove(d.id)} />}
                   />
                 </div>
@@ -124,7 +124,20 @@ export function ScarfSaved() {
           <div className="mb-6 rounded-2xl bg-[#F5F5F7] p-3">
             <Pictures front={open.info.images.front} back={open.info.images.back} text={open.info.text} captions />
           </div>
-          <MaterialView copy={open.made.copy} material={open.made.material} notes={open.made.notes} onZip={() => downloadZip({ ...open.download, copy: open.made!.copy, material: open.made!.material }, "/api/v1/scarf/agent/content/zip", "material.zip")} />
+          <MaterialView
+            copy={open.made.copy}
+            material={open.made.material}
+            notes={open.made.notes}
+            onZip={() => downloadZip({ ...open.download, copy: open.made!.copy, material: open.made!.material }, "/api/v1/scarf/agent/content/zip", "material.zip")}
+            onLink={async (link) => {
+              // Affischen görs om med den nya länken, och den sparade designen skrivs över med det ändrade materialet.
+              const made = { ...open.made!, material: await relinkPoster(open.download, open.made!.copy, open.made!.material, link) };
+              const next = { ...open, made };
+              await saveDesign(next);
+              setOpen(next);
+              setList((prev) => prev?.map((d) => (d.id === next.id ? next : d)) ?? prev);
+            }}
+          />
         </Modal>
       )}
     </main>

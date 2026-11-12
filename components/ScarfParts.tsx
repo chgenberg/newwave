@@ -32,7 +32,7 @@ export type ScarfInfo = {
 };
 
 /** `everyday`: företag och föreningar utanför idrotten fotograferas på stan och utanför jobbet i stället för på läktaren. */
-export type PhotoTarget = { club: string; headline: string; crestUrl: string; wide?: boolean; everyday?: boolean };
+export type PhotoTarget = { club: string; headline: string; crestUrl: string; wide?: boolean; everyday?: boolean; /** Klubben i flödet – då tas fotona på sportens egen plats. */ clubId?: string };
 
 export function Badge({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
   return <span className={`inline-flex h-6 items-center whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-medium ${dark ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#424245]"}`}>{children}</span>;
@@ -284,7 +284,7 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
       const res = await fetch("/api/v1/scarf/photos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, club: target.club, headline: target.headline, scarfDataUrl, ...(personDataUrl ? { personDataUrl } : { setting: target.everyday ? "vardag" : "sport" }) }),
+        body: JSON.stringify({ mode, club: target.club, headline: target.headline, scarfDataUrl, ...(personDataUrl ? { personDataUrl } : { setting: target.everyday ? "vardag" : "sport", clubId: target.clubId }) }),
       });
       const json = (await res.json().catch(() => ({}))) as { photos?: Photo[]; error?: string };
       if (!res.ok || !json.photos?.length) throw new Error(json.error || "Kunde inte skapa fotografierna.");
@@ -397,7 +397,7 @@ export function PhotoDialog({ target, scarf, colors, onClose }: { target: PhotoT
 
         {self.length > 0 && <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">{self.map((p, i) => card(p, `halsduk-jag-${i + 1}.jpg`, "aspect-square"))}</div>}
         {four.length > 0 && <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{four.map((p) => card(p, `halsduk-${p.id}.jpg`, "aspect-[2/3]"))}</div>}
-        {!self.length && !four.length && !camera && <p className="mt-4 text-[12.5px] leading-snug text-[#86868B]">Bilderna skapas av bildmodellen utifrån halsdukens framsida och tar knappt en minut. Personerna på modellbilderna finns inte.</p>}
+        {!self.length && !four.length && !camera && <p className="mt-4 text-[12.5px] leading-snug text-[#86868B]">Bilderna skapas av bildmodellen utifrån halsdukens framsida, granskas mot mönstret och tar ungefär en minut. Personerna på modellbilderna finns inte.</p>}
 
         <IFKLoader state={loader.state} crestUrl={target.crestUrl} wide={target.wide} lines={["Halsduken hängs om halsen…", "Ljuset sätts…", "Fransarna rättas till…", "Kameran ställs in…"]} doneLine="Klart!" />
       </div>
