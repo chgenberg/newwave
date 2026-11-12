@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { FilmChannel } from "./scarfChannels";
-import { FILM, closeUp, endCard, introCard, photoCard, scrollStage, strip, type MediaInput } from "./scarfMedia";
+import { FILM, closeUp, endCard, introCard, photoCard, scrollStage, strip, wideCard, type MediaInput } from "./scarfMedia";
 
 /**
  * Filmerna för Reels och TikTok: stillbilder och långa bilder av halsduken som kameran åker över, klippta ihop av
@@ -137,20 +137,21 @@ async function reels(m: MediaInput) {
     { kind: "zoom", dur: 2, bg: intro.bg, over: intro.over, overAt: 0.15, from: 1, to: 1.07 },
     { kind: "pan", dur: 3.2, strip: front, into: "fade" },
   ];
-  if (m.photos[0]) {
-    const photo = await photoCard(m, m.photos[0], { head: copy.headline, sub: copy.subline });
+  const { worn } = m.photos;
+  if (worn) {
+    const photo = await photoCard(m, worn, { head: copy.headline, sub: copy.subline });
     scenes.push({ kind: "zoom", dur: 2.8, bg: photo.bg, over: photo.over, overAt: 0.4, from: 1, to: 1.08, into: "slideup" });
   } else scenes.push({ kind: "pan", dur: 2.8, strip: await strip(m.back, 800, { width: W, color: look.stage }), up: true, into: "slideup" });
   scenes.push({ kind: "zoom", dur: 2.6, bg: end.bg, over: end.over, overAt: 0.3, from: 1.05, to: 1, into: "fade" });
-  return cutFilm(scenes, m.photos[0] ? 6.6 : 1.4);
+  return cutFilm(scenes, worn ? 6.6 : 1.4);
 }
 
-/** TikTok: kroken direkt på fotot, fram- och baksida som rullar åt var sitt håll, en närbild i sidled och en slutbild. */
+/** TikTok: kroken över fotot där halsduken hålls upp, fram- och baksida som rullar åt var sitt håll, en närbild i sidled och en slutbild. */
 async function tiktok(m: MediaInput) {
   const { copy, look } = m;
-  const photo = m.photos[1] ?? m.photos[0];
+  const { held, worn } = m.photos;
   const [first, stage, left, right, wide, end] = await Promise.all([
-    photo ? photoCard(m, photo, { head: copy.tiktok.hook, top: true }) : introCard(m, copy.tiktok.hook),
+    held ? wideCard(m, held, copy.tiktok.hook) : worn ? photoCard(m, worn, { head: copy.tiktok.hook, top: true }) : introCard(m, copy.tiktok.hook),
     scrollStage(m, ["Framsida", "Baksida"]),
     strip(m.front, 440),
     strip(m.back, 440),

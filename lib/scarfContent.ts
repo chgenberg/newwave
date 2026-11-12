@@ -6,7 +6,7 @@ import { CHANNELS, COPY_MAX, CopySchema, channelText, type ChannelId, type FilmC
 import type { ScarfClub } from "./scarfClub";
 import { facePreview } from "./scarfEngine";
 import { PHOTO_FILE, clubCrest, knitIdea, type KnitResult, type ScarfFiles } from "./scarfFlow";
-import { lookOf, mediaFonts, type MediaInput } from "./scarfMedia";
+import { lookOf, mediaFonts, sortPhotos, type MediaInput } from "./scarfMedia";
 import { buildPackage, slug } from "./scarfProduction";
 import { PERSONAL, RECIPES, type ScarfIdea } from "./scarfRecipes";
 import { loadFile } from "./store";
@@ -174,7 +174,7 @@ export async function frontOf(found: ScarfClub, idea: ScarfIdea, files: ScarfFil
 /** Allt som bilderna och filmerna sätts av. */
 export async function mediaFor(found: ScarfClub, idea: ScarfIdea, files: ScarfFiles, copy: ScarfCopy, photos: string[]): Promise<MediaInput> {
   const [knit, crest, fonts, shots] = await Promise.all([faces(found, idea, files), crestOf(found), mediaFonts(idea), photoBuffers(photos)]);
-  return { name: found.club.name, crest, look: lookOf(found.club, idea), front: knit.front, back: knit.back, photos: shots, copy, fonts };
+  return { name: found.club.name, crest, look: lookOf(found.club, idea), front: knit.front, back: knit.back, photos: await sortPhotos(shots), copy, fonts };
 }
 
 // --- Zip-filen ----------------------------------------------------------------------

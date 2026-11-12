@@ -35,11 +35,24 @@ export type MediaInput = {
   /** Fram- och baksida som de blir stickade, liggande med fransar (genomskinlig botten). */
   front: Buffer;
   back: Buffer;
-  /** Fotografier på modell, stående format: först halsduken buren om halsen, sedan uppsträckt mellan händerna. Kan vara tom. */
-  photos: Buffer[];
+  /** Fotografier på modell: halsduken buren om halsen (stående foto) och uppsträckt mellan händerna (liggande foto). */
+  photos: Photos;
   copy: ScarfCopy;
   fonts: { head: Font; label: Font };
 };
+
+export type Photos = { worn: Buffer | null; held: Buffer | null };
+
+/** Fotona sorteras efter format och inte efter ordning: det stående är halsduken buren, det liggande är halsduken uppsträckt. */
+export async function sortPhotos(shots: Buffer[]): Promise<Photos> {
+  const sized = await Promise.all(
+    shots.map(async (buf) => {
+      const meta = await sharp(buf).metadata();
+      return { buf, wide: (meta.width ?? 0) > (meta.height ?? 0) };
+    }),
+  );
+  return { worn: sized.find((p) => !p.wide)?.buf ?? null, held: sized.find((p) => p.wide)?.buf ?? null };
+}
 
 const lum = (hex: string) => {
   const [r, g, b] = hexToRgb(hex);
@@ -225,18 +238,20 @@ async function instagram(m: MediaInput) {
   let svg = open(W, H);
   const head = fit(m.fonts.head, up(copy.headline), { width: W - P * 2, max: 132, min: 64, lines: 2 });
   const sub = fit(m.fonts.label, copy.subline, { width: W - P * 2, max: 40, min: 28, lines: 2, leading: 1.5 });
-  const subY = H - P - sub.h;
+  const { held, worn } = m.photos;
+  // Det liggande fotot ligger överst i hela sin bredd, obeskuret i sidled, så att halsduken syns från frans till frans.
+  // Texten står då mitt i färgfältet under fotot; annars står den längst ner.
+  const size = held ? await sharp(held).metadata() : null;
+  const cut = Math.min(800, Math.round((W * (size?.height || 2)) / (size?.width || 3)));
+  const subY = held ? cut + (H - cut + 78 + head.h + 30 - sub.h) / 2 : H - P - sub.h;
   const headY = subY - 30 - head.h;
-  const held = m.photos[1];
   if (held) {
-    // Halsduken hålls upp i brösthöjd. Fotot slutar ovanför texten, så att ingenting ligger över halsduken.
-    const cut = headY - 110;
-    svg += `<rect width="${W}" height="${H}" fill="${look.stage}"/><image xlink:href="${await photoUri(held, W, cut, 0.3)}" width="${W}" height="${cut}"/>`;
+    svg += `<rect width="${W}" height="${H}" fill="${look.stage}"/><image xlink:href="${await photoUri(held, W, cut, 0.5)}" width="${W}" height="${cut}"/>`;
     svg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${look.stage}" stop-opacity="0"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.5"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
     svg += `<rect width="${W}" height="230" fill="url(#upp)"/><rect y="${cut - 90}" width="${W}" height="91" fill="url(#ner)"/>`;
     svg += (await mark(m, P, P - 8, 104, "#FFFFFF")).svg;
-  } else if (m.photos[0]) {
-    svg += `<image xlink:href="${await photoUri(m.photos[0], W, H)}" width="${W}" height="${H}"/>`;
+  } else if (worn) {
+    svg += `<image xlink:href="${await photoUri(worn, W, H)}" width="${W}" height="${H}"/>`;
     const from = Math.max(0.3, (headY - 330) / H);
     svg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="${n(from)}" stop-color="${look.stage}" stop-opacity="0"/><stop offset="${n((headY - 40) / H)}" stop-color="${look.stage}" stop-opacity="0.9"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.5"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
     svg += `<rect width="${W}" height="250" fill="url(#upp)"/><rect width="${W}" height="${H}" fill="url(#ner)"/>`;
@@ -258,7 +273,7 @@ async function facebook(m: MediaInput) {
   const { look, copy } = m;
   const split = 640;
   let svg = open(W, H) + `<rect width="${W}" height="${H}" fill="${look.stage}"/>`;
-  const photo = m.photos[0];
+  const photo = m.photos.worn;
   if (photo) svg += `<image xlink:href="${await photoUri(photo, W, split)}" width="${W}" height="${split}"/>`;
   else svg += `<defs>${clip({ x: 0, y: 0, w: W, h: split })}</defs><rect width="${W}" height="${split}" fill="${mix(look.stage, look.onStage, 0.1)}"/>${await bands(m, { x: 0, y: 0, w: W, h: split }, -10)}`;
   // Halsduken som den blir stickad ligger över skarven mellan fotot och färgfältet.
@@ -280,7 +295,7 @@ async function facebook(m: MediaInput) {
 async function linkedin(m: MediaInput) {
   const [W, H, P] = [1200, 628, 56];
   const { look, copy } = m;
-  const photo = m.photos[0];
+  const photo = m.photos.worn;
   const side = photo ? 400 : 0;
   const left = W - side;
   let svg = open(W, H) + `<rect width="${W}" height="${H}" fill="${PAPER}"/>`;
@@ -305,7 +320,7 @@ async function linkedin(m: MediaInput) {
 async function banner(m: MediaInput) {
   const [W, H, P] = [1920, 600, 84];
   const { look, copy } = m;
-  const photo = m.photos[0];
+  const photo = m.photos.worn;
   const side = photo ? 470 : 0;
   let svg = open(W, H) + `<rect width="${W}" height="${H}" fill="${look.stage}"/>`;
   if (photo) {
@@ -370,6 +385,33 @@ export async function introCard(m: MediaInput, hook: string) {
   return { bg: await still(`${bg}</svg>`), over: await layer(`${over}</svg>`) };
 }
 
+/** Kroken som en textruta överst, som i appens egna textverktyg. */
+function hookBox(m: MediaInput, hook: string) {
+  const head = fit(m.fonts.label, hook, { width: FW - FP * 2 - 80, max: 76, min: 48, lines: 3, leading: 1.5 });
+  const [w, h] = [head.w + 84, head.h + 76];
+  return `<rect x="${n((FW - w) / 2)}" y="210" width="${n(w)}" height="${n(h)}" rx="30" fill="#FFFFFF"/>` + draw(head, FW / 2, 210 + 38, "#111111", "center");
+}
+
+/**
+ * Ett liggande foto i den stående filmen: fotot i hela sin bredd mitt i bilden, över en suddig förstoring av sig självt.
+ * Så syns hela halsduken mellan händerna – ett liggande foto som fyller hela höjden skulle skära av båda ändarna.
+ */
+export async function wideCard(m: MediaInput, photo: Buffer, hook: string) {
+  const meta = await sharp(photo).metadata();
+  const h = Math.round((FW * (meta.height || 2)) / (meta.width || 3));
+  // Mitt emellan krokens ruta och appens egna knappar längst ner.
+  const y = Math.round((FH - h) / 2 + 30);
+  const [blurred, sharpPhoto] = await Promise.all([
+    sharp(photo).resize(FW, FH, { fit: "cover" }).blur(40).modulate({ brightness: 0.6 }).jpeg({ quality: 82 }).toBuffer(),
+    sharp(photo).jpeg({ quality: 92 }).toBuffer(),
+  ]);
+  const bg =
+    open(FW, FH, 2) +
+    `<image xlink:href="${uri(blurred, "jpeg")}" width="${FW}" height="${FH}" preserveAspectRatio="none"/>` +
+    `<image xlink:href="${uri(sharpPhoto, "jpeg")}" y="${y}" width="${FW}" height="${h}" filter="url(#skugga)"/></svg>`;
+  return { bg: await still(bg), over: await layer(`${open(FW, FH)}${hookBox(m, hook)}</svg>`) };
+}
+
 /** Fotot i helbild. Texten ligger i ett eget lager över toningen. */
 export async function photoCard(m: MediaInput, photo: Buffer, text: { head: string; sub?: string; top?: boolean }) {
   const { look } = m;
@@ -377,12 +419,8 @@ export async function photoCard(m: MediaInput, photo: Buffer, text: { head: stri
   bg += `<defs><linearGradient id="ner" x1="0" y1="0" x2="0" y2="1"><stop offset="0.52" stop-color="${look.stage}" stop-opacity="0"/><stop offset="0.8" stop-color="${look.stage}" stop-opacity="0.9"/><stop offset="1" stop-color="${look.stage}"/></linearGradient><linearGradient id="upp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity="0.55"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></linearGradient></defs>`;
   bg += text.top ? `<rect width="${FW}" height="560" fill="url(#upp)"/>` : `<rect width="${FW}" height="${FH}" fill="url(#ner)"/>`;
   let over = open(FW, FH);
-  if (text.top) {
-    // Kroken som en textruta överst, som i appens egna textverktyg.
-    const head = fit(m.fonts.label, text.head, { width: FW - FP * 2 - 80, max: 76, min: 48, lines: 3, leading: 1.5 });
-    const [w, h] = [head.w + 84, head.h + 76];
-    over += `<rect x="${n((FW - w) / 2)}" y="210" width="${n(w)}" height="${n(h)}" rx="30" fill="#FFFFFF"/>` + draw(head, FW / 2, 210 + 38, "#111111", "center");
-  } else {
+  if (text.top) over += hookBox(m, text.head);
+  else {
     const head = fit(m.fonts.head, up(text.head), { width: FW - FP * 2, max: 140, min: 70, lines: 2 });
     const sub = text.sub ? fit(m.fonts.label, text.sub, { width: FW - FP * 2, max: 46, min: 32, lines: 2, leading: 1.5 }) : null;
     // Appens egna knappar och bildtext ligger över filmens nedersta del – texten hålls ovanför.
