@@ -41,7 +41,7 @@ export const CALIBRATION = {
     "  Håll upp halsduken och se den bakifrån: BAKSIDA läses rätt, med B och den svarta änden till vänster.",
     "  Samma ände är röd och märkt A på båda sidor. Den andra är svart och märkt B på båda sidor.",
     "  A är den ände maskinen stickar först (rad 1).",
-    `  Ytterst i varje ände ligger ${SCARF.techRows} enfärgade vita rader, för maskinens startrader och vikmarkeringar.`,
+    `  Ytterst i varje ände ligger ${SCARF.endRows} enfärgade vita rader: sömsmån, och maskinens startrader och vikmarkeringar.`,
     "",
     "Om något avviker",
     "  1. Texten är spegelvänd på båda sidor.",

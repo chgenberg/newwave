@@ -252,9 +252,10 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
     case "toning": {
       const to = T === G ? A : T;
       const toInk = contrast(y.palette[to], y.palette[I]) >= contrast(y.palette[to], y.palette[G]) ? I : G;
-      const fade = (from: Yarn, target: Yarn): Section => ({ mm: 250, fill: { kind: "fade", from, to: target } });
-      front = { sections: mirrored([line(I, 24), ...crest(G, 180), fade(G, to)], [{ fill: solid(to), content: text(fm, fs, toInk) }]) };
-      back = { sections: mirrored([line(G, 24), ...crest(I, 180), fade(I, G)], [{ fill: solid(G), content: text(bm, bs, I) }]) };
+      // Ändfälten är kortare än de var innan ändarna fick 50 enfärgade rader, så att texten i mitten behåller sin plats.
+      const fade = (from: Yarn, target: Yarn): Section => ({ mm: 210, fill: { kind: "fade", from, to: target } });
+      front = { sections: mirrored([line(I, 24), ...crest(G, 170), fade(G, to)], [{ fill: solid(to), content: text(fm, fs, toInk) }]) };
+      back = { sections: mirrored([line(G, 24), ...crest(I, 170), fade(I, G)], [{ fill: solid(G), content: text(bm, bs, I) }]) };
       break;
     }
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { type Font, parse } from "opentype.js";
 import sharp, { type OverlayOptions } from "sharp";
 import { MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, deltaE, hexToRgb, type Rgb } from "./scarf";
-import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, TECH_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
+import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, END_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
 
 /**
  * Stickmotorn: gör om en design till maskor för OPEK 365.
@@ -16,8 +16,8 @@ import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_
 const ROWS = SCARF.rows;
 const SIDE = SCARF.side;
 const NEEDLES = SCARF.needles;
-/** De första och sista raderna hör till maskinen (startrader och vikmarkering) och stickas enfärgade. */
-const TECH = SCARF.techRows;
+/** De första och sista raderna stickas enfärgade: stickeriets sömsmån, med maskinens startrader och vikmarkering ytterst. */
+const END = SCARF.endRows;
 /** Luften mellan en kantrand och innehållet innanför den. */
 const EDGE_GAP_MM = 4;
 const SS = 4;
@@ -178,19 +178,19 @@ function fillFn(fill: Fill, lengthMm: number): FillFn {
 
 type Placed = { sec: Section; x0: number; x1: number; r0: number; r1: number };
 
-/** Sektionerna läggs ut på längden mellan maskinens rader i ändarna: rad 16 till 1195. */
+/** Sektionerna läggs ut på längden mellan de enfärgade raderna i ändarna: rad 51 till 1160. */
 function layout(face: Face): Placed[] {
-  const inner = L_MM - TECH_MM * 2;
+  const inner = L_MM - END_MM * 2;
   const fixed = face.sections.reduce((n, s) => n + (s.mm ?? 0), 0);
   const flex = face.sections.reduce((n, s) => n + (s.mm === undefined ? (s.flex ?? 1) : 0), 0);
   const unit = flex ? Math.max(0, inner - fixed) / flex : 0;
   const scale = flex ? 1 : inner / (fixed || 1);
-  let x = TECH_MM;
+  let x = END_MM;
   return face.sections.map((sec, i) => {
     const w = sec.mm === undefined ? (sec.flex ?? 1) * unit : sec.mm * scale;
     const r0 = Math.round(x / ROW_H_MM);
     x += w;
-    const r1 = i === face.sections.length - 1 ? ROWS - TECH : Math.min(ROWS - TECH, Math.round(x / ROW_H_MM));
+    const r1 = i === face.sections.length - 1 ? ROWS - END : Math.min(ROWS - END, Math.round(x / ROW_H_MM));
     return { sec, x0: r0 * ROW_H_MM, x1: r1 * ROW_H_MM, r0, r1 };
   });
 }
@@ -694,14 +694,14 @@ export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, o
   });
   for (const f of faces) for (let i = 0; i < f.cells.length; i++) f.cells[i] = remap[Math.min(f.cells[i], full.length - 1)];
 
-  // Maskinens rader i ändarna stickas i ett enda garn runt hela tuben: framsidans bottenfärg, den som har flest maskor.
+  // Raderna i ändarna stickas i ett enda garn runt hela tuben: framsidans bottenfärg, den som har flest maskor.
   const count = new Uint32Array(palette.length);
-  for (let i = TECH * SIDE; i < (ROWS - TECH) * SIDE; i++) count[faces[0].cells[i]]++;
+  for (let i = END * SIDE; i < (ROWS - END) * SIDE; i++) count[faces[0].cells[i]]++;
   const ground = count.indexOf(Math.max(...count));
   for (const f of faces) {
-    for (const r0 of [0, ROWS - TECH]) {
-      f.cells.fill(ground, r0 * SIDE, (r0 + TECH) * SIDE);
-      f.protect.fill(0, r0 * SIDE, (r0 + TECH) * SIDE);
+    for (const r0 of [0, ROWS - END]) {
+      f.cells.fill(ground, r0 * SIDE, (r0 + END) * SIDE);
+      f.protect.fill(0, r0 * SIDE, (r0 + END) * SIDE);
     }
   }
 

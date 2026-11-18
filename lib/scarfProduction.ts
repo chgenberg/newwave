@@ -89,9 +89,9 @@ export function inspect(knit: Knitted): ProductionReport {
   const fast = maxColors <= FAST_COLORS;
   // Filen viks till en tub och sidorna läses av från utsidan – de ska vara de sidor som ritades, maska för maska.
   const tube = tubeMismatch(knit);
-  // Maskinens rader i ändarna: varje rad i ett enda garn, runt hela tuben.
+  // Raderna i ändarna: varje rad i ett enda garn, runt hela tuben.
   const plain = (r: number) => cells.subarray(r * W, (r + 1) * W).every((v) => v === cells[r * W]);
-  const ends = Array.from({ length: SCARF.techRows }, (_, k) => plain(k) && plain(ROWS - 1 - k)).every(Boolean);
+  const ends = Array.from({ length: SCARF.endRows }, (_, k) => plain(k) && plain(ROWS - 1 - k)).every(Boolean);
 
   const checks: ProductionCheck[] = [
     { id: "format", level: "ok", title: `${W} × ${ROWS.toLocaleString("sv-SE")} maskor`, note: `En pixel per maska: ${W} nålar runt cylindern och ${ROWS.toLocaleString("sv-SE")} maskrader. Fransarna ligger utanför.` },
@@ -143,10 +143,10 @@ export function inspect(knit: Knitted): ProductionReport {
     {
       id: "ends",
       level: ends ? "ok" : "varning",
-      title: ends ? `De ${SCARF.techRows} första och sista raderna är enfärgade` : "Mönster i maskinens rader",
+      title: ends ? `De ${SCARF.endRows} första och sista raderna är enfärgade` : "Mönster i ändraderna",
       note: ends
-        ? "Där lägger stickeriet maskinens startrader och vikmarkeringar. Mönstret ligger på raderna däremellan."
-        : `De ${SCARF.techRows} första och sista raderna ska vara enfärgade, för maskinens startrader och vikmarkeringar – skicka inte filen till stickeriet.`,
+        ? "Stickeriet vill ha 50 enfärgade varv i början och slutet som sömsmån. Maskinens startrader och vikmarkeringar ligger i de yttersta."
+        : `De ${SCARF.endRows} första och sista raderna ska vara enfärgade: stickeriets sömsmån och maskinens egna rader – skicka inte filen till stickeriet.`,
     },
     { id: "seam", level: "info", title: "Varvskarven i nederkanten", note: "Varvet börjar och slutar i halsdukens nedre vikkant, så hacket i tvärränder syns minst." },
     {
@@ -295,7 +295,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
       front: `kolumn 1–${SCARF.side}, vriden ett kvarts varv medurs`,
       back: knit.backReads === "hold-up" ? `kolumn ${SCARF.side + 1}–${W}, vriden ett kvarts varv moturs (läses rätt bakifrån när halsduken hålls upp)` : `kolumn ${SCARF.side + 1}–${W}, vriden ett kvarts varv medurs (läses rätt när halsduken vänds över långsidan)`,
       row1: "bildens översta rad",
-      reserved: `rad 1–${SCARF.techRows} och ${ROWS - SCARF.techRows + 1}–${ROWS} är enfärgade, för maskinens startrader och vikmarkeringar`,
+      reserved: `rad 1–${SCARF.endRows} och ${ROWS - SCARF.endRows + 1}–${ROWS} är enfärgade: sömsmån, och maskinens startrader och vikmarkeringar`,
       clearEdge: `text, märken och kantränder ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna`,
     },
     yarns: report.yarns.map((y) => ({ feeder: y.index, hex: y.hex, pantone: y.pantone, stitches: y.stitches, share: Math.round(y.share * 1000) / 1000 })),
@@ -339,7 +339,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
       ? "  Baksidan är vriden ett kvarts varv moturs, så att den läses rätt bakifrån när halsduken hålls upp."
       : "  Baksidan är vriden medurs som framsidan, så att den läses rätt när halsduken vänds över långsidan.",
     "  Ingen sida är spegelvänd: vrid bilden ett kvarts varv så läses texten rätt.",
-    `  Rad 1–${SCARF.techRows} och ${ROWS - SCARF.techRows + 1}–${ROWS} är enfärgade: där läggs maskinens startrader och vikmarkeringar.`,
+    `  Rad 1–${SCARF.endRows} och ${ROWS - SCARF.endRows + 1}–${ROWS} är enfärgade: sömsmån enligt er rekommendation, med plats för maskinens startrader och vikmarkeringar.`,
     `  Text, märken och kantränder ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna (nål 1, 120, 121 och 240).`,
     "  Blir texten spegelvänd på provet, spegla hela bilden vågrätt i Draw Designer – då blir båda sidorna rätt.",
     "",

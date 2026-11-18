@@ -62,12 +62,12 @@
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.285
+          "share": 0.265
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.536
+          "share": 0.565
         },
         {
           "hex": "#197BC4",
@@ -82,7 +82,7 @@
         {
           "hex": "#1A3770",
           "pantone": "PANTONE 3597 C",
-          "share": 0.164
+          "share": 0.156
         }
       ],
       "system": "dubbel",
@@ -185,12 +185,12 @@
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.508
+          "share": 0.541
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.436
+          "share": 0.403
         },
         {
           "hex": "#197BC4",
@@ -205,12 +205,12 @@
         {
           "hex": "#1A3770",
           "pantone": "PANTONE 3597 C",
-          "share": 0.033
+          "share": 0.032
         }
       ],
       "system": "enkel",
       "maxColorsPerRow": 5,
-      "minTextMm": 22,
+      "minTextMm": 20,
       "ok": true,
       "consent": "Spelarnas namn och nummer kräver klubbens och spelarnas godkännande.",
       "art": false,
@@ -283,12 +283,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.493
+          "share": 0.522
         },
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.44
+          "share": 0.411
         },
         {
           "hex": "#0A0A0A",
@@ -387,22 +387,22 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.5
+          "share": 0.441
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.313
+          "share": 0.299
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.187
+          "share": 0.261
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 24,
+      "minTextMm": 25,
       "ok": true,
       "consent": null,
       "art": false,
@@ -471,12 +471,12 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.501
+          "share": 0.516
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.412
+          "share": 0.397
         },
         {
           "hex": "#FFFFFF",
@@ -486,7 +486,7 @@
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 38,
+      "minTextMm": 35,
       "ok": true,
       "consent": null,
       "art": false,
@@ -554,12 +554,12 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.537
+          "share": 0.569
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.428
+          "share": 0.395
         },
         {
           "hex": "#FFFFFF",

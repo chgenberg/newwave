@@ -6,7 +6,7 @@ import { SCARF } from "./scarf";
  * Motorn i scarfEngine.ts gör om en design till maskor – inget i den här filen behöver servern.
  *
  * Mått är i millimeter på den liggande halsduken: x längs de 135 cm, y tvärs över de 18 cm.
- * De yttersta 15 raderna i varje ände hör till maskinen och är alltid enfärgade (TECH_MM); en design ritas på längden däremellan.
+ * De yttersta 50 raderna i varje ände är alltid enfärgade (END_MM) – sömsmån och maskinens egna rader; en design ritas på längden däremellan.
  * Färger är alltid index i designens garnlista (högst sju).
  */
 
@@ -133,8 +133,8 @@ export type ScarfDesign = {
 
 export const L_MM = SCARF.lengthMm;
 export const W_MM = SCARF.widthMm;
-/** Så mycket av varje ände som lämnas enfärgad för maskinens startrader och vikmarkering. Sektionerna delar på längden däremellan. */
-export const TECH_MM = (SCARF.techRows * SCARF.lengthMm) / SCARF.rows;
+/** Så mycket av varje ände som lämnas enfärgad: sömsmån, och maskinens startrader och vikmarkering. Sektionerna delar på längden däremellan. */
+export const END_MM = (SCARF.endRows * SCARF.lengthMm) / SCARF.rows;
 /** Den fria kanten mot varje långsida, där tuben viks: text, sköld och kantränder håller sig innanför. */
 export const EDGE_MM = (SCARF.edgeNeedles * SCARF.widthMm) / SCARF.side;
 /** Maskrader per maskbredd: en maska är 1,5 mm bred men bara 1,12 mm hög, så ett motiv dras ut längs halsduken för att bli rätt. */

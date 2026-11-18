@@ -2,15 +2,17 @@ import { nearestPantone } from "./pantone";
 
 /**
  * Seger's knitted scarf: a tube on a 240-needle cylinder, front = needles 1–120, back = 121–240.
- * `techRows` and `edgeNeedles` are measured in the knitter's own machine file (004212.MOF, November 2026): its first and
- * last 15 rows hold the machine's start rows and fold markers, and its motif keeps 10 needles clear of both folds.
+ * `endRows` is the knitter's own rule (November 2026): always leave 50 courses plain at the start and at the end of the
+ * pattern, as seam allowance. The machine's start rows and fold markers lie in the outermost 15 of them, as measured in
+ * the knitter's machine file 004212.MOF. `edgeNeedles` is measured in that file: its motif keeps 10 needles clear of both folds.
+ * The knitter also confirms 7 yarns per scarf, and full machine speed with 1–4 yarns but slower with 5–7.
  */
 export const SCARF = {
   needles: 240,
   side: 120,
   rows: 1210,
-  /** Rows at each end that are left in one plain yarn, for the machine's start rows and fold markers. */
-  techRows: 15,
+  /** Rows at each end that are left in one plain yarn: seam allowance, and the machine's start rows and fold markers. */
+  endRows: 50,
   /** Needles next to each fold that text, crests and edge stripes stay clear of. */
   edgeNeedles: 10,
   lengthMm: 1350,
