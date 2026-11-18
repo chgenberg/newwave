@@ -1,10 +1,18 @@
 import { nearestPantone } from "./pantone";
 
-/** Seger's knitted scarf on the OPEK 365: a tube on a 240-needle cylinder, front = needles 1–120, back = 121–240. */
+/**
+ * Seger's knitted scarf: a tube on a 240-needle cylinder, front = needles 1–120, back = 121–240.
+ * `techRows` and `edgeNeedles` are measured in the knitter's own machine file (004212.MOF, November 2026): its first and
+ * last 15 rows hold the machine's start rows and fold markers, and its motif keeps 10 needles clear of both folds.
+ */
 export const SCARF = {
   needles: 240,
   side: 120,
   rows: 1210,
+  /** Rows at each end that are left in one plain yarn, for the machine's start rows and fold markers. */
+  techRows: 15,
+  /** Needles next to each fold that text, crests and edge stripes stay clear of. */
+  edgeNeedles: 10,
   lengthMm: 1350,
   widthMm: 180,
   maxColors: 7,

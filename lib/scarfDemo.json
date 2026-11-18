@@ -62,12 +62,12 @@
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.294
+          "share": 0.285
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.523
+          "share": 0.536
         },
         {
           "hex": "#197BC4",
@@ -82,7 +82,7 @@
         {
           "hex": "#1A3770",
           "pantone": "PANTONE 3597 C",
-          "share": 0.168
+          "share": 0.164
         }
       ],
       "system": "dubbel",
@@ -185,32 +185,32 @@
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.503
+          "share": 0.508
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.427
+          "share": 0.436
         },
         {
           "hex": "#197BC4",
           "pantone": "PANTONE 3005 C",
-          "share": 0.016
+          "share": 0.013
         },
         {
           "hex": "#FBC323",
           "pantone": "PANTONE 123 C",
-          "share": 0.013
+          "share": 0.011
         },
         {
           "hex": "#1A3770",
           "pantone": "PANTONE 3597 C",
-          "share": 0.04
+          "share": 0.033
         }
       ],
       "system": "enkel",
       "maxColorsPerRow": 5,
-      "minTextMm": 23,
+      "minTextMm": 22,
       "ok": true,
       "consent": "Spelarnas namn och nummer kräver klubbens och spelarnas godkännande.",
       "art": false,
@@ -283,12 +283,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.477
+          "share": 0.493
         },
         {
           "hex": "#234B9A",
           "pantone": "PANTONE 7687 C",
-          "share": 0.442
+          "share": 0.44
         },
         {
           "hex": "#0A0A0A",
@@ -298,27 +298,27 @@
         {
           "hex": "#A6AAB0",
           "pantone": "PANTONE Cool Gray 6 C",
-          "share": 0.013
+          "share": 0.011
         },
         {
           "hex": "#555960",
           "pantone": "PANTONE Cool Gray 11 C",
-          "share": 0.017
+          "share": 0.014
         },
         {
           "hex": "#197BC4",
           "pantone": "PANTONE 3005 C",
-          "share": 0.023
+          "share": 0.019
         },
         {
           "hex": "#FBC323",
           "pantone": "PANTONE 123 C",
-          "share": 0.02
+          "share": 0.016
         }
       ],
       "system": "enkel",
       "maxColorsPerRow": 7,
-      "minTextMm": 37,
+      "minTextMm": 34,
       "ok": true,
       "consent": "Porträtt och namn kräver personens skriftliga godkännande och klubbens.",
       "art": false,
@@ -387,22 +387,22 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.482
+          "share": 0.5
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.321
+          "share": 0.313
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.197
+          "share": 0.187
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 26,
+      "minTextMm": 24,
       "ok": true,
       "consent": null,
       "art": false,
@@ -471,12 +471,12 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.493
+          "share": 0.501
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.421
+          "share": 0.412
         },
         {
           "hex": "#FFFFFF",
@@ -554,12 +554,12 @@
         {
           "hex": "#FDEF04",
           "pantone": "PANTONE 3945 C",
-          "share": 0.531
+          "share": 0.537
         },
         {
           "hex": "#0D0C0C",
           "pantone": "PANTONE 419 C",
-          "share": 0.433
+          "share": 0.428
         },
         {
           "hex": "#FFFFFF",
@@ -569,7 +569,7 @@
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 29,
+      "minTextMm": 27,
       "ok": true,
       "consent": null,
       "art": false,

@@ -1,5 +1,5 @@
 import { GREY_YARNS, SCARF, deltaE, hexToRgb } from "./scarf";
-import { mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type SignStroke, type Stripe, type Yarn } from "./scarfDesign";
+import { EDGE_MM, mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type SignStroke, type Stripe, type Yarn } from "./scarfDesign";
 import type { Club } from "./types";
 
 /**
@@ -158,7 +158,8 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
   const line = (yarn: Yarn, mm = 9): Section => ({ mm, fill: solid(yarn) });
   /** Detaljfärgen om den syns mot bottnen, annars reservfärgen. */
   const pop = (ground: Yarn, fallback: Yarn) => (A !== ground && contrast(y.palette[A], y.palette[ground]) >= 60 ? A : fallback);
-  const thin = (yarn: Yarn): Face["edge"] => ({ stripes: stripes([-1, 6], [yarn, 4.5]), skip: 1 });
+  /** En tunn rand längs varje långsida, två maskor bred, innanför den fria kanten mot vikningen. */
+  const thin = (yarn: Yarn): Face["edge"] => ({ stripes: stripes([-1, EDGE_MM], [yarn, 3]), skip: 1 });
   /** Den vanliga baksidan: färgerna omvända, sköld i båda ändar och texten i mitten. */
   const plainBack = (): Face => ({
     sections: mirrored([endBars(I, G), ...crest(I)], [{ fill: solid(I), content: text(bm, bs, G) }]),
@@ -298,8 +299,8 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
       };
       const flake = (ground: Yarn, ink: Yarn, icon: IconId): Section => ({ mm: 104, fill: solid(ground), content: { kind: "icon", icon, yarn: ink }, pad: [8, 34] });
       const detail = A === G ? I : A;
-      front = { sections: mirrored([...end(G, I, detail), ...crest(G, 150)], [flake(G, I, "snoflinga"), { fill: solid(G), content: text(fm, fs, I) }, flake(G, I, "snoflinga")]), edge: { stripes: stripes([-1, 5], [I, 3]), skip: 2 } };
-      back = { sections: mirrored(end(I, G, A === I ? G : A), [flake(I, pop(I, G), "hjarta"), { fill: solid(I), content: text(bm, bs, G) }, flake(I, pop(I, G), "hjarta")]), edge: { stripes: stripes([-1, 5], [G, 3]), skip: 2 } };
+      front = { sections: mirrored([...end(G, I, detail), ...crest(G, 150)], [flake(G, I, "snoflinga"), { fill: solid(G), content: text(fm, fs, I) }, flake(G, I, "snoflinga")]), edge: { stripes: stripes([-1, EDGE_MM], [I, 3]), skip: 2 } };
+      back = { sections: mirrored(end(I, G, A === I ? G : A), [flake(I, pop(I, G), "hjarta"), { fill: solid(I), content: text(bm, bs, G) }, flake(I, pop(I, G), "hjarta")]), edge: { stripes: stripes([-1, EDGE_MM], [G, 3]), skip: 2 } };
       break;
     }
 

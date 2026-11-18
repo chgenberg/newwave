@@ -3,7 +3,7 @@ import path from "node:path";
 import { type Font, parse } from "opentype.js";
 import sharp, { type OverlayOptions } from "sharp";
 import { MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, deltaE, hexToRgb, type Rgb } from "./scarf";
-import { ASPECT, BITMAPS, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
+import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, TECH_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
 
 /**
  * Stickmotorn: gör om en design till maskor för OPEK 365.
@@ -16,6 +16,10 @@ import { ASPECT, BITMAPS, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIG
 const ROWS = SCARF.rows;
 const SIDE = SCARF.side;
 const NEEDLES = SCARF.needles;
+/** De första och sista raderna hör till maskinen (startrader och vikmarkering) och stickas enfärgade. */
+const TECH = SCARF.techRows;
+/** Luften mellan en kantrand och innehållet innanför den. */
+const EDGE_GAP_MM = 4;
 const SS = 4;
 const PX_X = (ROWS * SS) / L_MM;
 const PX_Y = (SIDE * SS) / W_MM;
@@ -174,17 +178,19 @@ function fillFn(fill: Fill, lengthMm: number): FillFn {
 
 type Placed = { sec: Section; x0: number; x1: number; r0: number; r1: number };
 
+/** Sektionerna läggs ut på längden mellan maskinens rader i ändarna: rad 16 till 1195. */
 function layout(face: Face): Placed[] {
+  const inner = L_MM - TECH_MM * 2;
   const fixed = face.sections.reduce((n, s) => n + (s.mm ?? 0), 0);
   const flex = face.sections.reduce((n, s) => n + (s.mm === undefined ? (s.flex ?? 1) : 0), 0);
-  const unit = flex ? Math.max(0, L_MM - fixed) / flex : 0;
-  const scale = flex ? 1 : L_MM / (fixed || 1);
-  let x = 0;
+  const unit = flex ? Math.max(0, inner - fixed) / flex : 0;
+  const scale = flex ? 1 : inner / (fixed || 1);
+  let x = TECH_MM;
   return face.sections.map((sec, i) => {
     const w = sec.mm === undefined ? (sec.flex ?? 1) * unit : sec.mm * scale;
     const r0 = Math.round(x / ROW_H_MM);
     x += w;
-    const r1 = i === face.sections.length - 1 ? ROWS : Math.min(ROWS, Math.round(x / ROW_H_MM));
+    const r1 = i === face.sections.length - 1 ? ROWS - TECH : Math.min(ROWS - TECH, Math.round(x / ROW_H_MM));
     return { sec, x0: r0 * ROW_H_MM, x1: r1 * ROW_H_MM, r0, r1 };
   });
 }
@@ -418,7 +424,9 @@ async function addContent(c: Content, box: Box, palette: string[], assets: KnitA
         y += h + gap;
       });
       if (c.rotate) {
-        out.svg.push(`<g transform="translate(${esc(box.x + box.w / 2)} ${esc(box.y + box.h / 2)}) rotate(-90)">${parts.join("")}</g>`);
+        // Bokstävernas överkant vänds mot halsdukens mitt, så att texten läses rätt i båda ändar när halsduken hänger om halsen.
+        const cx = box.x + box.w / 2;
+        out.svg.push(`<g transform="translate(${esc(cx)} ${esc(box.y + box.h / 2)}) rotate(${cx < L_MM / 2 ? 90 : -90})">${parts.join("")}</g>`);
         out.margins.push(box.y, W_MM - box.y - box.h);
       } else {
         // Glesa rader centreras tillsammans i höjdled.
@@ -550,23 +558,28 @@ async function knitFace(face: Face, palette: string[], assets: KnitAssets, clean
   const placed = layout(face);
   const overlay: Overlay = { svg: [], rasters: [], texts: out.texts, margins: out.margins, direct: [] };
 
-  const boxOf = (p: Placed): Box => {
-    const [px, py] = p.sec.pad ?? [10, 16];
+  const skip = face.edge?.skip ?? 0;
+  const edgeOf = (i: number) => (face.edge && i >= skip && i < placed.length - skip ? face.edge.stripes : null);
+  // Innehållet håller sig alltid innanför den fria kanten mot vikningen, och innanför kantränderna där de finns.
+  const boxOf = (p: Placed, i: number): Box => {
+    const rails = edgeOf(i)?.reduce((n, s) => n + s.mm, 0) ?? 0;
+    const [px, pad] = p.sec.pad ?? [10, 16];
+    const py = Math.max(pad, EDGE_MM, rails ? rails + EDGE_GAP_MM : 0);
     return { x: p.x0 + px, y: py, w: Math.max(4, p.x1 - p.x0 - px * 2), h: W_MM - py * 2 };
   };
   // Texter i samma grupp provas först var för sig; alla får sedan den minsta versalhöjden.
   const caps = new Map<string, number>();
-  for (const p of placed) {
+  for (const [i, p] of placed.entries()) {
     const c = p.sec.content;
     if (c?.kind !== "text" || !c.group) continue;
     const probe: Overlay = { svg: [], rasters: [], texts: [], margins: [], direct: [] };
-    await addContent(c, boxOf(p), palette, assets, probe, []);
+    await addContent(c, boxOf(p, i), palette, assets, probe, []);
     if (probe.texts.length) caps.set(c.group, Math.min(caps.get(c.group) ?? Infinity, probe.texts[0]));
   }
 
   for (const [i, p] of placed.entries()) {
     const fn = fillFn(p.sec.fill, p.x1 - p.x0);
-    const edge = face.edge && i >= (face.edge.skip ?? 0) && i < placed.length - (face.edge.skip ?? 0) ? face.edge.stripes : null;
+    const edge = edgeOf(i);
     const edgeMm = edge?.reduce((n, s) => n + s.mm, 0) ?? 0;
     for (let r = p.r0; r < p.r1; r++) {
       const rl = p.sec.through ? r : p.sec.flip ? p.r1 - 1 - r : r - p.r0;
@@ -583,7 +596,7 @@ async function knitFace(face: Face, palette: string[], assets: KnitAssets, clean
     if (p.sec.content) {
       const f = p.sec.fill;
       const ground = f.kind === "solid" ? [f.yarn] : f.kind === "tile" ? [f.ground, f.yarn] : [];
-      await addContent(p.sec.content, boxOf(p), palette, assets, overlay, ground, caps);
+      await addContent(p.sec.content, boxOf(p, i), palette, assets, overlay, ground, caps);
     }
   }
 
@@ -651,7 +664,8 @@ function tidy(face: FaceKnit, strong = false) {
 // --- Hela halsduken ----------------------------------------------------------
 
 /**
- * Så ligger sidorna i stickfilen (240 × 1210, en pixel per maska, rad 1 överst):
+ * Så ligger sidorna i stickfilen (240 × 1210, en pixel per maska, rad 1 överst). Jämfört med stickeriets egen maskinfil
+ * (004212.MOF) ligger framsidan på samma nålar, vriden åt samma håll och inte spegelvänd:
  * – Framsidan i kolumn 1–120, vriden ett kvarts varv medurs: texten läses uppifrån och ner.
  * – Baksidan i kolumn 121–240. "hold-up": vriden ett kvarts varv moturs, så att den läses rätt bakifrån när
  *   halsduken hålls upp. "turn-over": vriden medurs som framsidan, så att den läses rätt när halsduken vänds över långsidan.
@@ -679,6 +693,17 @@ export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, o
     palette.push(hex);
   });
   for (const f of faces) for (let i = 0; i < f.cells.length; i++) f.cells[i] = remap[Math.min(f.cells[i], full.length - 1)];
+
+  // Maskinens rader i ändarna stickas i ett enda garn runt hela tuben: framsidans bottenfärg, den som har flest maskor.
+  const count = new Uint32Array(palette.length);
+  for (let i = TECH * SIDE; i < (ROWS - TECH) * SIDE; i++) count[faces[0].cells[i]]++;
+  const ground = count.indexOf(Math.max(...count));
+  for (const f of faces) {
+    for (const r0 of [0, ROWS - TECH]) {
+      f.cells.fill(ground, r0 * SIDE, (r0 + TECH) * SIDE);
+      f.protect.fill(0, r0 * SIDE, (r0 + TECH) * SIDE);
+    }
+  }
 
   const cells = new Uint8Array(NEEDLES * ROWS);
   const protect = new Uint8Array(NEEDLES * ROWS);
