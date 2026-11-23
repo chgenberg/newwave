@@ -228,18 +228,16 @@ async function make(p: Pick, now: Date): Promise<BankScarf> {
     writeFile(path.join(PUBLIC, `${p.id}-skold.png`), crest),
     ...(built.uses.art && art ? [writeFile(path.join(PUBLIC, `${name}-motiv.png`), art)] : []),
   ]);
-  let drift = "";
   if (TO_SEND) {
     const pack = await buildPackage({ club: club.name, title: idea.title, why: idea.why, front, back, consent: built.consent, knit, report, date: today, pdf: htmlToPdf });
     const zip = new JSZip();
     for (const file of pack.files) zip.file(file.name, file.data);
     await writeFile(path.join(SEND, `stickfiler-${pack.base}.zip`), await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
-    drift = `  jpg-avvikelse ${pack.jpgDrift}`;
   }
 
   const warn = report.checks.filter((c) => c.level === "varning").map((c) => c.title);
   console.log(
-    `${p.name.padEnd(24)} ${idea.recipe.padEnd(9)} "${idea.title}"  ${knit.palette.length} garn${drift}  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${
+    `${p.name.padEnd(24)} ${idea.recipe.padEnd(9)} "${idea.title}"  ${knit.palette.length} garn  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${
       review ? `  betyg ${review.sales}/${review.brandFit}/${review.legibility}/${review.craft} → ${review.verdict}` : ""
     }${firstReview ? "  (omgjord)" : ""}${built.uses.art ? "  [ritat motiv]" : ""}`,
   );

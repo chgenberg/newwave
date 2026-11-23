@@ -150,7 +150,7 @@ async function main() {
         text: { front, back },
       });
       const warn = report.checks.filter((c) => c.level === "varning").map((c) => c.title);
-      const line = `  ${(firstReview ? "v2 " : "") + idea.title.padEnd(26)} ${idea.recipe.padEnd(10)} ${knit.palette.length} garn  ${report.maxColorsPerRow}/varv  text ${knit.minTextMm?.toFixed(0) ?? "–"} mm  jpg-avvikelse ${pack.jpgDrift}  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${review ? `  betyg sälj ${review.sales} profil ${review.brandFit} läsb ${review.legibility} hantv ${review.craft} → ${review.verdict}` : ""}`;
+      const line = `  ${(firstReview ? "v2 " : "") + idea.title.padEnd(26)} ${idea.recipe.padEnd(10)} ${knit.palette.length} garn  ${report.maxColorsPerRow}/varv  text ${knit.minTextMm?.toFixed(0) ?? "–"} mm  ${warn.length ? `VARNING: ${warn.join(", ")}` : "ok"}${review ? `  betyg sälj ${review.sales} profil ${review.brandFit} läsb ${review.legibility} hantv ${review.craft} → ${review.verdict}` : ""}`;
       console.log(line);
       log.push(line);
     }

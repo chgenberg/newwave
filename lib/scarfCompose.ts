@@ -733,7 +733,7 @@ export function renderKnit(
   out.drawImage(src, 0, 0, canvas.width, canvas.height);
 }
 
-/** 240×1210 pixel canvas where every pixel is one stitch; exported as PNG or JPG for Seger. */
+/** 240×1210 pixel canvas where every pixel is one stitch, the sides side by side as drawn – for the screen only. The knit files are made by lib/scarfMachine.ts. */
 export function renderPatternCanvas(cells: Uint8Array, palette: string[]) {
   const c = document.createElement("canvas");
   c.width = SCARF.needles;

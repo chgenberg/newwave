@@ -3,6 +3,7 @@ import path from "node:path";
 import { type Font, parse } from "opentype.js";
 import sharp, { type OverlayOptions } from "sharp";
 import { MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, deltaE, hexToRgb, type Rgb } from "./scarf";
+import { machineIndex } from "./scarfMachine";
 import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, END_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
 
 /**
@@ -664,17 +665,10 @@ function tidy(face: FaceKnit, strong = false) {
 // --- Hela halsduken ----------------------------------------------------------
 
 /**
- * Så ligger sidorna i stickfilen (240 × 1210, en pixel per maska, rad 1 överst). Jämfört med stickeriets egen maskinfil
- * (004212.MOF) ligger framsidan på samma nålar, vriden åt samma håll och inte spegelvänd:
- * – Framsidan i kolumn 1–120, vriden ett kvarts varv medurs: texten läses uppifrån och ner.
- * – Baksidan i kolumn 121–240. "hold-up": vriden ett kvarts varv moturs, så att den läses rätt bakifrån när
- *   halsduken hålls upp. "turn-over": vriden medurs som framsidan, så att den läses rätt när halsduken vänds över långsidan.
- * Båda sidorna är rena vridningar – ingen är spegelvänd – eftersom mönstret går runt tubens utsida.
+ * Så ligger sidorna i maskinens rutnät (240 × 1210, rad 1 överst) står i scarfMachine.ts. Framsidan ligger i samma läge
+ * som i stickeriets egen BMP och maskinfil: samma nålar, samma vridning, inte spegelvänd.
  */
-export function machineIndex(side: 0 | 1, r: number, s: number, backReads: "hold-up" | "turn-over") {
-  if (side === 0) return r * NEEDLES + (SIDE - 1 - s);
-  return backReads === "hold-up" ? (ROWS - 1 - r) * NEEDLES + SIDE + s : r * NEEDLES + (NEEDLES - 1 - s);
-}
+export { machineIndex };
 
 /** `clean` städar bort alla ensamma maskor utanför raster och bårder; används när maskinkontrollen annars varnar. */
 export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, opts: { clean?: boolean } = {}): Promise<Knitted> {

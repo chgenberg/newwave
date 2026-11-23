@@ -8,7 +8,7 @@ import { readAsset } from "./asset";
 import { nwProduct } from "./catalog";
 import { CLUB_CASE } from "./clubCase";
 import { colorName } from "./colors";
-import { knitScarf } from "./knitFile";
+import { FILES as KNIT_FILES, knitScarf } from "./knitFile";
 import { defaultDesign, type Design, fitDesign, type Placement } from "./marking";
 import { fileSlug, isDarkHex, makeJob, type MadeJob, type OutFile } from "./printFiles";
 import { mockupJpeg } from "./serverMockup";
@@ -26,7 +26,8 @@ import { readData, writeData } from "./workspace";
 
 const ROOT = path.join(process.cwd(), ".data", "hub");
 const LIST = "newwave/hub/leveranser.json";
-const VERSION = 1;
+/** Höjs när filerna ändras, så att sparade leveranser görs om. 2: stickfilen som två BMP i stickeriets format. */
+const VERSION = 2;
 
 export type HubFile = Omit<OutFile, "data"> & { bytes: number; sha256: string };
 export type HubJob = Omit<MadeJob, "files"> & {
@@ -153,11 +154,11 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
   const job = await stored(key, async () => {
     const k = await knitScarf({ club: club.name, front: knit.front, back: knit.back, yarns, crest: await readAsset(club.crest), date });
     const describe: Record<string, Pick<OutFile, "label" | "role" | "format" | "spec">> = {
-      "halsduk.bmp": { label: "Stickfil", role: "maskin", format: "BMP", spec: "240 × 1 210 maskor · 8 bitar indexerad · paletten är garnerna" },
-      "halsduk.png": { label: "Stickfil, PNG", role: "maskin", format: "PNG", spec: "Samma mönster med palett, förlustfritt" },
-      "halsduk-forhandsvisning.png": { label: "Korrektur", role: "korrektur", format: "PNG", spec: "Fram- och baksida i verkliga proportioner" },
-      "farger.csv": { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone och maskor per garn" },
-      "readme.txt": { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filen läses" },
+      [KNIT_FILES.front]: { label: "Stickfil, framsida", role: "maskin", format: "BMP", spec: "120 × 1 210 maskor · 8 bitar · stickeriets eget format" },
+      [KNIT_FILES.back]: { label: "Stickfil, baksida", role: "maskin", format: "BMP", spec: "120 × 1 210 maskor · 8 bitar · stickeriets eget format" },
+      [KNIT_FILES.preview]: { label: "Korrektur", role: "korrektur", format: "PNG", spec: "Fram- och baksida i verkliga proportioner" },
+      [KNIT_FILES.colors]: { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone, färg i BMP och maskor per garn" },
+      [KNIT_FILES.readme]: { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filerna läses" },
     };
     const total = k.counts.reduce((s, n) => s + n, 0);
     return {
@@ -174,11 +175,11 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
         { label: "Minsta text", value: `${Math.round(k.minTextMm)} mm hög` },
       ],
       notes: [
-        "En pixel är en maska och varje palettfärg är ett garn – filen skalas aldrig.",
-        "Kolumn 1–120 är framsidan, 121–240 baksidan, stickad spegelvänd så att texten läses rätt.",
+        "En BMP per sida i stickeriets eget format: en bildpunkt är en maska och varje färg ett garn – filerna skalas aldrig.",
+        "Framsidan är nål 1–120 och baksidan nål 121–240. De 50 första och sista raderna är enfärgade.",
         "Stickeriet skickar en provstickning för godkännande innan produktion.",
       ],
-      preview: "halsduk-forhandsvisning.png",
+      preview: KNIT_FILES.preview,
       files: k.files.map((f) => ({ name: f.name, data: f.data, ...describe[f.name] })),
     };
   });

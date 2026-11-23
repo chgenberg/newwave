@@ -53,7 +53,7 @@ async function zipResponse(club: string, title: string, why: string, { consent, 
 
 const fromIdea = (r: Awaited<ReturnType<typeof knitIdea>>): Knit => ({ consent: r.built.consent, knit: r.knit, report: r.report, front: r.front, back: r.back });
 
-/** Steg 7: stickfilerna till Seger som en zip – mönstret i JPG, BMP och PNG, stickorder, garnlista och korrektur. */
+/** Steg 7: stickfilerna till stickeriet som en zip – en BMP per sida i stickeriets format, stickorder, garnlista och korrektur. */
 export async function POST(req: Request) {
   const limited = scarfLimit(req, "pack");
   if (limited) return limited;

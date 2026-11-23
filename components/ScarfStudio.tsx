@@ -352,7 +352,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                   <p className="mt-2">
                     En bild på {SCARF.needles} × {SCARF.rows} pixlar där varje pixel är en maska. Vänstra halvan är framsidan, högra halvan baksidan. Teknikern läser in den i {SCARF.software}.
                   </p>
-                  <p className="mt-2">Med i zip-filen: JPG i högsta kvalitet, en exakt PNG, en färglista med närmaste Pantone och en förstorad version för granskning.</p>
+                  <p className="mt-2">Med i zip-filen: fram- och baksidan som var sin BMP i stickeriets format, en färglista med närmaste Pantone och en förhandsvisning.</p>
                 </div>
               </div>
             )}

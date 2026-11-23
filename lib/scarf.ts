@@ -167,23 +167,22 @@ export function checkGrid(
   return { checks, counts };
 }
 
-export function colorCsv(palette: string[], counts: number[]) {
-  return ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i] ?? 0}`)].join("\n");
+/** `bmp` är varje garns färg i BMP-filerna (index i Windows-paletten och färgen där), i samma ordning som `palette`. */
+export function colorCsv(palette: string[], counts: number[], bmp?: { index: number; hex: string }[]) {
+  return [
+    `Färg;Hex;RGB;Närmaste Pantone;${bmp ? "Färg i BMP (index);Färg i BMP (hex);" : ""}Maskor`,
+    ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${bmp ? `${bmp[i]?.index ?? ""};${bmp[i]?.hex ?? ""};` : ""}${counts[i] ?? 0}`),
+  ].join("\n");
 }
 
-const SCARF_FILES: [string, string][] = [
-  ["halsduk.jpg", "JPG i högsta kvalitet, för Draw Designer (JPG kan ge små färgavvikelser i kanterna)"],
-  ["halsduk.png", "samma mönster förlustfritt, exakt de färger som står nedan"],
-  ["halsduk-x4.png", "förstorad för granskning på skärm"],
-  ["farger.csv", "färglista"],
-];
-
-export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files?: [string, string][] }) {
+/** `layout` är raderna om hur mönsterfilerna är gjorda och ligger (bmpLines i scarfMachine.ts). */
+export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files: [string, string][]; layout: string[]; bmp?: { index: number; hex: string }[] }) {
   const lines = opts.palette.map((hex, i) => {
     const p = nearestPantone(hex);
-    return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}  (${opts.counts[i] ?? 0} maskor)`;
+    const inFile = opts.bmp?.[i] ? `  färg i BMP: ${opts.bmp[i].index} (${opts.bmp[i].hex})` : "";
+    return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}${inFile}  (${opts.counts[i] ?? 0} maskor)`;
   });
-  const files = opts.files ?? SCARF_FILES;
+  const files = opts.files;
   const pad = Math.max(15, ...files.map(([name]) => name.length)) + 2;
   return [
     `Halsduk – ${opts.club}`,
@@ -191,8 +190,8 @@ export function readMe(opts: { club: string; palette: string[]; counts: number[]
     "",
     `Maskin: ${SCARF.machine}   Mönsterprogram: ${SCARF.software}`,
     `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} maskrader, ca ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm exklusive fransar.`,
-    `Bilden är ${SCARF.needles} × ${SCARF.rows} pixlar: en pixel = en maska.`,
-    `Kolumn 1–${SCARF.side} = framsida, kolumn ${SCARF.side + 1}–${SCARF.needles} = baksida. Rad 1 är bildens översta rad.`,
+    "",
+    ...opts.layout,
     "",
     "Färger (Pantone är närmaste referens – välj garn som matchar):",
     ...lines,

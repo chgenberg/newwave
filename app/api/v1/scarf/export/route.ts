@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { readJson } from "@/lib/demoLimit";
 import { CELLS, SCARF, checkGrid, colorCsv, hexToRgb, readMe } from "@/lib/scarf";
+import { bmpColors, bmpLines, fromDrawnSides, sideBmp } from "@/lib/scarfMachine";
 
 export const maxDuration = 30;
 
@@ -29,27 +30,46 @@ export async function POST(req: Request) {
   const cells = Buffer.from(parsed.data.cells, "base64");
   if (cells.length !== CELLS || cells.some((v) => v >= palette.length)) return Response.json({ error: "Ogiltigt mönster" }, { status: 400 });
 
-  const rgb = Buffer.alloc(CELLS * 3);
-  const colors = palette.map(hexToRgb);
-  for (let i = 0; i < CELLS; i++) rgb.set(colors[cells[i]], i * 3);
-  const raw = { raw: { width: SCARF.needles, height: SCARF.rows, channels: 3 as const } };
+  // Halsduksstudion lägger sidorna bredvid varandra som de ritades. Här läggs de på maskinens nålar som i
+  // halsduksagenten, med enfärgade ändrader, och lämnas som en BMP per sida i stickeriets format.
+  const { cells: machine, faces } = fromDrawnSides(new Uint8Array(cells));
+  const { counts } = checkGrid(machine, palette, null);
+  const colors = bmpColors(palette, counts);
+  const [front, back] = ([0, 1] as const).map((k) => Buffer.from(sideBmp(machine, k, colors)));
 
-  const [jpg, png, x4] = await Promise.all([
-    sharp(rgb, raw).jpeg({ quality: 100, chromaSubsampling: "4:4:4" }).toBuffer(),
-    sharp(rgb, raw).png({ compressionLevel: 9 }).toBuffer(),
-    sharp(rgb, raw).resize(SCARF.needles * 4, SCARF.rows * 4, { kernel: "nearest" }).png().toBuffer(),
-  ]);
+  // Förhandsvisningen: båda sidorna liggande som de ritades, framsidan överst.
+  const pal = palette.map(hexToRgb);
+  const [R, S] = [SCARF.rows, SCARF.side];
+  const sideRgb = (face: Uint8Array) => {
+    const out = Buffer.alloc(R * S * 3);
+    for (let r = 0; r < R; r++) for (let y = 0; y < S; y++) out.set(pal[face[r * S + y]], (y * R + r) * 3);
+    return sharp(out, { raw: { width: R, height: S, channels: 3 } }).resize(R * 2, S * 3, { kernel: "nearest" }).png().toBuffer();
+  };
+  const [f, b] = await Promise.all(faces.map(sideRgb));
+  const preview = await sharp({ create: { width: R * 2, height: S * 6 + 24, channels: 3, background: "#FFFFFF" } })
+    .composite([
+      { input: f, left: 0, top: 0 },
+      { input: b, left: 0, top: S * 3 + 24 },
+    ])
+    .png()
+    .toBuffer();
 
-  const { counts } = checkGrid(new Uint8Array(cells), palette, null);
-  const csv = colorCsv(palette, counts);
+  const csv = colorCsv(palette, counts, colors);
   const date = new Date().toISOString().slice(0, 10);
+  const name = { front: `halsduk-framsida-${S}x${R}.bmp`, back: `halsduk-baksida-${S}x${R}.bmp`, preview: "halsduk-forhandsvisning.png" };
+  const files: [string, string][] = [
+    [name.front, `framsidan, nål 1–${S}: mönstret i stickeriets eget BMP-format, en bildpunkt per maska`],
+    [name.back, `baksidan, nål ${S + 1}–${SCARF.needles}, i samma format`],
+    [name.preview, "fram- och baksida liggande, för granskning på skärm"],
+    ["farger.csv", "färglista med närmaste Pantone och färgen i BMP-filerna"],
+  ];
 
   const zip = new JSZip();
-  zip.file("halsduk.jpg", jpg);
-  zip.file("halsduk.png", png);
-  zip.file("halsduk-x4.png", x4);
+  zip.file(name.front, front);
+  zip.file(name.back, back);
+  zip.file(name.preview, preview);
   zip.file("farger.csv", `\uFEFF${csv}`);
-  zip.file("LAS-MIG.txt", readMe({ club, palette, counts, date }));
+  zip.file("LAS-MIG.txt", readMe({ club, palette, counts, date, files, layout: bmpLines(), bmp: colors }));
   const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 
   return new Response(Buffer.from(out), {

@@ -472,17 +472,16 @@ export function FactoryDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rows = [
-    ["Mönstret i JPG", `Formatet ${SCARF.factory} bett om. Sparad utan färgkomprimering och kontrollerad: varje pixel ligger närmast rätt garn.`],
-    ["Samma mönster i BMP och PNG", "Indexerade filer där färg 0–6 är garn 1–7, utan mellantoner – det format stickprogram normalt läser."],
+    ["Mönstret som BMP", `En fil per sida i samma format som stickeriets egen BMP. En bildpunkt är en maska och varje färg ett garn.`],
     ["Stickorder som PDF", "En sida: korrektur av fram- och baksida, garner med Pantone, maskininställning och kontrollerna."],
-    ["Garnlista", "Varje garn med närmaste Pantone, antal maskor och andel – underlag för garnåtgång."],
+    ["Garnlista", "Varje garn med närmaste Pantone, färgen i BMP-filerna, antal maskor och andel."],
     ["Korrektur", "Fram- och baksida som de ser ut stickade, med fransar. Det beställaren godkänner."],
     ["Stickorder som data", "Samma uppgifter i maskinläsbar form, för en framtida direktkoppling till stickeriet."],
   ];
   return (
     <Modal title="Det här får stickeriet" eyebrow={`${SCARF.factory} · ${SCARF.machine}`} onClose={onClose}>
       <p className="text-[14.5px] leading-snug text-[#424245]">
-        En zip per halsduk. Mönstret är en bild på {SCARF.needles} × {SCARF.rows.toLocaleString("sv-SE")} pixlar där varje pixel är en maska och varje färg ett garn. Teknikern läser in den i {SCARF.software} och för över den till maskinen med USB.
+        En zip per halsduk. Mönstret är två bilder, en per sida, på {SCARF.side} × {SCARF.rows.toLocaleString("sv-SE")} bildpunkter där varje bildpunkt är en maska. Stickeriet väljer garn efter garnlistan och matar själva maskinen.
       </p>
       <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
         {rows.map(([t, d]) => (
