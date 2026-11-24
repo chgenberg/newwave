@@ -5,7 +5,7 @@ import { dataUrlToBase64, loadImage } from "./compose";
 import { CHANNELS } from "./links";
 import { checkGrid, clubScarfPalette, colorCsv, indexOfNear, readMe } from "./scarf";
 import { DEFAULT_ROSTER, composeScarf, renderKnit, type SideSpec } from "./scarfCompose";
-import { bmpColors, bmpLines, fromDrawnSides, sideBmp } from "./scarfMachine";
+import { bmpLines, fromDrawnSides, tubeBmp } from "./scarfMachine";
 import type { Club, Concept, ContentPack } from "./types";
 
 export type CampaignImages = {
@@ -159,7 +159,7 @@ Varje kanal har en egen spårbar länk, så att ni ser vad som säljer. Ju fler 
 ${family.length ? `<br><b>Familjepaket:</b> ${family.map((f) => esc(f!)).join(", ")} – perfekt att lyfta i inläggen.` : ""}</p>
 
 <h2>4. Stickad halsduk till Seger</h2>
-<p>I varje motivmapp finns <code>Halsduk – Seger</code> med färdiga mönsterfiler för Segers OPEK 365 (en BMP per sida i stickeriets eget format, max 7 färger, med färglista och Pantone-referens) samt en bild på hur halsduken ser ut stickad.</p>
+<p>I varje motivmapp finns <code>Halsduk – Seger</code> med en färdig mönsterfil för Segers OPEK 365 (en BMP för hela halsduken i garnernas egna färger, max 7 färger, med färglista och Pantone-referens) samt en bild på hur halsduken ser ut stickad.</p>
 
 <h2>5. Regler – ändra inte</h2>
 <div class="warn"><ul>
@@ -184,23 +184,20 @@ async function addScarfFolder(sf: JSZip, club: Club, slogan: string, date: strin
   const back: SideSpec = { ...base, template: "smeknamn", bg: white, ink: primary, accent, line1: up(club.nicknames[0] ?? club.shortName), line2: up(club.city) };
   const crest = await loadImage(`/api/v1/brand/${club.id}/${club.brand.crest.farg}`).catch(() => null);
   const { cells } = composeScarf({ palette, front, back, crest, font: '"Helvetica Neue", Arial, sans-serif' });
-  // Sidorna läggs på maskinens nålar som i halsduksagenten, med enfärgade ändrader, och lämnas som en BMP per sida.
+  // Sidorna läggs på maskinens nålar som i halsduksagenten, med enfärgade ändrader, och lämnas som en BMP för hela halsduken.
   const { cells: machine } = fromDrawnSides(cells);
   const { counts } = checkGrid(machine, palette, null);
-  const colors = bmpColors(palette, counts);
   const preview = document.createElement("canvas");
   renderKnit(preview, cells, palette, 0, 1400);
   const files: [string, string][] = [
-    ["halsduk-framsida-120x1210.bmp", "framsidan, nål 1–120: mönstret i stickeriets eget BMP-format, en bildpunkt per maska"],
-    ["halsduk-baksida-120x1210.bmp", "baksidan, nål 121–240, i samma format"],
+    ["halsduk-240x1210.bmp", "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska"],
     ["forhandsvisning-framsida.png", "framsidan som den ser ut stickad (före de enfärgade ändraderna)"],
-    ["farger.csv", "färglista med närmaste Pantone och färgen i BMP-filerna"],
+    ["farger.csv", "färglista med närmaste Pantone"],
   ];
-  sf.file(files[0][0], sideBmp(machine, 0, colors));
-  sf.file(files[1][0], sideBmp(machine, 1, colors));
-  sf.file(files[2][0], dataUrlToBase64(preview.toDataURL("image/png")), { base64: true });
-  sf.file("farger.csv", `\uFEFF${colorCsv(palette, counts, colors)}`);
-  sf.file("LAS-MIG.txt", readMe({ club: club.name, palette, counts, date, files, layout: bmpLines(), bmp: colors }));
+  sf.file(files[0][0], tubeBmp(machine, palette));
+  sf.file(files[1][0], dataUrlToBase64(preview.toDataURL("image/png")), { base64: true });
+  sf.file("farger.csv", `\uFEFF${colorCsv(palette, counts)}`);
+  sf.file("LAS-MIG.txt", readMe({ club: club.name, palette, counts, date, files, layout: bmpLines() }));
 }
 
 async function fetchBytes(url: string) {

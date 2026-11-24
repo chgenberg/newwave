@@ -309,14 +309,16 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
       const middle: Section = wantsArt
         ? { mm: 250, fill: solid(G), content: { kind: "art", yarns: [...new Set([I, A, T])].filter((i) => i !== G) }, pad: [8, 8] }
         : { mm: 230, fill: solid(G), content: { kind: "icon", icon: idea.icon ?? "stjarna", yarn: pop(G, I), outline: pop(G, I) === I ? undefined : I }, pad: [14, 14] };
-      const ends: Section[] = [{ mm: 54, fill: { kind: "bars", stripes: stripes([I, 18], [G, 8], [I, 8], [G, 20]) } }];
+      const ends = (ground: Yarn, ink: Yarn): Section[] => [{ mm: 54, fill: { kind: "bars", stripes: stripes([ink, 18], [ground, 8], [ink, 8], [ground, 20]) } }];
       front = {
         // Texterna får plats efter sin längd, så att de två halvorna blir lika höga.
         sections: fs
-          ? mirrored(ends, [{ flex: fm.length + 2, fill: solid(G), content: text(fm, "", I, { stretch: false, group: "sidor" }) }, middle, { flex: fs.length + 2, fill: solid(G), content: text(fs, "", I, { stretch: false, group: "sidor" }) }])
-          : mirrored(ends, [middle, { fill: solid(G), content: text(fm, "", I) }, middle]),
+          ? mirrored(ends(G, I), [{ flex: fm.length + 2, fill: solid(G), content: text(fm, "", I, { stretch: false, group: "sidor" }) }, middle, { flex: fs.length + 2, fill: solid(G), content: text(fs, "", I, { stretch: false, group: "sidor" }) }])
+          : mirrored(ends(G, I), [middle, { fill: solid(G), content: text(fm, "", I) }, middle]),
         edge: thin(A === G ? I : A),
       };
+      // Baksidan har samma ändränder i omvända färger: en rand är ett varv runt tuben, så kanterna ska mötas vid vikkanten.
+      back = { sections: mirrored([...ends(I, G), ...crest(I)], [{ fill: solid(I), content: text(bm, bs, G) }]), edge: thin(A === I ? G : A) };
       break;
     }
 

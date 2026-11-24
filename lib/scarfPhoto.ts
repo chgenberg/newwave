@@ -28,8 +28,8 @@ const CARD = "#F5F5F7";
 /** Så stor del av halsduken hänger synlig på var sida om halsen. Mitten ligger bakom nacken. */
 const END = 0.38;
 
-/** Halsdukens verkliga mått i centimeter, utan fransar. */
-const [LENGTH, WIDTH] = [SCARF.lengthMm / 10, SCARF.widthMm / 10];
+/** Den färdiga halsdukens mått i centimeter, utan fransar: cirka 130 × 18 cm. */
+const [LENGTH, WIDTH] = [SCARF.finishedMm / 10, SCARF.widthMm / 10];
 
 /**
  * Bildstilen: en vanlig mobilbild som någon i klubben har tagit – inte en reklambild. Blankt ljus, suddig bakgrund och

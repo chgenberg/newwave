@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { readJson } from "@/lib/demoLimit";
 import { CELLS, SCARF, checkGrid, colorCsv, hexToRgb, readMe } from "@/lib/scarf";
-import { bmpColors, bmpLines, fromDrawnSides, sideBmp } from "@/lib/scarfMachine";
+import { bmpLines, fromDrawnSides, tubeBmp } from "@/lib/scarfMachine";
 
 export const maxDuration = 30;
 
@@ -31,11 +31,10 @@ export async function POST(req: Request) {
   if (cells.length !== CELLS || cells.some((v) => v >= palette.length)) return Response.json({ error: "Ogiltigt mönster" }, { status: 400 });
 
   // Halsduksstudion lägger sidorna bredvid varandra som de ritades. Här läggs de på maskinens nålar som i
-  // halsduksagenten, med enfärgade ändrader, och lämnas som en BMP per sida i stickeriets format.
+  // halsduksagenten, med enfärgade ändrader, och lämnas som en BMP för hela halsduken i garnernas egna färger.
   const { cells: machine, faces } = fromDrawnSides(new Uint8Array(cells));
   const { counts } = checkGrid(machine, palette, null);
-  const colors = bmpColors(palette, counts);
-  const [front, back] = ([0, 1] as const).map((k) => Buffer.from(sideBmp(machine, k, colors)));
+  const bmp = Buffer.from(tubeBmp(machine, palette));
 
   // Förhandsvisningen: båda sidorna liggande som de ritades, framsidan överst.
   const pal = palette.map(hexToRgb);
@@ -54,22 +53,20 @@ export async function POST(req: Request) {
     .png()
     .toBuffer();
 
-  const csv = colorCsv(palette, counts, colors);
+  const csv = colorCsv(palette, counts);
   const date = new Date().toISOString().slice(0, 10);
-  const name = { front: `halsduk-framsida-${S}x${R}.bmp`, back: `halsduk-baksida-${S}x${R}.bmp`, preview: "halsduk-forhandsvisning.png" };
+  const name = { pattern: `halsduk-${SCARF.needles}x${R}.bmp`, preview: "halsduk-forhandsvisning.png" };
   const files: [string, string][] = [
-    [name.front, `framsidan, nål 1–${S}: mönstret i stickeriets eget BMP-format, en bildpunkt per maska`],
-    [name.back, `baksidan, nål ${S + 1}–${SCARF.needles}, i samma format`],
+    [name.pattern, "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska"],
     [name.preview, "fram- och baksida liggande, för granskning på skärm"],
-    ["farger.csv", "färglista med närmaste Pantone och färgen i BMP-filerna"],
+    ["farger.csv", "färglista med närmaste Pantone"],
   ];
 
   const zip = new JSZip();
-  zip.file(name.front, front);
-  zip.file(name.back, back);
+  zip.file(name.pattern, bmp);
   zip.file(name.preview, preview);
   zip.file("farger.csv", `\uFEFF${csv}`);
-  zip.file("LAS-MIG.txt", readMe({ club, palette, counts, date, files, layout: bmpLines(), bmp: colors }));
+  zip.file("LAS-MIG.txt", readMe({ club, palette, counts, date, files, layout: bmpLines() }));
   const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 
   return new Response(Buffer.from(out), {

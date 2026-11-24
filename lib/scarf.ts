@@ -15,7 +15,13 @@ export const SCARF = {
   endRows: 50,
   /** Needles next to each fold that text, crests and edge stripes stay clear of. */
   edgeNeedles: 10,
+  /** Stickad längd: 1210 varv. */
   lengthMm: 1350,
+  /**
+   * Färdig längd utan fransar, enligt stickeriet: änden rullar sig och klipps, och sömsmånen för fransen sys in, så
+   * ungefär 2,5 cm försvinner i varje ände. Det är den längd kunden och fotona ska få höra.
+   */
+  finishedMm: 1300,
   widthMm: 180,
   maxColors: 7,
   factory: "Seger",
@@ -167,20 +173,15 @@ export function checkGrid(
   return { checks, counts };
 }
 
-/** `bmp` är varje garns färg i BMP-filerna (index i Windows-paletten och färgen där), i samma ordning som `palette`. */
-export function colorCsv(palette: string[], counts: number[], bmp?: { index: number; hex: string }[]) {
-  return [
-    `Färg;Hex;RGB;Närmaste Pantone;${bmp ? "Färg i BMP (index);Färg i BMP (hex);" : ""}Maskor`,
-    ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${bmp ? `${bmp[i]?.index ?? ""};${bmp[i]?.hex ?? ""};` : ""}${counts[i] ?? 0}`),
-  ].join("\n");
+export function colorCsv(palette: string[], counts: number[]) {
+  return ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i] ?? 0}`)].join("\n");
 }
 
 /** `layout` är raderna om hur mönsterfilerna är gjorda och ligger (bmpLines i scarfMachine.ts). */
-export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files: [string, string][]; layout: string[]; bmp?: { index: number; hex: string }[] }) {
+export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files: [string, string][]; layout: string[] }) {
   const lines = opts.palette.map((hex, i) => {
     const p = nearestPantone(hex);
-    const inFile = opts.bmp?.[i] ? `  färg i BMP: ${opts.bmp[i].index} (${opts.bmp[i].hex})` : "";
-    return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}${inFile}  (${opts.counts[i] ?? 0} maskor)`;
+    return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}  (${opts.counts[i] ?? 0} maskor)`;
   });
   const files = opts.files;
   const pad = Math.max(15, ...files.map(([name]) => name.length)) + 2;
@@ -189,7 +190,7 @@ export function readMe(opts: { club: string; palette: string[]; counts: number[]
     `Skapad ${opts.date}`,
     "",
     `Maskin: ${SCARF.machine}   Mönsterprogram: ${SCARF.software}`,
-    `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} maskrader, ca ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm exklusive fransar.`,
+    `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} varv, stickad cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm, färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.`,
     "",
     ...opts.layout,
     "",

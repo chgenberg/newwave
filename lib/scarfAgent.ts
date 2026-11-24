@@ -137,7 +137,7 @@ function system(club: Club, count: number, avoid: RecipeId[], want: RecipeId[] =
   return `Du är ${club.agent.name} och formger stickade halsdukar för ${club.name}. Halsdukarna stickas i jacquard av Seger på en OPEK 365 och säljs ${brand ? `till ${club.name}s kunder och medarbetare` : "i klubbens butik"}.
 
 Så fungerar en stickad halsduk:
-- Den är cirka 135 × 18 cm och stickas maska för maska: 120 maskor på höjden och 1 210 på längden per sida. Det finns en framsida och en baksida, som får olika text.
+- Den är cirka 130 cm lång plus fransar och 18 cm bred, och stickas maska för maska: 120 maskor på höjden och 1 210 på längden per sida. Det finns en framsida och en baksida, som får olika text.
 - Högst sju garner i hela halsduken. ${brand ? "Loggans" : "Sköldens"} egna färger tar plats bland dem, så välj tre färger ur profilen: botten (ground), text (ink) och detalj (accent).
 - Text måste vara kort och stor. Huvudraden högst ${MAX_MAIN} tecken, helst under 11. Underraden högst ${MAX_SUB} tecken. Allt sätts i versaler.
 - Inga foton, toningar eller tunna linjer, utom i de recept som är gjorda för det.
@@ -409,7 +409,7 @@ ${brand ? "Varumärkets" : "Klubbens"} riktlinjer:
 ${club.agent.guidelines.map((g) => `- ${g}`).join("\n")}
 ${club.rules.filter((r) => !/DTG|digitaltryck/i.test(r)).map((r) => `- ${r}`).join("\n")}
 
-${PERSONAL.includes(idea.recipe) ? "Den här halsduken bär namn, nummer, ansikte eller namnteckning. Den stickas först när klubben och personen har godkänt det skriftligt, och namnen i korrekturet är påhittade exempel – räkna därför inte namn, nummer, porträtt eller namnteckningar som ett regelbrott.\n\n" : ""}${idea.recipe === "autograf" ? "Namnteckningarna är autografer skrivna för hand. De ska se ut som namnteckningar och behöver inte gå att läsa bokstav för bokstav – bedöm läsbarheten på rubriken och baksidans text.\n\n" : ""}Bilden är ett korrektur: framsidan överst och baksidan under, som de ser ut stickade i jacquard med fransar. ${brand ? "Loggan" : "Skölden"} är den officiella och ska inte räknas som ett fel. Halsduken är 135 cm lång och ses oftast på några meters håll.
+${PERSONAL.includes(idea.recipe) ? "Den här halsduken bär namn, nummer, ansikte eller namnteckning. Den stickas först när klubben och personen har godkänt det skriftligt, och namnen i korrekturet är påhittade exempel – räkna därför inte namn, nummer, porträtt eller namnteckningar som ett regelbrott.\n\n" : ""}${idea.recipe === "autograf" ? "Namnteckningarna är autografer skrivna för hand. De ska se ut som namnteckningar och behöver inte gå att läsa bokstav för bokstav – bedöm läsbarheten på rubriken och baksidans text.\n\n" : ""}Bilden är ett korrektur: framsidan överst och baksidan under, som de ser ut stickade i jacquard med fransar. ${brand ? "Loggan" : "Skölden"} är den officiella och ska inte räknas som ett fel. Halsduken är cirka 130 cm lång och ses oftast på några meters håll.
 
 Betygsätt 1–10:
 - sales: hur troligt är det att en ${brand ? "kund eller medarbetare" : "supporter"} köper och bär den?

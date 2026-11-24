@@ -45,8 +45,8 @@ export const FORMATS = [
   {
     method: "stickning",
     label: "Jacquardstickning",
-    files: "En BMP per sida, stickeriets eget format",
-    rules: ["En bildpunkt är en maska, 120 × 1 210 per sida", "Varje färg är ett garn, högst sju", "Garnlista med närmaste Pantone"],
+    files: "En BMP för hela halsduken",
+    rules: ["En bildpunkt är en maska, 240 × 1 210", "Garnernas egna färger, högst sju", "Garnlista med närmaste Pantone"],
   },
 ] as const;
 

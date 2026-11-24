@@ -2,14 +2,14 @@ import sharp from "sharp";
 import { nearestPantone } from "./pantone";
 import { CELLS, MIN_TEXT_MM, SCARF, STITCH_W_MM, hexToRgb } from "./scarf";
 import { facePreview, sheetPreview, type Knitted } from "./scarfEngine";
-import { bmpColors, bmpLines, sideBmp, sideFile } from "./scarfMachine";
+import { bmpLines, patternFile, tubeBmp } from "./scarfMachine";
 import { tubeMismatch } from "./scarfTube";
 
 /**
  * Det stickeriet behöver för att sticka: kontroll av mönstret maska för maska och ett filpaket.
  *
- * Mönstret lämnas som två BMP-filer, en per sida, i samma form som stickeriets egen BMP (se scarfMachine.ts).
- * Stickeriet väljer garn efter garnlistan och matar själva maskinen med färger och inställningar.
+ * Mönstret lämnas som en BMP för hela halsduken, i garnernas egna färger, som stickeriet vill ha den (se scarfMachine.ts).
+ * Stickeriet matar själva maskinen med färger och inställningar.
  * Från stickeriet: högst sju färger per halsduk; med en till fyra färger går maskinen i full fart, med fem till sju
  * långsammare. Från OPEK:s datablad: med två system klarar maskinen högst fyra färger per varv.
  */
@@ -29,8 +29,6 @@ export type YarnRow = {
   pantone: string;
   stitches: number;
   share: number;
-  /** Garnets färg i BMP-filerna: index i Windows-paletten, färgen där och avståndet till garnet. */
-  bmp: { index: number; hex: string; deltaE: number };
 };
 export type ProductionReport = {
   checks: ProductionCheck[];
@@ -101,9 +99,26 @@ export function inspect(knit: Knitted): ProductionReport {
   // Raderna i ändarna: varje rad i ett enda garn, runt hela tuben.
   const plain = (r: number) => cells.subarray(r * W, (r + 1) * W).every((v) => v === cells[r * W]);
   const ends = Array.from({ length: SCARF.endRows }, (_, k) => plain(k) && plain(ROWS - 1 - k)).every(Boolean);
+  // Ränder runt varvet: fram- och baksidan är samma varv, så där ena sidan byter från en hel färg till en annan ska den
+  // andra byta på samma varv. Annars slutar randen vid vikkanten. Övergången från ändraderna räknas inte.
+  const solidAt = (r: number, side: number) => {
+    const row = cells.subarray(r * W + side * SCARF.side, r * W + side * SCARF.side + SCARF.side);
+    return row.every((v) => v === row[0]) ? row[0] : -1;
+  };
+  let ringEdges = 0;
+  let brokenEdges = 0;
+  for (let r = SCARF.endRows + 1; r < ROWS - SCARF.endRows; r++) {
+    for (const side of [0, 1]) {
+      const [a, b] = [solidAt(r - 1, side), solidAt(r, side)];
+      if (a < 0 || b < 0 || a === b) continue;
+      ringEdges++;
+      const [c, d] = [solidAt(r - 1, 1 - side), solidAt(r, 1 - side)];
+      if (c >= 0 && c === d) brokenEdges++;
+    }
+  }
 
   const checks: ProductionCheck[] = [
-    { id: "format", level: "ok", title: `${W} × ${ROWS.toLocaleString("sv-SE")} maskor`, note: `${W} nålar runt cylindern och ${ROWS.toLocaleString("sv-SE")} maskrader, en BMP-fil per sida om ${SCARF.side} nålar. En bildpunkt är en maska. Fransarna ligger utanför.` },
+    { id: "format", level: "ok", title: `${W} × ${ROWS.toLocaleString("sv-SE")} maskor`, note: `En BMP för hela halsduken: ${W} nålar är ett varv och ${ROWS.toLocaleString("sv-SE")} är antalet varv. En bildpunkt är en maska. Fransarna ligger utanför.` },
     {
       id: "colors",
       level: used <= SCARF.maxColors ? "ok" : "varning",
@@ -154,8 +169,18 @@ export function inspect(knit: Knitted): ProductionReport {
       level: ends ? "ok" : "varning",
       title: ends ? `De ${SCARF.endRows} första och sista raderna är enfärgade` : "Mönster i ändraderna",
       note: ends
-        ? "Stickeriet vill ha 50 enfärgade varv i början och slutet som sömsmån. Maskinens startrader och vikmarkeringar ligger i de yttersta."
+        ? "Änden klipps och sömsmånen för fransen sys in – cirka 3 cm syns på den färdiga halsduken."
         : `De ${SCARF.endRows} första och sista raderna ska vara enfärgade: stickeriets sömsmån och maskinens egna rader – skicka inte filen till stickeriet.`,
+    },
+    {
+      id: "rings",
+      level: brokenEdges ? "info" : "ok",
+      title: brokenEdges ? "Ränder som slutar vid vikkanten" : ringEdges ? "Ränderna går runt hela varvet" : "Inga hela ränder tvärs över",
+      note: brokenEdges
+        ? `${brokenEdges} randkanter på ena sidan saknar en kant på samma varv på den andra. Där slutar randen vid vikkanten i stället för att gå runt halsduken.`
+        : ringEdges
+          ? "Där en rand byter färg på ena sidan byter den på samma varv på den andra, så ränderna går runt halsduken."
+          : "Inget varv byter från en hel färg till en annan.",
     },
     { id: "seam", level: "info", title: "Varvskarven i nederkanten", note: "Varvet börjar och slutar i halsdukens nedre vikkant, så hacket i tvärränder syns minst." },
     {
@@ -169,20 +194,9 @@ export function inspect(knit: Knitted): ProductionReport {
     },
   ];
 
-  // Varje garn får en egen färg i BMP-filernas Windows-palett. Färgen är en etikett; garnet väljs efter garnlistan.
-  const bmp = bmpColors(palette, counts);
-  const inFile = bmp.filter((_, i) => counts[i] > 0);
-  const worst = Math.max(0, ...inFile.map((c) => c.deltaE));
-  checks.push({
-    id: "bmp",
-    level: new Set(inFile.map((c) => c.index)).size === inFile.length ? "ok" : "varning",
-    title: "Egen färg per garn i BMP-filerna",
-    note: `Färgen är närmaste i Windows standardpalett, som i stickeriets egen BMP – största avvikelse ΔE ${Math.round(worst)}. Välj garn efter garnlistan.`,
-  });
-
   return {
     checks,
-    yarns: palette.map((hex, index) => ({ index: index + 1, hex, pantone: nearestPantone(hex).code, stitches: counts[index], share: counts[index] / CELLS, bmp: bmp[index] })),
+    yarns: palette.map((hex, index) => ({ index: index + 1, hex, pantone: nearestPantone(hex).code, stitches: counts[index], share: counts[index] / CELLS })),
     maxColorsPerRow: maxColors,
     rowsOverFast: over,
     longestFloatMm: floatMm,
@@ -208,51 +222,46 @@ export type PackageInput = { club: string; title: string; why?: string; front: s
 export async function buildPackage(input: PackageInput): Promise<{ files: PackageFile[]; base: string }> {
   const { knit, report } = input;
   const base = `${slug(input.club)}-${slug(input.title)}`;
-  const colors = report.yarns.map((y) => y.bmp);
-  const [front, back] = ([0, 1] as const).map((side) => Buffer.from(sideBmp(knit.cells, side, colors)));
+  const bmp = Buffer.from(tubeBmp(knit.cells, knit.palette));
   const proof = await sheetPreview(knit, 2400);
   const pct = (share: number) => `${(share * 100).toFixed(1).replace(".", ",")} %`;
 
-  const csv = [
-    "Garn;Hex;RGB;Närmaste Pantone;Färg i BMP (index);Färg i BMP (hex);Maskor;Andel",
-    ...report.yarns.map((y) => `${y.index};${y.hex};${hexToRgb(y.hex).join(",")};${y.pantone};${y.bmp.index};${y.bmp.hex};${y.stitches};${pct(y.share)}`),
-  ].join("\r\n");
+  const csv = ["Garn;Hex;RGB;Närmaste Pantone;Maskor;Andel", ...report.yarns.map((y) => `${y.index};${y.hex};${hexToRgb(y.hex).join(",")};${y.pantone};${y.stitches};${pct(y.share)}`)].join("\r\n");
 
   const order = {
-    version: 2,
+    version: 3,
     club: input.club,
     design: input.title,
     date: input.date,
-    machine: { factory: SCARF.factory, model: SCARF.machine, software: SCARF.software, needles: W, rows: ROWS, widthMm: SCARF.widthMm, lengthMm: SCARF.lengthMm, tube: true },
+    machine: { factory: SCARF.factory, model: SCARF.machine, software: SCARF.software, needles: W, rows: ROWS, widthMm: SCARF.widthMm, lengthMm: SCARF.lengthMm, finishedMm: SCARF.finishedMm, tube: true },
     layout: {
-      format: `BMP per sida, ${SCARF.side} × ${ROWS}, 8 bitar, Windows standardpalett – samma form som stickeriets egen BMP`,
+      format: `en BMP för hela halsduken, ${W} × ${ROWS}, 8 bitar, i garnernas egna färger (färg 1 är garn 1)`,
       front: `nål 1–${SCARF.side}, samma läge som stickeriets egen BMP`,
-      back: `nål ${SCARF.side + 1}–${W}, kolumn 1 är nål ${SCARF.side + 1}; ${knit.backReads === "hold-up" ? "läses rätt bakifrån när halsduken hålls upp" : "läses rätt när halsduken vänds över långsidan"}`,
+      back: `nål ${SCARF.side + 1}–${W}, ${knit.backReads === "hold-up" ? "läses rätt bakifrån när halsduken hålls upp" : "läses rätt när halsduken vänds över långsidan"}`,
       row1: "bildens översta rad",
-      reserved: `rad 1–${SCARF.endRows} och ${ROWS - SCARF.endRows + 1}–${ROWS} är enfärgade (sömsmån); startrader och vikmarkeringar ingår inte`,
-      clearEdge: `text, märken och kantränder ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna`,
+      reserved: `rad 1–${SCARF.endRows} och ${ROWS - SCARF.endRows + 1}–${ROWS} är enfärgade (änden som klipps och sömsmånen); startrader och vikmarkeringar ingår inte`,
+      clearEdge: `text och märken ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna; ränder går runt hela varvet`,
     },
-    yarns: report.yarns.map((y) => ({ yarn: y.index, hex: y.hex, pantone: y.pantone, bmpIndex: y.bmp.index, bmpHex: y.bmp.hex, stitches: y.stitches, share: Math.round(y.share * 1000) / 1000 })),
+    yarns: report.yarns.map((y) => ({ yarn: y.index, hex: y.hex, pantone: y.pantone, stitches: y.stitches, share: Math.round(y.share * 1000) / 1000 })),
     system: report.maxColorsPerRow <= FAST_COLORS ? "dubbel" : "enkel",
     maxColorsPerRow: report.maxColorsPerRow,
     longestFloatMm: report.longestFloatMm,
     text: { front: input.front, back: input.back, minCapMm: knit.minTextMm === null ? null : Math.round(knit.minTextMm) },
     checks: report.checks.map((c) => ({ id: c.id, level: c.level, title: c.title })),
     consent: input.consent ?? null,
-    files: { front: sideFile(base, 0), back: sideFile(base, 1) },
+    files: { pattern: patternFile(base) },
   };
 
   const files: PackageFile[] = [
-    { name: sideFile(base, 0), data: front, what: `framsidan, nål 1–${SCARF.side}: mönstret i stickeriets eget BMP-format, en bildpunkt per maska` },
-    { name: sideFile(base, 1), data: back, what: `baksidan, nål ${SCARF.side + 1}–${W}, i samma format` },
+    { name: patternFile(base), data: bmp, what: "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska" },
     { name: `${base}-korrektur.png`, data: proof, what: "fram- och baksida som de ser ut stickade, med fransar" },
-    { name: "garn.csv", data: Buffer.from(`\uFEFF${csv}`), what: "garnlista: närmaste Pantone, garnets färg i BMP-filerna, antal maskor och andel" },
+    { name: "garn.csv", data: Buffer.from(`\uFEFF${csv}`), what: "garnlista med närmaste Pantone, antal maskor och andel" },
     { name: "stickorder.json", data: Buffer.from(JSON.stringify(order, null, 2)), what: "samma uppgifter i maskinläsbar form, för en framtida direktkoppling" },
   ];
 
   if (input.pdf) {
     const pdf = await input.pdf(await orderHtml(input)).catch(() => null);
-    if (pdf) files.splice(3, 0, { name: "stickorder.pdf", data: pdf, what: "stickorder på en sida: korrektur, garner, maskininställning och kontroller" });
+    if (pdf) files.splice(2, 0, { name: "stickorder.pdf", data: pdf, what: "stickorder på en sida: korrektur, garner, maskininställning och kontroller" });
   }
 
   const pad = Math.max(...files.map((f) => f.name.length)) + 2;
@@ -261,14 +270,14 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
     `Skapad ${input.date} av Halsduksagenten`,
     "",
     `Maskin: ${SCARF.machine} hos ${SCARF.factory}   Mönsterprogram: ${SCARF.software}`,
-    `Storlek: ${W} nålar × ${ROWS} maskrader, cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm exklusive fransar.`,
+    `Storlek: ${W} nålar × ${ROWS} varv, stickad cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm, färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.`,
     "",
-    "Mönsterfilerna",
+    "Mönsterfilen",
     ...bmpLines(knit.backReads).map((l) => (l.startsWith("  ") ? l : `  ${l}`)),
-    `  Text, märken och kantränder ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna (nål 1, ${SCARF.side}, ${SCARF.side + 1} och ${W}).`,
+    `  Text och märken ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna (nål 1, ${SCARF.side}, ${SCARF.side + 1} och ${W}). Ränder går runt hela varvet.`,
     "",
     "Garner (Pantone är närmaste referens – välj garn som matchar)",
-    ...report.yarns.map((y) => `  Garn ${y.index}: ${y.hex}  ≈ ${y.pantone.padEnd(16)}  färg i BMP: ${String(y.bmp.index).padStart(3)} (${y.bmp.hex})  ${String(y.stitches).padStart(7)} maskor  ${pct(y.share).padStart(7)}`),
+    ...report.yarns.map((y) => `  Garn ${y.index}: ${y.hex}  ≈ ${y.pantone.padEnd(16)}  ${String(y.stitches).padStart(7)} maskor  ${pct(y.share).padStart(7)}`),
     "",
     "Kontroll",
     ...report.checks.map((c) => `  ${c.level === "ok" ? "OK " : c.level === "info" ? "–  " : "!  "}${c.title}. ${c.note}`),
@@ -307,35 +316,35 @@ h2{font-size:7pt;letter-spacing:.07em;text-transform:uppercase;color:#6F6B63;fon
 table{width:100%;border-collapse:collapse}td,th{padding:1.15mm 2mm 1.15mm 0;border-bottom:.5pt solid #ddd;text-align:left;vertical-align:top}
 th{font-size:6.6pt;letter-spacing:.06em;text-transform:uppercase;color:#6F6B63;font-weight:500;border-bottom:.9pt solid #111}
 .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.sw{display:inline-block;width:5.4mm;height:3.4mm;border:.4pt solid #999;vertical-align:-0.7mm;margin-right:1.6mm}
-.ch{display:grid;grid-template-columns:4.4mm 1fr;gap:0 1mm;margin-bottom:.9mm}.ch b{font-weight:600}.ch span{color:#3B3934}
+.ch{display:grid;grid-template-columns:4.4mm 1fr;gap:0 1mm;margin-bottom:.7mm;font-size:7.7pt;line-height:1.32}.ch b{font-weight:600}.ch span{color:#3B3934}
 .dot{width:3.5mm;height:3.5mm;border-radius:50%;color:#fff;font-size:6pt;font-weight:700;text-align:center;line-height:3.5mm;margin-top:.3mm}
 .ok{background:#1E8E3E}.info{background:#8A8A8E}.varning{background:#B3261E}
 .strip{width:100%;display:block;border:.5pt solid #bbb;image-rendering:pixelated}
 .note{font-size:7.4pt;color:#3B3934;margin-top:1.4mm}
 </style></head><body>
 <div class="top"><div><p class="k">Stickorder · ${html(SCARF.factory)} · ${html(SCARF.machine)}</p><h1>${html(input.club)} – ${html(input.title)}</h1></div>
-<div class="meta">${html(input.date)}<br>${W} × ${ROWS} maskor · cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm<br>${report.yarns.filter((y) => y.stitches).length} garner · ${report.maxColorsPerRow <= FAST_COLORS ? "dubbelsystem möjligt" : "enkelsystem"}</div></div>
+<div class="meta">${html(input.date)}<br>${W} × ${ROWS} maskor · färdig cirka ${SCARF.finishedMm / 10} × ${SCARF.widthMm / 10} cm<br>${report.yarns.filter((y) => y.stitches).length} garner · ${report.maxColorsPerRow <= FAST_COLORS ? "dubbelsystem möjligt" : "enkelsystem"}</div></div>
 <h2>Korrektur – så blir den</h2>
 <img class="scarf" src="${img(front, "image/jpeg")}"><p class="cap">Framsida · ${html(input.front)}</p>
 <img class="scarf" src="${img(back, "image/jpeg")}"><p class="cap">Baksida · ${html(input.back)}</p>
 <div class="cols"><div>
 <h2>Garner</h2>
-<table><tr><th>Garn</th><th>Närmaste Pantone</th><th>Hex</th><th>I BMP</th><th class="n">Maskor</th><th class="n">Andel</th></tr>
-${report.yarns.map((y) => `<tr><td><span class="sw" style="background:${y.hex}"></span>${y.index}</td><td>${html(y.pantone)}</td><td>${y.hex}</td><td><span class="sw" style="background:${y.bmp.hex}"></span>${y.bmp.index}</td><td class="n">${y.stitches.toLocaleString("sv-SE")}</td><td class="n">${(y.share * 100).toFixed(1).replace(".", ",")} %</td></tr>`).join("")}</table>
+<table><tr><th>Garn</th><th>Närmaste Pantone</th><th>Hex</th><th class="n">Maskor</th><th class="n">Andel</th></tr>
+${report.yarns.map((y) => `<tr><td><span class="sw" style="background:${y.hex}"></span>${y.index}</td><td>${html(y.pantone)}</td><td>${y.hex}</td><td class="n">${y.stitches.toLocaleString("sv-SE")}</td><td class="n">${(y.share * 100).toFixed(1).replace(".", ",")} %</td></tr>`).join("")}</table>
 <h2>Maskin</h2>
 <table>
 <tr><td>Maskin och program</td><td>${html(SCARF.machine)}, ${html(SCARF.software)}</td></tr>
-<tr><td>Mönster</td><td>${W} nålar × ${ROWS} maskrader, tub. Fransar utanför.</td></tr>
+<tr><td>Mönster</td><td>${W} nålar × ${ROWS} varv, tub. Färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.</td></tr>
 <tr><td>System</td><td>${report.maxColorsPerRow <= FAST_COLORS ? `Högst ${report.maxColorsPerRow} garner per varv – kan köras i dubbelsystem` : `Upp till ${report.maxColorsPerRow} garner per varv – enkelsystem`}</td></tr>
-<tr><td>Filer</td><td>En BMP per sida, ${SCARF.side} × ${ROWS}, i stickeriets eget format</td></tr>
+<tr><td>Fil</td><td>En BMP för hela halsduken, ${W} × ${ROWS}, i garnernas egna färger</td></tr>
 ${input.consent ? `<tr><td>Godkännande</td><td>${html(input.consent)}</td></tr>` : ""}
 </table>
 </div><div>
 <h2>Kontroll före stickning</h2>
 ${report.checks.map((c) => `<div class="ch"><div class="dot ${c.level}">${mark(c.level)}</div><div><b>${html(c.title)}.</b> <span>${html(c.note)}</span></div></div>`).join("")}
 </div></div>
-<h2>Mönstret, liggande</h2>
+<h2>Mönsterfilen, liggande</h2>
 <img class="strip" src="${img(strip, "image/png")}">
-<p class="note">Hela tuben: övre halvan är baksidan (nål ${SCARF.side + 1}–${W}), nedre halvan framsidan (nål 1–${SCARF.side}). I filerna står varje sida på högkant med rad 1 överst${knit.backReads === "hold-up" ? "; baksidan är vänd så att den läses rätt bakifrån när halsduken hålls upp" : ""}. En bildpunkt är en maska – skala inte om bilderna.</p>
+<p class="note">Mönsterfilen liggande: övre halvan är baksidan (nål ${SCARF.side + 1}–${W}), nedre halvan framsidan (nål 1–${SCARF.side}). I filen står bilden på högkant med rad 1 överst${knit.backReads === "hold-up" ? "; baksidan är vänd så att den läses rätt bakifrån när halsduken hålls upp" : ""}. En bildpunkt är en maska – skala inte om bilden.</p>
 </body></html>`;
 }

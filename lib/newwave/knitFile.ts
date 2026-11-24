@@ -1,10 +1,10 @@
 import sharp, { type OverlayOptions } from "sharp";
 import { SCARF, checkGrid, colorCsv, hexToRgb, indexOfNear, readMe } from "@/lib/scarf";
-import { bmpColors, bmpLines, plainEnds, sideBmp, toMachine } from "@/lib/scarfMachine";
+import { bmpLines, plainEnds, toMachine, tubeBmp } from "@/lib/scarfMachine";
 
 /**
- * Stickfilerna till en jacquardhalsduk i hubbens leverans, gjorda på servern: en BMP per sida i stickeriets eget format
- * (se lib/scarfMachine.ts), samma som halsduksagentens. Halsduken här är enklare – ränder, sköld och en text per sida.
+ * Stickfilerna till en jacquardhalsduk i hubbens leverans, gjorda på servern: en BMP för hela halsduken i garnernas
+ * egna färger (se lib/scarfMachine.ts), samma som halsduksagentens. Halsduken här är enklare – ränder, sköld och en text per sida.
  */
 
 export type KnitInput = { club: string; front: string; back: string; yarns: string[]; crest: Buffer | null; date: string };
@@ -42,8 +42,7 @@ async function side(text: string, bg: string, fg: string, thin: string, crest: B
 
 /** Filnamnen i leveransen. */
 export const FILES = {
-  front: `halsduk-framsida-${SCARF.side}x${SCARF.rows}.bmp`,
-  back: `halsduk-baksida-${SCARF.side}x${SCARF.rows}.bmp`,
+  pattern: `halsduk-${SCARF.needles}x${SCARF.rows}.bmp`,
   preview: "halsduk-forhandsvisning.png",
   colors: "farger.csv",
   readme: "readme.txt",
@@ -53,7 +52,6 @@ export async function knitScarf(input: KnitInput): Promise<Knit> {
   const palette = input.yarns.slice(0, SCARF.maxColors);
   const [bg, fg, thin] = [palette[0], palette[1] ?? "#FFFFFF", palette[2] ?? palette[1] ?? "#FFFFFF"];
   const [front, back] = await Promise.all([side(input.front, bg, fg, thin, input.crest), side(input.back, fg, bg, thin, input.crest)]);
-  const W = SCARF.needles;
   const cache = new Map<number, number>();
   const near = (d: Buffer, i: number) => {
     const key = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
@@ -74,8 +72,7 @@ export async function knitScarf(input: KnitInput): Promise<Knit> {
   const cells = toMachine(faces);
   const { counts } = checkGrid(cells, palette, Math.min(front.capMm, back.capMm));
   const pal = palette.map(hexToRgb);
-  const colors = bmpColors(palette, counts);
-  const [frontBmp, backBmp] = ([0, 1] as const).map((k) => Buffer.from(sideBmp(cells, k, colors)));
+  const bmp = Buffer.from(tubeBmp(cells, palette));
 
   // Förhandsvisningen ligger ner i verkliga proportioner: framsidan överst, baksidan under, som de ritades.
   const view = async (face: Uint8Array) => {
@@ -97,17 +94,15 @@ export async function knitScarf(input: KnitInput): Promise<Knit> {
     .toBuffer();
 
   const list: [string, string][] = [
-    [FILES.front, `framsidan, nål 1–${SCARF.side}: mönstret i stickeriets eget BMP-format, en bildpunkt per maska`],
-    [FILES.back, `baksidan, nål ${SCARF.side + 1}–${W}, i samma format`],
+    [FILES.pattern, "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska"],
     [FILES.preview, "fram- och baksida i verkliga proportioner, för korrektur"],
-    [FILES.colors, "garnlista med närmaste Pantone, garnets färg i BMP-filerna och antal maskor"],
+    [FILES.colors, "garnlista med närmaste Pantone och antal maskor"],
   ];
   const files: KnitFile[] = [
-    { name: FILES.front, data: frontBmp },
-    { name: FILES.back, data: backBmp },
+    { name: FILES.pattern, data: bmp },
     { name: FILES.preview, data: preview },
-    { name: FILES.colors, data: Buffer.from(`\uFEFF${colorCsv(palette, counts, colors)}`) },
-    { name: FILES.readme, data: Buffer.from(readMe({ club: input.club, palette, counts, date: input.date, files: list, layout: bmpLines(), bmp: colors })) },
+    { name: FILES.colors, data: Buffer.from(`\uFEFF${colorCsv(palette, counts)}`) },
+    { name: FILES.readme, data: Buffer.from(readMe({ club: input.club, palette, counts, date: input.date, files: list, layout: bmpLines() })) },
   ];
   return { cells, palette, counts, minTextMm: Math.min(front.capMm, back.capMm), files, preview };
 }

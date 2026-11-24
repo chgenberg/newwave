@@ -87,16 +87,16 @@ export function demoScarfCopy(club: Club, idea: ScarfIdea): ScarfCopy {
   const headline = clamp(`${idea.title} är här`, COPY_MAX.headline, "Ny halsduk");
   return {
     headline,
-    subline: "Stickad halsduk med fransar, 135 cm lång.",
+    subline: "Stickad halsduk med fransar, cirka 130 cm.",
     instagram: { caption: `${idea.title} – ${club.name}s nya stickade halsduk. ${idea.why} Länk i bio.`.slice(0, COPY_MAX.caption), hashtags: tags },
     facebook: { post: clamp(`Nu är den här: ${idea.title}, ${club.name}s nya stickade halsduk. ${idea.why} ${where}`, COPY_MAX.post, where) },
-    linkedin: { post: clamp(`${club.name} släpper en ny stickad halsduk: ${idea.title}. ${idea.why} Halsduken är stickad i jacquard, 135 cm lång, med olika text på fram- och baksidan.`, COPY_MAX.post, where) },
+    linkedin: { post: clamp(`${club.name} släpper en ny stickad halsduk: ${idea.title}. ${idea.why} Halsduken är stickad i jacquard, cirka 130 cm lång plus fransar, med olika text på fram- och baksidan.`, COPY_MAX.post, where) },
     banner: { headline: "Ny halsduk", subline: clamp(idea.title, COPY_MAX.subline, "Stickad i våra färger"), button: "Beställ halsduken", altText: clamp(`${club.name}s stickade halsduk ${idea.title}, fram- och baksida.`, COPY_MAX.alt, "Stickad halsduk") },
     reels: { hook: "Ny halsduk", caption: clamp(`${idea.title} – stickad i våra färger. Länk i bio.`, COPY_MAX.caption, "Länk i bio.") },
     tiktok: { hook: "Den här vill du ha", caption: clamp(`${idea.title}. Länk i bio.`, COPY_MAX.caption, "Länk i bio."), hashtags: tags.slice(0, 4) },
     newsletter: {
       subject: clamp(`${idea.title} – vår nya halsduk`, COPY_MAX.subject, "Vår nya halsduk"),
-      body: clamp(`Nu är den här: ${idea.title}, ${club.name}s nya stickade halsduk.\n\n${idea.why}\n\nHalsduken är stickad i jacquard, 135 cm lång, med fransar och olika text på fram- och baksidan. ${where}`, COPY_MAX.letter, where),
+      body: clamp(`Nu är den här: ${idea.title}, ${club.name}s nya stickade halsduk.\n\n${idea.why}\n\nHalsduken är stickad i jacquard, cirka 130 cm lång plus fransar, med olika text på fram- och baksidan. ${where}`, COPY_MAX.letter, where),
     },
   };
 }
@@ -111,7 +111,7 @@ export async function createScarfCopy(club: Club, idea: ScarfIdea, signal?: { ti
 Tonalitet: ${club.tone}
 Skriv på svenska, som en människa ${brand ? "på företaget" : "i klubben"} – varmt, kort och konkret. Ingen reklamjargong och inga utropstecken på rad.
 
-Det här vet du om halsduken och får säga: den är stickad i jacquard, cirka 135 × 18 cm, med fransar och olika text på fram- och baksidan.
+Det här vet du om halsduken och får säga: den är stickad i jacquard, cirka 130 cm lång plus fransar och 18 cm bred, med olika text på fram- och baksidan.
 Hitta inte på något annat: inga priser, rabatter, datum, antal, leveranstider, material eller länkar. Nämn inga personer vid namn${personal ? " – namn, nummer och ansikten på halsduken är exempel som byts ut" : ""}. Nämn inte stickeriet och inte hur halsduken har tagits fram.
 ${brand ? "Varumärkets" : "Klubbens"} regelbok gäller även texterna:
 ${club.rules.filter((r) => !/DTG|digitaltryck/i.test(r)).map((r) => `- ${r}`).join("\n")}

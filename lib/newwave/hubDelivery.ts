@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CLUBS } from "@/lib/club";
 import { nearestPantone } from "@/lib/pantone";
-import { clubScarfPalette } from "@/lib/scarf";
+import { SCARF, clubScarfPalette } from "@/lib/scarf";
 import { readAsset } from "./asset";
 import { nwProduct } from "./catalog";
 import { CLUB_CASE } from "./clubCase";
@@ -26,8 +26,8 @@ import { readData, writeData } from "./workspace";
 
 const ROOT = path.join(process.cwd(), ".data", "hub");
 const LIST = "newwave/hub/leveranser.json";
-/** Höjs när filerna ändras, så att sparade leveranser görs om. 2: stickfilen som två BMP i stickeriets format. */
-const VERSION = 2;
+/** Höjs när filerna ändras, så att sparade leveranser görs om. 3: stickfilen som en BMP i garnernas egna färger. */
+const VERSION = 3;
 
 export type HubFile = Omit<OutFile, "data"> & { bytes: number; sha256: string };
 export type HubJob = Omit<MadeJob, "files"> & {
@@ -154,11 +154,10 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
   const job = await stored(key, async () => {
     const k = await knitScarf({ club: club.name, front: knit.front, back: knit.back, yarns, crest: await readAsset(club.crest), date });
     const describe: Record<string, Pick<OutFile, "label" | "role" | "format" | "spec">> = {
-      [KNIT_FILES.front]: { label: "Stickfil, framsida", role: "maskin", format: "BMP", spec: "120 × 1 210 maskor · 8 bitar · stickeriets eget format" },
-      [KNIT_FILES.back]: { label: "Stickfil, baksida", role: "maskin", format: "BMP", spec: "120 × 1 210 maskor · 8 bitar · stickeriets eget format" },
+      [KNIT_FILES.pattern]: { label: "Stickfil", role: "maskin", format: "BMP", spec: "240 × 1 210 maskor · 8 bitar · garnernas egna färger" },
       [KNIT_FILES.preview]: { label: "Korrektur", role: "korrektur", format: "PNG", spec: "Fram- och baksida i verkliga proportioner" },
-      [KNIT_FILES.colors]: { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone, färg i BMP och maskor per garn" },
-      [KNIT_FILES.readme]: { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filerna läses" },
+      [KNIT_FILES.colors]: { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone och maskor per garn" },
+      [KNIT_FILES.readme]: { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filen läses" },
     };
     const total = k.counts.reduce((s, n) => s + n, 0);
     return {
@@ -166,16 +165,16 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
       methodLabel: "Jacquardstickning",
       receiver: "Stickeri",
       placement: "Hela halsduken, fram och bak",
-      sizeMm: [1350, 180] as [number, number],
+      sizeMm: [SCARF.finishedMm, SCARF.widthMm] as [number, number],
       inks: k.palette.map((hex, i) => ({ hex, name: colorName(hex), pantone: nearestPantone(hex).code, detail: `${Math.round(((k.counts[i] ?? 0) / total) * 100)} % av maskorna` })),
       facts: [
-        { label: "Storlek", value: "135 × 18 cm utan fransar" },
+        { label: "Storlek", value: `Cirka ${SCARF.finishedMm / 10} × ${SCARF.widthMm / 10} cm plus fransar` },
         { label: "Maskor", value: "240 nålar × 1 210 rader" },
         { label: "Garner", value: `${k.palette.length} av högst 7` },
         { label: "Minsta text", value: `${Math.round(k.minTextMm)} mm hög` },
       ],
       notes: [
-        "En BMP per sida i stickeriets eget format: en bildpunkt är en maska och varje färg ett garn – filerna skalas aldrig.",
+        "En BMP för hela halsduken i garnernas egna färger: en bildpunkt är en maska och 240 nålar ett varv – filen skalas aldrig.",
         "Framsidan är nål 1–120 och baksidan nål 121–240. De 50 första och sista raderna är enfärgade.",
         "Stickeriet skickar en provstickning för godkännande innan produktion.",
       ],

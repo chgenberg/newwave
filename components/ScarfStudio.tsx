@@ -297,7 +297,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
             <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#86868B]">Halsduksagenten · {club.name}</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">Stickad halsduk.</h1>
             <p className="mx-auto mt-3 max-w-xl text-[17px] text-[#86868B]">
-              Stickas av {SCARF.factory} på {SCARF.machine}. {SCARF.needles} × {SCARF.rows} maskor, cirka {SCARF.lengthMm / 10} × {SCARF.widthMm / 10} cm, högst {SCARF.maxColors} färger.
+              Stickas av {SCARF.factory} på {SCARF.machine}. {SCARF.needles} × {SCARF.rows} maskor, cirka {SCARF.finishedMm / 10} × {SCARF.widthMm / 10} cm plus fransar, högst {SCARF.maxColors} färger.
             </p>
           </div>
 
@@ -352,7 +352,7 @@ export function ScarfStudio({ fonts }: { fonts: Fonts }) {
                   <p className="mt-2">
                     En bild på {SCARF.needles} × {SCARF.rows} pixlar där varje pixel är en maska. Vänstra halvan är framsidan, högra halvan baksidan. Teknikern läser in den i {SCARF.software}.
                   </p>
-                  <p className="mt-2">Med i zip-filen: fram- och baksidan som var sin BMP i stickeriets format, en färglista med närmaste Pantone och en förhandsvisning.</p>
+                  <p className="mt-2">Med i zip-filen: mönstret som en BMP i garnernas egna färger, en färglista med närmaste Pantone och en förhandsvisning.</p>
                 </div>
               </div>
             )}
