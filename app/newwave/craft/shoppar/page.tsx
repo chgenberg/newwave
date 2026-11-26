@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import type { ProductOption, SavedDesign } from "@/components/poc/craft/CollectionBuilder";
 import { ShopEditor } from "@/components/poc/craft/ShopEditor";
+import { METHOD_INFO } from "@/lib/newwave/marking";
 import { requireRole } from "@/lib/poc/auth";
-import { garmentOptions, recolorable } from "@/lib/poc/build";
+import { garmentOptions, pocDesign, recolorable } from "@/lib/poc/build";
 import { baseProduct, POC_CATALOG } from "@/lib/poc/catalog";
 import { listDesigns } from "@/lib/poc/store";
 
@@ -20,7 +21,7 @@ export default async function CraftShops({ searchParams }: { searchParams: Promi
   const designs = await listDesigns().catch(() => []);
   const products: ProductOption[] = POC_CATALOG.map((p) => {
     const base = baseProduct(p);
-    return base ? { ...p, photo: base.photo, method: base.printArea.method, colorOptions: garmentOptions(p, base), clubColor: recolorable(base) && !(p.colors && p.colors.length >= 2) } : p;
+    return base ? { ...p, photo: base.photo, method: METHOD_INFO[pocDesign(base).method].label, colorOptions: garmentOptions(p, base), clubColor: recolorable(base) && !(p.colors && p.colors.length >= 2) } : p;
   });
   const saved: SavedDesign[] = designs.map((d) => ({
     id: d.id,

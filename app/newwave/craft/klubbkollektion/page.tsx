@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { CollectionBuilder, type Preset, type ProductOption, type SavedDesign } from "@/components/poc/craft/CollectionBuilder";
 import { allTemplates } from "@/lib/newwave/wordmark/store";
+import { METHOD_INFO } from "@/lib/newwave/marking";
 import { requireRole } from "@/lib/poc/auth";
-import { garmentOptions, recolorable, scarfPreviewUrl } from "@/lib/poc/build";
+import { garmentOptions, pocDesign, recolorable, scarfPreviewUrl } from "@/lib/poc/build";
 import { baseProduct, POC_CATALOG } from "@/lib/poc/catalog";
 import { seasonById } from "@/lib/poc/seasons";
 import { designUsage, listDesigns } from "@/lib/poc/store";
@@ -31,7 +32,7 @@ export default async function CraftCollection({ searchParams }: { searchParams: 
     const base = baseProduct(p);
     if (!base) return { ...p, photo: scarfPreviewUrl(SAMPLE, 480) };
     // Klubbens mörkaste färg går när tryckkedjan klarar färgade plagg och Craft inte har egna färger för plagget.
-    return { ...p, photo: base.photo, method: base.printArea.method, colorOptions: garmentOptions(p, base), clubColor: recolorable(base) && !(p.colors && p.colors.length >= 2) };
+    return { ...p, photo: base.photo, method: METHOD_INFO[pocDesign(base).method].label, colorOptions: garmentOptions(p, base), clubColor: recolorable(base) && !(p.colors && p.colors.length >= 2) };
   });
   const saved: SavedDesign[] = designs.map((d) => ({
     id: d.id,

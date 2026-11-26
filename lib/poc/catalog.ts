@@ -78,7 +78,7 @@ export const POC_BASES: NwProduct[] = [
     printArea: { widthCm: 12, heightCm: 12, method: "Transfer" },
     // Låret: på högra benet, mitt emot Crafts logga på det vänstra. 12 cm brett, så att ordmallen trycks hel (med
     // underraden) och inte i sin lilla version som bröstloggorna.
-    bilaga2: [zone("lar", "Låret", [120, 120], ["transfer", "brodyr", "screentryck"], [-0.1, 0.12])],
+    bilaga2: [zone("lar", "Låret", [120, 120], ["transfer", "screentryck"], [-0.1, 0.12])],
     seasons: ["höst", "vinter", "vår"],
     use: "träning, uppvärmning och resor",
     photo: "/poc/plagg/joggingbyxor-community-svart.jpg",
