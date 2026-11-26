@@ -1,26 +1,33 @@
 import JSZip from "jszip";
-import sharp from "sharp";
 import { z } from "zod";
 import { readJson } from "@/lib/demoLimit";
-import { CELLS, SCARF, checkGrid, colorCsv, hexToRgb, readMe } from "@/lib/scarf";
-import { bmpLines, fromDrawnSides, tubeBmp } from "@/lib/scarfMachine";
+import { CELLS, SCARF } from "@/lib/scarf";
+import { facesFromDrawn, packageFromFaces } from "@/lib/scarfPackage";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const Body = z.object({
   club: z.string().trim().min(1).max(80),
   palette: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).min(2).max(SCARF.maxColors),
   cells: z.string().max(Math.ceil(CELLS / 3) * 4 + 8),
+  /** Vad som står på sidorna, i ord, till stickordern. Saknas: "som den ritades". */
+  front: z.string().trim().max(160).optional(),
+  back: z.string().trim().max(160).optional(),
 });
 
 const safeName = (s: string) =>
   s
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^A-Za-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .toLowerCase() || "klubb";
 
+/**
+ * Stickfilerna till en halsduk som ritats med sidorna bredvid varandra – i halsduksstudion och i kampanjpaketet. Paketet är
+ * exakt det stickeriet godkänt (lib/scarfPackage.ts): en BMP för hela halsduken, korrektur, stickorder som PDF,
+ * garnlista, stickorder som data och LÄS MIG.
+ */
 export async function POST(req: Request) {
   const body = await readJson(req, 600_000);
   if (body === undefined) return Response.json({ error: "Förfrågan är för stor" }, { status: 413 });
@@ -30,43 +37,18 @@ export async function POST(req: Request) {
   const cells = Buffer.from(parsed.data.cells, "base64");
   if (cells.length !== CELLS || cells.some((v) => v >= palette.length)) return Response.json({ error: "Ogiltigt mönster" }, { status: 400 });
 
-  // Halsduksstudion lägger sidorna bredvid varandra som de ritades. Här läggs de på maskinens nålar som i
-  // halsduksagenten, med enfärgade ändrader, och lämnas som en BMP för hela halsduken i garnernas egna färger.
-  const { cells: machine, faces } = fromDrawnSides(new Uint8Array(cells));
-  const { counts } = checkGrid(machine, palette, null);
-  const bmp = Buffer.from(tubeBmp(machine, palette));
-
-  // Förhandsvisningen: båda sidorna liggande som de ritades, framsidan överst.
-  const pal = palette.map(hexToRgb);
-  const [R, S] = [SCARF.rows, SCARF.side];
-  const sideRgb = (face: Uint8Array) => {
-    const out = Buffer.alloc(R * S * 3);
-    for (let r = 0; r < R; r++) for (let y = 0; y < S; y++) out.set(pal[face[r * S + y]], (y * R + r) * 3);
-    return sharp(out, { raw: { width: R, height: S, channels: 3 } }).resize(R * 2, S * 3, { kernel: "nearest" }).png().toBuffer();
-  };
-  const [f, b] = await Promise.all(faces.map(sideRgb));
-  const preview = await sharp({ create: { width: R * 2, height: S * 6 + 24, channels: 3, background: "#FFFFFF" } })
-    .composite([
-      { input: f, left: 0, top: 0 },
-      { input: b, left: 0, top: S * 3 + 24 },
-    ])
-    .png()
-    .toBuffer();
-
-  const csv = colorCsv(palette, counts);
   const date = new Date().toISOString().slice(0, 10);
-  const name = { pattern: `halsduk-${SCARF.needles}x${R}.bmp`, preview: "halsduk-forhandsvisning.png" };
-  const files: [string, string][] = [
-    [name.pattern, "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska"],
-    [name.preview, "fram- och baksida liggande, för granskning på skärm"],
-    ["farger.csv", "färglista med närmaste Pantone"],
-  ];
-
+  const pack = await packageFromFaces({
+    club,
+    title: "Halsduk",
+    front: parsed.data.front || "framsidan som den ritades",
+    back: parsed.data.back || "baksidan som den ritades",
+    faces: facesFromDrawn(new Uint8Array(cells)),
+    palette,
+    date,
+  });
   const zip = new JSZip();
-  zip.file(name.pattern, bmp);
-  zip.file(name.preview, preview);
-  zip.file("farger.csv", `\uFEFF${csv}`);
-  zip.file("LAS-MIG.txt", readMe({ club, palette, counts, date, files, layout: bmpLines() }));
+  for (const f of pack.files) zip.file(f.name, f.data);
   const out = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 
   return new Response(Buffer.from(out), {

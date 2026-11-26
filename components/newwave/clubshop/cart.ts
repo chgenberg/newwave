@@ -1,13 +1,24 @@
 import { store } from "../shop/cart";
 import { type DeliveryId, FLOCK_PRICE, MAX_QTY, type PaymentId, shipping, vatOf } from "./pricing";
 
-/** Varukorgen och senaste beställningen i klubbens butik, bara i webbläsaren. Inget skickas och inget dras. */
+/**
+ * Varukorgen och senaste beställningen i klubbens butik, i webbläsaren. Inga pengar dras. Kollektionens varor stannar
+ * här; Crafts klubbprodukter skickas dessutom som en order till plattformen när kunden lägger beställningen (kassan).
+ */
 
 export type Flock = { name: string; number: string };
-/** Raden bär med sig namn, bild och pris, så att korgen kan visas utan att fråga servern. */
-export type ShopLine = { key: string; item: string; name: string; image: string; href: string; priceSek: number; size: string; qty: number; flock?: Flock };
+/**
+ * Raden bär med sig namn, bild och pris, så att korgen kan visas utan att fråga servern. `clubProductId` finns på Crafts
+ * klubbprodukter: de raderna skickas som en riktig order till plattformen, och priset där tas från klubbprodukten.
+ */
+export type ShopLine = { key: string; item: string; name: string; image: string; href: string; priceSek: number; size: string; qty: number; flock?: Flock; clubProductId?: string };
 export type Contact = { name: string; email: string; phone: string; street: string; zip: string; city: string };
-export type ShopOrder = { number: string; at: string; lines: ShopLine[]; contact: Contact; delivery: DeliveryId; payment: PaymentId; subtotal: number; shipping: number; total: number };
+/**
+ * Ordern i plattformen, när korgen hade klubbprodukter från Craft: numret, länken till kundens statussida och summan
+ * som plattformen räknat, med frakten för det valda leveranssättet.
+ */
+export type PlatformOrder = { number: string; statusUrl: string; totalSek?: number; shipping?: { label: string; priceSek: number } };
+export type ShopOrder = { number: string; at: string; lines: ShopLine[]; contact: Contact; delivery: DeliveryId; payment: PaymentId; subtotal: number; shipping: number; total: number; platform?: PlatformOrder };
 export type ClubCart = { lines: ShopLine[]; contact?: Contact; order?: ShopOrder };
 
 const EMPTY: ClubCart = { lines: [] };
@@ -41,9 +52,12 @@ export function totals(lines: ShopLine[], delivery: DeliveryId) {
   return { subtotal, shipping: ship, total, vat: vatOf(total), count: lines.reduce((s, l) => s + l.qty, 0) };
 }
 
-/** Beställningen blir senaste order och korgen töms; kontaktuppgifterna finns kvar till nästa gång. */
-export function placeOrder(cart: ClubCart, contact: Contact, delivery: DeliveryId, payment: PaymentId, prefix: string): ClubCart {
+/**
+ * Beställningen blir senaste order och korgen töms; kontaktuppgifterna finns kvar till nästa gång. Har plattformen tagit
+ * emot klubbprodukterna får kvittot plattformens ordernummer, så att kunden bara ser ett.
+ */
+export function placeOrder(cart: ClubCart, contact: Contact, delivery: DeliveryId, payment: PaymentId, prefix: string, platform?: PlatformOrder): ClubCart {
   const sum = totals(cart.lines, delivery);
-  const number = `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
-  return { lines: [], contact, order: { number, at: new Date().toISOString(), lines: cart.lines, contact, delivery, payment, subtotal: sum.subtotal, shipping: sum.shipping, total: sum.total } };
+  const number = platform?.number ?? `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+  return { lines: [], contact, order: { number, at: new Date().toISOString(), lines: cart.lines, contact, delivery, payment, subtotal: sum.subtotal, shipping: sum.shipping, total: sum.total, platform } };
 }

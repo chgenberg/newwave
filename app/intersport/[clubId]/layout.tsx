@@ -48,9 +48,14 @@ export default async function IntersportLayout({ params, children }: Props) {
           <p>
             <span className="font-semibold text-[#1D1D1F]">{club.name} klubbshop</span> · Tryckt på beställning av New Wave · Varje köp stöttar klubben
           </p>
-          <p>kundservice@intersport.se</p>
+          <p className="flex flex-wrap gap-x-5 gap-y-1">
+            <Link href={`${home}/order/hitta`} className="font-semibold text-[#164194] hover:underline">
+              Hitta din order
+            </Link>
+            <span>kundservice@intersport.se</span>
+          </p>
         </div>
-        <p className="mx-auto max-w-[1320px] border-t border-[#E5E5EA] px-4 py-4 text-[12px] text-[#6E6E73] sm:px-6">Demo – det här är inte Intersports riktiga butik. Inga beställningar skickas och inga pengar dras.</p>
+        <p className="mx-auto max-w-[1320px] border-t border-[#E5E5EA] px-4 py-4 text-[12px] text-[#6E6E73] sm:px-6">Demo – det här är inte Intersports riktiga butik. Inga pengar dras; bara beställningar av Crafts klubbprodukter skickas vidare, till demots tillverkning.</p>
       </footer>
     </div>
   );

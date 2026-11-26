@@ -24,7 +24,8 @@ export function CartLink({ clubId, href }: { clubId: string; href: string }) {
   );
 }
 
-export type BuyItem = { id: string; name: string; priceSek: number; image: string; href: string };
+/** `clubProductId` finns på Crafts klubbprodukter, som skickas till plattformen i kassan. */
+export type BuyItem = { id: string; name: string; priceSek: number; image: string; href: string; clubProductId?: string };
 
 const KIDS = /^\d/;
 
@@ -48,7 +49,7 @@ export function BuyBox({ clubId, item, sizes, flock, dark, garment, v, checkout 
     if (!size) return setError("Välj en storlek.");
     if (back && !player.trim() && !number) return setError("Skriv ett namn eller ett nummer, eller ta bort trycket på ryggen.");
     setError("");
-    update((c) => addLine(c, { item: item.id, name: item.name, image: item.image, href: item.href, priceSek: item.priceSek, size, qty, flock: back ? { name: player.trim().toUpperCase(), number } : undefined }));
+    update((c) => addLine(c, { item: item.id, name: item.name, image: item.image, href: item.href, priceSek: item.priceSek, size, qty, flock: back ? { name: player.trim().toUpperCase(), number } : undefined, clubProductId: item.clubProductId }));
     setAdded(true);
     track(clubId, { type: "cart", item: item.id });
   };

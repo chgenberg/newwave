@@ -114,18 +114,6 @@ export function finishTube(faces: [Uint8Array, Uint8Array], backReads: BackReads
 /** Fransen i varje ände får framsidans färg där: `[vid rad 1, vid rad 1210]`. */
 export const fringeOf = (ends: [[number, number], [number, number]]) => [ends[0][0], ends[0][1]] as [number, number];
 
-/**
- * Ett rutnät där sidorna ligger bredvid varandra som de ritades (kolumn 1–120 framsidan, 121–240 baksidan, kolumnen
- * räknad från den övre långsidan) – så som den gamla halsduksstudion bygger halsduken – färdigt för maskinen.
- */
-export function fromDrawnSides(drawn: Uint8Array, backReads: BackReads = "hold-up") {
-  const faces: [Uint8Array, Uint8Array] = [new Uint8Array(SIDE * ROWS), new Uint8Array(SIDE * ROWS)];
-  faces.forEach((f, side) => {
-    for (let r = 0; r < ROWS; r++) f.set(drawn.subarray(r * NEEDLES + side * SIDE, r * NEEDLES + side * SIDE + SIDE), r * SIDE);
-  });
-  return finishTube(faces, backReads);
-}
-
 // --- Mönsterfilen ----------------------------------------------------------------------
 
 /** Upplösningen i stickeriets fil: 3779 punkter per meter, alltså 96 dpi. */

@@ -1,5 +1,3 @@
-import { nearestPantone } from "./pantone";
-
 /**
  * Seger's knitted scarf: a tube on a 240-needle cylinder, front = needles 1–120, back = 121–240.
  * `endRows` is the knitter's own rule (November 2026): always leave 50 courses plain at the start and at the end of the
@@ -175,31 +173,3 @@ export function checkGrid(
   return { checks, counts };
 }
 
-export function colorCsv(palette: string[], counts: number[]) {
-  return ["Färg;Hex;RGB;Närmaste Pantone;Maskor", ...palette.map((hex, i) => `${i + 1};${hex};${hexToRgb(hex).join(",")};${nearestPantone(hex).code};${counts[i] ?? 0}`)].join("\n");
-}
-
-/** `layout` är raderna om hur mönsterfilerna är gjorda och ligger (bmpLines i scarfMachine.ts). */
-export function readMe(opts: { club: string; palette: string[]; counts: number[]; date: string; files: [string, string][]; layout: string[] }) {
-  const lines = opts.palette.map((hex, i) => {
-    const p = nearestPantone(hex);
-    return `  Färg ${i + 1}: ${hex}  ≈ ${p.code}  (${opts.counts[i] ?? 0} maskor)`;
-  });
-  const files = opts.files;
-  const pad = Math.max(15, ...files.map(([name]) => name.length)) + 2;
-  return [
-    `Halsduk – ${opts.club}`,
-    `Skapad ${opts.date}`,
-    "",
-    `Maskin: ${SCARF.machine}   Mönsterprogram: ${SCARF.software}`,
-    `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} varv, cirka ${SCARF.machineMm.length / 10} × ${SCARF.machineMm.width / 10} cm ur maskinen, ångtumlad till cirka ${SCARF.finishedMm / 10} × ${SCARF.widthMm / 10} cm plus fransar.`,
-    "",
-    ...opts.layout,
-    "",
-    "Färger (Pantone är närmaste referens – välj garn som matchar):",
-    ...lines,
-    "",
-    "Filer:",
-    ...files.map(([name, what]) => `  ${name.padEnd(pad)}– ${what}`),
-  ].join("\n");
-}

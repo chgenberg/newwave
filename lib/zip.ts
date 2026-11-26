@@ -3,9 +3,8 @@
 import JSZip from "jszip";
 import { dataUrlToBase64, loadImage } from "./compose";
 import { CHANNELS } from "./links";
-import { checkGrid, clubScarfPalette, colorCsv, indexOfNear, readMe } from "./scarf";
-import { DEFAULT_ROSTER, composeScarf, renderKnit, type SideSpec } from "./scarfCompose";
-import { bmpLines, fromDrawnSides, tubeBmp } from "./scarfMachine";
+import { clubScarfPalette, indexOfNear } from "./scarf";
+import { DEFAULT_ROSTER, composeScarf, type SideSpec } from "./scarfCompose";
 import type { Club, Concept, ContentPack } from "./types";
 
 export type CampaignImages = {
@@ -159,7 +158,7 @@ Varje kanal har en egen spårbar länk, så att ni ser vad som säljer. Ju fler 
 ${family.length ? `<br><b>Familjepaket:</b> ${family.map((f) => esc(f!)).join(", ")} – perfekt att lyfta i inläggen.` : ""}</p>
 
 <h2>4. Stickad halsduk till Seger</h2>
-<p>I varje motivmapp finns <code>Halsduk – Seger</code> med en färdig mönsterfil för Segers OPEK 365 (en BMP för hela halsduken i garnernas egna färger, max 7 färger, med färglista och Pantone-referens) samt en bild på hur halsduken ser ut stickad.</p>
+<p>I varje motivmapp finns <code>Halsduk – Seger</code> med stickfilerna i det format Seger godkänt för sin OPEK 365: en BMP för hela halsduken i garnernas egna färger (max 7 färger), stickorder som PDF, garnlista med Pantone-referens, korrektur som visar hur halsduken ser ut stickad, och en LÄS MIG.</p>
 
 <h2>5. Regler – ändra inte</h2>
 <div class="warn"><ul>
@@ -173,7 +172,7 @@ ${club.rules.map((r) => `<li>${esc(r)}</li>`).join("")}
 </body></html>`;
 }
 
-async function addScarfFolder(sf: JSZip, club: Club, slogan: string, date: string) {
+async function addScarfFolder(sf: JSZip, club: Club, slogan: string) {
   const palette = clubScarfPalette(club);
   const primary = indexOfNear(palette, club.palette[0]?.hex ?? palette[0]);
   const white = indexOfNear(palette, "#FFFFFF");
@@ -184,20 +183,18 @@ async function addScarfFolder(sf: JSZip, club: Club, slogan: string, date: strin
   const back: SideSpec = { ...base, template: "smeknamn", bg: white, ink: primary, accent, line1: up(club.nicknames[0] ?? club.shortName), line2: up(club.city) };
   const crest = await loadImage(`/api/v1/brand/${club.id}/${club.brand.crest.farg}`).catch(() => null);
   const { cells } = composeScarf({ palette, front, back, crest, font: '"Helvetica Neue", Arial, sans-serif' });
-  // Sidorna läggs på maskinens nålar som i halsduksagenten, med enfärgade ändrader, och lämnas som en BMP för hela halsduken.
-  const { cells: machine } = fromDrawnSides(cells);
-  const { counts } = checkGrid(machine, palette, null);
-  const preview = document.createElement("canvas");
-  renderKnit(preview, cells, palette, 0, 1400);
-  const files: [string, string][] = [
-    ["halsduk-240x1210.bmp", "mönstret: hela halsduken som en BMP i garnernas egna färger, en bildpunkt per maska"],
-    ["forhandsvisning-framsida.png", "framsidan som den ser ut stickad (före de enfärgade ändraderna)"],
-    ["farger.csv", "färglista med närmaste Pantone"],
-  ];
-  sf.file(files[0][0], tubeBmp(machine, palette));
-  sf.file(files[1][0], dataUrlToBase64(preview.toDataURL("image/png")), { base64: true });
-  sf.file("farger.csv", `\uFEFF${colorCsv(palette, counts)}`);
-  sf.file("LAS-MIG.txt", readMe({ club: club.name, palette, counts, date, files, layout: bmpLines() }));
+  // Stickfilerna görs på servern, så att de blir exakt det paket stickeriet godkänt: en BMP för hela halsduken,
+  // korrektur, stickorder som PDF, garnlista, stickorder som data och LÄS MIG (lib/scarfPackage.ts).
+  let binary = "";
+  for (let i = 0; i < cells.length; i += 0x8000) binary += String.fromCharCode(...cells.subarray(i, i + 0x8000));
+  const res = await fetch("/api/v1/scarf/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ club: club.name, palette, cells: btoa(binary), front: `${front.line1} / ${front.line2}`, back: `${back.line1} / ${back.line2}` }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Kunde inte göra stickfilerna.");
+  const pack = await JSZip.loadAsync(await res.arrayBuffer());
+  for (const f of Object.values(pack.files)) if (!f.dir) sf.file(f.name, await f.async("uint8array"));
 }
 
 async function fetchBytes(url: string) {
@@ -258,7 +255,7 @@ export async function buildCampaignZip(club: Club, items: PackItem[], onProgress
     pr.file("motiv-vektor.svg", await fetchBytes(it.vectorUrl));
     it.backPrints.forEach((b) => png(pr, b.file, b.dataUrl));
 
-    if (!brand) await addScarfFolder(f.folder("Halsduk – Seger")!, club, it.concept.slogan, date);
+    if (!brand) await addScarfFolder(f.folder("Halsduk – Seger")!, club, it.concept.slogan);
 
     f.file("Länkar och spårning.txt", t.links);
   }

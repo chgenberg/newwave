@@ -9,6 +9,11 @@ const ITEMS: NavItem[] = [
   { href: `${BASE}/designa`, label: "Designa", icon: "cube" },
   { href: `${BASE}/material`, label: "Material", icon: "grid" },
   { href: `${BASE}/skapa`, label: "Skapa", icon: "send" },
+  { href: `${BASE}/klubbkollektion`, label: "Klubbkollektion", icon: "layers" },
+  { href: `${BASE}/shoppar`, label: "Shoppar", icon: "store" },
+  { href: `${BASE}/sasonger`, label: "Säsonger", icon: "drop" },
+  { href: `${BASE}/utskick`, label: "Utskick", icon: "doc" },
+  { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },
   { href: `${BASE}/insikter`, label: "Insikter", icon: "chart" },
   { href: `${BASE}/regler`, label: "Regler", icon: "rules" },
 ];
@@ -21,7 +26,7 @@ export default async function CraftLayout({ children }: Readonly<{ children: Rea
       className="nw-club nw-club--plain"
       style={{ "--club": "#111111", "--club-accent": "#FFFFFF", "--club-on-accent": "#111111", "--club-soft": "#F2F2F0" } as React.CSSProperties}
     >
-      <DashShell portal="craft" base={BASE} items={ITEMS} label="Crafts dashboard" title="Craft" subtitle="Klubbmerch centralt" overview={["klubb"]} badges={badges} cta={{ href: `${BASE}/skapa`, label: "Skapa och tilldela" }} width={980}>
+      <DashShell portal="craft" base={BASE} items={ITEMS} label="Crafts dashboard" title="Craft" subtitle="Klubbmerch centralt" overview={["klubb/"]} badges={badges} cta={{ href: `${BASE}/skapa`, label: "Skapa och tilldela" }} width={980}>
         {children}
       </DashShell>
     </div>

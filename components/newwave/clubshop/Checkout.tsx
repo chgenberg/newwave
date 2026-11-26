@@ -3,8 +3,9 @@
 /* eslint-disable @next/next/no-img-element -- mockups per klubb */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { type Contact, placeOrder, setQty, type ShopLine, totals, unitPrice, useClubCart } from "./cart";
+import { useState, useTransition } from "react";
+import { placeClubOrder } from "@/components/poc/shop/actions";
+import { type Contact, placeOrder, type PlatformOrder, setQty, type ShopLine, totals, unitPrice, useClubCart } from "./cart";
 import { DELIVERY, DELIVERY_DAYS, type DeliveryId, FREE_SHIPPING_FROM, kr, MAX_QTY, PAYMENTS, type PaymentId, shipping, workdaysAfter } from "./pricing";
 import { track } from "./track";
 
@@ -50,9 +51,11 @@ export function Checkout({ clubId, clubName, home }: { clubId: string; clubName:
   const [delivery, setDelivery] = useState<DeliveryId>("ombud");
   const [payment, setPayment] = useState<PaymentId>("swish");
   const [error, setError] = useState("");
+  const [sending, startSending] = useTransition();
   const form = contact ?? cart.contact ?? EMPTY_CONTACT;
   const sum = totals(cart.lines, delivery);
   const needsAddress = delivery !== "butik";
+  const craft = cart.lines.filter((l) => l.clubProductId);
 
   if (!cart.lines.length) {
     return (
@@ -72,10 +75,29 @@ export function Checkout({ clubId, clubName, home }: { clubId: string; clubName:
     if (missing.length) return setError(`Fyll i ${missing.map((f) => f.label.toLowerCase()).join(", ")}.`);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setError("Kontrollera e-postadressen.");
     if (needsAddress && !/^\d{3}\s?\d{2}$/.test(form.zip.trim())) return setError("Postnumret har fem siffror.");
-    const placed = placeOrder(cart, form, delivery, payment, "IS");
-    update(() => placed);
-    if (placed.order) track(clubId, { type: "order", number: placed.order.number, delivery, lines: cart.lines.map((l) => ({ item: l.item, qty: l.qty, flock: Boolean(l.flock) })) });
-    router.push(`${home}/tack`);
+    if (sending) return;
+    setError("");
+    startSending(async () => {
+      // Crafts klubbprodukter går som en riktig order till plattformen, via servern, med leveranssättet (frakten räknas
+      // där); kollektionens varor stannar i webbläsaren som förut.
+      let platform: PlatformOrder | undefined;
+      if (craft.length) {
+        const address = needsAddress ? `${form.street.trim()}, ${form.zip.trim()} ${form.city.trim()}` : undefined;
+        const res = await placeClubOrder({
+          clubId,
+          customer: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() || undefined, address },
+          delivery,
+          lines: craft.map((l) => ({ clubProductId: l.clubProductId!, size: l.size, qty: l.qty })),
+        });
+        if (!res.ok) return setError(res.error);
+        platform = { number: res.number, statusUrl: res.statusUrl, totalSek: res.totalSek, shipping: res.shipping };
+      }
+      const placed = placeOrder(cart, form, delivery, payment, "IS", platform);
+      update(() => placed);
+      const own = cart.lines.filter((l) => !l.clubProductId);
+      if (placed.order && own.length) track(clubId, { type: "order", number: placed.order.number, delivery, lines: own.map((l) => ({ item: l.item, qty: l.qty, flock: Boolean(l.flock) })) });
+      router.push(`${home}/tack`);
+    });
   };
 
   return (
@@ -177,10 +199,14 @@ export function Checkout({ clubId, clubName, home }: { clubId: string; clubName:
             </div>
           </dl>
           {error ? <p className="mt-3 text-[13.5px] text-[#B42318]">{error}</p> : null}
-          <button type="submit" className="mt-4 h-12 w-full rounded-full bg-[var(--shop)] text-[15px] font-semibold text-[var(--shop-on)] transition hover:opacity-90">
-            Lägg beställningen
+          <button type="submit" disabled={sending} className="mt-4 h-12 w-full rounded-full bg-[var(--shop)] text-[15px] font-semibold text-[var(--shop-on)] transition hover:opacity-90 disabled:opacity-60">
+            {sending ? "Skickar beställningen …" : "Lägg beställningen"}
           </button>
-          <p className="mt-3 text-[12px] leading-snug text-[#6F6B63]">Det här är en demo av Intersports klubbshop: ingen beställning skickas, inget mejl går iväg och inga pengar dras.</p>
+          <p className="mt-3 text-[12px] leading-snug text-[#6F6B63]">
+            {craft.length
+              ? "Det här är en demo av Intersports klubbshop: varorna från Craft skickas som en order till tillverkningen, men inget mejl går iväg och inga pengar dras."
+              : "Det här är en demo av Intersports klubbshop: ingen beställning skickas, inget mejl går iväg och inga pengar dras."}
+          </p>
         </div>
       </aside>
     </form>
@@ -202,16 +228,22 @@ export function Confirmation({ clubId, clubName, home }: { clubId: string; clubN
   }
   const d = DELIVERY.find((x) => x.id === o.delivery);
   const pay = PAYMENTS.find((x) => x.id === o.payment);
+  const mixed = o.lines.some((l) => !l.clubProductId);
+  // Bara varor från Craft: kvittot visar plattformens summa och frakt, så att det stämmer med ordern och statussidan.
+  const platformSum = o.platform && !mixed && o.platform.totalSek !== undefined ? o.platform : undefined;
+  const shippingSek = platformSum?.shipping?.priceSek ?? o.shipping;
+  const totalSek = platformSum?.totalSek ?? o.total;
   return (
     <div className="mx-auto max-w-[760px] px-4 pt-10 sm:px-6">
       <p className="text-[12.5px] font-semibold uppercase tracking-[0.16em] text-[#6F6B63]">Order {o.number}</p>
       <h1 className="mt-1 text-[34px] font-black leading-[1.05] tracking-[-0.02em] sm:text-[44px]">Tack, {o.contact.name.split(" ")[0]}!</h1>
       <p className="mt-3 text-[16px] leading-relaxed text-[#4A4740]">
-        Din beställning är lagd hos Intersport och trycks nu hos New Wave. Tack för att du stöttar {clubName}!
+        {o.platform ? "Din beställning är lagd hos Intersport och skickad till tillverkningen." : "Din beställning är lagd hos Intersport och trycks nu hos New Wave."} Tack för att du stöttar {clubName}!
       </p>
       <p className="mt-2 text-[15px] text-[#4A4740]">
         {d?.id === "butik" ? "Att hämta i butiken" : "Levereras"} <DeliveryWindow at={o.at} />
       </p>
+      {o.platform ? <FollowOrder platform={o.platform} mixed={mixed} home={home} /> : null}
       <ul className="mt-6 divide-y divide-[#ECEAE5] border-y border-[#ECEAE5]">
         {o.lines.map((l) => (
           <LineRow key={l.key} line={l} />
@@ -219,18 +251,54 @@ export function Confirmation({ clubId, clubName, home }: { clubId: string; clubN
       </ul>
       <dl className="mt-4 grid gap-1.5 text-[14.5px]">
         <div className="flex justify-between">
-          <dt>Frakt · {d?.label}</dt>
-          <dd>{kr(o.shipping)}</dd>
+          <dt>Frakt · {platformSum?.shipping?.label ?? d?.label}</dt>
+          <dd>{kr(shippingSek)}</dd>
         </div>
         <div className="flex justify-between text-[18px] font-bold">
           <dt>Totalt · {pay?.label}</dt>
-          <dd>{kr(o.total)}</dd>
+          <dd>{kr(totalSek)}</dd>
         </div>
       </dl>
       <p className="mt-6 rounded-2xl bg-[var(--shop-bg)] p-4 text-[13.5px] text-[#4A4740]">Demo: ingenting har skickats till {o.contact.email} och inga pengar har dragits.</p>
       <Link href={home} className="mt-6 inline-flex h-12 items-center rounded-full bg-[var(--shop)] px-6 text-[15px] font-semibold text-[var(--shop-on)]">
         Fortsätt handla
       </Link>
+    </div>
+  );
+}
+
+/**
+ * Länken till kundens statussida, där ordern syns hela vägen till skickad, med plattformens summa. Med varor från
+ * kollektionen i samma korg gäller ordern och summan bara varorna från Craft.
+ */
+function FollowOrder({ platform, mixed, home }: { platform: PlatformOrder; mixed: boolean; home: string }) {
+  return (
+    <div className="mt-6 rounded-2xl border border-[var(--shop-line)] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold">Ordernummer {platform.number}</p>
+          {platform.totalSek !== undefined ? (
+            <p className="text-[13.5px] text-[#4A4740]">
+              {mixed ? "Varorna från Craft: " : "Summa "}
+              <span className="font-semibold text-[#111]">{kr(platform.totalSek)}</span>
+              {platform.shipping ? ` inklusive frakt (${platform.shipping.label.toLowerCase()}, ${platform.shipping.priceSek ? kr(platform.shipping.priceSek) : "fri frakt"})` : ""}
+            </p>
+          ) : null}
+          <p className="text-[13.5px] text-[#6F6B63]">
+            Följ ordern från bekräftad till skickad, med spårningsnummer.{mixed ? " Statussidan visar varorna från Craft." : ""}
+          </p>
+        </div>
+        <Link href={platform.statusUrl} className="inline-flex h-11 shrink-0 items-center rounded-full bg-[var(--shop)] px-5 text-[14.5px] font-semibold text-[var(--shop-on)]">
+          Följ din order
+        </Link>
+      </div>
+      <p className="mt-3 border-t border-[var(--shop-line)] pt-3 text-[12.5px] text-[#6F6B63]">
+        Spara ordernumret. Med det och din e-post{" "}
+        <Link href={`${home}/order/hitta`} className="font-semibold text-[#111] underline underline-offset-2">
+          hittar du ordern
+        </Link>{" "}
+        när som helst.
+      </p>
     </div>
   );
 }

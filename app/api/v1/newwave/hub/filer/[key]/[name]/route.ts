@@ -8,6 +8,8 @@ const TYPES: Record<string, string> = {
   dst: "application/octet-stream",
   csv: "text/csv; charset=utf-8",
   txt: "text/plain; charset=utf-8",
+  pdf: "application/pdf",
+  json: "application/json; charset=utf-8",
 };
 
 /** En produktionsfil från hubben; `?dl=1` laddar ner den med sitt riktiga namn. */

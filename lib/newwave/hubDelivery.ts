@@ -8,7 +8,7 @@ import { readAsset } from "./asset";
 import { nwProduct } from "./catalog";
 import { CLUB_CASE } from "./clubCase";
 import { colorName } from "./colors";
-import { FILES as KNIT_FILES, knitScarf } from "./knitFile";
+import { knitScarf } from "./knitFile";
 import { defaultDesign, type Design, fitDesign, type Placement } from "./marking";
 import { fileSlug, isDarkHex, makeJob, type MadeJob, type OutFile } from "./printFiles";
 import { mockupJpeg } from "./serverMockup";
@@ -27,7 +27,8 @@ import { readData, writeData } from "./workspace";
 const ROOT = path.join(process.cwd(), ".data", "hub");
 const LIST = "newwave/hub/leveranser.json";
 /** Höjs när filerna ändras, så att sparade leveranser görs om. 3: stickfilen som en BMP i garnernas egna färger. */
-const VERSION = 3;
+// 4: stickpaketet som stickeriet godkänt, med stickorder som PDF (lib/scarfPackage.ts).
+const VERSION = 4;
 
 export type HubFile = Omit<OutFile, "data"> & { bytes: number; sha256: string };
 export type HubJob = Omit<MadeJob, "files"> & {
@@ -56,7 +57,8 @@ export type HubDelivery = {
 
 export const fileUrl = (key: string, name: string) => `/api/v1/newwave/hub/filer/${key}/${encodeURIComponent(name)}`;
 export const KEY = /^[0-9a-f]{20}$/;
-export const NAME = /^[a-z0-9][a-z0-9._-]*\.(png|svg|dst|bmp|csv|txt|jpg)$/;
+/** Filnamnen i en leverans. Stickpaketet har LAS-MIG.txt, stickorder.pdf och stickorder.json, som stickeriet fått dem. */
+export const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.(png|svg|dst|bmp|csv|txt|jpg|pdf|json)$/;
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 
@@ -152,13 +154,17 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
   const yarns = clubScarfPalette({ palette: club.palette.map((hex) => ({ hex })), crestColors: club.crestColors }, []);
   const key = sha(JSON.stringify({ v: VERSION, knit, yarns, crest: club.crest, club: club.name })).slice(0, 20);
   const job = await stored(key, async () => {
-    const k = await knitScarf({ club: club.name, front: knit.front, back: knit.back, yarns, crest: await readAsset(club.crest), date });
-    const describe: Record<string, Pick<OutFile, "label" | "role" | "format" | "spec">> = {
-      [KNIT_FILES.pattern]: { label: "Stickfil", role: "maskin", format: "BMP", spec: "240 × 1 210 maskor · 8 bitar · garnernas egna färger" },
-      [KNIT_FILES.preview]: { label: "Korrektur", role: "korrektur", format: "PNG", spec: "Fram- och baksida i verkliga proportioner" },
-      [KNIT_FILES.colors]: { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone och maskor per garn" },
-      [KNIT_FILES.readme]: { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filen läses" },
-    };
+    const k = await knitScarf({ clubId: club.id, front: knit.front, back: knit.back, yarns, date });
+    // Stickpaketet som stickeriet godkänt, ritat av halsduksagentens motor; filerna känns igen på namnet.
+    const KINDS: [RegExp, Pick<OutFile, "label" | "role" | "format" | "spec">][] = [
+      [/-240x1210\.bmp$/, { label: "Stickfil", role: "maskin", format: "BMP", spec: "240 × 1 210 maskor · 8 bitar · garnernas egna färger" }],
+      [/-korrektur\.png$/, { label: "Korrektur", role: "korrektur", format: "PNG", spec: "Fram- och baksida som de blir stickade, med fransar" }],
+      [/^stickorder\.pdf$/, { label: "Stickorder", role: "data", format: "PDF", spec: "En sida: korrektur, garner, maskininställning och kontroller" }],
+      [/^garn\.csv$/, { label: "Garnlista", role: "data", format: "CSV", spec: "Hex, närmaste Pantone och maskor per garn" }],
+      [/^stickorder\.json$/, { label: "Stickorder, maskinläsbar", role: "data", format: "JSON", spec: "Samma uppgifter för en direktkoppling" }],
+      [/\.txt$/, { label: "Läs mig", role: "data", format: "TXT", spec: "Maskin, storlek och hur filen läses" }],
+    ];
+    const describe = (name: string) => KINDS.find(([re]) => re.test(name))?.[1] ?? { label: name, role: "data" as const, format: name.split(".").pop()!.toUpperCase(), spec: "" };
     const total = k.counts.reduce((s, n) => s + n, 0);
     return {
       method: "stickning" as const,
@@ -178,8 +184,8 @@ async function knitJob(club: Club, approvalId: string, knit: Knit, date: string)
         "Framsidan är nål 1–120 och baksidan nål 121–240. De 50 första och sista raderna är enfärgade.",
         "Stickeriet skickar en provstickning för godkännande innan produktion.",
       ],
-      preview: KNIT_FILES.preview,
-      files: k.files.map((f) => ({ name: f.name, data: f.data, ...describe[f.name] })),
+      preview: k.preview,
+      files: k.files.map((f) => ({ name: f.name, data: f.data, ...describe(f.name) })),
     };
   });
   return {

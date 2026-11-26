@@ -2,6 +2,8 @@
 import { notFound } from "next/navigation";
 import { CollectionSections } from "@/components/newwave/clubshop/CollectionView";
 import { ProductTile } from "@/components/newwave/clubshop/ProductTile";
+import { ClubProductsSection } from "@/components/poc/shop/ClubProducts";
+import { publishedClubProducts } from "@/components/poc/shop/data";
 import { intersportClub, intersportPath } from "@/lib/intersport";
 import { loadCollection } from "@/lib/newwave/clubCollection";
 import { loadClubShop } from "@/lib/newwave/clubShop";
@@ -12,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ClubShop({ params }: { params: Promise<{ clubId: string }> }) {
   const { clubId } = await params;
-  const [club, shop] = await Promise.all([intersportClub(clubId), loadClubShop(clubId)]);
+  const [club, shop, craft] = await Promise.all([intersportClub(clubId), loadClubShop(clubId), publishedClubProducts(clubId)]);
   if (!club) notFound();
   const { drops } = await loadCollection(clubId, shop?.content.hidden);
   const on = luminance(club.color) > 0.4 ? "#111111" : "#FFFFFF";
@@ -30,8 +32,9 @@ export default async function ClubShop({ params }: { params: Promise<{ clubId: s
         </div>
       </div>
 
+      <ClubProductsSection clubName={club.name} products={craft} href={(p) => intersportPath(clubId, p.id)} />
       <CollectionSections drops={drops} href={(it) => intersportPath(clubId, it.id)} />
-      {!drops.length && !shop?.groups.length ? <p className="mt-10 rounded-2xl bg-[#F5F5F7] p-10 text-center text-sm text-[#6E6E73]">Klubbshoppen fylls på inom kort.</p> : null}
+      {!craft.length && !drops.length && !shop?.groups.length ? <p className="mt-10 rounded-2xl bg-[#F5F5F7] p-10 text-center text-sm text-[#6E6E73]">Klubbshoppen fylls på inom kort.</p> : null}
 
       {shop?.groups.map((g) => (
         <section key={g.id} id={g.id} aria-labelledby={`${g.id}-rubrik`} className="scroll-mt-20 pt-10">
