@@ -10,7 +10,7 @@ import { registryAsset } from "@/lib/newwave/clubAssets";
 import { type ClubItem, CLUBS_DIR, queryClubs } from "@/lib/newwave/clubRegistry";
 import { wordmarkSpec } from "@/lib/newwave/clubShop";
 import { colorName } from "@/lib/newwave/colors";
-import { defaultDesign, fitPlacement, METHOD_INFO, type Method, zoneLabel } from "@/lib/newwave/marking";
+import { fitPlacement, METHOD_INFO, type Method, zoneLabel } from "@/lib/newwave/marking";
 import { fileSlug, isDarkHex, type MadeJob, makeJob } from "@/lib/newwave/printFiles";
 import { MOCKUP_VERSION, printFit, printOnPhoto } from "@/lib/newwave/printSurface";
 import { htmlToPdf } from "@/lib/pdf";
@@ -30,7 +30,7 @@ import { knitIdea, type KnitResult } from "@/lib/scarfFlow";
 import { buildPackage, FAST_COLORS, inspect } from "@/lib/scarfProduction";
 import type { ScarfIdea } from "@/lib/scarfRecipes";
 import type { Club } from "@/lib/types";
-import { baseById, baseProduct, catalogProduct, isPocBase } from "./catalog";
+import { baseById, baseProduct, catalogProduct, isPocBase, pocDesign } from "./catalog";
 import { type ClubProductDraft, getDesign } from "./store";
 import type { CatalogProduct, ClubProduct, Design, OrderLine, ProductionJob } from "./types";
 
@@ -439,18 +439,10 @@ export const STANDARD_COLORS: Swatch[] = [
 export const AUTO_COLOR = "auto";
 export const CLUB_COLOR = "klubb";
 
-/**
- * Basplaggets design i POC-flödet. Flödet har två producenter – tryckeriet och stickeriet – och inget broderi
- * (Christophers beslut, november 2026): där baskatalogen broderar (träningsjackan, västen och mössan) trycks märket med
- * transfer i stället, på samma yta och i samma storlek.
- */
-export function pocDesign(base: NwProduct) {
-  const d = defaultDesign(base);
-  return d.method === "brodyr" ? { ...d, method: "transfer" as const } : d;
-}
+export { pocDesign };
 
 /** Tryckkedjan klarar plagg i valfri färg: tryck och transfer – men inte sublimering eller gravyr. */
-export const recolorable = (base: NwProduct) => !["sublimering", "gravyr"].includes(pocDesign(base).method);
+export const recolorable = (base: NwProduct) => !["sublimering", "gravyr"].includes(pocDesign(base)?.method ?? "gravyr");
 
 /** Plaggets egna färger ur Crafts produktdata, när det finns flera. */
 const ownColors = (p: CatalogProduct) => (p.colors && p.colors.length >= 2 ? p.colors.map((c) => ({ name: c.name, hex: c.hex.toUpperCase() })) : null);
@@ -556,7 +548,7 @@ export const garmentMockupUrl = (source: { template: string } | { designId: stri
   `/api/v1/craft/mockup?${"template" in source ? `t=${encodeURIComponent(source.template)}${variantQuery(variant)}` : `d=${encodeURIComponent(source.designId)}`}&c=${encodeURIComponent(clubId)}&p=${encodeURIComponent(sku)}&g=${garment.slice(1).toUpperCase()}&s=${size}&v=${PREVIEW_VERSION}`;
 
 /** Artikeln med plaggets standarddesign (metod, placering och storlek), uträknad en gång per publicering. */
-type Article = { p: CatalogProduct; base?: NwProduct; d?: ReturnType<typeof pocDesign> };
+type Article = { p: CatalogProduct; base?: NwProduct; d?: NonNullable<ReturnType<typeof pocDesign>> };
 
 /**
  * Samma adress som `mockupUrl` i lib/newwave/clubShop.ts – butikens mockupväg med wordmarket som tryck – men med
@@ -645,7 +637,10 @@ export async function clubProductDrafts(design: Design, clubIds: string[], skus:
     const p = catalogProduct(sku);
     if (!p) return [];
     const base = baseProduct(p);
-    return [{ p, base, d: base ? pocDesign(base) : undefined }];
+    const d = base ? pocDesign(base) : undefined;
+    // Ett plagg som bara kan broderas görs inte i flödet.
+    if (base && !d) return [];
+    return [{ p, base, d: d ?? undefined }];
   });
   if (!articles.length) return [];
   const ids = [...new Set(clubIds)];
@@ -878,7 +873,7 @@ export async function fileMockup(design: Design, clubId: string, sku: string, si
   const [club, art] = await Promise.all([pocClub(clubId), designArt(design)]);
   if (!base || !club || !art) return null;
   const color = garment ?? base.garmentHex;
-  const zone = pocDesign(base).zone;
+  const zone = pocDesign(base)?.zone;
   return artMockup(base, await clubArtwork(art, club, color, 1200), size, zone, color);
 }
 
@@ -900,6 +895,7 @@ export async function garmentMockup(source: { template: string } | { design: Des
   const base = p ? baseProduct(p) : undefined;
   if (!base) return null;
   const d = pocDesign(base);
+  if (!d) return null;
   const art = await garmentWordmark(source.template, clubId, garment, d.sizeCm <= SMALL_PRINT_CM, 1200, variant);
   return art ? artMockup(base, art.png, size, d.zone, garment) : null;
 }

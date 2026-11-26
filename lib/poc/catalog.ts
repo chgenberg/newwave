@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { BILAGA2, type Bilaga2Zone } from "@/lib/newwave/bilaga2";
 import { type NwProduct, nwProduct } from "@/lib/newwave/catalog";
+import { defaultDesign, type Design, maxCmIn, METHOD_INFO, zoneMethods, zonesFor } from "@/lib/newwave/marking";
 import { surface } from "@/lib/newwave/printSurface";
 import type { CatalogProduct } from "./types";
 
@@ -102,10 +103,30 @@ const GARMENTS: [sku: string, name: string, baseId: string][] = [
   ["craft-hoodie", "Craft Hoodie", "p004"],
   ["craft-sweatshirt", "Craft Sweatshirt", "poc-sweatshirt"],
   ["craft-joggingbyxor", "Craft Joggingbyxor", "poc-joggingbyxor"],
-  ["craft-traningsjacka", "Craft Träningsjacka", "p006"],
-  ["craft-vast", "Craft Väst", "p010"],
-  ["craft-mossa", "Craft Mössa", "p012"],
+  // Träningsjackan (p006), västen (p010) och mössan (p012) är borta: flödet har inget broderi, och enligt New Waves
+  // Bilaga 2 tar deras bröst och framsida bara broderi. Mössan kan komma tillbaka som stickad hos stickeriet.
 ];
+
+/**
+ * Basplaggets design i flödet. Flödet har två producenter – tryckeriet och stickeriet – och inget broderi
+ * (Christophers beslut, november 2026). Broderar baskatalogen trycks märket med transfer, eller screentryck, på första
+ * ytan som tar det enligt Bilaga 2; tar ingen yta tryck går plagget inte att göra här, och då ger funktionen null.
+ */
+export function pocDesign(base: NwProduct): Design | null {
+  const d = defaultDesign(base);
+  if (d.method !== "brodyr") return d;
+  for (const method of ["transfer", "screentryck"] as const) {
+    const zone = zonesFor(base).find((z) => zoneMethods(base, z.id).includes(method));
+    if (zone) return { ...d, method, colors: METHOD_INFO[method].fixedColors ?? 1, zone: zone.id, sizeCm: Math.min(maxCmIn(base, zone.id), Math.max(2, Math.round(base.printCm))) };
+  }
+  return null;
+}
+
+/** Tryckmetoden som plagget får i flödet, för katalogen och Crafts sidor. */
+export const methodLabelOf = (base: NwProduct) => {
+  const d = pocDesign(base);
+  return d ? METHOD_INFO[d.method].label : "Går inte att trycka";
+};
 
 const SCARF: CatalogProduct = { sku: SCARF_SKU, name: "Stickad klubbhalsduk", kind: "halsduk", priceSek: SCARF_PRICE_SEK, sizes: ["One size"], placeholder: false };
 
@@ -168,7 +189,10 @@ function imported(): CatalogProduct[] | null {
   return null;
 }
 
-export const POC_CATALOG: CatalogProduct[] = imported() ?? [...PLACEHOLDERS, SCARF];
+/** Bara det som går att göra med tryck eller stickning; ett importerat plagg som bara kan broderas visas inte. */
+const printable = (p: CatalogProduct) => p.kind === "halsduk" || !p.baseId || Boolean(baseById(p.baseId) && pocDesign(baseById(p.baseId)!));
+
+export const POC_CATALOG: CatalogProduct[] = (imported() ?? [...PLACEHOLDERS, SCARF]).filter(printable);
 
 export const catalogProduct = (sku: string) => POC_CATALOG.find((p) => p.sku === sku);
 

@@ -34,9 +34,9 @@ const OWN: Own[] = [
     nature: "vår",
     hook: "Ny säsong, samma hjärta",
     line: "Lagom till vårens första träningar och matcher utomhus.",
-    brief: "Fotboll, friidrott och de andra utomhussporterna drar igång. Träningsjacka och t-shirt till spelare, ledare och föräldrar.",
+    brief: "Fotboll, friidrott och de andra utomhussporterna drar igång. T-shirt och hoodie till spelare, ledare och föräldrar.",
     template: "stadion",
-    products: ["p006", "p001"],
+    products: ["p001", "p004"],
   },
   {
     key: "cupsasong",
@@ -60,7 +60,7 @@ const OWN: Own[] = [
     line: "Till lägret, cuperna och de långa kvällarna vid planen.",
     brief: "Läger och sommarträning. Lätta plagg, och något till de svala kvällarna.",
     template: "solnedgang",
-    products: ["p001", "p010"],
+    products: ["p001", "poc-joggingbyxor"],
   },
   {
     key: "sasongsstart-inne",
@@ -82,9 +82,9 @@ const OWN: Own[] = [
     nature: "höst",
     hook: "Regnet kommer – klubbkänslan stannar",
     line: "Varma lager för regniga kvällar på läktaren och vägen till träningen.",
-    brief: "Hösten blir blöt. Träningsjacka, väst och hoodie som håller värmen, och halsduken till läktaren.",
+    brief: "Hösten blir blöt. Hoodie, sweatshirt och joggingbyxor som håller värmen, och halsduken till läktaren.",
     template: "hjalmen",
-    products: ["p006", "p010", "p004"],
+    products: ["p004", "poc-sweatshirt", "poc-joggingbyxor"],
   },
   {
     key: "jul",
@@ -96,7 +96,7 @@ const OWN: Own[] = [
     line: "Till spelaren, ledaren och den som står på läktaren varje helg.",
     brief: "Julklapparna säljer i december: halsduk, mössa och hoodie i klubbens färger.",
     template: "lagerkrans",
-    products: ["p012", "p004"],
+    products: ["poc-sweatshirt", "p004"],
   },
 ];
 
