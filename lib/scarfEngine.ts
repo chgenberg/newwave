@@ -3,7 +3,7 @@ import path from "node:path";
 import { type Font, parse } from "opentype.js";
 import sharp, { type OverlayOptions } from "sharp";
 import { MIN_TEXT_MM, ROW_H_MM, SCARF, STITCH_W_MM, deltaE, hexToRgb, type Rgb } from "./scarf";
-import { machineIndex } from "./scarfMachine";
+import { foldBands, fringeOf, machineIndex, plainEnds } from "./scarfMachine";
 import { ASPECT, BITMAPS, EDGE_MM, FONT_FILES, ICON_BOX, ICONS, L_MM, SIGN_FONT_FILE, SIGN_PAD, END_MM, W_MM, bandRows, type Content, type Face, type Fill, type FontKey, type NordicBand, type ScarfDesign, type Section, type Stripe, type TextStyle, type Yarn } from "./scarfDesign";
 
 /**
@@ -26,7 +26,14 @@ const PX_X = (ROWS * SS) / L_MM;
 const PX_Y = (SIDE * SS) / W_MM;
 
 export type KnitAssets = { crest?: Buffer | null; portrait?: Buffer | null; art?: Buffer | null };
-export type FaceKnit = { cells: Uint8Array; protect: Uint8Array; texts: number[]; margins: number[] };
+export type FaceKnit = {
+  cells: Uint8Array;
+  protect: Uint8Array;
+  texts: number[];
+  margins: number[];
+  /** Fransens garn vid sidans första och sista rad, som den ritas liggande. Saknas: varje fransstrå får maskans färg. */
+  fringe?: [number, number];
+};
 export type Knitted = {
   /** 240 × 1210 maskor, rad för rad som maskinen stickar dem. */
   cells: Uint8Array;
@@ -38,6 +45,8 @@ export type Knitted = {
   /** Minsta avståndet i mm mellan text eller sköld och en långsida. */
   minMarginMm: number | null;
   backReads: "hold-up" | "turn-over";
+  /** Fransens garn i varje ände: vid rad 1 och vid rad 1210. */
+  fringe: [number, number];
 };
 
 // --- Typsnitt ----------------------------------------------------------------
@@ -688,16 +697,8 @@ export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, o
   });
   for (const f of faces) for (let i = 0; i < f.cells.length; i++) f.cells[i] = remap[Math.min(f.cells[i], full.length - 1)];
 
-  // Raderna i ändarna stickas i ett enda garn runt hela tuben: framsidans bottenfärg, den som har flest maskor.
-  const count = new Uint32Array(palette.length);
-  for (let i = END * SIDE; i < (ROWS - END) * SIDE; i++) count[faces[0].cells[i]]++;
-  const ground = count.indexOf(Math.max(...count));
-  for (const f of faces) {
-    for (const r0 of [0, ROWS - END]) {
-      f.cells.fill(ground, r0 * SIDE, (r0 + END) * SIDE);
-      f.protect.fill(0, r0 * SIDE, (r0 + END) * SIDE);
-    }
-  }
+  // Ändraderna stickas enfärgade, på varje sida i färgen mönstret har närmast, så att kanten löper ut till fransen.
+  const ends = plainEnds([faces[0].cells, faces[1].cells], [faces[0].protect, faces[1].protect]);
 
   const cells = new Uint8Array(NEEDLES * ROWS);
   const protect = new Uint8Array(NEEDLES * ROWS);
@@ -710,9 +711,25 @@ export async function knitDesign(design: ScarfDesign, assets: KnitAssets = {}, o
       }
     }
   });
+  // Samma färg på båda sidor om vikkanterna. Sidorna läses sedan tillbaka ur rutnätet, så att förhandsbilderna och
+  // kontrollerna visar det som stickas.
+  foldBands(cells, protect);
+  faces.forEach((f, side) => {
+    for (let r = 0; r < ROWS; r++) {
+      for (let s = 0; s < SIDE; s++) {
+        const at = machineIndex(side as 0 | 1, r, s, backReads);
+        f.cells[r * SIDE + s] = cells[at];
+        f.protect[r * SIDE + s] = protect[at];
+      }
+    }
+  });
+  // Fransen i varje ände har framsidans färg där. Baksidan som hålls upp har rad 1210 vid sin första rad.
+  const fringe = fringeOf(ends);
+  faces[0].fringe = fringe;
+  faces[1].fringe = backReads === "hold-up" ? [fringe[1], fringe[0]] : fringe;
   const texts = faces.flatMap((f) => f.texts);
   const margins = faces.flatMap((f) => f.margins);
-  return { cells, protect, palette, faces, minTextMm: texts.length ? Math.min(...texts) : null, minMarginMm: margins.length ? Math.min(...margins) : null, backReads };
+  return { cells, protect, palette, faces, minTextMm: texts.length ? Math.min(...texts) : null, minMarginMm: margins.length ? Math.min(...margins) : null, backReads, fringe };
 }
 
 // --- Förhandsvisning ---------------------------------------------------------
@@ -757,7 +774,8 @@ export async function facePreview(face: FaceKnit, palette: string[], width = 240
     [1, ROWS - 1],
   ] as const) {
     for (let k = 0; k < n; k++) {
-      const hex = palette[face.cells[r * SIDE + Math.min(SIDE - 1, Math.floor(((k + 0.5) * SIDE) / n))]] ?? palette[0];
+      const yarn = face.fringe ? face.fringe[end] : face.cells[r * SIDE + Math.min(SIDE - 1, Math.floor(((k + 0.5) * SIDE) / n))];
+      const hex = palette[yarn] ?? palette[0];
       const y = ((k + 0.5) * h) / n;
       const len = FRINGE_PX * (0.86 + 0.14 * Math.abs(Math.sin(k * 12.9898 + end * 4.1)));
       const sway = Math.sin(k * 7.31 + end) * 5;

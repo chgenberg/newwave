@@ -5,7 +5,7 @@ import { SCARF } from "./scarf";
  * Varje sektion har en fyllning (ränder, rutor, bårder …) och kan bära ett innehåll (text, sköld, ikon, trupp, porträtt, autografer).
  * Motorn i scarfEngine.ts gör om en design till maskor – inget i den här filen behöver servern.
  *
- * Mått är i millimeter på den liggande halsduken: x längs de 135 cm, y tvärs över de 18 cm.
+ * Mått är i millimeter på den färdiga, ångtumlade halsduken liggande: x längs de 130 cm, y tvärs över de 18 cm.
  * De yttersta 50 raderna i varje ände är alltid enfärgade (END_MM) – sömsmån och maskinens egna rader; en design ritas på längden däremellan.
  * Färger är alltid index i designens garnlista (högst sju).
  */

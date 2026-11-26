@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { nearestPantone } from "./pantone";
 import { CELLS, MIN_TEXT_MM, SCARF, STITCH_W_MM, hexToRgb } from "./scarf";
 import { facePreview, sheetPreview, type Knitted } from "./scarfEngine";
-import { bmpLines, patternFile, tubeBmp } from "./scarfMachine";
+import { FOLD_NEEDLES, bmpLines, patternFile, tubeBmp } from "./scarfMachine";
 import { tubeMismatch } from "./scarfTube";
 
 /**
@@ -96,15 +96,22 @@ export function inspect(knit: Knitted): ProductionReport {
   const fast = maxColors <= FAST_COLORS;
   // Filen viks till en tub och sidorna läses av från utsidan – de ska vara de sidor som ritades, maska för maska.
   const tube = tubeMismatch(knit);
-  // Raderna i ändarna: varje rad i ett enda garn, runt hela tuben.
-  const plain = (r: number) => cells.subarray(r * W, (r + 1) * W).every((v) => v === cells[r * W]);
-  const ends = Array.from({ length: SCARF.endRows }, (_, k) => plain(k) && plain(ROWS - 1 - k)).every(Boolean);
-  // Ränder runt varvet: fram- och baksidan är samma varv, så där ena sidan byter från en hel färg till en annan ska den
-  // andra byta på samma varv. Annars slutar randen vid vikkanten. Övergången från ändraderna räknas inte.
+  // Nålarna närmast vikkanterna har samma färg fram och bak; de räknas inte när en sida ska vara enfärgad.
+  const K = FOLD_NEEDLES;
+  /** Sidans färg på varvet om den är en enda innanför vikbanden, annars -1. */
   const solidAt = (r: number, side: number) => {
-    const row = cells.subarray(r * W + side * SCARF.side, r * W + side * SCARF.side + SCARF.side);
+    const row = cells.subarray(r * W + side * SCARF.side + K, r * W + side * SCARF.side + SCARF.side - K);
     return row.every((v) => v === row[0]) ? row[0] : -1;
   };
+  // Raderna i ändarna: enfärgade på varje sida.
+  const ends = Array.from({ length: SCARF.endRows }, (_, k) => [k, ROWS - 1 - k].every((r) => solidAt(r, 0) >= 0 && solidAt(r, 1) >= 0)).every(Boolean);
+  // Vikkanterna: på varje varv har de närmaste nålarna på båda sidor om kanten samma färg.
+  const same = (r: number, cols: number[]) => cols.every((c) => cells[r * W + c] === cells[r * W + cols[0]]);
+  const band = (from: number) => Array.from({ length: K * 2 }, (_, k) => (from + k + W) % W);
+  let folds = 0;
+  for (let r = 0; r < ROWS; r++) if (same(r, band(SCARF.side - K)) && same(r, band(W - K))) folds++;
+  // Ränder runt varvet: fram- och baksidan är samma varv, så där ena sidan byter från en hel färg till en annan ska den
+  // andra byta på samma varv. Annars slutar randen vid vikkanten. Övergången från ändraderna räknas inte.
   let ringEdges = 0;
   let brokenEdges = 0;
   for (let r = SCARF.endRows + 1; r < ROWS - SCARF.endRows; r++) {
@@ -169,7 +176,7 @@ export function inspect(knit: Knitted): ProductionReport {
       level: ends ? "ok" : "varning",
       title: ends ? `De ${SCARF.endRows} första och sista raderna är enfärgade` : "Mönster i ändraderna",
       note: ends
-        ? "Änden klipps och sömsmånen för fransen sys in – cirka 3 cm syns på den färdiga halsduken."
+        ? "På varje sida i färgen mönstret har närmast, så att kanten löper ut till fransen. Änden klipps och sömsmånen sys in."
         : `De ${SCARF.endRows} första och sista raderna ska vara enfärgade: stickeriets sömsmån och maskinens egna rader – skicka inte filen till stickeriet.`,
     },
     {
@@ -181,6 +188,15 @@ export function inspect(knit: Knitted): ProductionReport {
         : ringEdges
           ? "Där en rand byter färg på ena sidan byter den på samma varv på den andra, så ränderna går runt halsduken."
           : "Inget varv byter från en hel färg till en annan.",
+    },
+    {
+      id: "fold",
+      level: folds === ROWS ? "ok" : "varning",
+      title: folds === ROWS ? "Samma färg på båda sidor om vikkanten" : "Olika färg vid vikkanten",
+      note:
+        folds === ROWS
+          ? `${K} nålar på var sida om varje vikkant har samma färg, så det syns inte om tuben viks lite snett.`
+          : `${(ROWS - folds).toLocaleString("sv-SE")} varv har olika färg på var sida om vikkanten.`,
     },
     { id: "seam", level: "info", title: "Varvskarven i nederkanten", note: "Varvet börjar och slutar i halsdukens nedre vikkant, så hacket i tvärränder syns minst." },
     {
@@ -219,6 +235,13 @@ export const slug = (s: string) =>
 
 export type PackageInput = { club: string; title: string; why?: string; front: string; back: string; consent?: string | null; knit: Knitted; report: ProductionReport; date: string; pdf?: (html: string) => Promise<Buffer> };
 
+/** Fransens färg i ord: samma garn i båda ändar, eller ett per ände. */
+function fringeText(knit: Knitted) {
+  const name = (i: number) => `garn ${i + 1} (${knit.palette[i]})`;
+  const [a, b] = knit.fringe;
+  return a === b ? `${name(a)} i båda ändar, samma färg som änden` : `${name(a)} vid rad 1 och ${name(b)} vid rad ${ROWS}, samma färg som änden`;
+}
+
 export async function buildPackage(input: PackageInput): Promise<{ files: PackageFile[]; base: string }> {
   const { knit, report } = input;
   const base = `${slug(input.club)}-${slug(input.title)}`;
@@ -233,7 +256,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
     club: input.club,
     design: input.title,
     date: input.date,
-    machine: { factory: SCARF.factory, model: SCARF.machine, software: SCARF.software, needles: W, rows: ROWS, widthMm: SCARF.widthMm, lengthMm: SCARF.lengthMm, finishedMm: SCARF.finishedMm, tube: true },
+    machine: { factory: SCARF.factory, model: SCARF.machine, software: SCARF.software, needles: W, rows: ROWS, widthMm: SCARF.widthMm, lengthMm: SCARF.lengthMm, finishedMm: SCARF.finishedMm, fromMachineMm: [SCARF.machineMm.length, SCARF.machineMm.width], tube: true },
     layout: {
       format: `en BMP för hela halsduken, ${W} × ${ROWS}, 8 bitar, i garnernas egna färger (färg 1 är garn 1)`,
       front: `nål 1–${SCARF.side}, samma läge som stickeriets egen BMP`,
@@ -243,6 +266,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
       clearEdge: `text och märken ligger minst ${SCARF.edgeNeedles} nålar från vikkanterna; ränder går runt hela varvet`,
     },
     yarns: report.yarns.map((y) => ({ yarn: y.index, hex: y.hex, pantone: y.pantone, stitches: y.stitches, share: Math.round(y.share * 1000) / 1000 })),
+    fringe: { row1: { yarn: knit.fringe[0] + 1, hex: knit.palette[knit.fringe[0]] }, [`row${ROWS}`]: { yarn: knit.fringe[1] + 1, hex: knit.palette[knit.fringe[1]] } },
     system: report.maxColorsPerRow <= FAST_COLORS ? "dubbel" : "enkel",
     maxColorsPerRow: report.maxColorsPerRow,
     longestFloatMm: report.longestFloatMm,
@@ -270,7 +294,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
     `Skapad ${input.date} av Halsduksagenten`,
     "",
     `Maskin: ${SCARF.machine} hos ${SCARF.factory}   Mönsterprogram: ${SCARF.software}`,
-    `Storlek: ${W} nålar × ${ROWS} varv, stickad cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm, färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.`,
+    `Storlek: ${W} nålar × ${ROWS} varv, cirka ${SCARF.machineMm.length / 10} × ${SCARF.machineMm.width / 10} cm ur maskinen, ångtumlad till cirka ${SCARF.finishedMm / 10} × ${SCARF.widthMm / 10} cm plus fransar. Text och märken är ritade för de färdiga måtten.`,
     "",
     "Mönsterfilen",
     ...bmpLines(knit.backReads).map((l) => (l.startsWith("  ") ? l : `  ${l}`)),
@@ -278,6 +302,7 @@ export async function buildPackage(input: PackageInput): Promise<{ files: Packag
     "",
     "Garner (Pantone är närmaste referens – välj garn som matchar)",
     ...report.yarns.map((y) => `  Garn ${y.index}: ${y.hex}  ≈ ${y.pantone.padEnd(16)}  ${String(y.stitches).padStart(7)} maskor  ${pct(y.share).padStart(7)}`),
+    `  Frans: ${fringeText(knit)}.`,
     "",
     "Kontroll",
     ...report.checks.map((c) => `  ${c.level === "ok" ? "OK " : c.level === "info" ? "–  " : "!  "}${c.title}. ${c.note}`),
@@ -337,6 +362,7 @@ ${report.yarns.map((y) => `<tr><td><span class="sw" style="background:${y.hex}">
 <tr><td>Mönster</td><td>${W} nålar × ${ROWS} varv, tub. Färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.</td></tr>
 <tr><td>System</td><td>${report.maxColorsPerRow <= FAST_COLORS ? `Högst ${report.maxColorsPerRow} garner per varv – kan köras i dubbelsystem` : `Upp till ${report.maxColorsPerRow} garner per varv – enkelsystem`}</td></tr>
 <tr><td>Fil</td><td>En BMP för hela halsduken, ${W} × ${ROWS}, i garnernas egna färger</td></tr>
+<tr><td>Frans</td><td>${html(fringeText(knit))}</td></tr>
 ${input.consent ? `<tr><td>Godkännande</td><td>${html(input.consent)}</td></tr>` : ""}
 </table>
 </div><div>

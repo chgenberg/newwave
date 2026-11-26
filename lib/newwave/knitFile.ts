@@ -1,6 +1,6 @@
 import sharp, { type OverlayOptions } from "sharp";
 import { SCARF, checkGrid, colorCsv, hexToRgb, indexOfNear, readMe } from "@/lib/scarf";
-import { bmpLines, plainEnds, toMachine, tubeBmp } from "@/lib/scarfMachine";
+import { bmpLines, finishTube, tubeBmp } from "@/lib/scarfMachine";
 
 /**
  * Stickfilerna till en jacquardhalsduk i hubbens leverans, gjorda på servern: en BMP för hela halsduken i garnernas
@@ -68,8 +68,9 @@ export async function knitScarf(input: KnitInput): Promise<Knit> {
   [front, back].forEach((f, k) => {
     for (let r = 0; r < SCARF.rows; r++) for (let y = 0; y < SCARF.side; y++) faces[k][r * SCARF.side + y] = near(f.data, (y * SCARF.rows + r) * 3);
   });
-  plainEnds(faces);
-  const cells = toMachine(faces);
+  // Enfärgade ändrader och samma färg på båda sidor om vikkanterna; förhandsbilden visar sidorna som de blir stickade.
+  const done = finishTube(faces);
+  const cells = done.cells;
   const { counts } = checkGrid(cells, palette, Math.min(front.capMm, back.capMm));
   const pal = palette.map(hexToRgb);
   const bmp = Buffer.from(tubeBmp(cells, palette));
@@ -83,7 +84,7 @@ export async function knitScarf(input: KnitInput): Promise<Knit> {
       .png()
       .toBuffer();
   };
-  const [f, b] = await Promise.all(faces.map(view));
+  const [f, b] = await Promise.all(done.faces.map(view));
   const gap = 16;
   const preview = await sharp({ create: { width: SCARF.lengthMm, height: SCARF.widthMm * 2 + gap, channels: 3, background: "#FFFFFF" } })
     .composite([

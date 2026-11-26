@@ -64,7 +64,7 @@ const W = SCARF.widthMm;
 
 type Ctx = CanvasRenderingContext2D;
 
-/** Draws one side lying flat: x runs along the 135 cm length, y across the 18 cm width (millimetres). */
+/** Draws one side lying flat: x runs along the 130 cm finished length, y across the 18 cm width (millimetres). */
 function drawSide(ctx: Ctx, side: SideSpec, input: ComposeInput, texts: number[]) {
   const col = (i: number) => input.palette[i] ?? input.palette[0];
   ctx.save();

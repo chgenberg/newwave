@@ -15,13 +15,15 @@ export const SCARF = {
   endRows: 50,
   /** Needles next to each fold that text, crests and edge stripes stay clear of. */
   edgeNeedles: 10,
-  /** Stickad längd: 1210 varv. */
-  lengthMm: 1350,
   /**
-   * Färdig längd utan fransar, enligt stickeriet: änden rullar sig och klipps, och sömsmånen för fransen sys in, så
-   * ungefär 2,5 cm försvinner i varje ände. Det är den längd kunden och fotona ska få höra.
+   * Halsdukens längd när den är klar, utan fransar. Stickeriet: den kommer ur maskinen cirka 170 × 24 cm och ångtumlas
+   * till cirka 130 × 18 cm, så text och märken ritas för de färdiga måtten. Alla mått i mönstret räknas på dem.
    */
+  lengthMm: 1300,
+  /** Samma längd, i det som kunden, agenterna och fotona får höra. */
   finishedMm: 1300,
+  /** Måtten när halsduken kommer ur maskinen, före ångtumlingen. */
+  machineMm: { length: 1700, width: 240 },
   widthMm: 180,
   maxColors: 7,
   factory: "Seger",
@@ -190,7 +192,7 @@ export function readMe(opts: { club: string; palette: string[]; counts: number[]
     `Skapad ${opts.date}`,
     "",
     `Maskin: ${SCARF.machine}   Mönsterprogram: ${SCARF.software}`,
-    `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} varv, stickad cirka ${SCARF.lengthMm / 10} × ${SCARF.widthMm / 10} cm, färdig cirka ${SCARF.finishedMm / 10} cm plus fransar.`,
+    `Storlek: ${SCARF.needles} nålar × ${SCARF.rows} varv, cirka ${SCARF.machineMm.length / 10} × ${SCARF.machineMm.width / 10} cm ur maskinen, ångtumlad till cirka ${SCARF.finishedMm / 10} × ${SCARF.widthMm / 10} cm plus fransar.`,
     "",
     ...opts.layout,
     "",

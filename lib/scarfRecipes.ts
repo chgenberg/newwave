@@ -1,5 +1,5 @@
 import { GREY_YARNS, SCARF, deltaE, hexToRgb } from "./scarf";
-import { EDGE_MM, mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type SignStroke, type Stripe, type Yarn } from "./scarfDesign";
+import { EDGE_MM, END_MM, L_MM, mirrored, nordicMm, type BitmapId, type Content, type Face, type Fill, type FontKey, type IconId, type NordicBand, type ScarfDesign, type Section, type SignStroke, type Stripe, type Yarn } from "./scarfDesign";
 import type { Club } from "./types";
 
 /**
@@ -176,7 +176,10 @@ export function buildDesign(club: ScarfClub, idea: ScarfIdea, has: { crest: bool
       break;
 
     case "bar": {
-      const bars: Section = { mm: 560, fill: { kind: "bars", stripes: stripes([I, 80], [G, 80]) } };
+      // Tre och en halv rand-par i varje ände och cirka 24 cm i mitten för märket eller texten, räknat på längden mellan
+      // de enfärgade ändraderna – så att mitten inte krymper när halsduken eller ändraderna ändras.
+      const stripe = (L_MM - END_MM * 2 - 240) / 2 / 7;
+      const bars: Section = { mm: stripe * 7, fill: { kind: "bars", stripes: stripes([I, stripe], [G, stripe]) } };
       front = { sections: mirrored([bars], wantsCrest ? [{ fill: solid(G), content: crestMark(G), pad: [16, 14] }] : [{ fill: solid(G), content: text(fm, "", I) }]) };
       back = { sections: mirrored([bars], [{ fill: solid(G), content: { kind: "text", lines: [bm.length <= 6 ? bm : year], font, yarn: I, stretch: true }, pad: [8, 30] }]) };
       break;

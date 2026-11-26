@@ -69,12 +69,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.579
+          "share": 0.57
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.367
+          "share": 0.376
         },
         {
           "hex": "#B3B5B8",
@@ -89,7 +89,7 @@
         {
           "hex": "#065798",
           "pantone": "PANTONE 4152 C",
-          "share": 0.049
+          "share": 0.05
         },
         {
           "hex": "#434343",
@@ -198,22 +198,22 @@
         {
           "hex": "#E40723",
           "pantone": "PANTONE 185 C",
-          "share": 0.52
+          "share": 0.501
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.373
+          "share": 0.389
         },
         {
           "hex": "#F9E404",
           "pantone": "PANTONE 102 C",
-          "share": 0.018
+          "share": 0.019
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.089
+          "share": 0.091
         },
         {
           "hex": "#9E8F0D",
@@ -320,12 +320,12 @@
         {
           "hex": "#CC3433",
           "pantone": "PANTONE 711 C",
-          "share": 0.556
+          "share": 0.543
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.4
+          "share": 0.413
         },
         {
           "hex": "#A48A62",
@@ -435,12 +435,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.575
+          "share": 0.558
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.373
+          "share": 0.39
         },
         {
           "hex": "#A81329",
@@ -450,7 +450,7 @@
         {
           "hex": "#A2A2A2",
           "pantone": "PANTONE 4276 C",
-          "share": 0.002
+          "share": 0.003
         },
         {
           "hex": "#4F4F4F",
@@ -557,17 +557,17 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.617
+          "share": 0.537
         },
         {
           "hex": "#084613",
           "pantone": "PANTONE 3537 C",
-          "share": 0.186
+          "share": 0.177
         },
         {
           "hex": "#C48A3D",
           "pantone": "PANTONE 7510 C",
-          "share": 0.197
+          "share": 0.286
         },
         {
           "hex": "#E0C3A1",
@@ -577,7 +577,7 @@
       ],
       "system": "dubbel",
       "maxColorsPerRow": 4,
-      "minTextMm": 39,
+      "minTextMm": 35,
       "ok": true,
       "consent": null,
       "art": false,
@@ -672,17 +672,17 @@
         {
           "hex": "#542B8A",
           "pantone": "PANTONE 268 C",
-          "share": 0.553
+          "share": 0.545
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.382
+          "share": 0.388
         },
         {
           "hex": "#F5A613",
           "pantone": "PANTONE 137 C",
-          "share": 0.065
+          "share": 0.067
         }
       ],
       "system": "dubbel",
@@ -782,12 +782,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.562
+          "share": 0.542
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.401
+          "share": 0.42
         },
         {
           "hex": "#DE3235",
@@ -807,7 +807,7 @@
       ],
       "system": "enkel",
       "maxColorsPerRow": 5,
-      "minTextMm": 41,
+      "minTextMm": 38,
       "ok": true,
       "consent": null,
       "art": true,
@@ -905,12 +905,12 @@
         {
           "hex": "#083470",
           "pantone": "PANTONE 294 C",
-          "share": 0.535
+          "share": 0.512
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.426
+          "share": 0.451
         },
         {
           "hex": "#7488AC",
@@ -1016,22 +1016,22 @@
         {
           "hex": "#144324",
           "pantone": "PANTONE 2411 C",
-          "share": 0.51
+          "share": 0.495
         },
         {
           "hex": "#FBCC04",
           "pantone": "PANTONE 116 C",
-          "share": 0.454
+          "share": 0.469
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.035
+          "share": 0.036
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 65,
+      "minTextMm": 62,
       "ok": true,
       "consent": null,
       "art": true,
@@ -1133,12 +1133,12 @@
         {
           "hex": "#1C4475",
           "pantone": "PANTONE 4154 C",
-          "share": 0.569
+          "share": 0.556
         },
         {
           "hex": "#F8DF05",
           "pantone": "PANTONE 102 C",
-          "share": 0.41
+          "share": 0.423
         },
         {
           "hex": "#083186",
@@ -1153,7 +1153,7 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.018
+          "share": 0.017
         }
       ],
       "system": "dubbel",
@@ -1259,17 +1259,17 @@
         {
           "hex": "#04AB4D",
           "pantone": "PANTONE 2257 C",
-          "share": 0.515
+          "share": 0.498
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.399
+          "share": 0.415
         },
         {
           "hex": "#C6952D",
           "pantone": "PANTONE 1245 C",
-          "share": 0.072
+          "share": 0.073
         },
         {
           "hex": "#0A0A0A",
@@ -1375,22 +1375,22 @@
         {
           "hex": "#332D88",
           "pantone": "PANTONE 2370 C",
-          "share": 0.565
+          "share": 0.545
         },
         {
           "hex": "#FBDE06",
           "pantone": "PANTONE Yellow C",
-          "share": 0.381
+          "share": 0.401
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.054
+          "share": 0.055
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 43,
+      "minTextMm": 41,
       "ok": true,
       "consent": null,
       "art": true,
@@ -1487,17 +1487,17 @@
         {
           "hex": "#EC191F",
           "pantone": "PANTONE 179 C",
-          "share": 0.494
+          "share": 0.476
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.459
+          "share": 0.477
         },
         {
           "hex": "#FABEC0",
           "pantone": "PANTONE 4064 C",
-          "share": 0.001
+          "share": 0.002
         },
         {
           "hex": "#F2696C",
@@ -1599,17 +1599,17 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.573
+          "share": 0.553
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.427
+          "share": 0.447
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 2,
-      "minTextMm": 53,
+      "minTextMm": 50,
       "ok": true,
       "consent": null,
       "art": true,
@@ -1704,22 +1704,22 @@
         {
           "hex": "#051B6D",
           "pantone": "PANTONE 662 C",
-          "share": 0.509
+          "share": 0.495
         },
         {
           "hex": "#FAE705",
           "pantone": "PANTONE 102 C",
-          "share": 0.405
+          "share": 0.415
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.087
+          "share": 0.09
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 38,
+      "minTextMm": 36,
       "ok": true,
       "consent": null,
       "art": false,
@@ -1821,22 +1821,22 @@
         {
           "hex": "#0C5542",
           "pantone": "PANTONE 7729 C",
-          "share": 0.534
+          "share": 0.516
         },
         {
           "hex": "#F8D105",
           "pantone": "PANTONE 7405 C",
-          "share": 0.37
+          "share": 0.389
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.045
+          "share": 0.04
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.051
+          "share": 0.055
         }
       ],
       "system": "dubbel",
@@ -1935,7 +1935,7 @@
         {
           "hex": "#8B6047",
           "pantone": "PANTONE 2469 C",
-          "share": 0.573
+          "share": 0.482
         },
         {
           "hex": "#FFFFFF",
@@ -1945,7 +1945,7 @@
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.223
+          "share": 0.314
         },
         {
           "hex": "#A0A0A0",
@@ -2043,17 +2043,17 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.561
+          "share": 0.542
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.439
+          "share": 0.458
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 2,
-      "minTextMm": 38,
+      "minTextMm": 36,
       "ok": true,
       "consent": null,
       "art": true,
@@ -2156,12 +2156,12 @@
         {
           "hex": "#0464B2",
           "pantone": "PANTONE 2144 C",
-          "share": 0.498
+          "share": 0.473
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.464
+          "share": 0.489
         },
         {
           "hex": "#FBDE05",
@@ -2273,12 +2273,12 @@
         {
           "hex": "#053466",
           "pantone": "PANTONE 648 C",
-          "share": 0.536
+          "share": 0.518
         },
         {
           "hex": "#F8CF08",
           "pantone": "PANTONE 109 C",
-          "share": 0.405
+          "share": 0.422
         },
         {
           "hex": "#616F43",
@@ -2298,7 +2298,7 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.048
+          "share": 0.047
         }
       ],
       "system": "enkel",
@@ -2400,17 +2400,17 @@
         {
           "hex": "#0BADED",
           "pantone": "PANTONE 2995 C",
-          "share": 0.525
+          "share": 0.509
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.399
+          "share": 0.413
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.07
+          "share": 0.071
         },
         {
           "hex": "#FADE06",
@@ -2425,7 +2425,7 @@
       ],
       "system": "enkel",
       "maxColorsPerRow": 5,
-      "minTextMm": 57,
+      "minTextMm": 54,
       "ok": true,
       "consent": null,
       "art": true,
@@ -2522,12 +2522,12 @@
         {
           "hex": "#F7D434",
           "pantone": "PANTONE 7405 C",
-          "share": 0.505
+          "share": 0.48
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.457
+          "share": 0.482
         },
         {
           "hex": "#FFFFFF",
@@ -2633,22 +2633,22 @@
         {
           "hex": "#0864AC",
           "pantone": "PANTONE 3506 C",
-          "share": 0.422
+          "share": 0.46
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.238
+          "share": 0.27
         },
         {
           "hex": "#EC1B32",
           "pantone": "PANTONE 1788 C",
-          "share": 0.34
+          "share": 0.27
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 34,
+      "minTextMm": 31,
       "ok": true,
       "consent": null,
       "art": false,
@@ -2747,12 +2747,12 @@
         {
           "hex": "#047BC3",
           "pantone": "PANTONE 3005 C",
-          "share": 0.544
+          "share": 0.523
         },
         {
           "hex": "#FAE21A",
           "pantone": "PANTONE 107 C",
-          "share": 0.384
+          "share": 0.403
         },
         {
           "hex": "#0A0A0A",
@@ -2772,12 +2772,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.059
+          "share": 0.061
         }
       ],
       "system": "enkel",
       "maxColorsPerRow": 6,
-      "minTextMm": 58,
+      "minTextMm": 54,
       "ok": true,
       "consent": null,
       "art": true,
@@ -2874,17 +2874,17 @@
         {
           "hex": "#FBD405",
           "pantone": "PANTONE Yellow 012 C",
-          "share": 0.492
+          "share": 0.455
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.429
+          "share": 0.462
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.079
+          "share": 0.083
         }
       ],
       "system": "dubbel",
@@ -2991,12 +2991,12 @@
         {
           "hex": "#055B94",
           "pantone": "PANTONE 6126 C",
-          "share": 0.53
+          "share": 0.508
         },
         {
           "hex": "#F9E006",
           "pantone": "PANTONE 102 C",
-          "share": 0.384
+          "share": 0.411
         },
         {
           "hex": "#739556",
@@ -3011,12 +3011,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.084
+          "share": 0.08
         }
       ],
-      "system": "enkel",
-      "maxColorsPerRow": 5,
-      "minTextMm": 67,
+      "system": "dubbel",
+      "maxColorsPerRow": 4,
+      "minTextMm": 63,
       "ok": true,
       "consent": null,
       "art": false,
@@ -3115,12 +3115,12 @@
         {
           "hex": "#E40925",
           "pantone": "PANTONE 185 C",
-          "share": 0.501
+          "share": 0.476
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.422
+          "share": 0.445
         },
         {
           "hex": "#F3B6B7",
@@ -3140,7 +3140,7 @@
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.07
+          "share": 0.071
         }
       ],
       "system": "enkel",
@@ -3235,12 +3235,12 @@
         {
           "hex": "#1C3F98",
           "pantone": "PANTONE 293 C",
-          "share": 0.523
+          "share": 0.507
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.449
+          "share": 0.465
         },
         {
           "hex": "#0A0A0A",
@@ -3250,7 +3250,7 @@
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 54,
+      "minTextMm": 51,
       "ok": true,
       "consent": null,
       "art": true,
@@ -3347,27 +3347,27 @@
         {
           "hex": "#D02C24",
           "pantone": "PANTONE 7626 C",
-          "share": 0.429
+          "share": 0.452
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.564
+          "share": 0.524
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.006
+          "share": 0.017
         },
         {
           "hex": "#F3C41D",
           "pantone": "PANTONE 7406 C",
-          "share": 0.002
+          "share": 0.007
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 4,
-      "minTextMm": 30,
+      "minTextMm": 65,
       "ok": true,
       "consent": null,
       "art": false,
@@ -3464,22 +3464,22 @@
         {
           "hex": "#0633AC",
           "pantone": "PANTONE 286 C",
-          "share": 0.327
+          "share": 0.345
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.514
+          "share": 0.484
         },
         {
           "hex": "#4E6EC5",
           "pantone": "PANTONE 6102 C",
-          "share": 0.159
+          "share": 0.171
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 84,
+      "minTextMm": 79,
       "ok": true,
       "consent": null,
       "art": false,
@@ -3567,12 +3567,12 @@
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.487
+          "share": 0.515
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.513
+          "share": 0.485
         },
         {
           "hex": "#838294",
@@ -3582,7 +3582,7 @@
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 20,
+      "minTextMm": 18,
       "ok": true,
       "consent": null,
       "art": false,
@@ -3680,17 +3680,17 @@
         {
           "hex": "#0A5643",
           "pantone": "PANTONE 7729 C",
-          "share": 0.517
+          "share": 0.488
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.404
+          "share": 0.429
         },
         {
           "hex": "#8FAEA5",
           "pantone": "PANTONE 5575 C",
-          "share": 0.079
+          "share": 0.083
         }
       ],
       "system": "dubbel",
@@ -3794,17 +3794,17 @@
         {
           "hex": "#F0D70C",
           "pantone": "PANTONE 3965 C",
-          "share": 0.605
+          "share": 0.59
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.327
+          "share": 0.342
         },
         {
           "hex": "#057465",
           "pantone": "PANTONE 562 C",
-          "share": 0.064
+          "share": 0.065
         },
         {
           "hex": "#A29109",
@@ -3814,7 +3814,7 @@
         {
           "hex": "#3D3704",
           "pantone": "PANTONE 5747 C",
-          "share": 0.002
+          "share": 0.001
         }
       ],
       "system": "enkel",
@@ -3910,22 +3910,22 @@
         {
           "hex": "#E31A1A",
           "pantone": "PANTONE 485 C",
-          "share": 0.469
+          "share": 0.452
         },
         {
           "hex": "#FFFFFF",
           "pantone": "White",
-          "share": 0.444
+          "share": 0.458
         },
         {
           "hex": "#0A0A0A",
           "pantone": "PANTONE 419 C",
-          "share": 0.087
+          "share": 0.09
         }
       ],
       "system": "dubbel",
       "maxColorsPerRow": 3,
-      "minTextMm": 26,
+      "minTextMm": 23,
       "ok": true,
       "consent": null,
       "art": false,
