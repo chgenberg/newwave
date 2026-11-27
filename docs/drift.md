@@ -149,6 +149,13 @@ anteckningar, och spårningsnumren tas bort (de leder till adressen hos fraktbol
 ordern och visar alltså inte heller något. Ordern, raderna, beloppen, klubben och datumen finns kvar för statistiken.
 Tidslinjen får en rad om när och varför uppgifterna togs bort.
 
+**Klubbarnas adresser.** Mejlutkasten till klubbarna går till föreningens egna adresser – info@, kansli@, styrelsen@
+och liknande på klubbens domän (`lib/poc/clubEmail.ts`) – aldrig till personliga adresser. Registrets paket är publikt
+och har inga kontaktuppgifter, så adresserna ligger i databasen (`poc_club_emails`). De läggs in från datorn med
+skrapningens filer: `POST /api/v1/craft/klubbmejl` med Crafts inloggning och `{ "clubs": { "<klubb-id>": [adresser] } }`
+(högst 2 000 klubbar per anrop). Servern väljer om adresserna själv, och en klubb utan föreningsadress tas bort.
+`GET` ger hur många klubbar som har adresser. Inlagt 27 november 2026: 1 422 klubbar.
+
 Det som inte når hit och måste hanteras där: kopian i New Waves hubb och affärssystem (där Crafts bokföring sker), och
 Intersports egen kopia av ordern. En begäran från en kund ska därför också gå vidare till dem. Säkerhetskopiorna
 innehåller uppgifterna tills de gått ut (se nedan); spara därför inte egna dumpar längre än tre månader. Loggarna

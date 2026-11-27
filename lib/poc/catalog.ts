@@ -105,8 +105,10 @@ const GARMENTS: [sku: string, name: string, baseId: string][] = [
   ["craft-hoodie", "Craft Hoodie", "p004"],
   ["craft-sweatshirt", "Craft Sweatshirt", "poc-sweatshirt"],
   ["craft-joggingbyxor", "Craft Joggingbyxor", "poc-joggingbyxor"],
-  // Träningsjackan (p006), västen (p010) och mössan (p012) är borta: flödet har inget broderi, och enligt New Waves
-  // Bilaga 2 tar deras bröst och framsida bara broderi. Mössan kan komma tillbaka som stickad hos stickeriet.
+  // Softshelljackans bröst tar bara broderi enligt New Waves Bilaga 2, så den trycks med transfer på ärmen – en av
+  // Stefans tre provordrar är en jacka. Västen (p010) och mössan (p012) är borta: flödet har inget broderi. Mössan kan
+  // komma tillbaka som stickad hos stickeriet.
+  ["craft-softshelljacka", "Craft Softshelljacka", "p006"],
 ];
 
 /**

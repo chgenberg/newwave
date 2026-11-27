@@ -23,6 +23,7 @@ import { people, type Season, settingOf } from "@/lib/scarfScene";
 import { loadFile, saveFile } from "@/lib/store";
 import { pocClub, type PocClub } from "./build";
 import { catalogProduct, pocCatalog } from "./catalog";
+import { roleAddresses } from "./clubEmail";
 import { iso, newId, query, tx } from "./db";
 import { getClubProduct, getDesign, listClubProducts } from "./store";
 import type { ClubProduct, ProductKind } from "./types";
@@ -92,6 +93,12 @@ CREATE TABLE IF NOT EXISTS poc_model_calls (
   at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS poc_model_calls_what ON poc_model_calls (what, at DESC);
+
+CREATE TABLE IF NOT EXISTS poc_club_emails (
+  club_id text PRIMARY KEY,
+  emails jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
 const g = globalThis as unknown as { pocContentSchema?: { sql: string; ready: Promise<void> } };
@@ -458,12 +465,49 @@ const kr = (n: number) => `${new Intl.NumberFormat("sv-SE").format(n)} kr`;
 const priced = (products: DraftProduct[]) => and(products.map((p) => `${p.name} (${kr(p.priceSek)})`));
 const tag = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, "").toLocaleLowerCase("sv-SE");
 
-/** Klubbens e-postadresser ur klubbregistret (.data/newwave/clubs/sites/<id>.json). Visas bara för Craft. */
-export async function clubEmails(clubId: string): Promise<string[]> {
-  if (!/^[a-z0-9-]{1,80}$/.test(clubId)) return [];
-  const site = JSON.parse(await readFile(path.join(CLUBS_DIR, "sites", `${clubId}.json`), "utf8").catch(() => "null")) as { emails?: unknown } | null;
-  const list = Array.isArray(site?.emails) ? site.emails : [];
-  return [...new Set(list.filter((e): e is string => typeof e === "string" && /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test(e)).map((e) => e.toLowerCase()))].slice(0, 5);
+/**
+ * Föreningens egna adresser (info@, kansli@ … på klubbens domän, se lib/poc/clubEmail.ts), som mejlutkasten går till.
+ * Visas bara för Craft. I produktionen ligger de i databasen (`poc_club_emails`, POST /api/v1/craft/klubbmejl), eftersom
+ * registrets paket är publikt och saknar kontaktuppgifter; på datorn finns de också i skrapningens filer.
+ */
+export async function clubEmails(club: { id: string; name: string }): Promise<string[]> {
+  if (!/^[a-z0-9-]{1,80}$/.test(club.id)) return [];
+  const [stored] = await q("SELECT emails FROM poc_club_emails WHERE club_id = $1", [club.id]);
+  if (stored && Array.isArray(stored.emails)) return stored.emails as string[];
+  const site = JSON.parse(await readFile(path.join(CLUBS_DIR, "sites", `${club.id}.json`), "utf8").catch(() => "null")) as { emails?: unknown; host?: string } | null;
+  return roleAddresses({ name: club.name, host: site?.host }, Array.isArray(site?.emails) ? site.emails : []);
+}
+
+/**
+ * Sparar föreningsadresserna (redan valda med roleAddresses) och lägger dem i de utkast till klubben som saknar
+ * mottagare. En klubb utan adresser tas bort ur tabellen.
+ */
+export async function saveClubEmails(entries: { clubId: string; emails: string[] }[]): Promise<{ saved: number; removed: number; draftsUpdated: number }> {
+  const keep = entries.filter((e) => e.emails.length);
+  const drop = entries.filter((e) => !e.emails.length).map((e) => e.clubId);
+  if (keep.length)
+    await q(
+      `INSERT INTO poc_club_emails (club_id, emails) SELECT club_id, emails::jsonb FROM unnest($1::text[], $2::text[]) AS t(club_id, emails)
+       ON CONFLICT (club_id) DO UPDATE SET emails = EXCLUDED.emails, updated_at = now()`,
+      [keep.map((e) => e.clubId), keep.map((e) => JSON.stringify(e.emails))],
+    );
+  if (drop.length) await q("DELETE FROM poc_club_emails WHERE club_id = ANY($1::text[])", [drop]);
+  const updated = keep.length
+    ? await q(
+        `UPDATE poc_content_drafts d SET mail = jsonb_set(d.mail, '{to}', e.emails), updated_at = now()
+         FROM poc_club_emails e
+         WHERE d.club_id = e.club_id AND e.club_id = ANY($1::text[]) AND d.status = 'utkast' AND jsonb_array_length(d.mail->'to') = 0
+         RETURNING d.id`,
+        [keep.map((e) => e.clubId)],
+      )
+    : [];
+  return { saved: keep.length, removed: drop.length, draftsUpdated: updated.length };
+}
+
+/** Hur många klubbar som har föreningsadresser i databasen. */
+export async function clubEmailCount(): Promise<number> {
+  const [r] = await q("SELECT count(*)::int AS n FROM poc_club_emails");
+  return Number(r?.n ?? 0);
 }
 
 async function clubWebsite(clubId: string): Promise<string> {
@@ -568,7 +612,7 @@ export async function createDrafts(designId: string, clubIds: string[], opts: { 
           .sort((a, b) => order(a.sku) - order(b.sku) || a.title.localeCompare(b.title, "sv"))
           .map((p) => ({ id: p.id, sku: p.sku, title: p.title, name: inText(catalogProduct(p.sku)?.name ?? p.title), priceSek: p.priceSek, mockupUrl: p.mockupUrl }));
         const shopUrl = `${opts.origin}${intersportPath(clubId)}`;
-        const to = await clubEmails(clubId);
+        const to = await clubEmails(club);
         return {
           club,
           products,

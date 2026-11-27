@@ -30,6 +30,8 @@ export type NwProduct = {
   chest?: Surface;
   /** Mitt på bröstet, för plagg som annars har trycket på vänster bröst. */
   center?: Surface;
+  /** Vänster ärm (bärarens), som den syns på fotot framifrån; höger ärm är den spegelvänd. */
+  sleeve?: Surface;
   model: string | null;
   /** Var trycket projiceras på 3D-modellen: riktning och förskjutning i andelar av modellens storlek. */
   zone: { dir: Vec3; offset: [number, number]; clearCm?: number };
@@ -101,7 +103,7 @@ function row(
   priceSek: number,
   seasons: Season[],
   use: string,
-  place: { print: SurfaceInput; chest?: SurfaceInput; center?: SurfaceInput; leftChest?: boolean },
+  place: { print: SurfaceInput; chest?: SurfaceInput; center?: SurfaceInput; sleeve?: SurfaceInput; leftChest?: boolean },
 ): NwProduct {
   const leftChest = Boolean(place.leftChest);
   const k = { ...KIND[kind], ...TUNED[id] };
@@ -131,6 +133,7 @@ function row(
     print: surface(place.print),
     chest: place.chest && surface(place.chest),
     center: place.center && surface(place.center),
+    sleeve: place.sleeve && surface(place.sleeve),
     model: NO_MODEL.has(id) ? null : `/newwave/models/${id}.glb`,
     zone: { dir: TOP_DOWN.has(id) ? [0, 1, 0] : k.dir, offset: TUNED[id]?.offset ?? (leftChest ? [0.12, 0.22] : k.offset), clearCm: TUNED[id]?.clearCm },
     sizeCm: k.sizeCm,
@@ -146,11 +149,13 @@ function garment([x, y, w, h]: [number, number, number, number], leftChest = fal
 }
 
 /** Ytan på fotot för designens zon; utan zon, eller för zoner som fotot inte visar, produktens huvudtryck. Höger bröst är vänster bröst spegelvänt. */
-export function printOf(p: Pick<NwProduct, "print" | "chest" | "center">, zone?: string): Surface {
+export function printOf(p: Pick<NwProduct, "print" | "chest" | "center" | "sleeve">, zone?: string): Surface {
   // Plagg utan bröstyta (jackorna, piké) har vänster bröst som huvudtryck; fotot är centrerat på plagget.
   const chest = p.chest ?? p.print;
   const mid = p.center?.cx ?? (p.chest ? p.print.cx : 0.5);
   if (zone === "hoger") return { ...chest, cx: 2 * mid - chest.cx, ry: -chest.ry, rz: -chest.rz };
+  if (p.sleeve && zone === "arm") return p.sleeve;
+  if (p.sleeve && zone === "arm-hoger") return { ...p.sleeve, cx: 2 * mid - p.sleeve.cx, ry: -p.sleeve.ry, rz: -p.sleeve.rz };
   return (zone === "vanster" ? chest : zone === "brost" ? p.center : undefined) ?? p.print;
 }
 
@@ -213,7 +218,7 @@ export const NW_CATALOG: NwProduct[] = [
   row("P003", "Piké", "Kläder", "top", "Svart", "#111111", 449, ["vår", "sommar"], "ledare, funktionärer och avslutning", { print: { cx: 0.625, cy: 0.32, w: 0.11, h: 0.1, bend: 18 }, center: { cx: 0.5, cy: 0.47, w: 0.22, h: 0.24, bend: 28, top: true }, leftChest: true }),
   row("P004", "Hoodie", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter", "vår"], "kalla kvällar på läktaren och träning", garment([0.356, 0.385, 0.29, 0.26])),
   row("P005", "Sweatshirt", "Kläder", "top", "Gråmelerad", "#9A9CA1", 499, ["höst", "vinter", "vår"], "vardag och hemmamatch inomhus", garment([0.334, 0.206, 0.33, 0.375])),
-  row("P006", "Softshelljacka", "Kläder", "top", "Svart", "#111111", 899, ["höst", "vår"], "ledare och blåsiga utomhusmatcher", garment([0.545, 0.224, 0.121, 0.157], true)),
+  row("P006", "Softshelljacka", "Kläder", "top", "Svart", "#111111", 899, ["höst", "vår"], "ledare och blåsiga utomhusmatcher", { ...garment([0.545, 0.224, 0.121, 0.157], true), sleeve: { cx: 0.772, cy: 0.345, w: 0.062, h: 0.078, ry: 30, rz: -7, bend: 40, top: true } }),
   row("P007", "Fleece", "Kläder", "top", "Svart", "#111111", 599, ["höst", "vinter"], "kyla, läger och utomhusträning", garment([0.546, 0.229, 0.124, 0.162], true)),
   row("P008", "Funktions-t-shirt", "Kläder", "top", "Svart", "#111111", 299, ["vinter", "vår", "sommar", "höst"], "träning, lopp och cup", garment([0.335, 0.219, 0.327, 0.367])),
   row("P009", "Skaljacka", "Kläder", "top", "Svart", "#111111", 1199, ["höst", "vår"], "regn och ledare", garment([0.54, 0.25, 0.112, 0.156], true)),

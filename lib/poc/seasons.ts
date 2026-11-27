@@ -82,9 +82,9 @@ const OWN: Own[] = [
     nature: "höst",
     hook: "Regnet kommer – klubbkänslan stannar",
     line: "Varma lager för regniga kvällar på läktaren och vägen till träningen.",
-    brief: "Hösten blir blöt. Hoodie, sweatshirt och joggingbyxor som håller värmen, och halsduken till läktaren.",
+    brief: "Hösten blir blöt. Softshelljacka, hoodie och joggingbyxor som håller värmen, och halsduken till läktaren.",
     template: "hjalmen",
-    products: ["p004", "poc-sweatshirt", "poc-joggingbyxor"],
+    products: ["p006", "p004", "poc-joggingbyxor"],
   },
   {
     key: "jul",
