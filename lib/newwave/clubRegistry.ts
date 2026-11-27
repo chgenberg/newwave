@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { registryAsset } from "./clubAssets";
+import { VECTOR_KINDS, vectorRank, type VectorKind, type VectorStatus } from "./clubVector";
 
 /**
  * Klubbregistret: föreningslistan och det `scripts/scrape-clubs.mjs` har hämtat från varje förenings webbplats. Indexet
@@ -31,6 +32,8 @@ export type ClubItem = {
   socials?: string[];
   founded?: string;
   at?: string;
+  /** Hur det gick när märket ritades om som vektor (vektor.json, scripts/club-logos-vector.ts status). */
+  vector?: VectorStatus;
 };
 
 /** Leadlistans siffror stannar på servern; de används bara för att ordna arbetet, aldrig i svaren. */
@@ -50,24 +53,44 @@ export type ClubDetail = ClubItem & {
 
 type Index = { builtAt: string; items: IndexItem[] };
 
-let cache: { mtime: number; index: Index; ids: Set<string> } | null = null;
+let cache: { key: string; index: Index; ids: Set<string> } | null = null;
+let vectorCache: { mtime: number; items: Record<string, VectorStatus> } | null = null;
 
+/** Vektorstatusen läggs på klubbarna när indexet eller vektor.json ändrats. */
 async function loadIndex() {
   const file = path.join(CLUBS_DIR, "index.json");
   const info = await stat(file).catch(() => null);
   if (!info) return null;
-  if (cache?.mtime !== info.mtimeMs) {
+  const vectors = await loadVectors();
+  const key = `${info.mtimeMs}|${vectors.mtime}`;
+  if (cache?.key !== key) {
     const index = JSON.parse(await readFile(file, "utf8")) as Index;
-    cache = { mtime: info.mtimeMs, index, ids: new Set(index.items.map((c) => c.id)) };
+    for (const c of index.items) c.vector = vectors.items[c.id];
+    cache = { key, index, ids: new Set(index.items.map((c) => c.id)) };
   }
   return cache;
 }
 
+async function loadVectors() {
+  const file = path.join(CLUBS_DIR, "vektor.json");
+  const info = await stat(file).catch(() => null);
+  if (!info) return { mtime: 0, items: {} as Record<string, VectorStatus> };
+  if (vectorCache?.mtime !== info.mtimeMs) vectorCache = { mtime: info.mtimeMs, items: (JSON.parse(await readFile(file, "utf8")) as { items: Record<string, VectorStatus> }).items };
+  return vectorCache;
+}
+
+/** Vektorstatusen för en klubb i registret. */
+export async function clubVector(id: string) {
+  return (await loadIndex())?.index.items.find((c) => c.id === id)?.vector;
+}
+
 const isListed = async (id: string) => CLUB_ID.test(id) && Boolean((await loadIndex())?.ids.has(id));
 
-export const SORTS = ["size", "name", "recent", "colors"] as const;
+export const SORTS = ["vector", "size", "name", "recent", "colors"] as const;
 
-export type ClubQuery = { q: string; county: string; sport: string; sort: (typeof SORTS)[number]; offset: number; limit: number };
+export type ClubQuery = { q: string; county: string; sport: string; vector?: VectorKind | ""; sort: (typeof SORTS)[number]; offset: number; limit: number };
+
+export const isVectorKind = (v: unknown): v is VectorKind => VECTOR_KINDS.includes(v as VectorKind);
 
 const fold = (s: string) =>
   s
@@ -83,18 +106,30 @@ function count(items: ClubItem[], key: "county" | "sport") {
   return [...m].sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
 }
 
+/** Grupperna i sidans ordning, de godkända först; tomma grupper visas inte. */
+function countVectors(items: ClubItem[]) {
+  const m = new Map<VectorKind, number>();
+  for (const c of items) m.set(c.vector?.k ?? "ovrigt", (m.get(c.vector?.k ?? "ovrigt") ?? 0) + 1);
+  return VECTOR_KINDS.filter((k) => m.has(k)).map((k) => ({ name: k, n: m.get(k)! }));
+}
+
 /** Varje facett räknas med alla andra filter, så att siffrorna visar vad ett klick ger. */
 export async function queryClubs(q: ClubQuery) {
   const index = (await loadIndex())?.index;
   if (!index) return null;
   const words = fold(q.q).split(/\s+/).filter(Boolean);
   const text = (c: ClubItem) => words.every((w) => fold(`${c.name} ${c.municipality} ${c.county} ${c.sport} ${c.host}`).includes(w));
-  const base = index.items.filter(text);
+  const kind = (c: ClubItem) => c.vector?.k ?? "ovrigt";
+  const inVector = (c: ClubItem) => !q.vector || kind(c) === q.vector;
+  const searched = index.items.filter(text);
+  const base = searched.filter(inVector);
   const inCounty = base.filter((c) => !q.county || c.county === q.county);
   const items = inCounty.filter((c) => !q.sport || c.sport === q.sport);
+  const byName = (a: ClubItem, b: ClubItem) => a.name.localeCompare(b.name, "sv");
   const order: Record<ClubQuery["sort"], (a: IndexItem, b: IndexItem) => number> = {
+    vector: (a, b) => vectorRank(a.vector?.k) - vectorRank(b.vector?.k) || byName(a, b),
     size: (a, b) => b.surplus - a.surplus,
-    name: (a, b) => a.name.localeCompare(b.name, "sv"),
+    name: byName,
     recent: (a, b) => (b.at ?? "").localeCompare(a.at ?? ""),
     colors: (a, b) => hue(a.colors?.[0]) - hue(b.colors?.[0]),
   };
@@ -105,7 +140,11 @@ export async function queryClubs(q: ClubQuery) {
       .sort(order[q.sort])
       .slice(q.offset, q.offset + q.limit)
       .map((c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "surplus")) as ClubItem),
-    facets: { counties: count(base.filter((c) => !q.sport || c.sport === q.sport), "county"), sports: count(inCounty, "sport").slice(0, 40) },
+    facets: {
+      counties: count(base.filter((c) => !q.sport || c.sport === q.sport), "county"),
+      sports: count(inCounty, "sport").slice(0, 40),
+      vectors: countVectors(searched.filter((c) => (!q.county || c.county === q.county) && (!q.sport || c.sport === q.sport))),
+    },
     stats: { clubs: all.length, counties: new Set(all.map((c) => c.county).filter(Boolean)).size, sports: new Set(all.map((c) => c.sport).filter(Boolean)).size, builtAt: index.builtAt },
   };
 }
@@ -189,5 +228,6 @@ export async function clubDetail(id: string): Promise<ClubDetail | null> {
     socials: Object.keys(s.socials ?? {}),
     shop: web(s.shop),
     founded: s.founded,
+    vector: await clubVector(id),
   };
 }

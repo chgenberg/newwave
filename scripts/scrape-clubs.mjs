@@ -3,6 +3,7 @@
 //   node scripts/scrape-clubs.mjs import <leadslista.xlsx>   läser listan till .data/newwave/clubs/clubs.json
 //   node scripts/scrape-clubs.mjs run [--workers=4] [--limit=N] [--only=id,id] [--retry=missing,error] [--before=2026-10-21T15:34]
 //   node scripts/scrape-clubs.mjs index                       bygger om index.json för sidan
+//   node scripts/scrape-clubs.mjs publish-vektorer <mapp>     lägger bara klubbmärkena som vektor i ett uppackat paket
 //   node scripts/scrape-clubs.mjs publish <mapp>              packar registret till produktion; sedan
 //     tar -czf clubs.tar.gz -C <mapp> . && gh release create clubs-<datum> clubs.tar.gz, och taggen i Dockerfile (CLUBS_RELEASE)
 // Körningen kan avbrytas och startas om; färdiga klubbar hoppas över.
@@ -11,6 +12,7 @@ import { lookup } from "node:dns/promises";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import JSZip from "jszip";
 import sharp from "sharp";
 
@@ -1148,7 +1150,33 @@ async function publish(dir) {
       }
     }),
   );
+  await publishVectors(dir, ids);
   log(`${items.length} klubbar packade i ${dir}`);
+}
+
+/**
+ * Klubbmärkena som vektor (scripts/club-logos-vector.ts status): grupperna i vektor.json, och för de godkända bilden och
+ * SVG:n (packad, SVG:er krymper till en tredjedel) i vektorer/. Fungerar också på ett befintligt paket: publish-vektorer <mapp>.
+ */
+async function publishVectors(dir, ids) {
+  const file = path.join(ROOT, "vektor.json");
+  if (!existsSync(file)) return log("vektor.json saknas – kör club-logos-vector.ts status först; paketet får inga vektorer");
+  const all = JSON.parse(await readFile(file, "utf8"));
+  ids ??= new Set(JSON.parse(await readFile(path.join(dir, "index.json"), "utf8")).items.map((c) => c.id));
+  const items = Object.fromEntries(Object.entries(all.items).filter(([id]) => ids.has(id)));
+  await mkdir(path.join(dir, "vektorer"), { recursive: true });
+  await writeJson(path.join(dir, "vektor.json"), { builtAt: all.builtAt, items });
+  let n = 0;
+  for (const [id, v] of Object.entries(items)) {
+    if (v.k !== "godkand") continue;
+    const png = path.join(ROOT, "vektorer", `${id}.png`);
+    const svg = path.join(ROOT, "logos-hd", `${id}.vektor.svg`);
+    if (!existsSync(png) || !existsSync(svg)) throw new Error(`Vektorn för ${id} saknas – kör club-logos-vector.ts status`);
+    await writeFile(path.join(dir, "vektorer", `${id}.png`), await readFile(png));
+    await writeFile(path.join(dir, "vektorer", `${id}.svg.gz`), gzipSync(await readFile(svg), { level: 9 }));
+    n++;
+  }
+  log(`${n} godkända vektorer packade`);
 }
 
 /* ---------- Körning ---------- */
@@ -1210,5 +1238,6 @@ if (cmd === "import") await importXlsx(args[1]);
 else if (cmd === "run") await run();
 else if (cmd === "index") log(`${(await buildIndex()).length} klubbar i index.json`);
 else if (cmd === "publish") await publish(args[1]);
+else if (cmd === "publish-vektorer") await publishVectors(args[1]);
 else console.log("Använd: import <fil.xlsx> | run [--workers=4] [--limit=N] [--only=id] [--retry=missing,error] [--before=tid] | index | publish <mapp>");
 process.exit(0);

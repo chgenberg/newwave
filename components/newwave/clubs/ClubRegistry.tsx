@@ -5,15 +5,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registryAsset } from "@/lib/newwave/clubAssets";
 import type { ClubDetail, ClubItem } from "@/lib/newwave/clubRegistry";
+import { VECTOR_LABEL, vectorAsset, type VectorKind } from "@/lib/newwave/clubVector";
 
 type Facet = { name: string; n: number };
 type Stats = { clubs: number; counties: number; sports: number; builtAt: string };
-type Page = { total: number; items: ClubItem[]; facets: { counties: Facet[]; sports: Facet[] }; stats: Stats };
+type Page = { total: number; items: ClubItem[]; facets: { counties: Facet[]; sports: Facet[]; vectors?: { name: VectorKind; n: number }[] }; stats: Stats };
 
 const API = "/api/v1/newwave/registry";
 const PAGE = 60;
 const num = new Intl.NumberFormat("sv-SE");
 const SORT = [
+  { id: "vector", label: "Godkända först" },
   { id: "name", label: "A–Ö" },
   { id: "recent", label: "Senast hämtade" },
   { id: "colors", label: "Efter färg" },
@@ -21,6 +23,11 @@ const SORT = [
 const SOCIAL: Record<string, string> = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", tiktok: "TikTok", x: "X", linkedin: "LinkedIn" };
 
 const asset = (c: ClubItem, file: "logo.png" | "bild.jpg") => registryAsset(c.id, c.at, file);
+const approved = (c: ClubItem) => c.vector?.k === "godkand";
+/** Kortens märke: den godkända vektorn, annars registrets bild. */
+const mark = (c: ClubItem) => (approved(c) ? vectorAsset(c.id, c.vector?.at, "vektor.png") : asset(c, "logo.png"));
+const kindOf = (c: ClubItem): VectorKind => c.vector?.k ?? "ovrigt";
+const share = (m: number) => `${(m * 100).toFixed(1).replace(".", ",")} %`;
 
 function rgb(hex: string) {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -50,7 +57,8 @@ export function ClubRegistry() {
   const [q, setQ] = useState("");
   const [county, setCounty] = useState("");
   const [sport, setSport] = useState("");
-  const [sort, setSort] = useState<(typeof SORT)[number]["id"]>("name");
+  const [vector, setVector] = useState("");
+  const [sort, setSort] = useState<(typeof SORT)[number]["id"]>("vector");
   const [data, setData] = useState<Page | null>(null);
   const [items, setItems] = useState<ClubItem[]>([]);
   const [error, setError] = useState("");
@@ -71,8 +79,9 @@ export function ClubRegistry() {
     if (q) p.set("q", q);
     if (county) p.set("county", county);
     if (sport) p.set("sport", sport);
+    if (vector) p.set("vector", vector);
     return p.toString();
-  }, [q, county, sport, sort]);
+  }, [q, county, sport, vector, sort]);
 
   /** Nya filter börjar om från första sidan; rullningen ber om nästa sida för samma filter. */
   const offset = want.params === params ? want.offset : 0;
@@ -126,7 +135,10 @@ export function ClubRegistry() {
   }, [more, loading, items.length, params]);
 
   const stats = data?.stats;
-  const filtered = Boolean(q || county || sport);
+  const filtered = Boolean(q || county || sport || vector);
+  const vectorFacets = data?.facets.vectors ?? [];
+  const vectorCount = (k: VectorKind) => vectorFacets.find((f) => f.name === k)?.n ?? 0;
+  const grouped = sort === "vector";
 
   return (
     <div className="mx-auto w-full max-w-[1480px]">
@@ -149,6 +161,11 @@ export function ClubRegistry() {
 
       <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start">
         <aside className="hidden w-[250px] shrink-0 lg:sticky lg:top-[84px] lg:block">
+          {vectorFacets.length > 0 && (
+            <div className="mb-5">
+              <FacetBars title="Klubbmärke" facets={vectorFacets} value={vector} onPick={setVector} label={(k) => VECTOR_LABEL[k as VectorKind]?.title ?? k} />
+            </div>
+          )}
           <FacetBars title="Län" facets={data?.facets.counties ?? []} value={county} onPick={setCounty} />
           <div className="mt-5">
             <p className="nw-mono mb-2 text-[11px] uppercase tracking-[0.08em] text-[#6F6B63]">Idrott</p>
@@ -172,7 +189,17 @@ export function ClubRegistry() {
               </svg>
               <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Sök förening, ort eller idrott" className="h-11 w-full rounded-full bg-[#F2F1EE] pl-10 pr-4 text-[14.5px] outline-none ring-[#111] placeholder:text-[#8A867E] focus:ring-2" />
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 min-[700px]:flex-nowrap">
+              {vectorFacets.length > 0 && (
+                <select value={vector} onChange={(e) => setVector(e.target.value)} aria-label="Klubbmärke" className="h-11 min-w-0 basis-full rounded-full bg-[#F2F1EE] px-3.5 text-[13.5px] min-[700px]:basis-auto lg:hidden">
+                  <option value="">Alla klubbmärken</option>
+                  {vectorFacets.map((f) => (
+                    <option key={f.name} value={f.name}>
+                      {VECTOR_LABEL[f.name].title} ({num.format(f.n)})
+                    </option>
+                  ))}
+                </select>
+              )}
               <select value={county} onChange={(e) => setCounty(e.target.value)} aria-label="Län" className="h-11 min-w-0 flex-1 rounded-full bg-[#F2F1EE] px-3.5 text-[13.5px] lg:hidden">
                 <option value="">Alla län</option>
                 {(data?.facets.counties ?? []).map((f) => (
@@ -208,6 +235,7 @@ export function ClubRegistry() {
                   setText("");
                   setCounty("");
                   setSport("");
+                  setVector("");
                 }}
                 className="shrink-0 rounded-full px-3 text-[13px] text-[#6F6B63] underline-offset-2 hover:underline"
               >
@@ -218,11 +246,12 @@ export function ClubRegistry() {
 
           {error && <p className="mt-6 rounded-2xl bg-[#FDF2F2] p-4 text-[14px] text-[#9B1C1C]">{error}</p>}
           <ul className="mt-3 grid grid-cols-2 gap-2.5 min-[640px]:grid-cols-3 min-[1100px]:grid-cols-4 2xl:grid-cols-5">
-            {items.map((c) => (
+            {items.flatMap((c, i) => [
+              ...(grouped && (i === 0 || kindOf(items[i - 1]) !== kindOf(c)) ? [<GroupHeading key={`grupp-${kindOf(c)}`} kind={kindOf(c)} n={vectorCount(kindOf(c))} first={i === 0} />] : []),
               <li key={c.id}>
                 <Card club={c} onOpen={() => setOpen(c)} />
-              </li>
-            ))}
+              </li>,
+            ])}
             {loading && items.length === 0 && Array.from({ length: 12 }, (_, i) => <li key={i} className="aspect-[4/4.2] animate-pulse rounded-[20px] bg-[#F2F1EE]" />)}
           </ul>
           {!loading && data && items.length === 0 && <p className="mt-10 text-center text-[14px] text-[#6F6B63]">Inga föreningar matchar filtret.</p>}
@@ -265,7 +294,7 @@ function LogoWall({ items, onPick }: { items: ClubItem[]; onPick: (c: ClubItem) 
   );
 }
 
-function FacetBars({ title, facets, value, onPick }: { title: string; facets: Facet[]; value: string; onPick: (v: string) => void }) {
+function FacetBars({ title, facets, value, onPick, label = (n) => n }: { title: string; facets: Facet[]; value: string; onPick: (v: string) => void; label?: (name: string) => string }) {
   const max = Math.max(1, ...facets.map((f) => f.n));
   return (
     <div>
@@ -281,8 +310,8 @@ function FacetBars({ title, facets, value, onPick }: { title: string; facets: Fa
         {facets.map((f) => (
           <li key={f.name}>
             <button type="button" onClick={() => onPick(value === f.name ? "" : f.name)} aria-pressed={value === f.name} className={`group relative flex h-7 w-full items-center justify-between overflow-hidden rounded-lg px-2 text-left text-[12.5px] ${value && value !== f.name ? "opacity-45 hover:opacity-100" : ""}`}>
-              <span className={`absolute inset-y-0 left-0 rounded-lg transition-[width] duration-500 ${value === f.name ? "bg-[#111]" : "bg-[#EDEBE6] group-hover:bg-[#E2DFD8]"}`} style={{ width: `${(f.n / max) * 100}%` }} />
-              <span className={`relative truncate ${value === f.name ? "text-white" : ""}`}>{f.name}</span>
+              <span className={`absolute inset-y-0 left-0 rounded-lg transition-[width] duration-500 ${value === f.name ? "bg-[#111]" : "bg-[#EDEBE6] group-hover:bg-[#E2DFD8]"}`} style={{ width: value === f.name ? "100%" : `${(f.n / max) * 100}%` }} />
+              <span className={`relative truncate ${value === f.name ? "text-white" : ""}`}>{label(f.name)}</span>
               <span className={`relative tabular-nums ${value === f.name ? "text-white" : "text-[#6F6B63]"}`}>{num.format(f.n)}</span>
             </button>
           </li>
@@ -292,13 +321,28 @@ function FacetBars({ title, facets, value, onPick }: { title: string; facets: Fa
   );
 }
 
+/** Rubriken över varje grupp när listan visar de godkända märkena först. */
+function GroupHeading({ kind, n, first }: { kind: VectorKind; n: number; first: boolean }) {
+  const g = VECTOR_LABEL[kind];
+  return (
+    <li className={`col-span-full ${first ? "pt-1" : "mt-6 border-t border-[rgba(17,17,17,0.08)] pt-6"}`}>
+      <h2 className="flex items-baseline gap-2.5 text-[19px] font-semibold tracking-[-0.01em]">
+        {g.title}
+        <span className="text-[14px] font-normal tabular-nums text-[#6F6B63]">{num.format(n)}</span>
+      </h2>
+      <p className="mt-1 max-w-[720px] text-[13px] leading-relaxed text-[#6F6B63]">{g.text}</p>
+    </li>
+  );
+}
+
 function Card({ club: c, onOpen }: { club: ClubItem; onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen} className="group block w-full overflow-hidden rounded-[20px] bg-white text-left shadow-[0_0_0_1px_rgba(17,17,17,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(17,17,17,0.1),0_18px_40px_-24px_rgba(17,17,17,0.45)]">
       <div className="relative aspect-[4/3]" style={{ background: backdrop(c) }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={asset(c, "logo.png")} alt={`${c.name} – klubbmärke`} loading="lazy" className="absolute inset-0 m-auto max-h-[68%] max-w-[72%] object-contain transition duration-300 group-hover:scale-[1.05]" />
+        <img src={mark(c)} alt={`${c.name} – klubbmärke`} loading="lazy" className="absolute inset-0 m-auto max-h-[68%] max-w-[72%] object-contain transition duration-300 group-hover:scale-[1.05]" />
         {c.platform && <span className="nw-mono absolute left-2 top-2 rounded-full bg-white/85 px-2 py-0.5 text-[10px] text-[#111] backdrop-blur">{c.platform}</span>}
+        {approved(c) && <span className="nw-mono absolute right-2 top-2 rounded-full bg-[#111] px-2 py-0.5 text-[10px] text-white">Vektor</span>}
         {c.colors && c.colors.length > 0 && (
           <span className="absolute inset-x-0 bottom-0 flex h-1.5">
             {c.colors.map((hex) => (
@@ -410,6 +454,8 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
             </Link>
           </div>
 
+          {c.vector && <VectorNote club={c} />}
+
           {d?.description && <p className="mt-4 text-[13.5px] leading-relaxed text-[#4A4740]">{d.description}</p>}
 
           {d?.colorInfo && d.colorInfo.length > 0 && (
@@ -470,11 +516,35 @@ function Drawer({ club, onClose }: { club: ClubItem; onClose: () => void }) {
   );
 }
 
+/** Hur det gick när märket ritades om; den godkända vektorn går att ladda ner. */
+function VectorNote({ club: c }: { club: ClubItem }) {
+  const v = c.vector!;
+  const g = VECTOR_LABEL[v.k];
+  if (v.k !== "godkand")
+    return (
+      <div className="mt-4 rounded-2xl bg-[#F7F6F3] p-3.5">
+        <p className="text-[13px] font-semibold">Klubbmärket som vektor: {g.title.toLowerCase()}</p>
+        <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#6F6B63]">{g.text}</p>
+      </div>
+    );
+  return (
+    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F7F6F3] p-3.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold">Godkänt som vektor</p>
+        <p className="mt-0.5 text-[12.5px] text-[#6F6B63]">{[v.n && `${v.n} färger`, v.m !== undefined && (v.m < 0.0005 ? "ingen mätbar avvikelse från originalet" : `avviker ${share(v.m)} från originalet`)].filter(Boolean).join(" · ")}</p>
+      </div>
+      <a href={vectorAsset(c.id, v.at, "vektor.svg")} download={`${c.id}.svg`} className="inline-flex h-9 shrink-0 items-center rounded-full bg-[#111] px-4 text-[13px] font-medium text-white transition hover:bg-[#333]">
+        Ladda ner SVG
+      </a>
+    </div>
+  );
+}
+
 function LogoTile({ club, bg }: { club: ClubItem; bg: string }) {
   return (
     <div className="flex h-[104px] w-[132px] items-center justify-center rounded-2xl p-3.5 shadow-[0_0_0_1px_rgba(17,17,17,0.08),0_12px_30px_-18px_rgba(17,17,17,0.5)]" style={{ background: bg }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={asset(club, "logo.png")} alt={`${club.name} – klubbmärke`} className="max-h-full max-w-full object-contain" />
+      <img src={mark(club)} alt={`${club.name} – klubbmärke`} className="max-h-full max-w-full object-contain" />
     </div>
   );
 }

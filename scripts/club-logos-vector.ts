@@ -5,15 +5,17 @@
 //
 //   NODE_PATH=node_modules node_modules/.bin/jiti scripts/club-logos-vector.ts run <idfil|id,id> [--del=1/4] [--force]
 //   NODE_PATH=node_modules node_modules/.bin/jiti scripts/club-logos-vector.ts sheet <idfil> <utmapp>
+//   NODE_PATH=node_modules node_modules/.bin/jiti scripts/club-logos-vector.ts status      grupperna till klubbregistret
 //
 // --del=k/n kör var n:te klubb med början på k, så att flera processer kan dela på arbetet.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
 import { Potrace } from "potrace";
 import sharp, { type OverlayOptions, type Sharp } from "sharp";
+import type { VectorKind, VectorStatus } from "../lib/newwave/clubVector";
 import { convertDesign } from "../lib/newwave/wordmark/convert";
 
 const ROOT = path.join(process.cwd(), ".data", "newwave", "clubs");
@@ -277,6 +279,55 @@ async function sheet(spec: string, dir: string) {
   log(`${Math.ceil(ids.length / 20)} bilder i ${dir}`);
 }
 
+/** Gruppen på klubbregistrets sida (lib/newwave/clubVector.ts), ur omritningens resultat. */
+function vectorKind(r: VectorRecord | null, rec: HdRecord | null, registryVector: boolean): VectorKind {
+  if (registryVector) return "egen";
+  if (!r) return rec?.status === "kunde inte nås" ? "vantar" : "ovrigt";
+  if (r.ok) return "godkand";
+  const why = r.reason ?? "";
+  if (why.startsWith("registrets bild")) return "felbild";
+  if (why.startsWith("märket finns redan")) return "egen";
+  if (why.startsWith("för liten")) return "liten";
+  if (why.startsWith("vektorn skiljer")) return "avvek";
+  if (why.startsWith("granskningen")) return "granskning";
+  return "ritas";
+}
+
+/**
+ * Skriver vektor.json (gruppen för varje klubb i registret) och en bild av varje godkänd vektor i vektorer/, som
+ * klubbregistrets sida visar. `scrape-clubs.mjs publish` tar med båda, och de godkända SVG:erna, till produktionen.
+ */
+async function status() {
+  const index: { items: { id: string }[] } = JSON.parse(await readFile(path.join(ROOT, "index.json"), "utf8"));
+  const dir = path.join(ROOT, "vektorer");
+  await mkdir(dir, { recursive: true });
+  const items: Record<string, VectorStatus> = {};
+  const thumbs: { id: string; svg: string }[] = [];
+  for (const { id } of index.items) {
+    const read = async <T>(f: string): Promise<T | null> => (existsSync(f) ? JSON.parse(await readFile(f, "utf8")) : null);
+    const site = await read<{ logo?: { vector?: boolean } }>(path.join(ROOT, "sites", `${id}.json`));
+    const r = await read<VectorRecord>(path.join(HD, `${id}.vektor.json`));
+    const k = vectorKind(r, await read<HdRecord>(path.join(HD, `${id}.json`)), Boolean(site?.logo?.vector));
+    items[id] = k === "godkand" && r ? { k, m: r.mismatch ?? undefined, n: r.colors ?? undefined, at: r.at } : { k };
+    if (k === "godkand" && r?.file) thumbs.push({ id, svg: path.join(HD, r.file) });
+  }
+  let made = 0;
+  const queue = [...thumbs];
+  await Promise.all(
+    Array.from({ length: 6 }, async () => {
+      for (let t = queue.shift(); t; t = queue.shift()) {
+        const out = path.join(dir, `${t.id}.png`);
+        if (existsSync(out) && statSync(out).mtimeMs >= statSync(t.svg).mtimeMs) continue;
+        await sharp(await readFile(t.svg)).resize(480, 480, { fit: "inside" }).png({ palette: true, quality: 95, effort: 8 }).toFile(out);
+        made++;
+      }
+    }),
+  );
+  await writeFile(path.join(ROOT, "vektor.json"), JSON.stringify({ builtAt: new Date().toISOString(), items }));
+  const counts = Object.values(items).reduce<Record<string, number>>((m, s) => ({ ...m, [s.k]: (m[s.k] ?? 0) + 1 }), {});
+  log(`vektor.json: ${index.items.length} klubbar ${JSON.stringify(counts)}, ${made} nya bilder i ${dir}`);
+}
+
 async function main() {
   // Nyckeln till bildmodellen, som när Next.js startar.
   try {
@@ -285,7 +336,8 @@ async function main() {
   const [cmd, a, b] = args.filter((x) => !x.startsWith("--"));
   if (cmd === "run") await runAll(a);
   else if (cmd === "sheet") await sheet(a, b);
-  else console.log("jiti scripts/club-logos-vector.ts run <idfil|id,id> [--del=1/4] [--force] | sheet <idfil> <utmapp>");
+  else if (cmd === "status") await status();
+  else console.log("jiti scripts/club-logos-vector.ts run <idfil|id,id> [--del=1/4] [--force] | sheet <idfil> <utmapp> | status");
   process.exit(0);
 }
 main();

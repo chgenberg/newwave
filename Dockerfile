@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 # Klubbregistret (scripts/scrape-clubs.mjs publish) ligger som release-tillgång, inte i repot.
-ARG CLUBS_RELEASE=clubs-2026-10-22
+ARG CLUBS_RELEASE=clubs-2026-11-27
 ADD https://github.com/chgenberg/newwave/releases/download/${CLUBS_RELEASE}/clubs.tar.gz /tmp/clubs.tar.gz
 RUN mkdir -p registry/clubs && tar -xzf /tmp/clubs.tar.gz -C registry/clubs && rm /tmp/clubs.tar.gz
 
