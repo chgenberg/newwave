@@ -106,6 +106,17 @@ async function save(list: Session[]) {
 
 // ── Inloggning ──────────────────────────────────────────────────────────────
 
+/**
+ * Den guidade demon (/newwave/demo): Crafts lösenord, eller en redan inloggad Craft, ger alla tre rollerna på en gång,
+ * så att visningen går från Craft till shoppen och producenterna utan fler inloggningar. Bara i serveråtgärder och routes.
+ */
+export async function loginDemo(password: string | null): Promise<boolean> {
+  const craft = (await sessions()).some((s) => s.role === "craft");
+  if (!craft && !keyOk(password ?? "", passwordOf("craft"))) return false;
+  await save(ROLES.map((role) => ({ role, exp: Date.now() + SESSION_MAX_AGE * 1000 })));
+  return true;
+}
+
 /** Loggar in rollen om lösenordet stämmer, och behåller rollerna som redan är inloggade. Bara i serveråtgärder och routes. */
 export async function login(role: Role, password: string): Promise<boolean> {
   if (!isRole(role) || !keyOk(password, passwordOf(role))) return false;

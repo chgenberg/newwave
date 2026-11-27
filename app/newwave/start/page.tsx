@@ -22,6 +22,12 @@ export default function StartPage() {
           </Link>
           <span className="hidden text-[14px] text-[#6F6B63] sm:inline">Välj ingång</span>
           <div className="ml-auto flex items-center gap-2">
+            <Link href="/newwave/demo" aria-label="Guidad demo av hela flödet" className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#111] px-3.5 text-[13.5px] font-medium text-white transition hover:bg-[#333]">
+              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12h12M12 6l6 6-6 6" />
+              </svg>
+              <span>Guidad demo</span>
+            </Link>
             <FilmDialogButton film={MERCH_VIDEO} className="inline-flex h-10 w-10 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13.5px] sm:w-auto sm:px-3.5 font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
               <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />

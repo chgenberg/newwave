@@ -106,7 +106,7 @@ function JobCard({ job, producer, now }: { job: QueueJob; producer: Producer; no
   const cancelled = isCancelled(job);
   const tone = cancelled ? "avbruten" : job.status;
   return (
-    <li className={`rounded-lg border bg-white ${job.status === "fel" && !cancelled ? "border-[#F3C5C0]" : "border-[#E2E2E2]"}`}>
+    <li id={job.orderNumber} className={`scroll-mt-24 rounded-lg border bg-white target:ring-2 target:ring-[#111] ${job.status === "fel" && !cancelled ? "border-[#F3C5C0]" : "border-[#E2E2E2]"}`}>
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 border-b border-[#EFEFEF] px-4 py-3">
         <div className="min-w-0">
           <p className="font-mono text-[15px] font-semibold">{job.orderNumber}</p>

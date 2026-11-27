@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { NoCopy } from "@/components/NoCopy";
 import { VisitTracker } from "@/components/VisitTracker";
+import { DemoBar } from "@/components/poc/demo/DemoBar";
 import "./globals.css";
 
 const inter = localFont({ src: "./fonts/inter.woff2", weight: "100 900", variable: "--font-inter" });
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="sv" className={`${inter.variable} ${brand.variable}`} data-protect={PROTECT ? "" : undefined}>
       <body className="min-h-screen bg-white font-sans text-[#1D1D1F] antialiased">
         {children}
+        <DemoBar />
         <VisitTracker />
         {PROTECT ? <NoCopy /> : null}
       </body>
