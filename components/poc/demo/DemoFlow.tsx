@@ -43,6 +43,11 @@ export function DemoFlow({ loggedIn, clubs, templates, skus }: { loggedIn: boole
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
+  // Redan inloggad som Craft: demon behöver också tryckeriets och stickeriets roller för att visa deras filer.
+  useEffect(() => {
+    if (loggedIn) void call({ action: "start" }).catch(() => {});
+  }, [loggedIn]);
+
   const chosen = clubs.filter((c) => picked.includes(c.id));
   const designKey = design ? (design.kind === "mall" ? `t:${design.template}` : `d:${design.designId}`) : "";
   const previewKey = `${designKey}|${picked.join(",")}`;
