@@ -3,10 +3,14 @@ import Link from "next/link";
 import { DELIVERY_DAYS, kr } from "@/components/newwave/clubshop/pricing";
 import type { CatalogProduct, ClubProduct } from "@/lib/poc/types";
 import { ClubProductTile, shopScenes } from "./ClubProducts";
+import { shopStock } from "./data";
 
-/** Crafts klubbprodukt i klubbshoppen; `children` är köprutan. Har Craft skapat en miljöbild visas den som andra bild. */
+/**
+ * Crafts klubbprodukt i klubbshoppen; `children` är köprutan (med lagret, ClubBuyBox). Har Craft skapat en miljöbild
+ * visas den som andra bild.
+ */
 export async function ClubProductView({ product, base, more, clubName, home, children }: { product: ClubProduct; base?: CatalogProduct; more: ClubProduct[]; clubName: string; home: string; children: React.ReactNode }) {
-  const scenes = await shopScenes([product, ...more]);
+  const [scenes, stock] = await Promise.all([shopScenes([product, ...more]), shopStock(more)]);
   const scene = scenes.get(product.id);
   const made = product.kind === "halsduk" ? "Stickas på beställning" : "Trycks på beställning";
   const sizes = base?.sizes ?? [];
@@ -65,7 +69,7 @@ export async function ClubProductView({ product, base, more, clubName, home, chi
           <ul className="mt-4 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-4 md:grid-cols-4">
             {more.map((p) => (
               <li key={p.id} className="min-w-0">
-                <ClubProductTile product={p} href={`${home}/${p.id}`} scene={scenes.get(p.id)} />
+                <ClubProductTile product={p} href={`${home}/${p.id}`} scene={scenes.get(p.id)} stock={stock.get(p.id)} />
               </li>
             ))}
           </ul>

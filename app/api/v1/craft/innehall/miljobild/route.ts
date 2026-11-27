@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { roleFromRequest } from "@/lib/poc/auth";
-import { ContentError, fetchCtx, SCENE_SEK, scenePhoto, scenesLeft } from "@/lib/poc/content";
+import { ContentError, fetchCtx, scenePhoto, sceneSek, scenesLeft } from "@/lib/poc/content";
 import { seasonOfDesign } from "@/lib/poc/seasons";
 import { getClubProduct, getDesign } from "@/lib/poc/store";
 
@@ -10,8 +10,9 @@ const Body = z.object({ clubProductId: z.string().regex(/^[a-z0-9-]{1,40}$/) });
 
 /**
  * Miljöbilden för en klubbprodukt: ett foto där en person i klubbens miljö (sporten, årstiden) bär plagget med
- * klubbens tryck. Finns den redan ges den sparade utan nytt anrop; annars gör bildmodellen den (cirka SCENE_SEK kr).
- * Antalet nya bilder per timme är begränsat. Kräver Crafts inloggning. Svar: `{ url, cached, costSek, left }`.
+ * klubbens tryck. Finns den redan ges den sparade utan nytt anrop; annars gör bildmodellen den (cirka 0,21 kr för ett
+ * plagg och 0,31 kr för halsduken; `costSek` är räknat ur svarets tokens). Antalet nya bilder per timme är begränsat.
+ * Kräver Crafts inloggning. Svar: `{ url, cached, costSek, estimateSek, left }`.
  */
 export async function POST(req: Request) {
   if (!(await roleFromRequest(req, "craft"))) return Response.json({ error: "Logga in som Craft för att skapa miljöbilder." }, { status: 401 });
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     const design = await getDesign(product.designId);
     const season = design ? await seasonOfDesign(design).catch(() => null) : null;
     const out = await scenePhoto(product.id, { ctx: fetchCtx(req), season });
-    return Response.json({ ...out, estimateSek: SCENE_SEK, left: await scenesLeft() });
+    return Response.json({ ...out, estimateSek: sceneSek(product.kind), left: await scenesLeft() });
   } catch (e) {
     if (e instanceof ContentError) return Response.json({ error: e.message }, { status: e.status, headers: e.status === 429 ? { "Retry-After": "600" } : undefined });
     console.error("craft/innehall/miljobild", e instanceof Error ? e.message : e);

@@ -1,3 +1,4 @@
+import { customerRemoved } from "@/lib/poc/privacy";
 import type { JobStatus, Producer } from "@/lib/poc/types";
 import { leaveQueue } from "./actions";
 import { CopyText } from "./CopyText";
@@ -34,6 +35,14 @@ const Label = ({ children }: { children: React.ReactNode }) => <p className="tex
 /** Vart paketet ska: leveranssättet och mottagaren, med knappar för att kopiera adressen och skriva ut fraktsedeln. */
 function Delivery({ job, producer }: { job: QueueJob; producer: Producer }) {
   const c = job.customer;
+  // Kunduppgifterna tas bort när ordern varit klar en tid (lib/poc/privacy.ts); då finns ingen mottagare att visa.
+  if (customerRemoved(c))
+    return (
+      <div className="min-w-0 text-[13.5px]">
+        <Label>Leverans{job.order.shipping ? ` · ${job.order.shipping.label}` : ""}</Label>
+        <p className="mt-1 text-[#777]">Kunduppgifterna är borttagna.</p>
+      </div>
+    );
   const lines = addressLines(job);
   const hasAddress = lines.length > 1;
   const copy = [...lines, c.phone, c.email].filter(Boolean).join("\n");

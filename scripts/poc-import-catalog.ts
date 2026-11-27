@@ -1,8 +1,8 @@
 /**
  * Importerar Crafts produktdata till POC-flödets katalog: läser en CSV- eller JSON-fil (t.ex. exporterad ur Excel),
  * kontrollerar varje rad och skriver lib/poc/catalog-data.json. Katalogen (lib/poc/catalog.ts) använder den filen i
- * stället för platshållarplaggen; ta bort filen för att gå tillbaka till platshållarna. Starta om servern (eller spara
- * lib/poc/catalog.ts) efter importen.
+ * stället för platshållarplaggen; ta bort filen för att gå tillbaka till platshållarna. Servern läser om katalogen inom
+ * en sekund, utan omstart. När New Waves hubb skickat produkter (lib/poc/hub/products.ts) går de före den här filen.
  *
  *   JITI_ALIAS='{"@/":"<repo>/"}' node_modules/.bin/jiti scripts/poc-import-catalog.ts scripts/poc-katalog-exempel.csv
  *     --prova     kontrollerar filen utan att skriva något

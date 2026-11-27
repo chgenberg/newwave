@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { hasRole } from "@/lib/poc/auth";
-import { cancelOrder, PocError, retryErp } from "@/lib/poc/orders";
+import { cancelOrder, PocError } from "@/lib/poc/orders";
 
 /** Knapparna i Crafts ordervy. Varje anrop kontrollerar Crafts inloggning på nytt. */
 
@@ -32,18 +32,5 @@ export async function cancelOrderAction(_prev: OrderActionState, form: FormData)
     return { done: `Order ${order.number} är avbruten.` };
   } catch (e) {
     return failed(e, "att avbryta ordern");
-  }
-}
-
-/** Skickar en order som affärssystemet inte bekräftat (status "mottagen") till affärssystemet igen. */
-export async function retryErpAction(_prev: OrderActionState, form: FormData): Promise<OrderActionState> {
-  const denied = await craft();
-  if (denied) return denied;
-  try {
-    const order = await retryErp(String(form.get("orderId") ?? ""));
-    refresh();
-    return { done: `Bekräftad i Crafts affärssystem: ${order.erpRef ?? "utan ordernummer"}.` };
-  } catch (e) {
-    return failed(e, "att skicka ordern igen");
   }
 }

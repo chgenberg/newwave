@@ -98,6 +98,46 @@ ALTER TABLE club_products ADD COLUMN IF NOT EXISTS custom_price boolean NOT NULL
 ALTER TABLE club_products DROP CONSTRAINT IF EXISTS club_products_design_id_club_id_sku_key;
 CREATE UNIQUE INDEX IF NOT EXISTS club_products_unique ON club_products (design_id, club_id, sku, variant);
 CREATE INDEX IF NOT EXISTS club_products_design ON club_products (design_id, status);
+
+-- Steg 4: butikens eget ordernummer, unikt per kanal, och ett fingeravtryck av beställningen, så att samma order
+-- skickad två gånger blir en (och samma nummer med annat innehåll avvisas).
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS external_ref text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS request_hash text;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_external_ref ON orders (channel, external_ref) WHERE external_ref IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_erp_ref ON orders (erp_ref) WHERE erp_ref IS NOT NULL;
+-- Raderna i jobbet som hubben rapporterat som skickade, när den skickar en del av jobbet i taget.
+ALTER TABLE production_jobs ADD COLUMN IF NOT EXISTS shipped_line_ids text[] NOT NULL DEFAULT '{}';
+
+-- Utkorgen mot New Waves hubb: en post per order och slag (order.submit, order.cancel), som skickas med nya försök tills
+-- hubben tagit emot den. claim_id och locked_until är den körning som skickar posten just nu. Ingen kopia av ordern
+-- sparas här: den byggs ur ordern när posten skickas.
+CREATE TABLE IF NOT EXISTS hub_outbox (
+  id text PRIMARY KEY,
+  kind text NOT NULL,
+  order_id text NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  idempotency_key text NOT NULL,
+  status text NOT NULL DEFAULT 'väntar',
+  attempts integer NOT NULL DEFAULT 0,
+  next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  claim_id text,
+  locked_until timestamptz,
+  last_error text,
+  last_error_at timestamptz,
+  erp_ref text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  sent_at timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (order_id, kind)
+);
+CREATE INDEX IF NOT EXISTS hub_outbox_due ON hub_outbox (next_attempt_at) WHERE status = 'väntar';
+CREATE INDEX IF NOT EXISTS hub_outbox_recent ON hub_outbox (updated_at DESC);
+
+-- Små värden som kopplingen mot hubben minns mellan körningarna, t.ex. när lagret senast hämtades.
+CREATE TABLE IF NOT EXISTS hub_state (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
 const g = globalThis as unknown as { pocPool?: Pool; pocSchema?: { sql: string; ready: Promise<void> } };

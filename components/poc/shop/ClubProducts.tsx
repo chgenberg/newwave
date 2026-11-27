@@ -3,7 +3,9 @@ import Link from "next/link";
 import { kr } from "@/components/newwave/clubshop/pricing";
 import { catalogProduct } from "@/lib/poc/catalog";
 import { scenePhotos } from "@/lib/poc/content";
+import type { ProductStock } from "@/lib/poc/hub/stock-rules";
 import type { ClubProduct } from "@/lib/poc/types";
+import { shopStock } from "./data";
 
 /** Miljöbilderna som Craft skapat för produkterna (lib/poc/content.ts). Går de inte att läsa visas shoppen utan dem. */
 export async function shopScenes(products: Pick<ClubProduct, "id">[]): Promise<Map<string, string>> {
@@ -15,14 +17,21 @@ export async function shopScenes(products: Pick<ClubProduct, "id">[]): Promise<M
   }
 }
 
+/** Lagret på bilden: "Tillfälligt slut" när allt är slut, "Få kvar" när någon storlek har få kvar. */
+export function StockBadge({ stock }: { stock?: ProductStock }) {
+  if (!stock?.tracked || (!stock.soldOut && !stock.few)) return null;
+  return <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ${stock.soldOut ? "bg-[#111] text-white" : "bg-[#FFF4E5] text-[#8A4B00]"}`}>{stock.soldOut ? "Tillfälligt slut" : "Få kvar"}</span>;
+}
+
 /** Klubbprodukten i shoppen: mockupen i klubbens färger, titel och pris. Med en miljöbild visas den när muspekaren är över. */
-export function ClubProductTile({ product, href, scene }: { product: ClubProduct; href: string; scene?: string }) {
+export function ClubProductTile({ product, href, scene, stock }: { product: ClubProduct; href: string; scene?: string; stock?: ProductStock }) {
   const base = catalogProduct(product.sku);
   return (
     <Link href={href} className="group block">
       <span className="relative block aspect-square overflow-hidden rounded-[18px] bg-[#F3F2EF]">
-        {product.mockupUrl ? <img src={product.mockupUrl} alt={product.title} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-3 transition duration-500 group-hover:scale-[1.04]" /> : null}
+        {product.mockupUrl ? <img src={product.mockupUrl} alt={product.title} loading="lazy" className={`absolute inset-0 h-full w-full object-contain p-3 transition duration-500 group-hover:scale-[1.04] ${stock?.soldOut ? "opacity-60" : ""}`} /> : null}
         {scene ? <img src={scene} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100" /> : null}
+        <StockBadge stock={stock} />
       </span>
       <span className="mt-3 block truncate text-[15px] font-semibold">{product.title}</span>
       <span className="mt-0.5 flex items-baseline justify-between gap-2 text-[13.5px]">
@@ -36,7 +45,7 @@ export function ClubProductTile({ product, href, scene }: { product: ClubProduct
 /** Crafts klubbkollektion överst i klubbshoppen. */
 export async function ClubProductsSection({ clubName, products, href }: { clubName: string; products: ClubProduct[]; href: (p: ClubProduct) => string }) {
   if (!products.length) return null;
-  const scenes = await shopScenes(products);
+  const [scenes, stock] = await Promise.all([shopScenes(products), shopStock(products)]);
   return (
     <section id="craft" aria-labelledby="craft-rubrik" className="scroll-mt-20 pt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--shop-line)] pb-3">
@@ -48,7 +57,7 @@ export async function ClubProductsSection({ clubName, products, href }: { clubNa
       <ul className="mt-5 grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-4 md:grid-cols-3 lg:grid-cols-4">
         {products.map((p) => (
           <li key={p.id} className="min-w-0">
-            <ClubProductTile product={p} href={href(p)} scene={scenes.get(p.id)} />
+            <ClubProductTile product={p} href={href(p)} scene={scenes.get(p.id)} stock={stock.get(p.id)} />
           </li>
         ))}
       </ul>

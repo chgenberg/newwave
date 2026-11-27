@@ -30,7 +30,7 @@ import { knitIdea, type KnitResult } from "@/lib/scarfFlow";
 import { buildPackage, FAST_COLORS, inspect } from "@/lib/scarfProduction";
 import type { ScarfIdea } from "@/lib/scarfRecipes";
 import type { Club } from "@/lib/types";
-import { baseById, baseProduct, catalogProduct, isPocBase, pocDesign } from "./catalog";
+import { baseById, baseProduct, catalogProduct, isPocBase, pocDesign, sellable } from "./catalog";
 import { type ClubProductDraft, getDesign } from "./store";
 import type { CatalogProduct, ClubProduct, Design, OrderLine, ProductionJob } from "./types";
 
@@ -635,7 +635,8 @@ export function clubVariants(design: Design, club: PocClub, choices: VariantChoi
 export async function clubProductDrafts(design: Design, clubIds: string[], skus: string[], opts: DraftOptions = {}): Promise<ClubProductDraft[]> {
   const articles: Article[] = [...new Set(skus)].flatMap((sku) => {
     const p = catalogProduct(sku);
-    if (!p) return [];
+    // En produkt som inte säljs längre publiceras inte igen.
+    if (!p || !sellable(sku)) return [];
     const base = baseProduct(p);
     const d = base ? pocDesign(base) : undefined;
     // Ett plagg som bara kan broderas görs inte i flödet.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { kr } from "@/components/newwave/clubshop/pricing";
+import { customerRemoved, REMOVED, REMOVED_NAME } from "@/lib/poc/privacy";
 import type { OrderLine, OrderStatus as Status, OrderView } from "@/lib/poc/types";
 
 /** Kundens statussida: ordern, raderna och var den är på väg, med kundvänliga texter. */
@@ -30,8 +31,12 @@ function makingText(lines: OrderLine[]) {
   return `${text[0].toUpperCase()}${text.slice(1)} just nu, på beställning för dig.`;
 }
 
-/** Vart paketet ska, i kundens ord, efter leveranssättet. Äldre ordrar utan leveranssätt visar bara adressen. */
+/**
+ * Vart paketet ska, i kundens ord, efter leveranssättet. Äldre ordrar utan leveranssätt visar bara adressen. En order
+ * vars kunduppgifter tagits bort (lib/poc/privacy.ts) säger bara det.
+ */
 function deliveryText(o: OrderView) {
+  if (customerRemoved(o.customer)) return `${REMOVED_NAME} ur ordern.`;
   const { name, address } = o.customer;
   const method = o.shipping?.method;
   if (method === "butik") return `Hämtas i närmaste Intersport-butik av ${name}.`;
@@ -119,7 +124,7 @@ export function OrderStatusView({ order, clubName, home }: { order: OrderView; c
                       {shipped.map((j) => (
                         <li key={j.id} className="rounded-xl bg-[var(--shop-bg)] px-4 py-3 text-[14px]">
                           <span className="block font-semibold">{j.lineIds.map((id) => lineById.get(id)?.title).filter(Boolean).join(", ") || "Paket"}</span>
-                          {j.tracking ? (
+                          {j.tracking && j.tracking !== REMOVED ? (
                             <span className="block text-[#4A4740]">
                               Spårningsnummer <span className="font-mono font-semibold tracking-wide text-[#111]">{j.tracking}</span>
                             </span>
@@ -167,7 +172,7 @@ export function OrderStatusView({ order, clubName, home }: { order: OrderView; c
       </dl>
       <p className="mt-1 text-[12.5px] text-[#6F6B63]">{o.shipping ? "Inklusive moms och frakt." : "Inklusive moms, exklusive frakt."}</p>
 
-      {where && o.status !== "avbruten" ? <p className="mt-6 text-[14px] text-[#4A4740]">{where}</p> : null}
+      {where && (o.status !== "avbruten" || customerRemoved(o.customer)) ? <p className="mt-6 text-[14px] text-[#4A4740]">{where}</p> : null}
       <Link href={home} className="mt-6 inline-flex h-12 items-center rounded-full bg-[var(--shop)] px-6 text-[15px] font-semibold text-[var(--shop-on)]">
         Till klubbshoppen
       </Link>

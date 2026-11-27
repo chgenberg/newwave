@@ -4,9 +4,13 @@ import { notFound } from "next/navigation";
 import { Crest, fmtKr } from "@/components/newwave/craft/parts";
 import { OrderActions } from "@/components/poc/craft/OrderActions";
 import { AutoRefresh } from "@/components/poc/craft/OrderControls";
-import { ACTOR_NAME, fmtDay, fmtTime, fmtWhen, JobPill, OrderPill, PRODUCER_NAME } from "@/components/poc/craft/orderParts";
+import { ACTOR_NAME, fmtDay, fmtTime, fmtWhen, HubPill, hubLine, JobPill, OrderPill, PRODUCER_NAME } from "@/components/poc/craft/orderParts";
 import { requireRole } from "@/lib/poc/auth";
 import { pocClub } from "@/lib/poc/build";
+import { hubConfig } from "@/lib/poc/hub/config";
+import { MAX_ATTEMPTS, outboxForOrder } from "@/lib/poc/hub/outbox";
+import type { OutboxItem } from "@/lib/poc/hub/types";
+import { customerRemoved } from "@/lib/poc/privacy";
 import { getOrderView } from "@/lib/poc/store";
 import type { EventActor } from "@/lib/poc/types";
 
@@ -25,7 +29,10 @@ export default async function CraftOrder({ params }: { params: Promise<{ id: str
   await requireRole("craft", `/newwave/craft/ordrar/${id}`);
   const order = await getOrderView(decodeURIComponent(id)).catch(() => null);
   if (!order) notFound();
-  const club = await pocClub(order.clubId).catch(() => null);
+  const [club, hubItems] = await Promise.all([pocClub(order.clubId).catch(() => null), outboxForOrder(order.id).catch((): OutboxItem[] => [])]);
+  const hub = hubConfig();
+  const submit = hubItems.find((i) => i.kind === "order.submit");
+  const removed = customerRemoved(order.customer) ? order.customer : null;
   const lineNo = new Map(order.lines.map((l, i) => [l.id, i + 1]));
   const jobs = new Map(order.jobs.map((j) => [j.id, j]));
   /** Jobbet en händelse gäller, när det inte redan framgår av vem som gjorde den. */
@@ -42,11 +49,12 @@ export default async function CraftOrder({ params }: { params: Promise<{ id: str
   }, []);
   // Samma regel som cancelOrder: inget jobb får ha börjat tillverkas eller skickats.
   const canCancel = order.status !== "avbruten" && !order.jobs.some((j) => j.status === "i produktion" || j.status === "skickad" || j.tracking);
-  const canRetry = order.status === "mottagen";
+  // Samma regel som resendToHub: ordern väntar på bekräftelse och skickas inte just nu.
+  const canRetry = order.status === "mottagen" && !submit?.sending;
   const facts = [
     { label: "Summa", value: fmtKr(order.totalSek) },
-    { label: "Crafts affärssystem", value: order.erpRef ?? "Väntar på bekräftelse" },
-    { label: "Kanal", value: order.channel === "intersport" ? "Intersport" : order.channel },
+    { label: "Crafts affärssystem", value: order.erpRef ?? (submit?.status === "misslyckad" ? "Kom inte fram" : order.status === "avbruten" ? "–" : "Väntar på bekräftelse") },
+    { label: "Kanal", value: `${order.channel === "intersport" ? "Intersport" : order.channel}${order.externalRef ? ` · ${order.externalRef}` : ""}` },
     { label: "Lagd", value: fmtWhen(order.createdAt) },
   ];
 
@@ -157,11 +165,52 @@ export default async function CraftOrder({ params }: { params: Promise<{ id: str
           </section>
 
           <section>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <h2 className="text-[15px] font-semibold text-[var(--nw-ink)]">New Waves hubb</h2>
+              <span className="text-[12px] text-[var(--nw-muted)]">{hub.mode === "simulerad" ? "Simulerad – affärssystemet svarar själv" : "Riktig hubb"}</span>
+            </div>
+            {hub.mode === "http" && !hub.ready ? (
+              <p className="mt-3 rounded-2xl bg-[#FDECEC] px-4 py-3 text-[13px] text-[#9B1C1C]">
+                Hubben är inte inställd ({hub.missing.join(", ")} saknas eller är fel). Ordrarna väntar i utkorgen tills det är rättat.
+              </p>
+            ) : null}
+            {hubItems.length ? (
+              <ul className="mt-3 flex flex-col gap-2">
+                {hubItems.map((i) => (
+                  <li key={i.id} className="min-w-0 rounded-[22px] border border-[var(--nw-line)] px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold text-[var(--nw-ink)]">{i.kind === "order.submit" ? "Ordern" : "Avbokningen"}</span>
+                      <HubPill item={i} />
+                    </div>
+                    <p className="mt-1 text-[12.5px] text-[var(--nw-muted)]">{hubLine(i, order.erpRef, MAX_ATTEMPTS)}</p>
+                    {i.lastError && (i.status === "väntar" || i.status === "misslyckad") ? (
+                      <p className="mt-2 rounded-xl bg-[#FDECEC] px-3 py-2 text-[12.5px] text-[#9B1C1C]">
+                        <span>Senaste fel{i.lastErrorAt ? ` ${fmtWhen(i.lastErrorAt)}` : ""}</span>
+                        <span className="block break-words">{i.lastError}</span>
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 rounded-2xl bg-[var(--nw-soft)] p-4 text-[13.5px] text-[var(--nw-muted)]">
+                {order.erpRef ? "Ordern skickades till affärssystemet innan utkorgen mot hubben fanns." : "Ordern ligger inte i utkorgen. Skicka den till affärssystemet igen för att lägga den där."}
+              </p>
+            )}
+          </section>
+
+          <section>
             <h2 className="text-[15px] font-semibold text-[var(--nw-ink)]">Kunden</h2>
             <div className="mt-3 rounded-[22px] border border-[var(--nw-line)] px-4 py-3 text-[13.5px] leading-relaxed">
-              <p className="font-medium text-[var(--nw-ink)]">{order.customer.name}</p>
-              <p className="text-[var(--nw-muted)]">{[order.customer.email, order.customer.phone].filter(Boolean).join(" · ")}</p>
-              {order.customer.address ? <p className="text-[var(--nw-muted)]">{order.customer.address}</p> : null}
+              {removed ? (
+                <p className="text-[var(--nw-muted)]">Kunduppgifterna är borttagna ({fmtWhen(removed.removedAt)}).</p>
+              ) : (
+                <>
+                  <p className="font-medium text-[var(--nw-ink)]">{order.customer.name}</p>
+                  <p className="text-[var(--nw-muted)]">{[order.customer.email, order.customer.phone].filter(Boolean).join(" · ")}</p>
+                  {order.customer.address ? <p className="text-[var(--nw-muted)]">{order.customer.address}</p> : null}
+                </>
+              )}
             </div>
           </section>
         </div>

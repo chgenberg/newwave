@@ -5,14 +5,15 @@ import type { ShopProductView } from "@/app/api/v1/craft/products/view";
 import { Crest, fmtKr, fmtN } from "@/components/newwave/craft/parts";
 import { SearchBox } from "@/components/newwave/craft/SearchBox";
 import type { ClubProductStatus } from "@/lib/poc/types";
-import { Chevron, type ProductOption, type SavedDesign } from "./CollectionBuilder";
+import { Chevron, type ProductOption, type SavedDesign, stockLabelOf, StockNote } from "./CollectionBuilder";
 import { VariantRows } from "./VariantRows";
 import { STANDARD_VARIANT, type VariantChoice } from "./variants";
 
 /**
  * Crafts vy över en klubbs Intersport-shop: alla klubbprodukter från alla designer, med bild, titel, pris och status.
  * Craft tar bort en produkt ur shoppen (den finns kvar för ordrarna), lägger tillbaka den, lägger till en ny – design,
- * variant, artikel och färg, publicerad till just den klubben – och ändrar priset.
+ * variant, artikel och färg, publicerad till just den klubben – och ändrar priset. Lagret i New Waves hubb syns per
+ * produkt i dess färg ("Slut i M och L"), och en produkt som hubben tagit bort står som "Säljs inte längre".
  */
 
 /** En rad ur klubbregistret: id, namn, län, kommun, sport, färger med komma emellan, märkets version och grundandeåret. */
@@ -50,7 +51,9 @@ const STATUS_LABEL: Record<ClubProductStatus, string> = { publicerad: "I shoppen
 const ORDER: Record<ClubProductStatus, number> = { publicerad: 0, utkast: 1, borttagen: 2 };
 const field = "h-9 w-full appearance-none truncate rounded-full bg-[var(--nw-soft)] pl-3.5 pr-8 text-[13px] font-medium text-[var(--nw-ink)] outline-none focus:ring-2 focus:ring-[var(--club)]";
 
-export function ShopEditor({ initialClub, designs, products }: { initialClub: string; designs: SavedDesign[]; products: ProductOption[] }) {
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+export function ShopEditor({ initialClub, designs, products, catalogNote }: { initialClub: string; designs: SavedDesign[]; products: ProductOption[]; catalogNote?: string }) {
   const [clubs, setClubs] = useState<Club[] | null>(null);
   const [q, setQ] = useState("");
   const [clubId, setClubId] = useState(initialClub);
@@ -191,6 +194,7 @@ export function ShopEditor({ initialClub, designs, products }: { initialClub: st
         clubId={clubId}
         designs={designs}
         products={products}
+        catalogNote={catalogNote}
         sample={club ? { name: club.name, municipality: club.municipality, sport: club.sport, founded: club.founded } : undefined}
         onAdded={(p, existed) => {
           replace(p);
@@ -207,6 +211,9 @@ export function ShopEditor({ initialClub, designs, products }: { initialClub: st
           {sorted.map((p) => {
             const gone = p.status !== "publicerad";
             const price = prices[p.id] ?? String(p.priceSek);
+            // Produkten i katalogen som säljs nu; saknas den har hubben tagit bort den (eller katalogen bytt källa).
+            const option = products.find((o) => o.sku === p.sku);
+            const stock = option ? stockLabelOf(option, p.color) : null;
             return (
               <li key={p.id} className={`flex flex-col gap-3 rounded-[20px] border border-[var(--nw-line)] p-2.5 sm:flex-row sm:items-center ${gone ? "bg-[var(--nw-soft)]" : ""}`}>
                 <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -219,7 +226,11 @@ export function ShopEditor({ initialClub, designs, products }: { initialClub: st
                     <span className="block truncate text-[12px] text-[var(--nw-muted)]">
                       {[p.designName, p.color?.name, p.orders ? `${fmtN(p.orders)} ${p.orders === 1 ? "order" : "ordrar"}` : ""].filter(Boolean).join(" · ")}
                     </span>
-                    <span className={`mt-1 inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium ${gone ? "bg-white text-[var(--nw-muted)]" : "bg-[var(--nw-ink)] text-white"}`}>{STATUS_LABEL[p.status]}</span>
+                    {stock ? <StockNote label={stock} className="block truncate text-[12px] font-medium" /> : null}
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      <span className={`inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium ${gone ? "bg-white text-[var(--nw-muted)]" : "bg-[var(--nw-ink)] text-white"}`}>{STATUS_LABEL[p.status]}</span>
+                      {!option ? <span className="inline-flex h-5 items-center rounded-full bg-[#FDECEA] px-2 text-[11px] font-medium text-[#9B1C1C]">Säljs inte längre</span> : null}
+                    </span>
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -242,7 +253,13 @@ export function ShopEditor({ initialClub, designs, products }: { initialClub: st
                     </button>
                   ) : null}
                   {gone ? (
-                    <button type="button" disabled={busy === p.id} onClick={() => patch(p, { status: "publicerad" }, `${p.title} är tillbaka i shoppen.`)} className="nw-btn h-9 px-3.5 text-[13px] disabled:opacity-50">
+                    <button
+                      type="button"
+                      disabled={busy === p.id || !option}
+                      title={option ? undefined : "Artikeln säljs inte längre och syns inte i shoppen"}
+                      onClick={() => patch(p, { status: "publicerad" }, `${p.title} är tillbaka i shoppen.`)}
+                      className="nw-btn h-9 px-3.5 text-[13px] disabled:opacity-50"
+                    >
                       {p.status === "utkast" ? "Publicera" : "Lägg tillbaka"}
                     </button>
                   ) : (
@@ -270,12 +287,14 @@ function AddProduct({
   clubId,
   designs,
   products,
+  catalogNote,
   sample,
   onAdded,
 }: {
   clubId: string;
   designs: SavedDesign[];
   products: ProductOption[];
+  catalogNote?: string;
   sample?: { name: string; municipality?: string; sport?: string; founded?: number };
   onAdded: (p: ShopProductView, existed: ClubProductStatus | null) => void;
 }) {
@@ -290,6 +309,8 @@ function AddProduct({
 
   const design = designs.find((d) => d.id === designId);
   const product = products.find((p) => p.sku === sku);
+  // Lagret för den valda färgen, eller alla färger ihop när färgen väljs automatiskt.
+  const stock = product ? stockLabelOf(product, /^#/.test(color) ? { hex: color, name: product.colorOptions?.find((c) => c.hex === color)?.name } : null) : null;
   const wordmark = design?.type === "ordmall";
   const body = design && product ? { clubId, designId, sku, color: product.kind === "plagg" ? color : undefined, variant: wordmark ? variant[0] : undefined } : null;
   const key = open && body ? JSON.stringify(body) : "";
@@ -384,16 +405,30 @@ function AddProduct({
                   }}
                   className={field}
                 >
-                  {products.map((p) => (
-                    <option key={p.sku} value={p.sku}>
-                      {p.name} · {p.priceSek} kr
-                    </option>
-                  ))}
+                  {products.map((p) => {
+                    const stock = stockLabelOf(p);
+                    return (
+                      <option key={p.sku} value={p.sku}>
+                        {p.name} · {p.priceSek} kr{stock ? ` · ${stock.text.charAt(0).toLowerCase()}${stock.text.slice(1)}` : ""}
+                      </option>
+                    );
+                  })}
                 </select>
                 <Chevron />
               </span>
             </label>
           </div>
+          {catalogNote || stock ? (
+            <p className="px-1 text-[12px] text-[var(--nw-muted)]">
+              {catalogNote ? `${capital(catalogNote)}.` : ""}
+              {stock ? (
+                <>
+                  {catalogNote ? " " : ""}
+                  Lager{/^#/.test(color) ? " i färgen" : ""}: <StockNote label={stock} className="font-medium" />
+                </>
+              ) : null}
+            </p>
+          ) : null}
           {product?.kind === "plagg" ? (
             <div>
               <span className="mb-1 block px-1 text-[12px] text-[var(--nw-muted)]">Färg</span>

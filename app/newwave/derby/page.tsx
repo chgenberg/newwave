@@ -349,7 +349,7 @@ export default function DerbyPage() {
           </div>
         </div>
         <p className="mt-6 max-w-[80ch] text-[12.5px] leading-relaxed text-[var(--nw-muted)]">
-          Listpriser i dollar, räknade till {SEK_PER_USD} kr per dollar. Bildmodellen redovisar inte tokens, så bilderna är uppskattade till {IMAGE_SEK} kr styck. Att skriva de {num(run.total)} påhittade bidragen kostade {kr(stage("generate").sek)} – i verkligheten skriver supportrarna dem själva.
+          Listpriser i dollar, räknade till {SEK_PER_USD} kr per dollar. Bildernas tokens sparades inte i körningen, så de är uppskattade till ca {kr(IMAGE_SEK)} styck: så mycket kostar en bild med bildmodellens listpris (ungefär 1 500 tokens in och 350 ut). Att skriva de {num(run.total)} påhittade bidragen kostade {kr(stage("generate").sek)} – i verkligheten skriver supportrarna dem själva.
         </p>
       </section>
     </main>

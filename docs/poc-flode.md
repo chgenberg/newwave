@@ -64,7 +64,7 @@ Typerna ligger i `lib/poc/types.ts` och är det som alla delar bygger mot.
   status? })`, `getOrderView(id)`, `listJobs(producer, status?)`, `getJob(id)`.
 - `lib/poc/orders.ts` (A): `createOrder(ny: NewOrder) → { order: OrderView, token }`, `setJobStatus(producer, jobId,
   { status, note?, tracking? })`, `orderForCustomer(id, token)`.
-- `lib/poc/catalog.ts` (B): `POC_CATALOG`, `catalogProduct(sku)`.
+- `lib/poc/catalog.ts` (B): `pocCatalog()` (läses om när hubben ändrat katalogen), `catalogProduct(sku)`, `sellable(sku)`.
 - `lib/poc/build.ts` (B): `clubProductDrafts(design, clubIds, skus)` → rader till `upsertClubProducts` (titel, pris,
   mockup-URL, `spec`), och `jobFiles(job, lines, products) → { name, label, data: Buffer }[]` som bygger
   produktionsfilerna ur `spec` – stickfilen för halsduken, tryckfilerna för plaggen.
@@ -162,6 +162,52 @@ Kontraktet mellan D och E:
 - Miljöbilden: `POST /api/v1/craft/innehall/miljobild` med `{ clubProductId }` ger `{ url }`. E sparar den i en egen tabell och visar den i shoppens produktvy.
 - Varje del skapar sina egna tabeller idempotent med `query` ur `lib/poc/db.ts`; E rör inte `db.ts` eller `store.ts`.
 
+## Steg 4: kopplingen mot New Waves hubb, åt båda hållen
+
+Målet: när New Wave lämnar API-beskrivning och nyckel ska bara miljövariablerna sättas och översättningen till hubbens
+fältnamn skrivas – ut i `lib/poc/hub/mapping.ts`, in i `lib/poc/hub/mapping-in.ts`. Allt annat är byggt, provat mot en
+provhubb och dokumenterat. Tills dess är hubbens format detsamma som våra typer i `lib/poc/hub/types.ts`.
+
+Miljövariabler:
+
+| Variabel | Vad |
+| --- | --- |
+| `HUB_MODE` | `simulerad` (standard: svarar själv, som i dag) eller `http` |
+| `HUB_API_URL`, `HUB_API_KEY` | Hubbens adress och nyckel |
+| `HUB_AUTH_HEADER` | Rubriken som bär nyckeln; standard `Authorization` med `Bearer <nyckel>` |
+| `HUB_WEBHOOK_SECRET` | Hemligheten för signaturen (HMAC-SHA256) på hubbens händelser till oss |
+| `HUB_CRON_KEY` | Nyckeln för schemat som kör utkorgen och hämtningen (`POST /api/v1/hub/kor`) |
+| `HUB_PULL` | `1`: vi hämtar lager och produkter själva, om hubben inte skickar händelser |
+| `HUB_FILE_TTL_H` | Hur många timmar fillänkarna till hubben gäller (standard 336, två veckor) |
+| `PUBLIC_BASE_URL` | Sajtens adress i länkarna till hubben (standard `https://www.nextwaveproduction.se`) |
+| `HUB_TIMER` | `0`: timern i serverprocessen (`instrumentation.ts`) som kör utkorgen varje minut stängs av; då måste schemat anropa `/api/v1/hub/kor` |
+| `ALERT_WEBHOOK_URL` | Larm, t.ex. en Slack-webhook; utan den skrivs larmen bara i loggen |
+
+| Del | Vad | Äger |
+| --- | --- | --- |
+| Ut | `HubClient` (simulerad och http), utkorgen med nya försök och larm, ordrar och avbokningar till hubben, butikens ordernummer (`externalRef`) så att samma order aldrig blir två, tidsbegränsade fillänkar, schemats route, hubbens status in i ordern | `lib/poc/hub/client.ts`, `mapping.ts`, `outbox.ts`, `files.ts`, `alert.ts`, `config.ts`, `lib/poc/erp.ts`, `lib/poc/orders.ts`, `lib/poc/store.ts`, `lib/poc/db.ts`, `lib/poc/types.ts`, `lib/access.ts`, `instrumentation.ts`, `app/api/v1/hub/kor/**`, `app/api/v1/hub/filer/**`, `app/api/v1/orders/**`, `app/newwave/craft/ordrar/**`, `components/poc/craft/Order*.tsx`, `components/poc/craft/orderParts.tsx` |
+| In | Ingången för hubbens händelser (signatur, att samma händelse bara behandlas en gång, fördelning), översättningen in, provhubben, testet av hela kretsen, API-dokumentationen (OpenAPI) och Crafts integrationssida | `lib/poc/hub/inbox.ts`, `mapping-in.ts`, `app/api/v1/hub/webhook/**`, `app/api/v1/hub/openapi/**`, `docs/hubb-api.yaml`, `scripts/hub-mock.mjs`, `scripts/hub-e2e.mjs`, `app/newwave/craft/integration/**`, `components/poc/craft/integration/**` |
+| Lager och produkter | Lagersaldo och produkter från hubben, katalogen som uppdateras medan servern kör, lagret i shoppen, kassan och Crafts vyer | `lib/poc/hub/stock.ts`, `lib/poc/hub/products.ts`, `lib/poc/catalog.ts` och katalogens anropsställen, `components/poc/shop/**`, `app/intersport/**`, `app/newwave/craft/shoppar/**`, `app/newwave/craft/klubbkollektion/**`, `components/poc/craft/**` utom `integration/` och orderfilerna |
+| Drift | Rensning av personuppgifter, rensning av demodatan, miljöbildens kostnad ur verkliga tokens, driftbeskrivning | `lib/poc/privacy.ts`, `scripts/poc-rensa-demodata.ts`, `lib/poc/content.ts`, `docs/drift.md`, `app/api/v1/poc/rensa/**` |
+
+Funktionerna mellan delarna (namnen är bestämda; signaturerna får förfinas av ägaren):
+- Ut → In: `applyOrderStatus(data)` i `lib/poc/orders.ts` (data som i händelsen `order.status`) uppdaterar order, jobb
+  och tidslinje och ger `{ ok, message? }`; `processOutbox()` och `outboxSummary()` i `outbox.ts`; `hub()` och
+  `hubConfig()` (läge, adress, vad som saknas – aldrig nyckeln) i `client.ts`/`config.ts`; `alert(key, text)` i `alert.ts`.
+- Lager och produkter → In och Ut: `applyStock(items, full?)`, `stockFor(sku)`, `checkStock(lines)` (ger
+  `{ ok, problems }`; Ut anropar den i `createOrder`), `reserveStock(lines)` (Ut anropar den när hubben bekräftat) i
+  `stock.ts`; `applyProducts(products)`, `deleteProducts(skus)` i `products.ts`; `pocCatalog()` i `catalog.ts`
+  ersätter konstanten `POC_CATALOG` (synkron, läser om katalogen när hubben ändrat den).
+- In → alla: `recordEvent(event)` och `eventSummary()` i `inbox.ts`; In anropar `applyOrderStatus`, `applyStock`,
+  `applyProducts` och `deleteProducts`.
+- Varje del skapar sina egna tabeller idempotent med `query` ur `lib/poc/db.ts` (som `q` i `lib/poc/content.ts`); bara Ut ändrar `db.ts` och `store.ts`.
+- Utan lagersaldo för en artikel säljs den som i dag (obegränsat). Saknas en storlek i ett fullständigt lager är den slut.
+
+Provning: två utvecklingsservrar kan inte köra i samma mapp, och den på 3300 kör med `.env.local` i simulerat läge.
+Hubbläget (`http`) provas med skript som kör bibliotekets funktioner och routernas `GET`/`POST` direkt (med
+`node node_modules/.bin/jiti`, som `scripts/club-logos-vector.ts`) med `process.env` satt i skriptet, mot provhubben
+`scripts/hub-mock.mjs`. Hela kretsen över HTTP körs till sist av huvudsessionen med `scripts/hub-e2e.mjs`.
+
 ## Att koppla in de riktiga systemen
 
 Det som simuleras i POC:n sitter bakom gränssnitt, och flödets API:er går att nå utan demolösenordet (de kontrollerar
@@ -169,14 +215,18 @@ själva nyckel eller inloggning, se `lib/access.ts`).
 
 | System | Kopplas in | Behövs från dem |
 | --- | --- | --- |
-| New Waves affärssystem och API-hubb | `erp()` i `lib/poc/erp.ts` – en egen `ErpAdapter` i stället för den simulerade | API-beskrivning; att samma order skickad två gånger (nytt försök) inte blir två ordrar; ett anrop för att avbryta |
+| New Waves affärssystem och API-hubb, ut | Sätt `HUB_MODE=http`, `HUB_API_URL`, `HUB_API_KEY` (och `HUB_AUTH_HEADER` om nyckeln inte ska gå som `Authorization: Bearer`), och skriv översättningen till hubbens fältnamn och ändpunkter i `lib/poc/hub/mapping.ts`. Allt annat är byggt: `hub()` i `lib/poc/hub/client.ts` (tidsgräns 15 s, `Idempotency-Key`, nya försök vid nät, tidsgräns, 5xx, 408 och 429), utkorgen `hub_outbox` (`lib/poc/hub/outbox.ts`: posten läggs i orderns transaktion, försök direkt och efter 1, 5, 15, 30, 60 min och sedan varje timme i ett dygn, därefter "misslyckad" och larm; Craft skickar igen från ordervyn), avbokningar, butikens ordernummer (`externalRef` eller `Idempotency-Key` i `POST /api/v1/orders`), signerade fillänkar i ordern (`GET /api/v1/hub/filer/{token}`) och hubbens status in i ordern (`applyOrderStatus` i `lib/poc/orders.ts`). Utan adress eller nyckel i http-läget skickas inget: ordrarna väntar i utkorgen och ett larm går | API-beskrivning (ändpunkter, fältnamn, hur nyckeln skickas); att samma `Idempotency-Key` ger samma svar och aldrig två ordrar; om ordern bekräftas i svaret eller senare (202); anropet för att avboka och vad det svarar när ordern redan är i produktion; om de hämtar produktionsfilerna direkt eller behöver längre giltighet än två veckor; om `GET /stock` utan `since` ger hela lagret |
+| Utkorgen mot hubben | Timern i `instrumentation.ts` kör varje minut i serverprocessen (`HUB_TIMER=0` stänger av den). Ett schema utanför kan dessutom köra `POST /api/v1/hub/kor` (nyckel `HUB_CRON_KEY` i `x-api-key` eller som Bearer; `?alla=1` skickar allt som väntar direkt) | – |
 | Intersports klubbshoppar | Ordrar in: `POST /api/v1/orders` (nyckel `INTERSPORT_API_KEY`). Produkter ut: publiceringen i `lib/poc/build.ts`/`store.ts` skickas vidare till deras produkt-API | Deras produkt-API och hur ordrar och betalning kommer tillbaka |
 | Tryckeriet och stickeriet | Hämtar jobb och filer: `/api/v1/producers/{tryckeri,stickeri}/jobs` (nycklar `PRODUCER_KEY_*`), eller köerna på `/producent` med lösenord – om de inte nås via New Waves hubb | Om de vill hämta själva eller få jobben skickade (webhook) |
 | Crafts produktdata | `scripts/poc-import-catalog.ts` → `lib/poc/catalog-data.json` | Artikelnummer, namn, pris, storlekar, färger (från Robin) |
 | Säsongsschemat | `POST /api/v1/craft/sasong/kor` en gång i timmen (nyckel `CRAFT_SEASON_KEY`) | – |
 
 Miljövariabler i produktion: `DATABASE_URL`, `CRAFT_PASSWORD`, `STICKERI_PASSWORD`, `TRYCKERI_PASSWORD`,
-`POC_SESSION_SECRET`, `PRODUCER_KEY_STICKERI`, `PRODUCER_KEY_TRYCKERI`, `INTERSPORT_API_KEY`, `CRAFT_SEASON_KEY`.
+`POC_SESSION_SECRET`, `PRODUCER_KEY_STICKERI`, `PRODUCER_KEY_TRYCKERI`, `INTERSPORT_API_KEY`, `CRAFT_SEASON_KEY`, och för
+hubben `HUB_MODE`, `HUB_API_URL`, `HUB_API_KEY`, `HUB_CRON_KEY`, `PUBLIC_BASE_URL` och `ALERT_WEBHOOK_URL` (valfria:
+`HUB_AUTH_HEADER`, `HUB_PULL`, `HUB_FILE_TTL_H`, `HUB_TIMER`). `POC_SESSION_SECRET` signerar också fillänkarna till hubben:
+byts den slutar länkarna i redan skickade ordrar att gälla.
 
 ## Regler för bygget
 

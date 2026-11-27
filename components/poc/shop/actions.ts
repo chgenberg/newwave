@@ -6,7 +6,9 @@ import { z } from "zod";
 import { MAX_QTY } from "@/components/newwave/clubshop/pricing";
 import { createLimiter } from "@/lib/demoLimit";
 import { intersportClub } from "@/lib/intersport";
+import { checkStock, type StockProblemReason } from "@/lib/poc/hub/stock";
 import { createOrder, customerStatusPath, findOrderForCustomer, PocError } from "@/lib/poc/orders";
+import { listClubProducts } from "@/lib/poc/store";
 import { isVisitorId, VISITOR_COOKIE } from "@/lib/visits";
 
 /**
@@ -31,19 +33,83 @@ const Input = z.object({
 });
 
 export type ClubOrderInput = z.input<typeof Input>;
-/** Plattformens order: numret, statussidan och summan som plattformen räknat, med frakten. */
-export type ClubOrderResult = { ok: true; number: string; statusUrl: string; totalSek: number; shipping?: { label: string; priceSek: number } } | { ok: false; error: string };
+/**
+ * Plattformens order: numret, statussidan och summan som plattformen räknat, med frakten. Går en vara inte att beställa
+ * för att den är slut, har för få kvar eller inte säljs längre står det i `error` (och raderna i `problems`).
+ */
+export type ClubOrderResult = { ok: true; number: string; statusUrl: string; totalSek: number; shipping?: { label: string; priceSek: number } } | { ok: false; error: string; problems?: CartStockProblem[] };
+
+// ── Lagret ──────────────────────────────────────────────────────────────────
+
+type CraftLine = { key?: string; clubProductId: string; size?: string; qty: number };
+
+/** Ett hinder i korgen: korgens rader (`keys`), beskedet till kunden och, när det går, antalet som finns kvar. */
+export type CartStockProblem = { keys: string[]; reason: StockProblemReason; message: string; fix?: { key: string; qty: number } };
+
+/** Korgens rader från Craft mot lagret i New Waves hubb (lib/poc/hub/stock.ts), med klubbproduktens plagg och färg. */
+async function stockProblems(clubId: string, lines: CraftLine[]): Promise<CartStockProblem[]> {
+  const products = new Map((await listClubProducts({ ids: [...new Set(lines.map((l) => l.clubProductId))] })).map((p) => [p.id, p]));
+  // Bara klubbens publicerade produkter; de andra får kärnans besked när ordern läggs.
+  const known = lines.filter((l) => {
+    const p = products.get(l.clubProductId);
+    return p && p.clubId === clubId && p.status === "publicerad";
+  });
+  const { problems } = await checkStock(
+    known.map((l) => {
+      const p = products.get(l.clubProductId)!;
+      return { sku: p.sku, title: p.title, spec: p.spec, size: l.size, qty: l.qty };
+    }),
+  );
+  return problems.map((p) => {
+    const keys = p.lines.map((i) => known[i].key ?? known[i].clubProductId);
+    const single = p.lines.length === 1 && p.reason === "få kvar" && p.available > 0;
+    return { keys, reason: p.reason, message: p.message, ...(single ? { fix: { key: keys[0], qty: p.available } } : {}) };
+  });
+}
+
+const stockError = (messages: string[]) => `${messages.length > 1 ? "Några varor går inte att beställa just nu. " : ""}${messages.join(" ")} Ändra varukorgen och försök igen – ingenting har dragits.`;
+
+const CartInput = z.object({
+  clubId: z.string().min(1).max(120),
+  lines: z.array(z.object({ key: z.string().max(300), clubProductId: z.string().min(1).max(80), size: z.string().trim().max(20).optional(), qty: z.number().int().min(1).max(MAX_QTY) })).max(30),
+});
+
+/**
+ * Kassan prövar korgen mot lagret medan kunden fyller i, så att det som är slut syns innan ordern läggs. Visar inget om
+ * lagret inte går att läsa – ordern prövas ändå när den läggs.
+ */
+export async function cartStock(raw: z.input<typeof CartInput>): Promise<{ problems: CartStockProblem[] }> {
+  const input = CartInput.safeParse(raw);
+  if (!input.success || !input.data.lines.length) return { problems: [] };
+  try {
+    return { problems: await stockProblems(input.data.clubId, input.data.lines) };
+  } catch (e) {
+    console.error("[kassan] lagret kunde inte prövas", e instanceof Error ? e.message : e);
+    return { problems: [] };
+  }
+}
 
 export async function placeClubOrder(raw: ClubOrderInput): Promise<ClubOrderResult> {
   const input = Input.safeParse(raw);
   if (!input.success) return { ok: false, error: "Kontrollera dina uppgifter och försök igen." };
   const { clubId, customer, delivery, lines } = input.data;
   if (!(await intersportClub(clubId))) return { ok: false, error: "Klubbshoppen finns inte." };
+  // Lagret först, så att kunden får beskedet om det som är slut innan någon order skapas. Kärnan prövar det igen.
+  const problems = await stockProblems(clubId, lines).catch((e) => {
+    console.error("[kassan] lagret kunde inte prövas", e instanceof Error ? e.message : e);
+    return [];
+  });
+  if (problems.length) return { ok: false, error: stockError(problems.map((p) => p.message)), problems };
   try {
     const { order, token } = await createOrder({ clubId, customer, delivery, lines });
     const shipping = order.shipping ? { label: order.shipping.label, priceSek: order.shipping.priceSek } : undefined;
     return { ok: true, number: order.number, statusUrl: customerStatusPath(order, token), totalSek: order.totalSek, shipping };
   } catch (e) {
+    // Kärnans lagerkontroll (409): något tog slut medan kunden var i kassan.
+    if (e instanceof PocError && e.status === 409) {
+      const messages = e.issues?.map((i) => i.message).filter(Boolean) ?? [];
+      return { ok: false, error: stockError(messages.length ? messages : [e.message.replace(/\.?$/, ".")]) };
+    }
     if (e instanceof PocError && e.status === 400) {
       const why = e.issues?.find((i) => i.path.startsWith("lines."))?.message;
       return { ok: false, error: why ? `En vara i korgen går inte att beställa just nu (${why.toLowerCase()}). Ta bort den och försök igen.` : "Kontrollera dina uppgifter och försök igen." };

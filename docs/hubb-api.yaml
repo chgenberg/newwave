@@ -1,0 +1,910 @@
+openapi: 3.1.0
+info:
+  title: Next Wave Commerce Hub och New Waves hubb
+  version: 1.0.0-utkast
+  summary: Kopplingen mellan Next Wave Commerce Hub och New Waves hubb (affärssystemet och dess API), åt båda hållen.
+  description: |
+    Underlag för New Waves IT. Beskrivningen gäller båda hållen:
+
+    - **Det vi anropar hos hubben** (taggen *Hubben*): ordrar från klubbarnas Intersport-shoppar, avbokningar och –
+      om hubben inte skickar händelser – hämtning av lager och produkter. Adresserna är relativa till hubbens adress
+      (`HUB_API_URL` hos oss).
+    - **Det hubben anropar hos oss** (taggen *Webhook*): orderstatus, lagersaldon och produkter som händelser till
+      `POST https://www.nextwaveproduction.se/api/v1/hub/webhook`.
+    - **Produktionsfilerna** (taggen *Filer*): varje orderrad bär tidsbegränsade länkar till tryck- och stickfilerna.
+
+    Formatet nedan är vårt förslag. Har hubben redan egna ändpunkter och fältnamn anpassar vi oss: översättningen ligger
+    på ett ställe hos oss och resten av flödet påverkas inte. Det vi behöver från New Wave står sist, under *Öppna frågor*.
+
+    ## Flödet
+
+    1. En kund handlar i en klubbs Intersport-shop. Vi sparar ordern och lägger den i vår utkorg.
+    2. Utkorgen skickar ordern till hubben (`POST /orders`) med vårt ordernummer som `Idempotency-Key`. Hubben svarar med
+       sitt ordernummer (`erpRef`), eller med 202 och bekräftar senare med händelsen `order.status` `bekräftad`.
+    3. Hubben (eller producenten) hämtar produktionsfilerna med länkarna i orderraderna.
+    4. Hubben skickar status när ordern tas i produktion och skickas, med spårningsnummer, som händelser till webhooken.
+       Status kan gälla hela ordern eller en producents del (`producer`, `lineIds`): halsdukar stickas hos stickeriet och
+       plagg trycks hos tryckeriet, och delarna skickas var för sig.
+    5. Avbokar Craft en order som inte börjat tillverkas skickar utkorgen `POST /orders/{orderNumber}/cancel`.
+    6. Lager och produkter kommer som händelser (`stock.updated`, `product.upsert`, `product.delete`), eller hämtas av
+       oss med `GET /stock` och `GET /products` om hubben inte kan skicka dem.
+
+    ## Format
+
+    - JSON i UTF-8. Tider i ISO 8601 med tidszon, helst UTC (`2026-11-26T14:05:00Z`).
+    - Belopp i svenska kronor (`unitSek`, `priceSek`, `totalSek`), som priset i butiken. `totalSek` inkluderar frakten.
+    - Artikelnummer (`sku`) är Crafts artikelnummer. Storlek (`size`) som i Crafts produktdata, t.ex. `M` eller `134/140`.
+    - Ordernumret (`orderNumber`) är vårt, t.ex. `IS-100001`. Hubbens eget nummer är `erpRef`.
+
+    ## Våra anrop till hubben
+
+    **Nyckel.** Varje anrop bär hubbens nyckel i `Authorization: Bearer <nyckel>`. Vill hubben ha nyckeln i en annan
+    rubrik (t.ex. `X-Api-Key`) skickas den där som den är. Vi följer inga omdirigeringar, så att nyckeln aldrig går till
+    en annan adress. `User-Agent: NextWave-Commerce-Hub/1.0`.
+
+    **Samma order två gånger blir aldrig två ordrar.** `POST /orders` bär `Idempotency-Key` = vårt ordernummer. Om
+    svaret inte kommer fram skickar vi samma order igen med samma nyckel, ibland långt senare. Hubben ska då ge samma
+    svar som första gången och inte skapa en ny order. Fillänkarna kan ha fått ny giltighetstid i ett nytt försök
+    (`expiresAt`), så jämför ordern på nyckeln eller ordernumret, inte på hela kroppen. Avbokningen bär en egen
+    `Idempotency-Key` (`{ordernummer}-avbokning`) och ska tåla att komma flera gånger.
+
+    **Tidsgräns och nya försök.** Vi väntar högst 15 sekunder på svar. Första försöket görs direkt när kunden betalat;
+    går det inte försöker utkorgen igen efter 1, 5, 15, 30 och 60 minuter och sedan varje timme i ett dygn, med hänsyn
+    till `Retry-After`. Därefter larmar vi och Craft skickar igen för hand. Nytt försök gör vi vid nätverksfel,
+    tidsgräns och svaren 408, 425, 429 och 5xx. Svaren 401 och 403 (och omdirigeringar) betyder att nyckeln eller
+    adressen är fel hos oss: allt väntar i utkorgen utan att försöken räknas, och vi larmar tills det är rättat. Övriga
+    4xx tolkas som att hubben nekat just den ordern eller avbokningen: vi försöker inte igen, larmar och visar felet i
+    Crafts ordervy. Ange gärna orsaken i `error`.
+
+    ## Hubbens anrop till oss (webhooken)
+
+    **Signatur.** Varje anrop signeras med en delad hemlighet som vi lämnar till New Wave (hos oss
+    `HUB_WEBHOOK_SECRET`):
+
+    - `X-Hub-Timestamp`: när anropet skickades, i unix-sekunder. Den får skilja högst 5 minuter från vår klocka.
+    - `X-Hub-Signature-256`: `sha256=` följt av HMAC-SHA256 i hex med hemligheten, över strängen
+      `{X-Hub-Timestamp}.{kroppen}` – kroppen exakt som den skickas, byte för byte.
+
+    Ett nytt försök ska signeras på nytt med ny tid. Under ett byte av hemlighet tar vi emot både den gamla och den nya.
+    Exempel i Node:
+
+    ```js
+    const ts = Math.floor(Date.now() / 1000).toString();
+    const sig = createHmac("sha256", hemlighet).update(`${ts}.${kropp}`).digest("hex");
+    // rubrikerna: X-Hub-Timestamp: ts, X-Hub-Signature-256: "sha256=" + sig
+    ```
+
+    **Samma händelse två gånger behandlas en gång.** Varje händelse har ett `id` som är unikt hos hubben. Kommer samma id
+    igen svarar vi `dubblett` och gör ingenting. Det gäller i 30 dagar. Hubben kan därför alltid skicka om ett helt anrop.
+
+    **Ordning.** Händelserna i ett anrop behandlas i den ordning de står. Skicka händelser för samma order i den ordning
+    de hände. En order flyttas aldrig bakåt (en sen `i produktion` efter `skickad` gör ingenting), och ett lagersaldo
+    med äldre `at` än det vi redan har skriver inte över det nyare.
+
+    **Rad för rad.** Lagerrader och produkter prövas var för sig: det som stämmer tas in, och det som inte stämmer
+    redovisas i `message` och för Craft. Bara om ingenting går att ta in blir händelsen `avvisad`.
+
+    **Produkterna blir katalogen.** Så snart hubben skickat produkter är det hubbens produkter som säljs; Crafts
+    tidigare produktdata används inte längre. Skicka därför hela sortimentet första gången, och sedan ändringarna. En
+    produkt med `active: false`, eller som tas bort med `product.delete`, säljs inte längre men finns kvar för gamla
+    ordrar.
+
+    **Svarskoderna** säger om hubben ska försöka igen:
+
+    | Kod | Betyder | Försök igen? |
+    | --- | --- | --- |
+    | 200 | Taget om hand. `results` har utfallet per händelse (behandlad, dubblett, eller avvisad/ogiltig bland andra som gick bra). | Nej |
+    | 422 | Inget gick att genomföra: alla händelser avvisades eller var ogiltiga. | Nej, inte med samma innehåll |
+    | 400 | Kroppen är inte JSON, eller inte händelser. | Nej, rätta anropet |
+    | 401 | Signaturen eller tiden stämmer inte. Vi larmar. | Nej, rätta hemligheten eller klockan |
+    | 413 | Kroppen är större än 1 MB. | Nej, dela upp händelserna |
+    | 503 | Tillfälligt fel hos oss (minst en händelse har `retry: true`), eller webhooken är inte inställd än. | Ja, efter `Retry-After` |
+    | 5xx, nätverksfel | Något gick fel hos oss. | Ja, med växande pauser (t.ex. 1 min, 5 min, 30 min, sedan varje timme i ett dygn) |
+
+    Utfallet per händelse (`results[].status`):
+
+    - `behandlad` – klar.
+    - `dubblett` – samma id är redan behandlat; `previous` säger hur det gick då.
+    - `avvisad` – går inte att genomföra, t.ex. en order vi inte har eller ett steg som inte är tillåtet. Vi larmar och
+      Craft ser den. Skicka inte om med samma id.
+    - `ogiltig` – fälten stämmer inte med formatet; `issues` pekar ut vilka. Samma id får skickas igen när den är rättad.
+    - `misslyckad` och `pågår` – tillfälligt (`retry: true`). Skicka om; den behandlas då igen eller blir en dubblett.
+
+    ## Produktionsfilerna
+
+    Varje orderrad har `files`: länkar till stickfilen (BMP 240 × 1210 för halsduken, samma format som stickeriet
+    godkänt) eller tryckfilerna (PNG/PDF för plaggen). Länken hämtas med en vanlig `GET`, utan nyckel: den är signerad
+    och gäller till `expiresAt` (två veckor). Filen byggs när länken hämtas, så det första anropet kan ta några sekunder.
+    En avbruten order ger 410. Behöver filerna hämtas efter `expiresAt` får hubben nya länkar om vi skickar ordern igen.
+
+    ## Öppna frågor till New Wave
+
+    1. Hubbens API-beskrivning: adress (test och produktion), ändpunkter och fältnamn, och hur nyckeln skickas.
+    2. Att samma order skickad två gånger (samma `Idempotency-Key` eller ordernummer) inte blir två ordrar, och hur
+       länge hubben minns nyckeln.
+    3. Ett anrop för att avboka en order, och till och med vilket steg det går.
+    4. Kan hubben skicka händelser till vår webhook och signera dem som ovan (eller hur signerar ni)? Annars hämtar vi
+       lager och produkter själva med jämna mellanrum, och behöver då också ett sätt att hämta orderstatus.
+    5. Status per producent (stickeriet och tryckeriet) med spårningsnummer och transportör, och vilka statusar som finns.
+    6. Hämtar hubben filerna och skickar dem vidare till producenterna, eller hämtar producenterna själva?
+    7. Priser: inklusive moms som i butiken, eller exklusive moms med momssats per rad?
+    8. Lager: per artikel, storlek och färg? Skickar ni hela lagret eller bara ändringar, och hur ofta?
+    9. Produkter: artikelnummer, namn, pris, storlekar, färger och bilder – och vad som gäller när en produkt utgår.
+       Kan hubben skicka hela sortimentet en första gång?
+    10. Vilken tidszon och vilket format har hubbens tider, och skickar hubben händelserna i ordning?
+  contact:
+    name: Next Wave Commerce Hub
+    url: https://www.nextwaveproduction.se
+
+servers:
+  - url: https://www.nextwaveproduction.se
+    description: Next Wave Commerce Hub (vår sida)
+  - url: http://localhost:3300
+    description: Utveckling
+
+tags:
+  - name: Hubben
+    description: Det vi anropar hos New Waves hubb. Adresserna är relativa till hubbens adress (HUB_API_URL).
+  - name: Webhook
+    description: Det hubben anropar hos oss.
+  - name: Filer
+    description: Produktionsfilerna bakom länkarna i ordern.
+  - name: Drift
+    description: Schemat som kör utkorgen och hämtningen, och den här beskrivningen.
+
+paths:
+  # ── Hubben: det vi anropar ────────────────────────────────────────────────
+  /orders:
+    servers:
+      - url: "{hubbensAdress}"
+        variables:
+          hubbensAdress:
+            default: https://hubb.newwave.example
+            description: Hubbens adress, HUB_API_URL hos oss.
+    post:
+      tags: [Hubben]
+      operationId: submitOrder
+      summary: Ny order till hubben
+      description: |
+        En order från en klubbs Intersport-shop. Skickas av vår utkorg, som försöker igen tills hubben svarat. Samma
+        `Idempotency-Key` (vårt ordernummer) ska alltid ge samma svar och aldrig en ny order.
+
+        Svara 201 (eller 200) med hubbens ordernummer, eller 202 utan nummer om ordern bekräftas senare – då väntar vi på
+        händelsen `order.status` med `status: bekräftad` och `erpRef`.
+      security:
+        - hubbensNyckel: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyOrder"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HubOrder" }
+            examples:
+              tvaProducenter: { $ref: "#/components/examples/HubOrder" }
+      responses:
+        "201":
+          description: Ordern är skapad och bekräftad.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmitResponse" }
+              example: { erpRef: NW-SO-100001 }
+        "200":
+          description: Samma order igen (samma nyckel) – samma svar som första gången.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmitResponse" }
+        "202":
+          description: Mottagen men inte bekräftad än. Bekräftelsen kommer som händelsen `order.status` `bekräftad` med `erpRef`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmitResponse" }
+              example: {}
+        "401": { $ref: "#/components/responses/NyckelNekas" }
+        "403": { $ref: "#/components/responses/NyckelNekas" }
+        "409":
+          description: Samma nyckel användes för en annan order. Vi försöker inte igen, och larmar.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "422":
+          description: Hubben nekar ordern (t.ex. okänt artikelnummer). Vi försöker inte igen, larmar och visar felet för Craft.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "429": { $ref: "#/components/responses/ForsokIgen" }
+        "503": { $ref: "#/components/responses/ForsokIgen" }
+
+  /orders/{orderNumber}/cancel:
+    servers:
+      - url: "{hubbensAdress}"
+        variables:
+          hubbensAdress:
+            default: https://hubb.newwave.example
+            description: Hubbens adress, HUB_API_URL hos oss.
+    post:
+      tags: [Hubben]
+      operationId: cancelOrder
+      summary: Avboka en order
+      description: |
+        Craft avbokar en order som inte börjat tillverkas. Skickas av utkorgen med nya försök, och kan därför komma flera
+        gånger: en redan avbokad order ska ge samma svar. 404 eller 410 betyder att hubben inte har ordern; då finns inget
+        att avboka och vi räknar avbokningen som klar.
+      security:
+        - hubbensNyckel: []
+      parameters:
+        - $ref: "#/components/parameters/OrderNumber"
+        - $ref: "#/components/parameters/IdempotencyKeyCancel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CancelRequest" }
+            example: { reason: Kunden ångrade köpet }
+      responses:
+        "200": { description: Avbokad (eller redan avbokad). }
+        "202": { description: Avbokningen är mottagen och genomförs. }
+        "204": { description: Avbokad. }
+        "404": { description: Hubben har inte ordern. Räknas som klart. }
+        "409":
+          description: Ordern tillverkas redan och kan inte avbokas. Vi larmar och Craft ser beskedet.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "410": { description: Ordern finns inte längre. Räknas som klart. }
+        "401": { $ref: "#/components/responses/NyckelNekas" }
+        "429": { $ref: "#/components/responses/ForsokIgen" }
+        "503": { $ref: "#/components/responses/ForsokIgen" }
+
+  /stock:
+    servers:
+      - url: "{hubbensAdress}"
+        variables:
+          hubbensAdress:
+            default: https://hubb.newwave.example
+            description: Hubbens adress, HUB_API_URL hos oss.
+    get:
+      tags: [Hubben]
+      operationId: fetchStock
+      summary: Lagersaldon (hämtningsläget)
+      description: |
+        Bara om hubben inte skickar `stock.updated` till webhooken (HUB_PULL=1 hos oss): vi hämtar lagret med jämna
+        mellanrum. Utan `since` hela lagret – det som saknas räknas då som slut. Med `since` bara det som ändrats sedan
+        dess. Är svaret långt delas det i sidor med `next`, som vi skickar tillbaka som `page`.
+      security:
+        - hubbensNyckel: []
+      parameters:
+        - $ref: "#/components/parameters/Since"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: Lagerraderna. En lista, eller ett objekt med `items` och `next`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items: { $ref: "#/components/schemas/StockItem" }
+                  - $ref: "#/components/schemas/StockPage"
+        "401": { $ref: "#/components/responses/NyckelNekas" }
+
+  /products:
+    servers:
+      - url: "{hubbensAdress}"
+        variables:
+          hubbensAdress:
+            default: https://hubb.newwave.example
+            description: Hubbens adress, HUB_API_URL hos oss.
+    get:
+      tags: [Hubben]
+      operationId: fetchProducts
+      summary: Produkterna (hämtningsläget)
+      description: Som `GET /stock`, för Crafts produkter. Rader som inte går att läsa hoppas över och loggas hos oss.
+      security:
+        - hubbensNyckel: []
+      parameters:
+        - $ref: "#/components/parameters/Since"
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: Produkterna. En lista, eller ett objekt med `products` och `next`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items: { $ref: "#/components/schemas/HubProduct" }
+                  - $ref: "#/components/schemas/ProductPage"
+        "401": { $ref: "#/components/responses/NyckelNekas" }
+
+  # ── Webhooken: det hubben anropar hos oss ─────────────────────────────────
+  /api/v1/hub/webhook:
+    post:
+      tags: [Webhook]
+      operationId: hubWebhook
+      summary: Händelser från hubben
+      description: |
+        Orderstatus, lager och produkter. Kroppen är en händelse, en lista med händelser eller `{ "events": [...] }`,
+        högst 500 händelser och 1 MB. Signeras med `X-Hub-Timestamp` och `X-Hub-Signature-256` (se ovan). Varje händelse
+        behandlas en gång per `id`; svaret har utfallet per händelse. Försök igen vid 503 och andra 5xx, inte vid 2xx
+        och 4xx.
+      security:
+        - webhookSignatur: []
+      parameters:
+        - name: X-Hub-Timestamp
+          in: header
+          required: true
+          description: När anropet skickades, i unix-sekunder. Högst 5 minuter från vår klocka.
+          schema: { type: string, pattern: "^[0-9]{9,14}$", examples: ["1795701900"] }
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          description: "`sha256=` + HMAC-SHA256 i hex med den delade hemligheten över `{X-Hub-Timestamp}.{kroppen}`."
+          schema: { type: string, pattern: "^sha256=[0-9a-f]{64}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WebhookBody" }
+            examples:
+              iProduktion:
+                summary: Stickeriets del av ordern är i produktion
+                value:
+                  id: evt_01JDX4Y7Q2
+                  type: order.status
+                  at: "2026-11-26T09:12:00Z"
+                  data: { orderNumber: IS-100001, erpRef: NW-SO-100001, status: i produktion, producer: stickeri, lineIds: [ln-3f9a0c1b7e42] }
+              skickad:
+                summary: Tryckeriets del är skickad
+                value:
+                  id: evt_01JDX5K1VB
+                  type: order.status
+                  at: "2026-11-27T15:40:00Z"
+                  data: { orderNumber: IS-100001, erpRef: NW-SO-100001, status: skickad, producer: tryckeri, lineIds: [ln-8be20d4a1c90], tracking: PN123456785SE, carrier: PostNord }
+              bekraftad:
+                summary: Bekräftelse efter 202 på ordern
+                value:
+                  id: evt_01JDX3A0ZP
+                  type: order.status
+                  at: "2026-11-26T08:01:00Z"
+                  data: { orderNumber: IS-100001, erpRef: NW-SO-100001, status: bekräftad }
+              lager:
+                summary: Lagret har ändrats
+                value:
+                  events:
+                    - id: evt_01JDX6M2RS
+                      type: stock.updated
+                      at: "2026-11-26T10:00:00Z"
+                      data:
+                        items:
+                          - { sku: craft-hoodie, size: M, available: 42 }
+                          - { sku: craft-hoodie, size: S, available: 0, incoming: 60, eta: "2026-12-10" }
+              produkter:
+                summary: Ny produkt och nytt pris
+                value:
+                  id: evt_01JDX7B9TT
+                  type: product.upsert
+                  at: "2026-11-26T11:00:00Z"
+                  data:
+                    products:
+                      - { sku: craft-core-zip, name: Craft Core Zip Hood, kind: plagg, priceSek: 699, sizes: [XS, S, M, L, XL, XXL], colors: [{ name: Svart, hex: "#111111" }], active: true }
+      responses:
+        "200":
+          description: Taget om hand. Se `results` för varje händelse.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebhookResponse" }
+              example:
+                received: 2
+                results:
+                  - { index: 0, id: evt_01JDX4Y7Q2, type: order.status, status: behandlad, retry: false, message: "IS-100001: i produktion" }
+                  - { index: 1, id: evt_01JDX3A0ZP, type: order.status, status: dubblett, retry: false, previous: behandlad }
+        "422":
+          description: Inget gick att genomföra – alla händelser avvisades eller var ogiltiga. Försök inte igen med samma innehåll.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebhookResponse" }
+              example:
+                received: 1
+                results:
+                  - { index: 0, id: evt_01JDX8C3AA, type: order.status, status: avvisad, retry: false, message: Ordern IS-999999 finns inte }
+        "400":
+          description: Kroppen är inte JSON, eller inte händelser. Försök inte igen förrän anropet är rättat.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "401":
+          description: Signaturen eller tiden stämmer inte (eller saknas). Vi larmar. Försök inte igen förrän det är rättat.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { error: Signaturen stämmer inte (fel hemlighet, eller kroppen ändrad på vägen) }
+        "413":
+          description: Kroppen är större än 1 MB. Dela upp händelserna på flera anrop.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "503":
+          description: |
+            Tillfälligt fel hos oss: minst en händelse har `retry: true` (kroppen är då ett `WebhookResponse`), eller
+            webhooken är inte inställd än (kroppen är ett `Error`). Skicka om hela anropet efter `Retry-After`; det som
+            redan är behandlat blir dubbletter.
+          headers:
+            Retry-After: { $ref: "#/components/headers/RetryAfter" }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/WebhookResponse"
+                  - $ref: "#/components/schemas/Error"
+
+  # ── Filerna ───────────────────────────────────────────────────────────────
+  /api/v1/hub/filer/{token}:
+    get:
+      tags: [Filer]
+      operationId: productionFile
+      summary: En produktionsfil
+      description: |
+        Länken i orderradens `files[].url`. Ingen nyckel: länken är signerad, bär ordern, producenten och filnamnet, och
+        gäller till `expiresAt`. Filen byggs när den hämtas.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Delen av länken efter `/filer/`. Skapas av oss; ändras den nekas den.
+          schema: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Filen.
+          content:
+            image/bmp: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            application/pdf: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "403": { description: Länken är ogiltig (ändrad eller inte vår). }
+        "404": { description: Ordern eller filen finns inte. }
+        "410": { description: Länken har gått ut, eller ordern är avbruten och ska inte tillverkas. }
+
+  # ── Drift ─────────────────────────────────────────────────────────────────
+  /api/v1/hub/kor:
+    post:
+      tags: [Drift]
+      operationId: runHubSchedule
+      summary: Kör utkorgen och hämtningen
+      description: |
+        Skickar det som väntar i utkorgen till hubben, larmar om ordrar som hubben tagit emot men inte bekräftat på en
+        timme och, med HUB_PULL=1, hämtar lager och produkter. Servern kör samma sak själv varje minut; routen är för ett
+        externt schema och för att köra direkt. Kräver schemats nyckel (`HUB_CRON_KEY`) i `x-api-key`, eller Crafts
+        inloggning. Inget New Wave behöver anropa.
+      security:
+        - schemaNyckel: []
+      responses:
+        "200":
+          description: Körningen är klar.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubRun" }
+              example: { mode: http, ready: true, outbox: { processed: 2, sent: 2, waiting: 0, failed: 0, stopped: 0 } }
+        "401": { description: Nyckeln saknas eller stämmer inte. }
+
+  /api/v1/hub/openapi:
+    get:
+      tags: [Drift]
+      operationId: openapi
+      summary: Den här beskrivningen
+      description: OpenAPI 3.1 som YAML. `?ladda=1` ger den som fil.
+      security: []
+      responses:
+        "200":
+          description: Beskrivningen.
+          content: { application/yaml: { schema: { type: string } } }
+
+components:
+  securitySchemes:
+    hubbensNyckel:
+      type: http
+      scheme: bearer
+      description: |
+        Hubbens nyckel (HUB_API_KEY hos oss) i `Authorization: Bearer <nyckel>`. Vill hubben ha den i en annan rubrik
+        anger vi den i HUB_AUTH_HEADER, och nyckeln skickas då som den är.
+    webhookSignatur:
+      type: apiKey
+      in: header
+      name: X-Hub-Signature-256
+      description: |
+        HMAC-SHA256 med den delade hemligheten (HUB_WEBHOOK_SECRET hos oss) över `{X-Hub-Timestamp}.{kroppen}`, i hex
+        med prefixet `sha256=`. Tillsammans med `X-Hub-Timestamp` i unix-sekunder, högst 5 minuter från vår klocka.
+    schemaNyckel:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Schemats nyckel, HUB_CRON_KEY.
+
+  parameters:
+    IdempotencyKeyOrder:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Vårt ordernummer. Samma nyckel ska alltid ge samma svar och aldrig en ny order.
+      schema: { type: string, maxLength: 200, examples: [IS-100001] }
+    IdempotencyKeyCancel:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Avbokningens nyckel, en per order. Samma nyckel igen ska ge samma svar.
+      schema: { type: string, maxLength: 200, examples: [IS-100001-avbokning] }
+    OrderNumber:
+      name: orderNumber
+      in: path
+      required: true
+      description: Vårt ordernummer.
+      schema: { type: string, examples: [IS-100001] }
+    Since:
+      name: since
+      in: query
+      required: false
+      description: Bara det som ändrats efter den här tiden (ISO 8601). Utan den allt.
+      schema: { type: string, format: date-time }
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Markören `next` från föregående sida.
+      schema: { type: string }
+
+  headers:
+    RetryAfter:
+      description: Sekunder att vänta före nästa försök.
+      schema: { type: integer, examples: [60] }
+
+  responses:
+    NyckelNekas:
+      description: Nyckeln saknas eller nekas. Vi larmar och fortsätter försöka tills nyckeln är rättad hos oss.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ForsokIgen:
+      description: Tillfälligt. Vi försöker igen, efter `Retry-After` om den finns.
+      headers:
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: Vad som är fel, i klartext. }
+
+    # ── Ut: ordern ──────────────────────────────────────────────────────────
+    HubOrder:
+      type: object
+      description: En order från en klubbs Intersport-shop. Raderna har ett jobb var hos stickeriet (halsdukar) eller tryckeriet (plagg).
+      required: [orderNumber, channel, createdAt, club, customer, delivery, lines, totalSek, currency]
+      properties:
+        orderNumber: { type: string, description: Vårt ordernummer, också Idempotency-Key., examples: [IS-100001] }
+        channel: { type: string, enum: [intersport] }
+        externalRef: { type: string, description: Butikens eget ordernummer, när butiken skickat ett. }
+        createdAt: { type: string, format: date-time }
+        club:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, description: Klubbens id i vårt klubbregister. }
+            name: { type: string }
+        customer: { $ref: "#/components/schemas/Customer" }
+        delivery: { $ref: "#/components/schemas/Delivery" }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/HubOrderLine" }
+        totalSek: { type: number, description: Hela ordern i kronor, frakten inräknad. }
+        currency: { type: string, enum: [SEK] }
+
+    HubOrderLine:
+      type: object
+      required: [lineId, sku, qty, unitSek, title, producer, method, design, files]
+      properties:
+        lineId: { type: string, description: Radens id hos oss. Anges i `lineIds` när status gäller en del av ordern. }
+        sku: { type: string, description: Crafts artikelnummer. }
+        size: { type: string, description: Storleken, när artikeln har storlekar. }
+        color:
+          type: object
+          description: Plaggets färg.
+          required: [name, hex]
+          properties:
+            name: { type: string }
+            hex: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        qty: { type: integer, minimum: 1 }
+        unitSek: { type: number, description: Styckpris i kronor, som i butiken. }
+        title: { type: string, description: Produktens namn i butiken, t.ex. "AIK Hoodie". }
+        producer: { type: string, enum: [tryckeri, stickeri], description: Vem som tillverkar raden. }
+        method: { type: string, description: Tryckmetoden (t.ex. "Screentryck"), eller "stickning". }
+        design:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            variant: { type: string, description: Variantens texter, t.ex. smeknamn eller ort. }
+        files:
+          type: array
+          description: Produktionsfilerna som tidsbegränsade länkar.
+          items: { $ref: "#/components/schemas/HubFile" }
+
+    HubFile:
+      type: object
+      required: [name, label, url, expiresAt]
+      properties:
+        name: { type: string, description: Filnamnet, t.ex. "01-stickfil.bmp". }
+        label: { type: string, description: Vad filen är, i klartext. }
+        url: { type: string, format: uri, description: "https://www.nextwaveproduction.se/api/v1/hub/filer/{token}" }
+        expiresAt: { type: string, format: date-time, description: Till och med när länken gäller. }
+
+    Customer:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        address: { type: string, description: Leveransadressen som en text. }
+
+    Delivery:
+      type: object
+      required: [method, label, priceSek]
+      properties:
+        method: { type: string, enum: [ombud, hem, butik], description: Leveranssättet i kassan. }
+        label: { type: string, examples: [Hämta hos ombud] }
+        priceSek: { type: number, description: Frakten i kronor, ingår i totalSek. }
+
+    SubmitResponse:
+      type: object
+      properties:
+        erpRef: { type: string, description: Hubbens ordernummer. Saknas när ordern bekräftas senare (202). }
+
+    CancelRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, maxLength: 300, description: Varför Craft avbokar. }
+
+    HubRun:
+      type: object
+      required: [mode, ready, outbox]
+      properties:
+        mode: { type: string, enum: [simulerad, http] }
+        ready: { type: boolean, description: Hubben går att anropa (adress och nyckel är satta). }
+        outbox:
+          type: object
+          description: Posterna som provades i den här körningen.
+          properties:
+            processed: { type: integer }
+            sent: { type: integer }
+            waiting: { type: integer, description: Får ett nytt försök senare. }
+            failed: { type: integer, description: Gav upp; larm har gått. }
+            stopped: { type: integer, description: Ordern avbröts innan den skickades. }
+            paused: { type: string, description: Varför körningen stannade (hubben nere eller inte inställd). }
+        pull:
+          type: object
+          description: Hämtningen av lager och produkter, med HUB_PULL=1.
+          properties:
+            stock: { type: object, properties: { items: { type: integer }, full: { type: boolean } } }
+            products: { type: object, properties: { items: { type: integer } } }
+            error: { type: string }
+            skipped: { type: string }
+
+    # ── In: lager och produkter ─────────────────────────────────────────────
+    StockItem:
+      type: object
+      required: [sku, available]
+      properties:
+        sku: { type: string }
+        size: { type: string, description: Saknas för artiklar utan storlek. }
+        color: { type: string, description: Färgens namn, när lagret är per färg. }
+        available: { type: integer, description: Antal att sälja nu. 0 eller mindre är slut. }
+        incoming: { type: integer, minimum: 0, description: Antal på väg in. }
+        eta: { type: string, description: När det som är på väg väntas, ISO 8601. }
+
+    StockPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/StockItem" } }
+        next: { type: string, description: Markören till nästa sida. Saknas på sista sidan. }
+
+    HubProduct:
+      type: object
+      required: [sku, name, kind, priceSek, sizes]
+      properties:
+        sku: { type: string, description: Crafts artikelnummer. }
+        name: { type: string }
+        kind: { type: string, enum: [plagg, halsduk] }
+        priceSek: { type: number, minimum: 0, description: Priset i butiken, i kronor. }
+        sizes: { type: array, items: { type: string } }
+        colors:
+          type: array
+          items:
+            type: object
+            required: [name, hex]
+            properties:
+              name: { type: string }
+              hex: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        images: { type: array, items: { type: string, format: uri }, description: Produktbilder (https). }
+        baseId: { type: string, description: Basplagget hos oss som ger foto och tryckytor, tills hubben levererar egna. }
+        active: { type: boolean, description: false = säljs inte just nu. }
+
+    ProductPage:
+      type: object
+      required: [products]
+      properties:
+        products: { type: array, items: { $ref: "#/components/schemas/HubProduct" } }
+        next: { type: string }
+
+    # ── In: händelserna ─────────────────────────────────────────────────────
+    WebhookBody:
+      description: En händelse, en lista med händelser eller `{ events }`. Högst 500 händelser och 1 MB.
+      oneOf:
+        - $ref: "#/components/schemas/HubEvent"
+        - type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/HubEvent" }
+        - type: object
+          required: [events]
+          properties:
+            events:
+              type: array
+              maxItems: 500
+              items: { $ref: "#/components/schemas/HubEvent" }
+
+    HubEvent:
+      oneOf:
+        - $ref: "#/components/schemas/OrderStatusEvent"
+        - $ref: "#/components/schemas/StockUpdatedEvent"
+        - $ref: "#/components/schemas/ProductUpsertEvent"
+        - $ref: "#/components/schemas/ProductDeleteEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          order.status: "#/components/schemas/OrderStatusEvent"
+          stock.updated: "#/components/schemas/StockUpdatedEvent"
+          product.upsert: "#/components/schemas/ProductUpsertEvent"
+          product.delete: "#/components/schemas/ProductDeleteEvent"
+
+    EventBase:
+      type: object
+      required: [id, type]
+      properties:
+        id: { type: string, maxLength: 200, description: Unikt per händelse hos hubben. Samma id igen blir en dubblett. }
+        type: { type: string }
+        at: { type: string, format: date-time, description: När det hände hos hubben. Saknas den används tiden vi tog emot händelsen. }
+
+    OrderStatusEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventBase"
+        - type: object
+          required: [type, data]
+          properties:
+            type: { const: order.status }
+            data:
+              type: object
+              required: [orderNumber, status]
+              properties:
+                orderNumber: { type: string, description: Vårt ordernummer. }
+                erpRef: { type: string, description: Hubbens ordernummer. Krävs med `bekräftad` efter 202. }
+                status:
+                  type: string
+                  enum: [bekräftad, i produktion, skickad, levererad, avbruten, fel]
+                  description: |
+                    Utan `producer` och `lineIds` gäller statusen hela ordern.
+                    `bekräftad` – hubben har ordern; med `erpRef` om hubben svarade 202 på ordern. Jobben till
+                    stickeriet och tryckeriet skapas då. `i produktion` – tillverkas. `skickad` – på väg till kunden,
+                    med `tracking`; gäller den bara några av jobbets rader (`lineIds`) blir jobbet skickat när alla
+                    rader är det. Steg får hoppas över (`skickad` direkt efter `bekräftad`). `levererad` – framme;
+                    syns i tidslinjen. `avbruten` – stoppad hos hubben; ordern avbryts hos oss med `note` som orsak.
+                    `fel` – något hindrar tillverkningen; förklara i `note`. Craft får ett larm.
+                producer: { type: string, enum: [tryckeri, stickeri], description: Gäller bara den producentens del av ordern. }
+                lineIds: { type: array, items: { type: string }, description: Gäller bara de raderna (orderradens `lineId`). }
+                tracking: { type: string, maxLength: 100, description: Spårningsnummer. }
+                carrier: { type: string, maxLength: 80, description: Transportör, t.ex. PostNord. }
+                note: { type: string, maxLength: 500, description: Kommentar som Craft (och vid fel kunden) ser. }
+
+    StockUpdatedEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventBase"
+        - type: object
+          required: [type, data]
+          properties:
+            type: { const: stock.updated }
+            data:
+              type: object
+              required: [items]
+              properties:
+                items: { type: array, items: { $ref: "#/components/schemas/StockItem" } }
+                full: { type: boolean, description: Hela lagret. Det som saknas räknas då som slut. }
+
+    ProductUpsertEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventBase"
+        - type: object
+          required: [type, data]
+          properties:
+            type: { const: product.upsert }
+            data:
+              type: object
+              required: [products]
+              properties:
+                products: { type: array, minItems: 1, items: { $ref: "#/components/schemas/HubProduct" } }
+
+    ProductDeleteEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventBase"
+        - type: object
+          required: [type, data]
+          properties:
+            type: { const: product.delete }
+            data:
+              type: object
+              required: [skus]
+              properties:
+                skus: { type: array, minItems: 1, items: { type: string }, description: Artiklarna som utgår. }
+
+    WebhookResponse:
+      type: object
+      required: [received, results]
+      properties:
+        received: { type: integer, description: Antal händelser i anropet. }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/EventResult" }
+
+    EventResult:
+      type: object
+      required: [index, status, retry]
+      properties:
+        index: { type: integer, description: Händelsens plats i anropet, från 0. }
+        id: { type: string }
+        type: { type: string }
+        status:
+          type: string
+          enum: [behandlad, dubblett, avvisad, ogiltig, misslyckad, pågår]
+        retry: { type: boolean, description: Skicka händelsen igen senare. }
+        message: { type: string }
+        previous:
+          type: string
+          enum: [behandlad, avvisad, ogiltig, misslyckad]
+          description: För en dubblett, hur det gick första gången.
+        issues:
+          type: array
+          description: För en ogiltig händelse, fälten som inte stämmer.
+          items:
+            type: object
+            properties:
+              path: { type: string, examples: [data.status] }
+              message: { type: string }
+
+  examples:
+    HubOrder:
+      summary: En halsduk och en t-shirt – ett jobb hos stickeriet och ett hos tryckeriet
+      value:
+        orderNumber: IS-100001
+        channel: intersport
+        externalRef: INT-55120931
+        createdAt: "2026-11-26T08:00:00Z"
+        club: { id: aik, name: AIK }
+        customer: { name: Anna Andersson, email: anna@example.se, phone: "0701234567", address: "Storgatan 1, 111 22 Stockholm" }
+        delivery: { method: ombud, label: Hämta hos ombud, priceSek: 49 }
+        lines:
+          - lineId: ln-3f9a0c1b7e42
+            sku: klubbhalsduk
+            qty: 1
+            unitSek: 199
+            title: AIK Klubbhalsduk
+            producer: stickeri
+            method: stickning
+            design: { id: des-1a2b3c4d5e6f, name: Klassisk }
+            files:
+              - { name: 01-stickfil.bmp, label: Stickfil 240 × 1210, url: "https://www.nextwaveproduction.se/api/v1/hub/filer/eyJvIjoi…", expiresAt: "2026-12-10T08:00:00Z" }
+          - lineId: ln-8be20d4a1c90
+            sku: craft-t-shirt
+            size: M
+            color: { name: Svart, hex: "#111111" }
+            qty: 1
+            unitSek: 249
+            title: AIK T-shirt
+            producer: tryckeri
+            method: Screentryck
+            design: { id: des-1a2b3c4d5e6f, name: Klassisk }
+            files:
+              - { name: 01-tryck-brost.png, label: Tryckfil bröstet, url: "https://www.nextwaveproduction.se/api/v1/hub/filer/eyJvIjoi…", expiresAt: "2026-12-10T08:00:00Z" }
+        totalSek: 497
+        currency: SEK

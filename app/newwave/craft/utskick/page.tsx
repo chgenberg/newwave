@@ -8,7 +8,21 @@ import { SceneBulk, SceneCard } from "@/components/poc/craft/content/SceneButton
 import { fmtWhen } from "@/components/poc/craft/orderParts";
 import { requireRole } from "@/lib/poc/auth";
 import { pocClub } from "@/lib/poc/build";
-import { type ContentDraft, draftDesigns, draftUrls, listDrafts, mailText, modelCosts, REWRITE_SEK_ESTIMATE, SCENE_SEK, scenePhotos, scenesLeft } from "@/lib/poc/content";
+import {
+  type ContentDraft,
+  draftDesigns,
+  draftUrls,
+  listDrafts,
+  mailText,
+  modelCosts,
+  REWRITE_SEK_ESTIMATE,
+  SCENE_ESTIMATES,
+  sceneEstimates,
+  scenePhotos,
+  sceneSekFor,
+  sceneSekForAll,
+  scenesLeft,
+} from "@/lib/poc/content";
 import { pastDesigns } from "@/lib/poc/seasons";
 
 export const dynamic = "force-dynamic";
@@ -51,8 +65,17 @@ export default async function CraftOutbox({ searchParams }: { searchParams: Prom
   let costs: Awaited<ReturnType<typeof modelCosts>> = { miljobild: { calls: 0, costSek: 0 }, text: { calls: 0, costSek: 0 } };
   let published: Awaited<ReturnType<typeof pastDesigns>> = [];
   let left = 0;
+  // Vad en miljöbild brukar kosta: snittet av de senaste bilderna, annars uppskattningen med listpriset.
+  let estimates = SCENE_ESTIMATES;
   try {
-    [designs, drafts, costs, published, left] = await Promise.all([draftDesigns(), listDrafts({ designId: p.design, status, limit: 5000 }), modelCosts(), pastDesigns(), scenesLeft()]);
+    [designs, drafts, costs, published, left, estimates] = await Promise.all([
+      draftDesigns(),
+      listDrafts({ designId: p.design, status, limit: 5000 }),
+      modelCosts(),
+      pastDesigns(),
+      scenesLeft(),
+      sceneEstimates().catch(() => SCENE_ESTIMATES),
+    ]);
   } catch (e) {
     console.error("craft/utskick", e instanceof Error ? e.message : e);
     failed = true;
@@ -65,6 +88,7 @@ export default async function CraftOutbox({ searchParams }: { searchParams: Prom
     scenePhotos(drafts.flatMap((d) => d.products.map((x) => x.id))).catch(() => new Map<string, string>()),
   ]);
   const missing = [...new Set(drafts.flatMap((d) => d.products.map((x) => x.id)))].filter((id) => !scenes.get(id));
+  const skuOf = new Map(drafts.flatMap((d) => d.products.map((x) => [x.id, x.sku] as const)));
   const club = selected ? (clubs.get(selected.clubId) ?? (await pocClub(selected.clubId).catch(() => null))) : null;
   const files = selected ? draftUrls(selected.id) : null;
   const total = designs.reduce((n, d) => n + d.drafts, 0);
@@ -130,7 +154,7 @@ export default async function CraftOutbox({ searchParams }: { searchParams: Prom
                 </Link>
               ))}
             </div>
-            {design ? <SceneBulk ids={missing} estimateSek={SCENE_SEK} left={left} label={`”${design.designName}”`} /> : null}
+            {design ? <SceneBulk ids={missing} estimateSek={sceneSekForAll(estimates, missing.map((id) => skuOf.get(id) ?? ""))} left={left} label={`”${design.designName}”`} /> : null}
           </div>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.5fr)] lg:items-start">
@@ -230,15 +254,20 @@ export default async function CraftOutbox({ searchParams }: { searchParams: Prom
 
                 <div className="mt-6 flex flex-wrap items-end justify-between gap-2">
                   <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--nw-muted)]">Produkterna och miljöbilderna</h3>
-                  <p className="text-[12.5px] text-[var(--nw-faint)]">Miljöbild ca {sek(SCENE_SEK)} styck · {left} kvar den här timmen</p>
+                  <p className="text-[12.5px] text-[var(--nw-faint)]">Miljöbild ca {sek(sceneSekForAll(estimates, selected.products.map((x) => x.sku)))} styck · {left} kvar den här timmen</p>
                 </div>
                 <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3">
                   {selected.products.map((x) => (
-                    <SceneCard key={x.id} product={x} scene={scenes.get(x.id)} estimateSek={SCENE_SEK} />
+                    <SceneCard key={x.id} product={x} scene={scenes.get(x.id)} estimateSek={sceneSekFor(estimates, x.sku)} />
                   ))}
                 </ul>
                 <div className="mt-3">
-                  <SceneBulk ids={selected.products.map((x) => x.id).filter((id) => !scenes.get(id))} estimateSek={SCENE_SEK} left={left} label={selected.clubName} />
+                  <SceneBulk
+                    ids={selected.products.map((x) => x.id).filter((id) => !scenes.get(id))}
+                    estimateSek={sceneSekForAll(estimates, selected.products.filter((x) => !scenes.get(x.id)).map((x) => x.sku))}
+                    left={left}
+                    label={selected.clubName}
+                  />
                 </div>
               </section>
             ) : null}

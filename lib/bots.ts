@@ -16,8 +16,22 @@ const BLOCKED = new RegExp(
   "i",
 );
 
-/** Det crawlers ska få läsa (robots.txt) och andra system som hämtar härifrån: webhooks och New Waves produktionsfiler. */
-const ALLOWED = ["/robots.txt", "/api/v1/webhooks/", "/api/v1/newwave/hub/filer/"];
+/**
+ * Det crawlers ska få läsa (robots.txt), och flödets API:er som andra system anropar med vanliga HTTP-klienter (curl,
+ * Java, okhttp …): webhooks, New Waves hubb och dess fillänkar, butikens ordrar, producenternas kö, katalogen och
+ * scheman. De kontrollerar själva nyckel, signatur eller inloggning (lib/access.ts, lib/poc/auth.ts).
+ */
+const ALLOWED = [
+  "/robots.txt",
+  "/api/v1/webhooks/",
+  "/api/v1/newwave/hub/filer/",
+  "/api/v1/hub/",
+  "/api/v1/orders",
+  "/api/v1/producers/",
+  "/api/v1/catalog",
+  "/api/v1/craft/sasong/kor",
+  "/api/v1/poc/rensa",
+];
 
 /** Next bildoptimerare hämtar bilderna från sidan själv, utan user-agent. */
 const IMAGE = /^\/(?!api\/)[^?#]+\.(?:jpe?g|png|webp|avif|gif|svg|ico)$/i;

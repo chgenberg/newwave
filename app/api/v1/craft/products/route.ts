@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { roleFromRequest } from "@/lib/poc/auth";
 import { AUTO_COLOR, clubProductDrafts, ColorChoices, pocClub, VariantChoiceSchema } from "@/lib/poc/build";
-import { catalogProduct } from "@/lib/poc/catalog";
+import { catalogProduct, sellable } from "@/lib/poc/catalog";
 import { getDesign, listClubProducts, listDesigns, orderCounts, upsertClubProducts } from "@/lib/poc/store";
 import { shopProductView } from "./view";
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Välj design, artikel och färg." }, { status: 400 });
   const { clubId, designId, sku, variant, color } = parsed.data;
-  if (!catalogProduct(sku)) return Response.json({ error: `Okänt artikelnummer: ${sku}.` }, { status: 400 });
+  if (!sellable(sku)) return Response.json({ error: catalogProduct(sku) ? `${sku} säljs inte längre.` : `Okänt artikelnummer: ${sku}.` }, { status: 400 });
   const colors = color && color !== AUTO_COLOR ? ColorChoices.safeParse({ [sku]: color }) : null;
   if (colors && !colors.success) return Response.json({ error: "Okänd färg." }, { status: 400 });
   try {

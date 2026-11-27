@@ -12,7 +12,8 @@ export const STATS_PATH = "/newwave/besok";
 /**
  * Öppna utan lösenord: inloggningen, besöksloggen, robots.txt och adresser som andra system hämtar från. Flödets API:er
  * (ordrar från butiken, producenternas kö och filer, katalogen och säsongsschemat) anropas av Intersport, New Waves hubb,
- * tryckeriet, stickeriet och ett schema – de kontrollerar själva nyckel eller inloggning (lib/poc/auth.ts).
+ * tryckeriet, stickeriet och ett schema – de kontrollerar själva nyckel eller inloggning (lib/poc/auth.ts). Hubbens
+ * routes under /api/v1/hub/ kontrollerar själva signaturen (händelserna och fillänkarna) eller nyckeln (schemat).
  */
 const OPEN = [
   LOGIN_PATH,
@@ -26,6 +27,8 @@ const OPEN = [
   "/api/v1/producers/",
   "/api/v1/catalog",
   "/api/v1/craft/sasong/kor",
+  "/api/v1/hub/",
+  "/api/v1/poc/rensa",
 ];
 
 /** Bilderna i public: bildoptimeringen hämtar dem internt utan besökarens cookie, och delningsbilden ska synas i chattar. Filmerna kräver lösenordet. */

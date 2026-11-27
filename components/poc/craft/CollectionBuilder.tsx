@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Crest, fmtN } from "@/components/newwave/craft/parts";
 import { SearchBox } from "@/components/newwave/craft/SearchBox";
 import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
+import { colorRef, productStock, type SkuStock, type StockLabel } from "@/lib/poc/hub/stock-rules";
 import type { CatalogProduct } from "@/lib/poc/types";
 import { VariantRows } from "./VariantRows";
 import { type ClubFacts, crowded, distribute, STANDARD_VARIANT, sameChoice, usable, type VariantChoice, variantKey, variantLabel, variantTexts } from "./variants";
@@ -17,8 +18,23 @@ import { type ClubFacts, crowded, distribute, STANDARD_VARIANT, sameChoice, usab
  */
 
 export type TemplateOption = { id: string; name: string; style: string; own: boolean };
-/** `colorOptions` är färgerna plagget kan få, `clubColor` att klubbens mörkaste färg också går (tryckkedjan klarar den). */
-export type ProductOption = CatalogProduct & { photo?: string; method?: string; colorOptions?: { name: string; hex: string }[]; clubColor?: boolean };
+/**
+ * `colorOptions` är färgerna plagget kan få, `clubColor` att klubbens mörkaste färg också går (tryckkedjan klarar den).
+ * `stock` är lagret i New Waves hubb; saknas det säljs plagget obegränsat.
+ */
+export type ProductOption = CatalogProduct & { photo?: string; method?: string; colorOptions?: { name: string; hex: string }[]; clubColor?: boolean; stock?: SkuStock };
+
+/** Lagret för produkten i alla färger, eller i en färg: "Slut i M och L", "Få kvar i S", "Tillfälligt slut". */
+export function stockLabelOf(p: Pick<ProductOption, "stock" | "sizes" | "colors">, color?: { name?: string; hex?: string } | null): StockLabel | null {
+  if (!p.stock?.tracked) return null;
+  return productStock(p.stock, p.sizes, color ? colorRef(color, p.colors) : undefined).label;
+}
+
+/** Lagrets text i Crafts vyer, röd när något är slut och gul när det är lite kvar. */
+export function StockNote({ label, className = "" }: { label: StockLabel | null; className?: string }) {
+  if (!label) return null;
+  return <span className={`${label.tone === "slut" ? "text-[#9B1C1C]" : "text-[#8A4B00]"} ${className}`}>{label.text}</span>;
+}
 /** `published` och `clubs`: hur många produkter och klubbshoppar designen finns i nu. */
 export type SavedDesign = { id: string; name: string; type: "ordmall" | "fil"; template?: string; art?: string; createdAt: string; published?: number; clubs?: number };
 /** Säsongen klubbkollektionen öppnades från (lib/poc/seasons.ts): id, namn, datum och budskap. */
@@ -198,7 +214,22 @@ function SeasonBanner({ season }: { season: PresetSeason }) {
   );
 }
 
-export function CollectionBuilder({ templates, products, designs: initialDesigns, preset = {} }: { templates: TemplateOption[]; products: ProductOption[]; designs: SavedDesign[]; preset?: Preset }) {
+/**
+ * `catalogNote` säger var produkterna kommer ifrån (New Waves hubb, Crafts produktdata eller platshållarna).
+ */
+export function CollectionBuilder({
+  templates,
+  products,
+  designs: initialDesigns,
+  preset = {},
+  catalogNote = "plaggen är platshållare tills Crafts produktdata finns",
+}: {
+  templates: TemplateOption[];
+  products: ProductOption[];
+  designs: SavedDesign[];
+  preset?: Preset;
+  catalogNote?: string;
+}) {
   // 1. Designerna
   const [mode, setMode] = useState<"ordmall" | "fil" | "sparad">(preset.designIds?.length && !preset.templates?.length ? "sparad" : "ordmall");
   // En förvald mall längre ner i listan syns direkt.
@@ -738,10 +769,11 @@ export function CollectionBuilder({ templates, products, designs: initialDesigns
         ) : null}
       </Step>
 
-      <Step n={2} title="Produkterna" sub={`${skus.length ? `${skus.length} valda` : "Välj vad klubbarna ska sälja"} · plaggen är platshållare tills Crafts produktdata finns`}>
+      <Step n={2} title="Produkterna" sub={`${skus.length ? `${skus.length} valda` : "Välj vad klubbarna ska sälja"} · ${catalogNote}`}>
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           {products.map((p) => {
             const on = skus.includes(p.sku);
+            const stock = stockLabelOf(p);
             return (
               <li key={p.sku}>
                 <button
@@ -762,6 +794,7 @@ export function CollectionBuilder({ templates, products, designs: initialDesigns
                   <span className="block truncate px-1 pb-0.5 text-[11.5px] text-[var(--nw-muted)]">
                     {p.priceSek} kr · {p.kind === "halsduk" ? "Stickeriet" : p.method}
                   </span>
+                  {stock ? <StockNote label={stock} className="block truncate px-1 pb-0.5 text-[11.5px] font-medium" /> : null}
                   {on ? (
                     <span className="absolute right-2.5 top-2.5">
                       <Tick on />
@@ -780,23 +813,41 @@ export function CollectionBuilder({ templates, products, designs: initialDesigns
               {chosenGarments.map((p) => {
                 const value = colors[p.sku] ?? "auto";
                 const pick = (v: string) => setColors((c) => ({ ...c, [p.sku]: v }));
+                // Lagret i hubben för varje färg, när någon storlek är slut eller har få kvar.
+                const low = (p.colorOptions ?? []).flatMap((c) => {
+                  const label = stockLabelOf(p, c);
+                  return label ? [{ name: c.name, label }] : [];
+                });
                 return (
                   <li key={p.sku} className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
                     <span className="w-40 shrink-0 truncate text-[13px] text-[var(--nw-ink)]">{p.name}</span>
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Färg på ${p.name}`}>
-                      <button type="button" onClick={() => pick("auto")} aria-pressed={value === "auto"} className={chip(value === "auto")}>
-                        Automatiskt
-                      </button>
-                      {(p.colorOptions ?? []).map((c) => (
-                        <button key={c.hex} type="button" onClick={() => pick(c.hex)} aria-pressed={value === c.hex} className={`${chip(value === c.hex)} inline-flex items-center gap-1.5`}>
-                          <span className="h-3 w-3 rounded-full" style={{ background: c.hex, boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.18)" }} aria-hidden />
-                          {c.name}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Färg på ${p.name}`}>
+                        <button type="button" onClick={() => pick("auto")} aria-pressed={value === "auto"} className={chip(value === "auto")}>
+                          Automatiskt
                         </button>
-                      ))}
-                      {p.clubColor ? (
-                        <button type="button" onClick={() => pick("klubb")} aria-pressed={value === "klubb"} className={chip(value === "klubb")}>
-                          Klubbens mörkaste färg
-                        </button>
+                        {(p.colorOptions ?? []).map((c) => (
+                          <button key={c.hex} type="button" onClick={() => pick(c.hex)} aria-pressed={value === c.hex} className={`${chip(value === c.hex)} inline-flex items-center gap-1.5`}>
+                            <span className="h-3 w-3 rounded-full" style={{ background: c.hex, boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.18)" }} aria-hidden />
+                            {c.name}
+                          </button>
+                        ))}
+                        {p.clubColor ? (
+                          <button type="button" onClick={() => pick("klubb")} aria-pressed={value === "klubb"} className={chip(value === "klubb")}>
+                            Klubbens mörkaste färg
+                          </button>
+                        ) : null}
+                      </div>
+                      {low.length ? (
+                        <p className="mt-1 text-[12px] text-[var(--nw-muted)]">
+                          Lager:{" "}
+                          {low.map((l, i) => (
+                            <span key={l.name}>
+                              {i ? " · " : ""}
+                              {l.name} – <StockNote label={{ ...l.label, text: l.label.text.charAt(0).toLowerCase() + l.label.text.slice(1) }} />
+                            </span>
+                          ))}
+                        </p>
                       ) : null}
                     </div>
                   </li>

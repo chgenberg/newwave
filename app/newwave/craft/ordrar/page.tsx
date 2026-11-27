@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Crest, fmtKr, fmtN } from "@/components/newwave/craft/parts";
 import { AutoRefresh, ClubFilter } from "@/components/poc/craft/OrderControls";
-import { fmtWhen, JobPill, ORDER_STATUSES, OrderPill, PRODUCER_NAME } from "@/components/poc/craft/orderParts";
+import { fmtTime, fmtWhen, JobPill, ORDER_STATUSES, OrderPill, PRODUCER_NAME } from "@/components/poc/craft/orderParts";
 import { requireRole } from "@/lib/poc/auth";
 import { pocClub } from "@/lib/poc/build";
+import { submitStates } from "@/lib/poc/hub/outbox";
+import type { OutboxItem } from "@/lib/poc/hub/types";
+import { customerRemoved } from "@/lib/poc/privacy";
 import { listOrders } from "@/lib/poc/store";
 import type { OrderStatus, OrderView } from "@/lib/poc/types";
 
@@ -14,6 +17,18 @@ export const metadata: Metadata = { title: "Craft · Ordrar" };
 
 const chip = (on: boolean) => `nw-chip h-8 px-3 ${on ? "border-[var(--nw-ink)] bg-[var(--nw-ink)] text-white" : "hover:border-[var(--nw-ink)]"}`;
 const ACTIVE: OrderStatus[] = ["mottagen", "bekräftad", "i produktion", "delvis skickad"];
+
+/** Affärssystemets ordernummer, eller var ordern är på väg dit (utkorgen mot New Waves hubb). */
+function erpText(o: OrderView, item: OutboxItem | undefined): { text: string; bad?: boolean } {
+  if (o.erpRef) return { text: o.erpRef };
+  if (o.status === "avbruten") return { text: "–" };
+  if (!item) return { text: "väntar" };
+  if (item.sending) return { text: "skickas" };
+  if (item.status === "misslyckad") return { text: "kom inte fram", bad: true };
+  if (item.status === "skickad") return { text: "mottagen, obekräftad" };
+  if (item.lastError) return { text: `nytt försök ${fmtTime(item.nextAttemptAt).slice(0, 5)}`, bad: true };
+  return { text: "väntar" };
+}
 
 export default async function CraftOrders({ searchParams }: { searchParams: Promise<{ status?: string; klubb?: string }> }) {
   const p = await searchParams;
@@ -28,6 +43,7 @@ export default async function CraftOrders({ searchParams }: { searchParams: Prom
     console.error("craft/ordrar", e instanceof Error ? e.message : e);
     failed = true;
   }
+  const hubStates = await submitStates(orders.map((o) => o.id)).catch(() => new Map<string, OutboxItem>());
   const clubIds = [...new Set(orders.map((o) => o.clubId))];
   const clubs = new Map((await Promise.all(clubIds.map((id) => pocClub(id).catch(() => null)))).flatMap((c) => (c ? [[c.id, c] as const] : [])));
   const klubb = p.klubb && clubIds.includes(p.klubb) ? p.klubb : "";
@@ -90,6 +106,7 @@ export default async function CraftOrders({ searchParams }: { searchParams: Prom
           {shown.map((o) => {
             const club = clubs.get(o.clubId);
             const qty = o.lines.reduce((n, l) => n + l.qty, 0);
+            const erp = erpText(o, hubStates.get(o.id));
             return (
               <li key={o.id}>
                 <Link href={`/newwave/craft/ordrar/${encodeURIComponent(o.number)}`} className="block rounded-[22px] border border-[var(--nw-line)] p-4 transition-colors hover:border-[#cfcfca] hover:shadow-[0_8px_22px_-16px_rgba(17,17,17,0.45)]">
@@ -103,6 +120,7 @@ export default async function CraftOrders({ searchParams }: { searchParams: Prom
                         </p>
                         <p className="truncate text-[12.5px] text-[var(--nw-muted)]">
                           {club?.name ?? o.clubId} · {fmtWhen(o.createdAt)}
+                          {customerRemoved(o.customer) ? " · kunduppgifterna borttagna" : ""}
                         </p>
                         {o.status === "avbruten" ? <p className="truncate text-[12.5px] text-[#9B1C1C]">Avbruten{o.cancelReason ? `: ${o.cancelReason}` : ""}</p> : null}
                       </div>
@@ -110,7 +128,7 @@ export default async function CraftOrders({ searchParams }: { searchParams: Prom
                     <div className="flex items-baseline gap-4 text-[13px] lg:block">
                       <p className="text-[15px] font-semibold tabular-nums text-[var(--nw-ink)]">{fmtKr(o.totalSek)}</p>
                       <p className="truncate text-[12.5px] text-[var(--nw-muted)]">
-                        {qty} st · Affärssystem: <span className="font-medium text-[var(--nw-ink)]">{o.erpRef ?? "väntar"}</span>
+                        {qty} st · Affärssystem: <span className={`font-medium ${erp.bad ? "text-[#9B1C1C]" : "text-[var(--nw-ink)]"}`}>{erp.text}</span>
                       </p>
                     </div>
                     <ul className="flex flex-col gap-1.5">

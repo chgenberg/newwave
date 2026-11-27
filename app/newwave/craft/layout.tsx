@@ -14,6 +14,7 @@ const ITEMS: NavItem[] = [
   { href: `${BASE}/sasonger`, label: "Säsonger", icon: "drop" },
   { href: `${BASE}/utskick`, label: "Utskick", icon: "doc" },
   { href: `${BASE}/ordrar`, label: "Ordrar", icon: "truck" },
+  { href: `${BASE}/integration`, label: "Integration", icon: "plug" },
   { href: `${BASE}/insikter`, label: "Insikter", icon: "chart" },
   { href: `${BASE}/regler`, label: "Regler", icon: "rules" },
 ];

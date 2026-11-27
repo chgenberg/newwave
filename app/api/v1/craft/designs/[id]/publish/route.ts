@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { roleFromRequest } from "@/lib/poc/auth";
 import { clubProductDrafts, ColorChoices, VariantChoices } from "@/lib/poc/build";
-import { catalogProduct } from "@/lib/poc/catalog";
+import { sellable } from "@/lib/poc/catalog";
 import { getDesign, upsertClubProducts } from "@/lib/poc/store";
 
 export const maxDuration = 120;
@@ -28,8 +28,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Välj minst en klubb och en produkt." }, { status: 400 });
   // Ett okänt artikelnummer ska inte bara falla bort – då tror den som publicerar att produkten finns i shopparna.
-  const unknown = parsed.data.skus.filter((sku) => !catalogProduct(sku));
-  if (unknown.length) return Response.json({ error: `Okända artikelnummer: ${unknown.join(", ")}. Se /api/v1/catalog.` }, { status: 400 });
+  // En produkt som inte säljs längre (hubben har tagit bort den) går inte heller att publicera.
+  const unknown = parsed.data.skus.filter((sku) => !sellable(sku));
+  if (unknown.length) return Response.json({ error: `Okända artikelnummer, eller produkter som inte säljs längre: ${unknown.join(", ")}. Se /api/v1/catalog.` }, { status: 400 });
   try {
     const design = await getDesign(id);
     if (!design) return Response.json({ error: "Designen finns inte." }, { status: 404 });

@@ -178,6 +178,7 @@ const toOrder = (r: Row, lines: OrderLine[]): Order => ({
   erpRef: (r.erp_ref as string | null) ?? undefined,
   shipping: (r.shipping as Order["shipping"] | null) ?? undefined,
   cancelReason: (r.cancel_reason as string | null) ?? undefined,
+  externalRef: (r.external_ref as string | null) ?? undefined,
   createdAt: iso(r.created_at as Date)!,
   updatedAt: iso(r.updated_at as Date)!,
 });
@@ -216,17 +217,26 @@ const toEvent = (r: Row): OrderEvent => ({
   at: iso(r.at as Date)!,
 });
 
+async function sequence<T>(fns: (() => Promise<T>)[]): Promise<T[]> {
+  const out: T[] = [];
+  for (const f of fns) out.push(await f());
+  return out;
+}
+
 const JOB_SELECT = "SELECT j.*, o.number AS order_number, o.club_id, o.customer, o.status AS order_status FROM production_jobs j JOIN orders o ON o.id = j.order_id";
 
 /** Ordrarna med rader, jobb och händelser, i samma ordning som `rows`. */
 async function views(rows: Row[], db?: Db): Promise<OrderView[]> {
   if (!rows.length) return [];
   const ids = rows.map((r) => r.id as string);
-  const [lines, jobs, events] = await Promise.all([
-    query("SELECT * FROM order_lines WHERE order_id = ANY($1) ORDER BY order_id, pos", [ids], db),
-    query(`${JOB_SELECT} WHERE j.order_id = ANY($1) ORDER BY j.created_at, j.producer`, [ids], db),
-    query("SELECT * FROM order_events WHERE order_id = ANY($1) ORDER BY at, id", [ids], db),
-  ]);
+  const asks = [
+    () => query("SELECT * FROM order_lines WHERE order_id = ANY($1) ORDER BY order_id, pos", [ids], db),
+    () => query(`${JOB_SELECT} WHERE j.order_id = ANY($1) ORDER BY j.created_at, j.producer`, [ids], db),
+    () => query("SELECT * FROM order_events WHERE order_id = ANY($1) ORDER BY at, id", [ids], db),
+  ];
+  // I en transaktion går frågorna på samma klient, en i taget (pg tar inte parallella frågor på en klient); annars
+  // parallellt över poolen.
+  const [lines, jobs, events] = db ? await sequence(asks) : await Promise.all(asks.map((f) => f()));
   const by = <T>(list: Row[], map: (r: Row) => T) => {
     const m = new Map<string, T[]>();
     for (const r of list) m.set(r.order_id as string, [...(m.get(r.order_id as string) ?? []), map(r)]);

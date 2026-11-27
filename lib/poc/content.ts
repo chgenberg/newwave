@@ -11,7 +11,7 @@ import { intersportPath } from "@/lib/intersport";
 import { readAsset } from "@/lib/newwave/asset";
 import { CLUBS_DIR } from "@/lib/newwave/clubRegistry";
 import { costSek, usageOf } from "@/lib/newwave/derby";
-import { IMAGE_SEK } from "@/lib/newwave/derbyData";
+import { IMAGE_USAGE_TYPICAL, imageCostSek, type ImageUsage } from "@/lib/newwave/derbyData";
 import { genitive, newsletterHtml } from "@/lib/newwave/newsletterHtml";
 import { errorMessage, hasOpenAIKey, IMAGE_MODEL, IMAGE_QUALITY, openai } from "@/lib/openai";
 import { SITE } from "@/lib/newwave/site";
@@ -22,10 +22,10 @@ import { FAITHFUL, references, scarfReferences, SNAPSHOT, UPRIGHT, worn } from "
 import { people, type Season, settingOf } from "@/lib/scarfScene";
 import { loadFile, saveFile } from "@/lib/store";
 import { pocClub, type PocClub } from "./build";
-import { catalogProduct, POC_CATALOG } from "./catalog";
+import { catalogProduct, pocCatalog } from "./catalog";
 import { iso, newId, query, tx } from "./db";
 import { getClubProduct, getDesign, listClubProducts } from "./store";
-import type { ClubProduct } from "./types";
+import type { ClubProduct, ProductKind } from "./types";
 
 /**
  * Innehållet till klubbarna när Craft publicerat en design (del E i steg 3, se docs/poc-flode.md):
@@ -37,8 +37,8 @@ import type { ClubProduct } from "./types";
  *   A4-affisch med QR-kod till klubbshoppen och produkternas bilder – och ett mejlutkast till klubbens e-post ur
  *   klubbregistret. Sparas som utkast i `poc_content_drafts`. Mejlen skickas aldrig härifrån: Craft laddar ner
  *   paketet, kopierar mejlet och markerar utkastet som skickat.
- * - Varje modellanrop loggas med sin kostnad i `poc_model_calls`, räknad med projektets prislista
- *   (lib/newwave/derby.ts för text, IMAGE_SEK i lib/newwave/derbyData.ts för bilder).
+ * - Varje modellanrop loggas med sin kostnad i `poc_model_calls`, räknad ur svarets tokens med listpriserna
+ *   (PRICES i lib/newwave/derby.ts för text, IMAGE_PRICES i lib/newwave/derbyData.ts för bilder).
  *
  * Tabellerna skapas här, idempotent, med `query` ur lib/poc/db.ts. Inga främmande nycklar mot klubbprodukterna: den
  * delen av schemat ägs av kärnan och får ändras utan att innehållet står i vägen.
@@ -130,8 +130,48 @@ export class ContentError extends Error {
 
 // ── Kostnaderna ─────────────────────────────────────────────────────────────
 
-/** Uppskattat pris per miljöbild i kronor: projektets pris per bild (bildmodellen redovisar inte tokens som textmodellerna). */
-export const SCENE_SEK = IMAGE_SEK;
+/**
+ * Typiska tokens för en miljöbild i 1024 × 1536, uppmätta: plagget ger bildmodellen en referensbild (mockupen),
+ * halsduken två (ändarna som de hänger och hela halsduken). Utdata är lika stor för båda.
+ */
+const SCENE_USAGE: Record<ProductKind, ImageUsage> = {
+  plagg: IMAGE_USAGE_TYPICAL,
+  halsduk: { input_tokens: 2829, output_tokens: 343, input_tokens_details: { text_tokens: 781, image_tokens: 2048 } },
+};
+
+/** Uppskattat pris för en miljöbild med listpriset: cirka 0,21 kr för ett plagg och 0,31 kr för halsduken. */
+export const sceneSek = (kind: ProductKind) => imageCostSek(SCENE_USAGE[kind] ?? SCENE_USAGE.plagg)!;
+
+/** Vad en miljöbild brukar kosta, per slag. */
+export type SceneEstimates = Record<ProductKind, number>;
+export const SCENE_ESTIMATES: SceneEstimates = { plagg: sceneSek("plagg"), halsduk: sceneSek("halsduk") };
+
+/**
+ * Vad en miljöbild brukar kosta, per slag: snittet av de senaste tio bilderna (räknat ur deras tokens), annars
+ * uppskattningen med listpriset. Följer med om bildmodellen eller kvaliteten byts (OPENAI_IMAGE_MODEL,
+ * OPENAI_IMAGE_QUALITY).
+ */
+export async function sceneEstimates(): Promise<SceneEstimates> {
+  const rows = await q(
+    `SELECT kind, usage, cost_sek FROM (
+       SELECT cp.kind, m.usage, m.cost_sek, row_number() OVER (PARTITION BY cp.kind ORDER BY m.at DESC) AS n
+       FROM poc_model_calls m JOIN club_products cp ON cp.id = m.ref WHERE m.what = 'miljobild' AND m.ok
+     ) t WHERE n <= 10`,
+  );
+  const out = { ...SCENE_ESTIMATES };
+  for (const kind of Object.keys(out) as ProductKind[]) {
+    const costs = rows.filter((r) => r.kind === kind).map((r) => imageCostSek(r.usage as ImageUsage) ?? Number(r.cost_sek));
+    if (costs.length) out[kind] = costs.reduce((a, b) => a + b, 0) / costs.length;
+  }
+  return out;
+}
+
+/** Den ungefärliga kostnaden för produkten (artikelnumret avgör om det är ett plagg eller halsduken). */
+export const sceneSekFor = (estimates: SceneEstimates, sku: string) => estimates[catalogProduct(sku)?.kind ?? "plagg"] ?? estimates.plagg;
+
+/** Snittet för flera produkter, för "Skapa för alla". */
+export const sceneSekForAll = (estimates: SceneEstimates, skus: string[]) => (skus.length ? skus.reduce((s, sku) => s + sceneSekFor(estimates, sku), 0) / skus.length : estimates.plagg);
+
 /** Textmodellen för "Skriv om med AI". */
 export const REWRITE_MODEL = "gpt-5-mini";
 /** Ungefärligt pris för en omskrivning: cirka 1 500 tokens in och 1 500 ut med gpt-5-mini. */
@@ -152,14 +192,36 @@ async function logCall(c: { what: CallKind; model: string; ref: string; ok: bool
   ]).catch((e) => console.error("poc/content kostnadsloggen", e instanceof Error ? e.message : e));
 }
 
-/** Modellanropen hittills: antal och kostnad per slag. */
+/** Ett tal ur `usage` i SQL, eller NULL om det saknas eller inte är ett tal. */
+const usageNum = (path: string) => `CASE WHEN jsonb_typeof(usage${path}) = 'number' THEN (usage${path})::text::numeric END`;
+
+/**
+ * Modellanropen hittills: antal och kostnad per slag. Miljöbildernas kostnad räknas ur deras tokens, även för de
+ * första bilderna, som sparades med en fast uppskattning på 4 kr styck. Priset är linjärt i tokens, så summan av
+ * tokens ger samma kostnad som summan av bilderna.
+ */
 export async function modelCosts(): Promise<Record<CallKind, { calls: number; costSek: number }>> {
-  const rows = await q("SELECT what, count(*)::int AS n, coalesce(sum(cost_sek), 0)::float AS sek FROM poc_model_calls WHERE ok GROUP BY what");
+  const [rows, [img]] = await Promise.all([
+    q("SELECT what, count(*)::int AS n, coalesce(sum(cost_sek), 0)::float AS sek FROM poc_model_calls WHERE ok GROUP BY what"),
+    q(
+      `SELECT coalesce(sum(${usageNum("->'input_tokens'")}), 0)::float AS input,
+         coalesce(sum(${usageNum("->'input_tokens_details'->'text_tokens'")}), 0)::float AS text,
+         coalesce(sum(${usageNum("->'output_tokens'")}), 0)::float AS output,
+         count(*) FILTER (WHERE ${usageNum("->'input_tokens'")} IS NOT NULL OR ${usageNum("->'output_tokens'")} IS NOT NULL)::int AS counted,
+         coalesce(sum(cost_sek) FILTER (WHERE ${usageNum("->'input_tokens'")} IS NULL AND ${usageNum("->'output_tokens'")} IS NULL), 0)::float AS sek_rest
+       FROM poc_model_calls WHERE ok AND what = 'miljobild'`,
+    ),
+  ]);
   const of = (w: CallKind) => {
     const r = rows.find((x) => x.what === w);
     return { calls: Number(r?.n ?? 0), costSek: Number(r?.sek ?? 0) };
   };
-  return { miljobild: of("miljobild"), text: of("text") };
+  const scenes = of("miljobild");
+  if (img && Number(img.counted)) {
+    const counted = imageCostSek({ input_tokens: Number(img.input), output_tokens: Number(img.output), input_tokens_details: { text_tokens: Number(img.text) } }) ?? 0;
+    scenes.costSek = counted + Number(img.sek_rest);
+  }
+  return { miljobild: scenes, text: of("text") };
 }
 
 async function callsLastHour(what: CallKind) {
@@ -335,18 +397,21 @@ export async function scenePhoto(clubProductId: string, opts: { ctx: FetchCtx; s
       usage = res.usage;
       if (!b64) throw new Error("Bildmodellen returnerade ingen bild");
     } catch (e) {
-      await logCall({ what: "miljobild", model: IMAGE_MODEL, ref: clubProductId, ok: false, costSek: 0, error: errorMessage(e) });
+      // Ett svar utan bild kan ändå ha kostat: då finns tokens i svaret.
+      await logCall({ what: "miljobild", model: IMAGE_MODEL, ref: clubProductId, ok: false, costSek: imageCostSek(usage as ImageUsage) ?? 0, usage, error: errorMessage(e) });
       throw new ContentError("Bildmodellen kunde inte göra miljöbilden just nu.", 502);
     }
+    // Kostnaden ur svarets tokens; saknas de används uppskattningen.
+    const cost = imageCostSek(usage as ImageUsage) ?? sceneSek(product.kind);
     const jpg = await sharp(Buffer.from(b64, "base64")).jpeg({ quality: 86, mozjpeg: true }).toBuffer();
     const { url } = await saveFile(jpg, "jpg");
     await q(
       `INSERT INTO poc_scene_photos (club_product_id, club_id, design_id, url, season, place, model, cost_sek) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (club_product_id) DO UPDATE SET url = EXCLUDED.url, season = EXCLUDED.season, place = EXCLUDED.place, model = EXCLUDED.model, cost_sek = EXCLUDED.cost_sek, created_at = now()`,
-      [product.id, product.clubId, product.designId, url, opts.season?.id ?? "", shot.place, `${IMAGE_MODEL}/${IMAGE_QUALITY}`, SCENE_SEK],
+      [product.id, product.clubId, product.designId, url, opts.season?.id ?? "", shot.place, `${IMAGE_MODEL}/${IMAGE_QUALITY}`, cost],
     );
-    await logCall({ what: "miljobild", model: `${IMAGE_MODEL}/${IMAGE_QUALITY}`, ref: clubProductId, ok: true, costSek: SCENE_SEK, usage });
-    return { url, cached: false, costSek: SCENE_SEK };
+    await logCall({ what: "miljobild", model: `${IMAGE_MODEL}/${IMAGE_QUALITY}`, ref: clubProductId, ok: true, costSek: cost, usage });
+    return { url, cached: false, costSek: cost };
   })();
   making.set(clubProductId, job);
   try {
@@ -498,7 +563,7 @@ export async function createDrafts(designId: string, clubIds: string[], opts: { 
         const club = list?.length ? await pocClub(clubId) : null;
         if (!club || !list) return null;
         // I katalogens ordning: plaggen först och halsduken sist.
-        const order = (sku: string) => (POC_CATALOG.findIndex((c) => c.sku === sku) + 1 || 99) + (catalogProduct(sku)?.kind === "halsduk" ? 100 : 0);
+        const order = (sku: string) => (pocCatalog().findIndex((c) => c.sku === sku) + 1 || 99) + (catalogProduct(sku)?.kind === "halsduk" ? 100 : 0);
         const products: DraftProduct[] = [...list]
           .sort((a, b) => order(a.sku) - order(b.sku) || a.title.localeCompare(b.title, "sv"))
           .map((p) => ({ id: p.id, sku: p.sku, title: p.title, name: inText(catalogProduct(p.sku)?.name ?? p.title), priceSek: p.priceSek, mockupUrl: p.mockupUrl }));

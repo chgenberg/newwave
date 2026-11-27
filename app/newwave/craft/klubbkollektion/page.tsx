@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { CollectionBuilder, type Preset, type ProductOption, type SavedDesign } from "@/components/poc/craft/CollectionBuilder";
+import { catalogNote, productOptions } from "@/components/poc/craft/catalogOptions";
+import { CollectionBuilder, type Preset, type SavedDesign } from "@/components/poc/craft/CollectionBuilder";
 import { allTemplates } from "@/lib/newwave/wordmark/store";
 import { requireRole } from "@/lib/poc/auth";
-import { garmentOptions, recolorable, scarfPreviewUrl } from "@/lib/poc/build";
-import { baseProduct, methodLabelOf, POC_CATALOG } from "@/lib/poc/catalog";
+import { scarfPreviewUrl } from "@/lib/poc/build";
 import { seasonById } from "@/lib/poc/seasons";
 import { designUsage, listDesigns } from "@/lib/poc/store";
 
@@ -26,13 +26,8 @@ export default async function CraftCollection({ searchParams }: { searchParams: 
   const p = await searchParams;
   const here = new URLSearchParams(PARAMS.flatMap((k) => (one(p[k]) ? [[k, one(p[k])!] as [string, string]] : [])));
   await requireRole("craft", `/newwave/craft/klubbkollektion${here.size ? `?${here}` : ""}`);
-  const [templates, designs, usage] = await Promise.all([allTemplates(), listDesigns().catch(() => []), designUsage().catch(() => ({}) as Awaited<ReturnType<typeof designUsage>>)]);
-  const products: ProductOption[] = POC_CATALOG.map((p) => {
-    const base = baseProduct(p);
-    if (!base) return { ...p, photo: scarfPreviewUrl(SAMPLE, 480) };
-    // Klubbens mörkaste färg går när tryckkedjan klarar färgade plagg och Craft inte har egna färger för plagget.
-    return { ...p, photo: base.photo, method: methodLabelOf(base), colorOptions: garmentOptions(p, base), clubColor: recolorable(base) && !(p.colors && p.colors.length >= 2) };
-  });
+  // Katalogen och lagret från New Waves hubb när hubben skickat dem, annars Crafts produktdata eller platshållarna.
+  const [templates, designs, usage, products] = await Promise.all([allTemplates(), listDesigns().catch(() => []), designUsage().catch(() => ({}) as Awaited<ReturnType<typeof designUsage>>), productOptions({ scarfPhoto: scarfPreviewUrl(SAMPLE, 480) })]);
   const saved: SavedDesign[] = designs.map((d) => ({
     id: d.id,
     name: d.name,
@@ -62,7 +57,7 @@ export default async function CraftCollection({ searchParams }: { searchParams: 
       <p className="mt-1 max-w-[64ch] text-[14.5px] text-[var(--nw-muted)]">
         Gör designerna en gång och publicera dem som varje klubbs egna i klubbarnas Intersport-shoppar – med klubbens namn, färger och märke. Plaggen trycks hos tryckeriet och halsduken stickas hos stickeriet när kunderna beställer.
       </p>
-      <CollectionBuilder templates={shown} products={products} designs={saved} preset={preset} />
+      <CollectionBuilder templates={shown} products={products} designs={saved} preset={preset} catalogNote={catalogNote()} />
     </div>
   );
 }

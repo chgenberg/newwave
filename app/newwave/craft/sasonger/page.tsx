@@ -8,7 +8,7 @@ import { Replicate } from "@/components/poc/craft/season/Replicate";
 import { wordmarkUrl } from "@/lib/newwave/wordmark/spec";
 import { allTemplates } from "@/lib/newwave/wordmark/store";
 import { requireRole } from "@/lib/poc/auth";
-import { POC_CATALOG } from "@/lib/poc/catalog";
+import { pocCatalog } from "@/lib/poc/catalog";
 import { listPlans, type PastDesign, pastDesigns, type PlanStatus, type SeasonPlan, type SeasonRow, seasonRows } from "@/lib/poc/seasons";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,7 @@ export default async function CraftSeasons() {
     console.error("craft/sasonger", e instanceof Error ? e.message : e);
     failed = true;
   }
-  const names = new Map(POC_CATALOG.map((p) => [p.sku, p.name.replace(/^Craft\s+/i, "")]));
+  const names = new Map(pocCatalog().map((p) => [p.sku, p.name.replace(/^Craft\s+/i, "")]));
   const shownTemplates = templates.filter((t) => !t.hidden && t.style !== "Rygg").map((t) => ({ id: t.id, name: t.name }));
   const sources = past.map((d) => ({ id: d.id, name: d.name, type: d.type, template: d.template, clubIds: d.clubIds, skus: d.skus, season: d.season }));
   const open = plans.filter((p) => p.status !== "publicerad");
@@ -143,7 +143,7 @@ export default async function CraftSeasons() {
                   <Link href={r.href} className="nw-btn">
                     Skapa kollektion
                   </Link>
-                  <Replicate season={{ id: r.id, key: r.key, label: r.label, date: r.date, name: r.name, template: r.template }} sources={sources} templates={shownTemplates} products={POC_CATALOG.map((p) => ({ sku: p.sku, name: names.get(p.sku) ?? p.name }))} today={today} />
+                  <Replicate season={{ id: r.id, key: r.key, label: r.label, date: r.date, name: r.name, template: r.template }} sources={sources} templates={shownTemplates} products={pocCatalog().map((p) => ({ sku: p.sku, name: names.get(p.sku) ?? p.name }))} today={today} />
                 </div>
               </li>
             );

@@ -90,6 +90,8 @@ export type Order = {
   shipping?: { method: string; label: string; priceSek: number };
   /** Varför ordern avbröts, när status är "avbruten". */
   cancelReason?: string;
+  /** Butikens eget ordernummer (eller Idempotency-Key), när butiken skickat ett. Unikt per kanal. */
+  externalRef?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -118,8 +120,11 @@ export type OrderEvent = { id: string; orderId: string; jobId?: string; actor: E
 /** En order med allt som hör till, som statussidan och Crafts ordervy visar den. */
 export type OrderView = Order & { jobs: ProductionJob[]; events: OrderEvent[] };
 
-/** Kroppen i POST /api/v1/orders. `delivery` är ett av butikens leveranssätt (DeliveryId); priset räknas på servern. */
-export type NewOrder = { clubId: string; customer: Customer; delivery?: string; lines: { clubProductId: string; size?: string; qty: number }[] };
+/**
+ * Kroppen i POST /api/v1/orders. `delivery` är ett av butikens leveranssätt (DeliveryId); priset räknas på servern.
+ * `externalRef` är butikens eget ordernummer: samma nummer igen ger den befintliga ordern i stället för en ny.
+ */
+export type NewOrder = { clubId: string; customer: Customer; delivery?: string; externalRef?: string; lines: { clubProductId: string; size?: string; qty: number }[] };
 
 /** Vem som är inloggad i POC-flödet: Craft, eller en av producenterna. */
 export type Role = "craft" | Producer;

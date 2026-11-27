@@ -2,7 +2,7 @@ import { craftCalendar, SEASON_OF, seasonProducts, TEMPLATES } from "@/lib/newwa
 import { allTemplates } from "@/lib/newwave/wordmark/store";
 import type { Season } from "@/lib/scarfScene";
 import { clubProductDrafts } from "./build";
-import { catalogProduct, POC_CATALOG } from "./catalog";
+import { pocCatalog, sellable } from "./catalog";
 import { ContentError, type ContentSeason, createDrafts } from "./content";
 import { iso, newId, query, tx } from "./db";
 import { getDesign, listClubProducts, listDesigns, upsertClubProducts } from "./store";
@@ -157,7 +157,7 @@ const ymd = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, "
  * `seasonProducts` (katalogens årstider via plaggets basplagg), och halsduken när det är kallt. Högst fyra.
  */
 export function suggestSkus(nature: Season, templateProducts: string[] = []): string[] {
-  const garments = POC_CATALOG.filter((p) => p.kind === "plagg" && p.baseId);
+  const garments = pocCatalog().filter((p) => p.kind === "plagg" && p.baseId);
   const skuOf = (baseId: string) => garments.filter((p) => p.baseId === baseId).map((p) => p.sku);
   const fromTemplate = templateProducts.flatMap(skuOf);
   const seasonal = seasonProducts(
@@ -165,7 +165,7 @@ export function suggestSkus(nature: Season, templateProducts: string[] = []): st
     garments.map((p) => p.baseId!),
     4,
   ).flatMap(skuOf);
-  const scarf = nature === "vinter" || nature === "höst" ? POC_CATALOG.filter((p) => p.kind === "halsduk").map((p) => p.sku) : [];
+  const scarf = nature === "vinter" || nature === "höst" ? pocCatalog().filter((p) => p.kind === "halsduk").map((p) => p.sku) : [];
   const list = [...new Set([...fromTemplate, ...seasonal])].slice(0, scarf.length ? 3 : 4);
   return [...list, ...scarf];
 }
@@ -342,8 +342,8 @@ export type NewPlan = {
 export async function createPlan(p: NewPlan): Promise<SeasonPlan> {
   const design = await getDesign(p.designId);
   if (!design) throw new ContentError("Designen finns inte.", 404);
-  const unknown = p.skus.filter((s) => !catalogProduct(s));
-  if (unknown.length) throw new ContentError(`Okända artikelnummer: ${unknown.join(", ")}.`, 400);
+  const unknown = p.skus.filter((s) => !sellable(s));
+  if (unknown.length) throw new ContentError(`Okända artikelnummer, eller produkter som inte säljs längre: ${unknown.join(", ")}.`, 400);
   const runAt = new Date(p.runAt);
   if (Number.isNaN(runAt.getTime())) throw new ContentError("Ogiltigt datum.", 400);
   const season = p.season ? await seasonById(p.season) : null;
@@ -420,8 +420,8 @@ export async function runPlan(id: string, origin: string): Promise<SeasonPlan> {
   try {
     const design = await getDesign(plan.designId);
     if (!design) throw new Error("Designen finns inte längre.");
-    const unknown = plan.skus.filter((s) => !catalogProduct(s));
-    if (unknown.length) throw new Error(`Okända artikelnummer: ${unknown.join(", ")}.`);
+    const unknown = plan.skus.filter((s) => !sellable(s));
+    if (unknown.length) throw new Error(`Okända artikelnummer, eller produkter som inte säljs längre: ${unknown.join(", ")}.`);
     const season = plan.season ? await seasonById(plan.season) : null;
     for (let i = 0; i < plan.clubIds.length; i += BATCH) {
       const part = plan.clubIds.slice(i, i + BATCH);
@@ -486,7 +486,7 @@ export async function pastDesigns(): Promise<PastDesign[]> {
       type: d.source.type,
       template: d.source.type === "ordmall" ? d.source.template : undefined,
       clubIds: [...e.clubs].slice(0, 6000),
-      skus: POC_CATALOG.map((p) => p.sku).filter((s) => e.skus.has(s)),
+      skus: pocCatalog().map((p) => p.sku).filter((s) => e.skus.has(s)),
       published: e.n,
       createdAt: d.createdAt,
       season: season?.id,

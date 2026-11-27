@@ -1,15 +1,17 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { cancelOrderAction, type OrderActionState, retryErpAction } from "./actions";
+import { type HubActionState, resendToHubAction } from "@/app/newwave/craft/ordrar/actions";
+import { cancelOrderAction, type OrderActionState } from "./actions";
 
 /**
- * Crafts åtgärder på en order: försöka igen mot affärssystemet när det inte bekräftat ordern, och avbryta ordern med
- * en orsak så länge inget jobb börjat tillverkas. Knapparna visas bara när åtgärden är tillåten.
+ * Crafts åtgärder på en order: skicka den till affärssystemet igen (genom utkorgen mot New Waves hubb) när det inte
+ * bekräftat ordern, och avbryta ordern med en orsak så länge inget jobb börjat tillverkas. Knapparna visas bara när
+ * åtgärden är tillåten.
  */
 export function OrderActions({ orderId, canCancel, canRetry }: { orderId: string; canCancel: boolean; canRetry: boolean }) {
   const [asking, setAsking] = useState(false);
-  const [retry, retryAction, retrying] = useActionState<OrderActionState, FormData>(retryErpAction, {});
+  const [retry, retryAction, retrying] = useActionState<HubActionState, FormData>(resendToHubAction, {});
   const [cancel, cancelAction, cancelling] = useActionState<OrderActionState, FormData>(cancelOrderAction, {});
   const message = [cancel, retry].find((s) => s.error || s.done);
   if (!canCancel && !canRetry && !message) return null;
@@ -21,7 +23,7 @@ export function OrderActions({ orderId, canCancel, canRetry }: { orderId: string
             <form action={retryAction}>
               <input type="hidden" name="orderId" value={orderId} />
               <button type="submit" disabled={retrying} className="nw-btn disabled:opacity-50">
-                {retrying ? "Skickar…" : "Försök igen mot affärssystemet"}
+                {retrying ? "Skickar…" : "Skicka till affärssystemet igen"}
               </button>
             </form>
           ) : null}
@@ -39,7 +41,7 @@ export function OrderActions({ orderId, canCancel, canRetry }: { orderId: string
             Varför avbryts ordern?
           </label>
           <input id="cancel-reason" name="reason" required maxLength={300} autoFocus placeholder="T.ex. kunden ångrade köpet" className="nw-input h-10" />
-          <p className="text-[12.5px] text-[var(--nw-muted)]">Jobben hos tryckeriet och stickeriet stoppas, och kunden ser att ordern är avbruten.</p>
+          <p className="text-[12.5px] text-[var(--nw-muted)]">Jobben hos tryckeriet och stickeriet stoppas, affärssystemet får en avbokning och kunden ser att ordern är avbruten.</p>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={cancelling} className="nw-btn bg-[#9B1C1C] disabled:opacity-50">
               {cancelling ? "Avbryter…" : "Avbryt ordern"}
