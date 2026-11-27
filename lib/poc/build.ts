@@ -536,7 +536,7 @@ export function garmentColor(p: CatalogProduct, base: NwProduct, design: Design,
 // ── Förhandsbilder och mockuper ─────────────────────────────────────────────
 
 /** Höjs när förhandsbilderna ritas annorlunda, så att webbläsarna släpper de gamla. */
-const PREVIEW_VERSION = 4;
+const PREVIEW_VERSION = 5;
 
 /** Halsdukens förhandsbild: klassisk utan design, annars med ordmallen (i variantens texter) eller den uppladdade filen. */
 export const scarfPreviewUrl = (clubId: string, size: 480 | 800 = 800, source?: { template: string } | { designId: string }, variant?: VariantTexts) =>
@@ -736,20 +736,47 @@ export async function normalizeArt(input: Buffer): Promise<Buffer> {
 }
 
 /** Motivet i två toner: mörka partier i `a`, ljusa i `b`. Utan `b` blir ljusa partier genomskinliga. */
+/**
+ * Gränsen mellan mörkt och ljust i motivets synliga bildpunkter: mitt emellan de mörkaste och de ljusaste (5:e och 95:e
+ * percentilen). null när motivet har en enda ton och allt ska tryckas.
+ */
+function toneCut(px: Buffer, lum: (i: number) => number): number | null {
+  const hist = new Array<number>(101).fill(0);
+  let n = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i + 3] < 128) continue;
+    hist[Math.round(lum(i) * 100)]++;
+    n++;
+  }
+  if (!n) return null;
+  const at = (p: number) => {
+    let seen = 0;
+    for (let v = 0; v <= 100; v++) if ((seen += hist[v]) >= p * n) return v / 100;
+    return 1;
+  };
+  const [lo, hi] = [at(0.05), at(0.95)];
+  return hi - lo < 0.2 ? null : (lo + hi) / 2;
+}
+
 async function tintArt(art: Buffer, a: string, b: string | null, max = 1600) {
   const [ra, ga, ba] = hexToRgb(a);
   const [rb, gb, bb] = hexToRgb(b ?? a);
   const src = await sharp(art).resize(max, max, { fit: "inside" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const px = src.data;
+  const lum = (i: number) => (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / 255;
+  // En färg: mörka partier blir färgen och ljusa genomskinliga, med gränsen mitt emellan motivets mörka och ljusa partier
+  // och en kort övergång för mjuka kanter. Ytor blir aldrig halvgenomskinliga – det kan trycket inte återge. Ett motiv i
+  // en enda ton (t.ex. ett ljusblått märke på genomskinlig botten) trycks helt.
+  const cut = b ? null : toneCut(px, lum);
   for (let i = 0; i < px.length; i += 4) {
-    const t = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / 255;
+    const t = lum(i);
     if (b) {
       px[i] = Math.round(ra + (rb - ra) * t);
       px[i + 1] = Math.round(ga + (gb - ga) * t);
       px[i + 2] = Math.round(ba + (bb - ba) * t);
     } else {
       [px[i], px[i + 1], px[i + 2]] = [ra, ga, ba];
-      px[i + 3] = Math.round(px[i + 3] * (1 - t));
+      if (cut !== null) px[i + 3] = Math.round(px[i + 3] * Math.min(1, Math.max(0, (cut + 0.05 - t) / 0.1)));
     }
   }
   return { png: await sharp(px, { raw: { width: src.info.width, height: src.info.height, channels: 4 } }).png().toBuffer(), w: src.info.width, h: src.info.height };

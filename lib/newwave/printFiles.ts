@@ -258,7 +258,15 @@ async function namesSheet(names: Names, textHex: string) {
   return { data: data.data, spec: `${nf.format(data.info.width)} × ${nf.format(data.info.height)} px · 300 dpi · ${Math.round(widthMm)} × ${Math.round(totalMm)} mm film`, heightMm };
 }
 
-async function transfer(c: Ctx): Promise<MadeJob> {
+/** Varje bildpunkt helt eller inte alls: halvgenomskinliga partier blir fläckiga i DTF-filmens vita lager. */
+function solid(a: Art): Art {
+  const rgba = Buffer.from(a.rgba);
+  for (let i = 3; i < rgba.length; i += 4) rgba[i] = rgba[i] >= 128 ? 255 : 0;
+  return { ...a, rgba };
+}
+
+async function transfer(ctx: Ctx): Promise<MadeJob> {
+  const c = { ...ctx, a: solid(ctx.a) };
   const files: OutFile[] = [
     { name: `${c.base}-dtf.png`, label: "Tryckfil", role: "tryck", format: "PNG", spec: `${sizeSpec(c.a)} · transparent bakgrund`, data: await pngOf(c.a) },
   ];
