@@ -232,3 +232,5 @@ export const HUB_NODES = {
 export const HERO_VIDEO = { src: "/newwave/hero.mp4", poster: "/newwave/hero-poster.jpg" };
 /** Merchfilmen med IFK Göteborg och Önnereds HK, stående 9:16; öppnas från startsidans topprad. */
 export const MERCH_VIDEO = { src: "/newwave/ifk-merch.mp4", poster: "/newwave/ifk-merch-poster.jpg", title: "Merchfilmen med IFK Göteborg och Önnereds HK" };
+/** Flödesfilmen (16:9, cirka 3½ minut): hela flödet för Craft på de riktiga sidorna; öppnas från den guidade demon. */
+export const FLOW_VIDEO = { src: "/newwave/flodet.mp4", poster: "/newwave/flodet-poster.jpg", title: "Flödet för Craft – från design till kund" };

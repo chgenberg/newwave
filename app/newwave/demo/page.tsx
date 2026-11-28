@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HubFooterSlim } from "@/components/newwave/HubFooter";
+import { FilmDialogButton } from "@/components/newwave/landing/FilmDialog";
 import { LogoMark } from "@/components/newwave/Logo";
 import { DemoFlow } from "@/components/poc/demo/DemoFlow";
+import { FLOW_VIDEO } from "@/lib/newwave/hub";
 import { hasRole } from "@/lib/poc/auth";
 import { catalogProduct } from "@/lib/poc/catalog";
 import { DEMO_TEMPLATES, demoClubs, demoSkus } from "@/lib/poc/demo";
@@ -23,6 +25,13 @@ export default async function DemoPage() {
             <span className="hidden text-[13px] font-semibold tracking-[0.18em] sm:inline">NEXT WAVE</span>
           </Link>
           <span className="text-[14px] text-[#6F6B63]">Guidad demo</span>
+          <FilmDialogButton film={FLOW_VIDEO} className="ml-auto inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium text-[#111] shadow-[inset_0_0_0_1px_rgba(17,17,17,0.12)] transition hover:shadow-[inset_0_0_0_1px_rgba(17,17,17,0.35)]">
+            <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4 shrink-0 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M10 8.5v7l5.5-3.5L10 8.5Z" fill="currentColor" />
+            </svg>
+            Se filmen · 3½ min
+          </FilmDialogButton>
         </header>
         <main className="flex-1 px-4 py-8 min-[900px]:px-10 min-[900px]:py-10">
           <p className="nw-mono text-[12px] uppercase tracking-[0.08em] text-[#6F6B63]">Next Wave × Craft · guidad demo</p>
