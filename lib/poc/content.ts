@@ -460,7 +460,11 @@ const inText = (name: string) => {
   return n.charAt(0).toLocaleLowerCase("sv-SE") + n.slice(1);
 };
 const capital = (s: string) => s.charAt(0).toLocaleUpperCase("sv-SE") + s.slice(1);
-const and = (list: string[]) => (list.length < 2 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} och ${list.at(-1)}`);
+/** "a, b och c" – varje del en gång: en klubb med två varianter av samma plagg ska inte få "t-shirt, t-shirt". */
+const and = (items: string[]) => {
+  const list = [...new Set(items)];
+  return list.length < 2 ? (list[0] ?? "") : `${list.slice(0, -1).join(", ")} och ${list.at(-1)}`;
+};
 const kr = (n: number) => `${new Intl.NumberFormat("sv-SE").format(n)} kr`;
 const priced = (products: DraftProduct[]) => and(products.map((p) => `${p.name} (${kr(p.priceSek)})`));
 const tag = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, "").toLocaleLowerCase("sv-SE");
@@ -708,7 +712,7 @@ export async function rewriteDraft(id: string): Promise<{ draft: ContentDraft; c
   rewriteLimit.set("alla", [...recent, now]);
   const facts = [
     `Förening: ${draft.clubName}`,
-    `Produkter: ${draft.products.map((p) => `${p.name} (${kr(p.priceSek)})`).join(", ")}`,
+    `Produkter: ${priced(draft.products)}`,
     `Länk till klubbshoppen: ${draft.shopUrl}`,
     draft.season ? `Säsong: ${draft.season.label} – ${draft.season.line}` : "",
     "",

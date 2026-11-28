@@ -2,13 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { sek } from "./format";
 
 /**
  * Det Craft gör med ett utkast: laddar ner innehållspaketet, kopierar mejlet till sitt eget e-postprogram och
  * markerar det som skickat. Inget mejl skickas härifrån. "Skriv om med AI" anropar språkmodellen, bara på knapptryck.
  */
-export function DraftActions({ id, zip, mail, status, aiSek, rewritten }: { id: string; zip: string; mail: string; status: "utkast" | "skickat"; aiSek: number; rewritten?: number }) {
+export function DraftActions({ id, zip, mail, status, rewritten }: { id: string; zip: string; mail: string; status: "utkast" | "skickat"; rewritten?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"" | "status" | "ai">("");
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
@@ -30,9 +29,9 @@ export function DraftActions({ id, zip, mail, status, aiSek, rewritten }: { id: 
         kind === "status"
           ? await fetch(`/api/v1/craft/innehall/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: status === "skickat" ? "utkast" : "skickat" }) })
           : await fetch(`/api/v1/craft/innehall/${id}/ai`, { method: "POST" });
-      const json = (await res.json().catch(() => ({}))) as { error?: string; costSek?: number };
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Något gick fel.");
-      if (kind === "ai") setMessage({ text: `Texterna är omskrivna. Kostnad: ${sek(json.costSek ?? 0)}.` });
+      if (kind === "ai") setMessage({ text: "Texterna är omskrivna." });
       router.refresh();
     } catch (e) {
       setMessage({ text: e instanceof Error ? e.message : "Något gick fel.", error: true });
@@ -54,10 +53,10 @@ export function DraftActions({ id, zip, mail, status, aiSek, rewritten }: { id: 
           {busy === "status" ? "Sparar…" : status === "skickat" ? "Markera som utkast" : "Markera som skickat"}
         </button>
         <button type="button" disabled={!!busy} onClick={() => call("ai")} className="nw-btn nw-btn-ghost disabled:opacity-50" title="Texterna till Instagram, Facebook och nyhetsbrevet skrivs om av gpt-5-mini">
-          {busy === "ai" ? "Skriver om…" : `Skriv om med AI · ca ${sek(aiSek)}`}
+          {busy === "ai" ? "Skriver om…" : "Skriv om med AI"}
         </button>
       </div>
-      {rewritten !== undefined && !message ? <p className="text-[12.5px] text-[var(--nw-muted)]">Texterna är omskrivna med AI ({sek(rewritten)}).</p> : null}
+      {rewritten && !message ? <p className="text-[12.5px] text-[var(--nw-muted)]">Texterna är omskrivna med AI.</p> : null}
       {message ? (
         <p role="status" className={`text-[13px] ${message.error ? "text-[#9B1C1C]" : "text-[#1E6B34]"}`}>
           {message.text}

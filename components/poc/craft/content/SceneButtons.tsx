@@ -3,14 +3,13 @@
 /* eslint-disable @next/next/no-img-element -- miljöbilderna är sparade filer */
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { sek } from "./format";
 
 /**
  * Miljöbilden – ett foto där en person i klubbens miljö bär plagget – görs bara när Craft ber om den: per produkt,
- * eller för alla produkter som saknar en, efter en bekräftelse med den ungefärliga kostnaden.
+ * eller för alla produkter som saknar en, efter en bekräftelse. Inga priser visas: modellanropen ingår i det fasta priset.
  */
 
-type SceneResponse = { url?: string; cached?: boolean; costSek?: number; left?: number; error?: string };
+type SceneResponse = { url?: string; cached?: boolean; left?: number; error?: string };
 
 async function makeScene(clubProductId: string): Promise<{ ok: boolean; status: number } & SceneResponse> {
   const res = await fetch("/api/v1/craft/innehall/miljobild", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clubProductId }) });
@@ -19,7 +18,7 @@ async function makeScene(clubProductId: string): Promise<{ ok: boolean; status: 
 }
 
 /** Produkten med sin mockup, och miljöbilden när den finns – annars knappen som skapar den. */
-export function SceneCard({ product, scene, estimateSek }: { product: { id: string; title: string; mockupUrl: string }; scene?: string; estimateSek: number }) {
+export function SceneCard({ product, scene }: { product: { id: string; title: string; mockupUrl: string }; scene?: string }) {
   const router = useRouter();
   const [url, setUrl] = useState(scene);
   const [busy, setBusy] = useState(false);
@@ -56,7 +55,7 @@ export function SceneCard({ product, scene, estimateSek }: { product: { id: stri
             className="flex aspect-[4/5] flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-[#cfcfca] px-2 text-center text-[12.5px] text-[var(--nw-muted)] transition hover:border-[var(--nw-ink)] hover:text-[var(--nw-ink)] disabled:cursor-wait disabled:opacity-70"
           >
             <span className="font-medium text-[var(--nw-ink)]">{busy ? "Skapar…" : "Skapa miljöbild"}</span>
-            <span>{busy ? "cirka en minut" : `ca ${sek(estimateSek)}`}</span>
+            <span>cirka en minut</span>
           </button>
         )}
       </div>
@@ -67,10 +66,10 @@ export function SceneCard({ product, scene, estimateSek }: { product: { id: stri
 }
 
 /**
- * "Skapa för alla N": bekräftelse med den totala kostnaden, sedan två bilder åt gången. Stannar när timmens gräns är
+ * "Skapa för alla N": en bekräftelse, sedan två bilder åt gången. Stannar när timmens gräns är
  * nådd och säger hur många som blev klara.
  */
-export function SceneBulk({ ids, estimateSek, left, label }: { ids: string[]; estimateSek: number; left: number; label: string }) {
+export function SceneBulk({ ids, left, label }: { ids: string[]; left: number; label: string }) {
   const router = useRouter();
   const [asking, setAsking] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -113,12 +112,12 @@ export function SceneBulk({ ids, estimateSek, left, label }: { ids: string[]; es
             Skapa {n} {n === 1 ? "miljöbild" : "miljöbilder"} för {label}?
           </p>
           <p className="text-[13px] text-[var(--nw-muted)]">
-            Ungefär {n} × {sek(estimateSek)} = <span className="font-semibold text-[var(--nw-ink)]">{sek(n * estimateSek)}</span> på OpenAI-kontot. Varje bild tar ungefär en minut.
+            Varje bild tar ungefär en minut.
             {left < n ? ` Högst ${left} kan göras den här timmen – resten när du trycker igen senare.` : ""}
           </p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={run} disabled={left <= 0} className="nw-btn disabled:opacity-40">
-              Skapa {Math.min(n, left)} för ca {sek(Math.min(n, left) * estimateSek)}
+              Skapa {Math.min(n, left)} {Math.min(n, left) === 1 ? "miljöbild" : "miljöbilder"}
             </button>
             <button type="button" onClick={() => setAsking(false)} className="nw-btn nw-btn-ghost">
               Avbryt
